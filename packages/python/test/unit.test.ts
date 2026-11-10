@@ -95,6 +95,7 @@ import {
 } from '../src/uv';
 import {
   getQueueAdapterBootstrap,
+  QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN,
   type QueueAdapterInjectedPackage,
   type QueueIntegration,
 } from '../src/conditional-vendoring';
@@ -129,6 +130,7 @@ import {
 } from '@vercel/build-utils';
 import { derivePycPath } from '../src/compileall';
 import { getServiceCrons } from '../src/crons';
+import { getGeneratedScheduleHandlerPath } from '../src/schedules';
 import {
   entrypointToModule,
   detectPythonEntrypoint,
@@ -608,6 +610,7 @@ describe('conditional Python adapter vendoring', () => {
       expect.objectContaining({
         name: 'vercel-celery-bundle',
         requirement: 'vercel-celery-bundle',
+        extraRequirements: [QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN],
         allowLocalSource: false,
       }),
     ]);
@@ -627,6 +630,7 @@ describe('conditional Python adapter vendoring', () => {
       expect.objectContaining({
         name: 'vercel-celery',
         requirement: 'vercel-celery',
+        extraRequirements: [],
         allowLocalSource: false,
       }),
     ]);
@@ -643,6 +647,7 @@ describe('conditional Python adapter vendoring', () => {
       expect.objectContaining({
         name: 'vercel-dramatiq-bundle',
         requirement: 'vercel-dramatiq-bundle',
+        extraRequirements: [QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN],
         allowLocalSource: false,
       }),
     ]);
@@ -662,6 +667,7 @@ describe('conditional Python adapter vendoring', () => {
       expect.objectContaining({
         name: 'vercel-dramatiq',
         requirement: 'vercel-dramatiq',
+        extraRequirements: [],
         allowLocalSource: false,
       }),
     ]);
@@ -2072,6 +2078,124 @@ describe('file exclusions', () => {
     expect(outputFiles.some(f => f.includes('.git'))).toBe(false);
   });
 
+  it.each([
+    'handler.py',
+    '*.py',
+    'handler',
+  ])('applies excludeFiles from the matching functions entry %s', async functionPattern => {
+    const result = await build({
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+        'secret.txt': new FileBlob({ data: 'secret data' }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: {
+        functions: {
+          [functionPattern]: { excludeFiles: 'secret.txt' },
+        },
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
+    expect(outputFiles.some(file => file.includes('secret.txt'))).toBe(false);
+  });
+
+  it('ignores file selection from functions entries that do not match the entrypoint', async () => {
+    const result = await build({
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+        'other.py': new FileBlob({ data: 'def app(): pass' }),
+        'secret.txt': new FileBlob({ data: 'secret data' }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: {
+        functions: {
+          'other.py': { excludeFiles: 'secret.txt' },
+        },
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
+    expect(outputFiles.some(file => file.includes('secret.txt'))).toBe(true);
+  });
+
+  it('merges top-level and per-function file selection', async () => {
+    const result = await build({
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+        'top-level-secret.txt': new FileBlob({ data: 'secret data' }),
+        'function-secret.txt': new FileBlob({ data: 'secret data' }),
+        'public/included.txt': new FileBlob({ data: 'included data' }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: {
+        excludeFiles: 'top-level-secret.txt',
+        functions: {
+          'handler.py': {
+            includeFiles: 'public/included.txt',
+            excludeFiles: 'function-secret.txt',
+          },
+        },
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
+    expect(
+      outputFiles.some(file => file.includes('top-level-secret.txt'))
+    ).toBe(false);
+    expect(outputFiles.some(file => file.includes('function-secret.txt'))).toBe(
+      false
+    );
+    expect(outputFiles.some(file => file.includes('public/included.txt'))).toBe(
+      true
+    );
+  });
+
+  it('prefers includeFiles when a file also matches excludeFiles', async () => {
+    const result = await build({
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+        'secrets/runtime.txt': new FileBlob({
+          data: 'required at runtime',
+        }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: {
+        functions: {
+          'handler.py': {
+            includeFiles: 'secrets/**',
+            excludeFiles: 'secrets/**',
+          },
+        },
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
+    expect(outputFiles.some(file => file.includes('secrets/runtime.txt'))).toBe(
+      true
+    );
+  });
+
   it('compiles only Python sources included by the app glob', async () => {
     const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
     const mockedExeca = vi.mocked(execa);
@@ -2774,17 +2898,21 @@ describe('FastAPI CDN static exclusion', () => {
     await download(files, workPath);
 
     vi.mocked(runFastAPICollectStatic).mockResolvedValueOnce({
-      collectedMounts: [
-        {
-          urlPath: '/static',
-          directory: staticDir,
-          fallback: null,
-          frontend: false,
-        },
-      ],
-      cdnOutputDir: path.join(workPath, '.vercel', 'output', 'static'),
-      shadowRoutes: [],
-      fallbacks: [],
+      discovery: {
+        mounts: [
+          {
+            urlPath: '/static',
+            directory: staticDir,
+            fallback: null,
+            frontend: false,
+            html: false,
+          },
+        ],
+        shadowRoutes: [],
+        excludedFiles: [],
+      },
+      copiedMounts: [],
+      outputStaticDir: path.join(workPath, '.vercel', 'output', 'static'),
     });
 
     const result = await build({
@@ -2839,17 +2967,21 @@ describe('FastAPI CDN static exclusion', () => {
     await download(files, workPath);
 
     vi.mocked(runFastAPICollectStatic).mockResolvedValueOnce({
-      collectedMounts: [
-        {
-          urlPath: '/static',
-          directory: staticDir,
-          fallback: null,
-          frontend: false,
-        },
-      ],
-      cdnOutputDir: path.join(workPath, '.vercel', 'output', 'static'),
-      shadowRoutes: [],
-      fallbacks: [],
+      discovery: {
+        mounts: [
+          {
+            urlPath: '/static',
+            directory: staticDir,
+            fallback: null,
+            frontend: false,
+            html: false,
+          },
+        ],
+        shadowRoutes: [],
+        excludedFiles: [],
+      },
+      copiedMounts: [],
+      outputStaticDir: path.join(workPath, '.vercel', 'output', 'static'),
     });
 
     const result = await build({
@@ -3650,6 +3782,7 @@ describe('handlerFunction validation', () => {
   });
 
   afterEach(() => {
+    vi.mocked(execa).mockReset();
     if (fs.existsSync(mockWorkPath)) {
       fs.removeSync(mockWorkPath);
     }
@@ -3699,6 +3832,108 @@ describe('handlerFunction validation', () => {
     });
 
     expect(result).toBeDefined();
+  });
+
+  it('builds schedule scripts into one function that dispatches by name', async () => {
+    const files = {
+      'jobs/nightly.py': new FileBlob({
+        data: 'import os\nprint(os.environ["VERCEL_SCHEDULE_NAME"])\n',
+      }),
+      'jobs/hourly.py': new FileBlob({ data: 'print("hourly")\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    const outputPath = '_vercel/schedules/default';
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/nightly.py',
+      meta: { isDev: false },
+      config: {
+        scheduleFunction: {
+          outputPath,
+          entrypoints: [
+            {
+              entrypoint: 'jobs/nightly.py',
+              sourceFile: 'jobs/nightly.py',
+              scheduleNames: ['nightly', 'nightly-retry'],
+            },
+            {
+              entrypoint: 'jobs/hourly.py',
+              sourceFile: 'jobs/hourly.py',
+              scheduleNames: ['hourly'],
+            },
+          ],
+        },
+        functions: { 'jobs/**': { memory: 512 } },
+        zeroConfig: true,
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const v2 = getBuildOutputV2(result);
+    expect(Object.keys(v2.output)).toEqual([outputPath]);
+    const output = v2.output[outputPath] as BuildResultV3['output'];
+    expect(output.experimentalTriggers).toEqual([{ type: 'schedule/v1beta' }]);
+    expect(output.memory).toBe(512);
+
+    const generatedPath = getGeneratedScheduleHandlerPath(outputPath);
+    const generated = output.files?.[generatedPath] as FileBlob;
+    expect(generated.data.toString()).toContain(
+      [
+        'app = create_schedule_scripts_app({',
+        '    "nightly": os.path.join(_root, "jobs/nightly.py"),',
+        '    "nightly-retry": os.path.join(_root, "jobs/nightly.py"),',
+        '    "hourly": os.path.join(_root, "jobs/hourly.py"),',
+        '})',
+      ].join('\n')
+    );
+    const trampoline = output.files?.['vc__handler__python.py'] as FileBlob;
+    expect(trampoline.data.toString()).toContain(
+      `"__VC_HANDLER_MODULE_NAME": "${generatedPythonPathToModule(generatedPath)}"`
+    );
+  });
+
+  it('matches schedule script functions config by the full path', async () => {
+    const files = {
+      'jobs/nightly.py': new FileBlob({ data: 'print("nightly")\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    const outputPath = '_vercel/schedules/default';
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/nightly.py',
+      meta: { isDev: false },
+      config: {
+        scheduleFunction: {
+          outputPath,
+          entrypoints: [
+            {
+              entrypoint: 'jobs/nightly.py',
+              sourceFile: 'jobs/nightly.py',
+              scheduleNames: ['nightly'],
+            },
+          ],
+        },
+        // Other Python builds also accept the key without `.py`; schedule
+        // scripts match `functions` keys like every other runtime.
+        functions: { 'jobs/nightly': { memory: 512 } },
+        zeroConfig: true,
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output[
+      outputPath
+    ] as BuildResultV3['output'];
+    expect(output.memory).toBeUndefined();
+    expect(output.experimentalTriggers).toEqual([{ type: 'schedule/v1beta' }]);
   });
 
   it('throws PYTHON_HANDLER_NOT_FOUND when handlerFunction does not exist', async () => {
@@ -4915,13 +5150,16 @@ describe('pyproject.toml service entrypoint', () => {
     });
   }
 
-  function buildService(files: Record<string, FileBlob>) {
+  function buildService(
+    files: Record<string, FileBlob>,
+    config: Record<string, unknown> = {}
+  ) {
     return build({
       workPath: mockWorkPath,
       files,
       entrypoint: 'pyproject.toml',
       meta: { isDev: false },
-      config: { zeroConfig: true },
+      config: { zeroConfig: true, ...config },
       service: { name: 'backend' },
       repoRootPath: mockWorkPath,
     });
@@ -4950,6 +5188,7 @@ describe('pyproject.toml service entrypoint', () => {
     expect(v2.routes).toEqual([
       { handle: 'filesystem' },
       { src: `/${WORKER_PATH}`, dest: `/${WORKER_PATH}` },
+      { handle: 'rewrite' },
       {
         src: '/(.*)',
         dest: '/python',
@@ -4966,6 +5205,35 @@ describe('pyproject.toml service entrypoint', () => {
     expect(v2.output[workerPath].experimentalTriggers).toEqual([
       { type: 'queue/v2beta', topic: 'invoices', consumer: WORKER_CONSUMER },
     ]);
+  });
+
+  it('applies web entrypoint exclusions to every Lambda in the service', async () => {
+    mockQueueIntrospection([
+      { topic: 'invoices', consumer_group: WORKER_CONSUMER },
+    ]);
+
+    const result = await buildService(
+      {
+        'main.py': MAIN_PY,
+        'worker.py': WORKER_PY,
+        'secret.txt': new FileBlob({ data: 'secret data' }),
+        'pyproject.toml': pyprojectBlob([
+          '[tool.vercel]',
+          'entrypoint = "main:app"',
+          '',
+          ...SUBSCRIBER_TOML,
+        ]),
+      },
+      {
+        functions: {
+          'main.py': { excludeFiles: 'secret.txt' },
+        },
+      }
+    );
+
+    const v2 = getBuildOutputV2(result) as any;
+    expect(v2.output.python.files['secret.txt']).toBeUndefined();
+    expect(v2.output[WORKER_PATH].files['secret.txt']).toBeUndefined();
   });
 
   it('builds subscribers only when no tool.vercel.entrypoint is declared', async () => {
@@ -5947,6 +6215,7 @@ describe('V2 services should generate catch-all routes', () => {
     expect(v2result.output['_svc/my-backend/index']).toBeUndefined();
     expect(v2result.routes).toEqual([
       { handle: 'filesystem' },
+      { handle: 'rewrite' },
       {
         src: '/(.*)',
         dest: '/fastapi',
@@ -7125,6 +7394,16 @@ describe('worker services dependency installation', () => {
     }
   });
 
+  it('ignores the user require-hashes setting for injected pip installs', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
+    expect(pipCalls.length).toBeGreaterThan(0);
+    for (const args of pipCalls) {
+      expect(args).toContain('--no-require-hashes');
+    }
+  });
+
   it('skips adapter injection when no subscribers are declared', async () => {
     const { pipCalls } = await buildWithPipSpy({
       dependencies: ['APScheduler>=3.10.4,<4', 'celery>=5.3', 'dramatiq>=1.17'],
@@ -7164,6 +7443,13 @@ describe('worker services dependency installation', () => {
     expect(
       pipCalls.some(args => args.includes('vercel-apscheduler-bundle'))
     ).toBe(true);
+    expect(
+      pipCalls.some(
+        args =>
+          args.includes('vercel-apscheduler-bundle') &&
+          args.includes(QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN)
+      )
+    ).toBe(true);
     expect(operations.indexOf('sync')).toBeGreaterThanOrEqual(0);
     expect(operations.indexOf('pip:vercel-apscheduler-bundle')).toBeGreaterThan(
       operations.indexOf('sync')
@@ -7194,6 +7480,13 @@ describe('worker services dependency installation', () => {
     expect(pipCalls.some(args => args.includes('vercel-celery-bundle'))).toBe(
       true
     );
+    expect(
+      pipCalls.some(
+        args =>
+          args.includes('vercel-celery-bundle') &&
+          args.includes(QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN)
+      )
+    ).toBe(true);
     expect(operations.indexOf('sync')).toBeGreaterThanOrEqual(0);
     expect(operations.indexOf('pip:vercel-celery-bundle')).toBeGreaterThan(
       operations.indexOf('sync')
@@ -7211,6 +7504,11 @@ describe('worker services dependency installation', () => {
     expect(pipCalls.some(args => args.includes('vercel-celery-bundle'))).toBe(
       false
     );
+    expect(
+      pipCalls.some(args =>
+        args.includes(QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN)
+      )
+    ).toBe(false);
     expect(operations.indexOf('pip:vercel-celery')).toBeGreaterThan(
       operations.indexOf('sync')
     );
@@ -7356,6 +7654,11 @@ describe('worker services dependency installation', () => {
         args.some(arg => arg.includes('vercel-celery-bundle'))
       )
     ).toBe(true);
+    expect(
+      pipCalls.some(args =>
+        args.includes(QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN)
+      )
+    ).toBe(false);
   });
 
   it('uses VERCEL_PYTHON_CELERY_DEPENDENCY override for unbundled celery when provided', async () => {

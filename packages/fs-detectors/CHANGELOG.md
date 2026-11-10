@@ -1,5 +1,321 @@
 # @vercel/fs-detectors
 
+## 7.11.1
+
+### Patch Changes
+
+- Updated dependencies [5f55ccc]
+- Updated dependencies [d0629bd]
+  - @vercel/build-utils@15.1.0
+
+## 7.11.0
+
+### Minor Changes
+
+- c424ce6: Resolve the proxy entrypoint and root-level middleware in one place.
+
+### Patch Changes
+
+- 2f0edaf: Report the runtime preset for services without a framework.
+- Updated dependencies [2f0edaf]
+  - @vercel/build-utils@15.0.2
+
+## 7.10.2
+
+### Patch Changes
+
+- Updated dependencies [1a379a3]
+  - @vercel/build-utils@15.0.1
+
+## 7.10.1
+
+### Patch Changes
+
+- 9e445b9: Load `@vercel/python-analysis` only when checking a Python entrypoint, not when the package loads.
+- Updated dependencies [9b1b587]
+- Updated dependencies [fec2df1]
+- Updated dependencies [d123652]
+  - @vercel/build-utils@15.0.0
+
+## 7.10.0
+
+### Minor Changes
+
+- 787f498: Report proxy runtime mismatch before framework conflict.
+
+### Patch Changes
+
+- Updated dependencies [7fea9e0]
+- Updated dependencies [9abaa6d]
+- Updated dependencies [179d4ab]
+- Updated dependencies [d39dd61]
+- Updated dependencies [5aa1b58]
+  - @vercel/python-analysis@0.15.2
+  - @vercel/build-utils@14.23.0
+
+## 7.9.12
+
+### Patch Changes
+
+- Updated dependencies [bdb4ecb]
+  - @vercel/python-analysis@0.15.1
+
+## 7.9.11
+
+### Patch Changes
+
+- a2e9f5d: Add `functions[glob].installCommand`. For matching `@vercel/node` functions, an empty string skips the dependency install and a non-empty value runs instead of the default install. Builds warn when the property matches functions of other runtimes, which ignore it.
+- Updated dependencies [a19979c]
+- Updated dependencies [a2e9f5d]
+  - @vercel/build-utils@14.22.0
+
+## 7.9.10
+
+### Patch Changes
+
+- Updated dependencies [bb42e81]
+  - @vercel/build-utils@14.21.3
+
+## 7.9.9
+
+### Patch Changes
+
+- Updated dependencies [cd68435]
+  - @vercel/build-utils@14.21.2
+
+## 7.9.8
+
+### Patch Changes
+
+- Updated dependencies [3d616ad]
+- Updated dependencies [1336097]
+  - @vercel/python-analysis@0.15.0
+  - @vercel/build-utils@14.21.1
+
+## 7.9.7
+
+### Patch Changes
+
+- da51924: Add `detectDaemons`, which reads the daemons (name and entrypoint) in `vercel.json` or `vercel.toml`.
+- 8845006: Accept Dockerfile and Containerfile names anywhere in the basename of explicit service and daemon entrypoints, such as `worker_Dockerfile`.
+- Updated dependencies [24a7e04]
+- Updated dependencies [7e396f7]
+  - @vercel/build-utils@14.21.0
+
+## 7.9.6
+
+### Patch Changes
+
+- 0d62534: Accept suffixed Dockerfile and Containerfile names in explicit service and daemon entrypoints.
+- Updated dependencies [42cc083]
+  - @vercel/build-utils@14.20.1
+
+## 7.9.5
+
+### Patch Changes
+
+- Updated dependencies [e041037]
+  - @vercel/build-utils@14.20.0
+
+## 7.9.4
+
+### Patch Changes
+
+- Updated dependencies [e58b37a]
+  - @vercel/build-utils@14.19.0
+
+## 7.9.3
+
+### Patch Changes
+
+- 8ac5320: Add an experimental workspace-scoped install path for Node builds to avoid installing unrelated monorepo workspaces.
+- Updated dependencies [94f6cea]
+- Updated dependencies [3eeaad5]
+- Updated dependencies [8ac5320]
+  - @vercel/build-utils@14.18.0
+
+## 7.9.2
+
+### Patch Changes
+
+- Updated dependencies [28a7ab7]
+- Updated dependencies [28a7ab7]
+  - @vercel/build-utils@14.17.0
+
+## 7.9.1
+
+### Patch Changes
+
+- Updated dependencies [20c5940]
+  - @vercel/build-utils@14.16.0
+
+## 7.9.0
+
+### Minor Changes
+
+- b0c985b: Build standalone Go servers with the Vercel Go buildpack and the container
+  runtime when `VERCEL_EXPERIMENTAL_BUILDPACK_GO=1`, instead of running them
+  behind the IPC proxy on Lambda. This applies to zero-config Go projects and
+  Go services with a `go.mod` at their root, including `package main` and
+  directory service entrypoints. `api/**/*.go` functions and Go handler
+  entrypoints keep using `@vercel/go`.
+
+  The build image is `golang:<version>-bookworm`, selected from the newer of
+  the go.mod `toolchain` and `go` directives. The buildpack defaults to
+  `GOTOOLCHAIN=local`, so the image's Go builds the module. It compiles the
+  package a service entrypoint names, or else the one `@vercel/go` would
+  build, passed as `VERCEL_GO_TARGET`, and the binary runs on distroless
+  Debian 12.
+
+- 5772e9e: Build Rust HTTP servers with a root `Cargo.toml` using the container builder when `VERCEL_EXPERIMENTAL_BUILDPACK_RUST=1`, selecting the build image from `rust-toolchain` or `rust-toolchain.toml` and serving `public/` from the root path. API functions and services with explicit file entrypoints continue using `@vercel/rust`.
+
+### Patch Changes
+
+- 1f558d0: `vercel dev` runs schedules that target an `entrypoint`. It plans them into the same functions `vercel build` does, such as `_vercel/schedules/default`, registers each one with the local scheduler, and builds it with the entrypoint's builder. Schedule functions are only invoked by the scheduler, never by a public URL. Projects with services still reject schedule entrypoints in `vercel dev`.
+- Updated dependencies [a7ef28c]
+  - @vercel/build-utils@14.15.0
+
+## 7.8.1
+
+### Patch Changes
+
+- Updated dependencies [deb48cd]
+  - @vercel/build-utils@14.14.0
+
+## 7.8.0
+
+### Minor Changes
+
+- 3520d5c: Detect Dockerfile and Containerfile projects with the Container framework preset while keeping plain filenames lower priority than other framework matches.
+
+### Patch Changes
+
+- Updated dependencies [3520d5c]
+- Updated dependencies [ff3d2f7]
+  - @vercel/frameworks@3.35.0
+  - @vercel/build-utils@14.13.2
+
+## 7.7.3
+
+### Patch Changes
+
+- 5082546: Build Python schedule entrypoints. A `.py` entrypoint such as `jobs/nightly.py` runs as a script once per firing in a private function under `_vercel/schedules/`. Entrypoints with the same `functions` config share one function, which runs the script for the dispatched schedule name, so the project's dependencies are bundled once per distinct config instead of once per script. Entrypoints without `functions` config share `_vercel/schedules/default`; the others' function is named after the `functions` patterns their config came from, such as `_vercel/schedules/jobs/report`. Schedule names must be unique within a shared function.
+
+  Declared schedule entrypoints are not served as static files, but other files follow the normal static rules. When a project with Python schedule entrypoints publishes other `.py` files from its root, through the zero-config static fallback or `outputDirectory: "."`, `vercel build` now warns and lists them.
+
+  Add `findMatchingFunction` to `@vercel/build-utils`, which returns the `functions` entry that applies to a function.
+
+- Updated dependencies [5082546]
+  - @vercel/build-utils@14.13.1
+
+## 7.7.2
+
+### Patch Changes
+
+- Updated dependencies [34b2c8e]
+  - @vercel/build-utils@14.13.0
+
+## 7.7.1
+
+### Patch Changes
+
+- Updated dependencies [6e68e60]
+  - @vercel/build-utils@14.12.0
+
+## 7.7.0
+
+### Minor Changes
+
+- 2a134f6: Accept Python module:attr proxy entrypoints.
+
+### Patch Changes
+
+- 0d38103: Use Ruby buildpacks for services with an explicit root config.ru entrypoint when buildpacks are enabled and a Gemfile exists at the service root. Preserve the Ruby runtime for function handlers and custom Rack entrypoints.
+- 7eb63c0: Accept runtime-specific schedule entrypoints and provide build plumbing for lowering dedicated entrypoints to function targets. All schedule entrypoints must use one runtime, including for static frameworks and `framework: null`. Entrypoints must also match the runtime of frameworks that own one (Next.js, FastAPI, Express). The builder contract still supports multiple entrypoints per function for future runtimes.
+- Updated dependencies [888f59e]
+- Updated dependencies [7eb63c0]
+  - @vercel/build-utils@14.11.0
+
+## 7.6.2
+
+### Patch Changes
+
+- a20c274: Bundle internal runtime helpers into the published package.
+
+## 7.6.1
+
+### Patch Changes
+
+- Updated dependencies [53a6086]
+  - @vercel/build-utils@14.10.2
+
+## 7.6.0
+
+### Minor Changes
+
+- 360ffab: Re-add @vercel-internals/runtimes as a dev dep to fs-detectors.
+
+## 7.5.0
+
+### Minor Changes
+
+- e22e20f: Add a migration assistant for `experimentalServices` which converts a legacy `experimentalServices` config into `services` with top-level service rewrites. Available under `vercel dev`, `vercel link` and `vercel deploy`.
+
+## 7.4.0
+
+### Minor Changes
+
+- d41b887: Reject proxy entrypoints with mismatched runtime.
+
+## 7.3.0
+
+### Minor Changes
+
+- a88afa0: Route Ruby services and zero-config Ruby projects (Rails and Rack) to the
+  experimental Ruby buildpack container builder behind
+  `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1`. The buildpack is selected only when a
+  `Gemfile` sits at the build root and no file `entrypoint` narrows the build;
+  services with an explicit `.rb`/`.ru` entrypoint keep building with
+  `@vercel/ruby`. `vercel dev` reports that Ruby projects and services are not
+  supported yet.
+
+## 7.2.5
+
+### Patch Changes
+
+- Updated dependencies [f9d0e90]
+- Updated dependencies [8a277e4]
+- Updated dependencies [f8eb285]
+- Updated dependencies [66e443e]
+- Updated dependencies [08b0be2]
+  - @vercel/build-utils@14.10.1
+  - @vercel/routing-utils@6.6.0
+  - @vercel/frameworks@3.34.0
+
+## 7.2.4
+
+### Patch Changes
+
+- Updated dependencies [2a57243]
+- Updated dependencies [54a6d73]
+- Updated dependencies [3d16792]
+  - @vercel/build-utils@14.10.0
+
+## 7.2.3
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/build-utils@14.9.3
+
+## 7.2.2
+
+### Patch Changes
+
+- b174f14: Raise the client-side `maxDuration` validation limit to 3600 seconds.
+- Updated dependencies [b174f14]
+  - @vercel/build-utils@14.9.2
+
 ## 7.2.1
 
 ### Patch Changes

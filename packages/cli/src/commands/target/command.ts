@@ -9,7 +9,8 @@ import { packageName } from '../../util/pkg-name';
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List targets defined for the current Project',
+  description: 'List environments for the current Project',
+  default: true,
   arguments: [],
   options: [
     formatOption,
@@ -23,16 +24,18 @@ export const listSubcommand = {
   ],
   examples: [
     {
-      name: 'List all targets for the current Project',
-      value: `${packageName} target ls my-project`,
+      name: 'List all environments for the current Project',
+      value: `${packageName} environments list`,
     },
   ],
 } as const;
 
+// `targets` and `target` are the old names of `environments`. They keep
+// working and print a deprecation warning.
 export const targetCommand = {
-  name: 'target',
-  aliases: ['targets'],
-  description: 'Manage your Vercel Project\'s "targets" (custom environments).',
+  name: 'environments',
+  aliases: ['environment', 'targets', 'target'],
+  description: 'Manage custom environments for a Project',
   arguments: [],
   subcommands: [listSubcommand],
   options: [],

@@ -210,6 +210,81 @@ describe('activity ls', () => {
     expect(requestQuery.until).toBe('2025-01-02T00:00:00.000Z');
   });
 
+  describe('--next cursor', () => {
+    function captureQuery() {
+      const queries: Record<string, unknown>[] = [];
+      client.scenario.get('/v3/events', (req, res) => {
+        queries.push(req.query);
+        res.json({ events: [] });
+      });
+      return queries;
+    }
+
+    it.each([
+      [['--next', '1584722256178']],
+      [['--next=1584722256178']],
+      [['-N', '1584722256178']],
+    ])('reads %j as the same timestamp as before', async args => {
+      const queries = captureQuery();
+      client.setArgv('activity', 'ls', ...args);
+
+      expect(await activity(client)).toBe(0);
+      expect(queries[0].until).toBe(new Date(1584722256178).toISOString());
+    });
+
+    it('warns when the hidden -N is used', async () => {
+      captureQuery();
+      client.setArgv('activity', 'ls', '-N', '1584722256178');
+
+      expect(await activity(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        '! -N is deprecated. Use --next.'
+      );
+    });
+
+    it('does not warn for -N with --json', async () => {
+      captureQuery();
+      client.setArgv('activity', 'ls', '-N', '1584722256178', '--json');
+
+      expect(await activity(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(JSON.parse(client.stdout.getFullOutput())).toHaveProperty(
+        'pagination'
+      );
+    });
+
+    it('never prints the token in the next page command', async () => {
+      client.scenario.get('/v3/events', (_req, res) => {
+        res.json({
+          events: [
+            { id: 'e1', createdAt: 3, text: 'a', type: 'deployment' },
+            { id: 'e2', createdAt: 2, text: 'b', type: 'deployment' },
+          ],
+        });
+      });
+      client.setArgv('activity', 'ls', '--limit', '1', '-t', 'secret-token');
+
+      expect(await activity(client)).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        '  Next page:\n    vercel activity --limit 1 --next 2\n'
+      );
+      expect(stderr).not.toContain('secret-token');
+    });
+
+    it('rejects a value that is not a cursor as a usage error', async () => {
+      const queries = captureQuery();
+      client.setArgv('activity', 'ls', '--next', 'oops');
+
+      expect(await activity(client)).toBe(2);
+      expect(queries).toHaveLength(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--next must be the cursor printed with the previous page.'
+      );
+      expect(client.stderr.getFullOutput()).not.toContain('number');
+    });
+  });
+
   it('resolves --project to projectId and skips linked project lookup', async () => {
     let requestQuery: any;
     client.scenario.get('/v9/projects/:projectNameOrId', (_req, res) => {
@@ -298,7 +373,7 @@ describe('activity ls', () => {
 
     const exitCode = await activity(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Cannot specify both --all and --project'
     );
@@ -341,8 +416,12 @@ describe('activity ls', () => {
 
     expect(exitCode).toBe(0);
     expect(requestQuery.limit).toBe('3');
-    expect(client.stderr.getFullOutput()).toContain('To display the next page');
-    expect(client.stderr.getFullOutput()).toContain('--next 1999');
+    expect(client.stderr.getFullOutput()).toContain(
+      '  Next page:\n    vercel activity --limit 2 --next 1999\n'
+    );
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'To display the next page'
+    );
   });
 
   it('returns JSON payload with pagination metadata', async () => {

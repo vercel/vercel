@@ -13,7 +13,13 @@ import {
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
-import { resolveAlertsScope } from './resolve-alerts-scope';
+import {
+  type AlertsScope,
+  resolveAlertsScope,
+  scopeFromLinkedProject,
+} from './resolve-alerts-scope';
+import { resolveRulesTeam } from '../monitors/parse-scope';
+import { getLinkedProject } from '../../util/projects/link';
 import formatDate from '../../util/format-date';
 import chalk from 'chalk';
 import {
@@ -565,10 +571,10 @@ export default async function inspect(
               },
             ],
       },
-      1
+      2
     );
     printError(e);
-    return 1;
+    return 2;
   }
 
   const groupId = parsedArgs.args[0];
@@ -581,10 +587,10 @@ export default async function inspect(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: fr.error,
       },
-      1
+      2
     );
     output.error(fr.error);
-    return 1;
+    return 2;
   }
 
   if (!groupId) {
@@ -604,7 +610,7 @@ export default async function inspect(
           },
         ],
       },
-      1
+      2
     );
     return outputError(
       client,
@@ -614,7 +620,7 @@ export default async function inspect(
     );
   }
 
-  const scope = await resolveAlertsScope(client, {
+  const scope = await resolveInspectScope(client, {
     project: parsedArgs.flags['--project'] as string | undefined,
     all: parsedArgs.flags['--all'] as boolean | undefined,
     jsonOutput: fr.jsonOutput,
@@ -658,9 +664,13 @@ export default async function inspect(
           status: 'error',
           reason,
           message: msg,
-          ...(err.status === 401 || err.status === 403
+          ...(err.status === 401 || err.status === 403 || err.status === 404
             ? {
-                hint: 'Confirm team scope; use --scope <team-slug> if the group belongs to another team.',
+                // A project scope (linked or --project) takes the team from
+                // the project, so --scope alone does not change it.
+                hint: scope.projectId
+                  ? 'The request was scoped to a project. Use --all, and --scope <team-slug> if the group belongs to another team.'
+                  : 'Confirm team scope; use --scope <team-slug> if the group belongs to another team.',
                 next: [
                   {
                     command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
@@ -669,7 +679,9 @@ export default async function inspect(
                   {
                     command: buildCommandWithGlobalFlags(
                       client.argv,
-                      `alerts inspect ${groupId}`
+                      scope.projectId
+                        ? `alerts inspect ${groupId} --all`
+                        : `alerts inspect ${groupId}`
                     ),
                     when: 'Retry after fixing scope or permissions',
                   },
@@ -685,4 +697,30 @@ export default async function inspect(
   } finally {
     output.stopSpinner();
   }
+}
+
+async function resolveInspectScope(
+  client: Client,
+  opts: {
+    project?: string;
+    all?: boolean;
+    jsonOutput: boolean;
+    command: string;
+  }
+): Promise<AlertsScope | number> {
+  if (opts.project || opts.all) {
+    return resolveAlertsScope(client, opts);
+  }
+
+  const linkedProject = await getLinkedProject(client);
+  if (linkedProject.status === 'error') {
+    return linkedProject.exitCode;
+  }
+  if (linkedProject.status === 'linked') {
+    return scopeFromLinkedProject(linkedProject);
+  }
+
+  // Alert group IDs are unique within a team, and the API looks them up by
+  // team alone, so an unlinked directory only needs a team scope.
+  return resolveRulesTeam(client, opts.jsonOutput);
 }

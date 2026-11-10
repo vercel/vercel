@@ -12,10 +12,8 @@ import { getLinkedProject } from '../../util/projects/link';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
 import { buildCommandWithYes, outputAgentError } from '../../util/agent-output';
-import {
-  VALID_ENVIRONMENTS,
-  validateEnvironments,
-} from '../../util/integration/post-provision-setup';
+import { VALID_ENVIRONMENTS } from '../../util/integration/post-provision-setup';
+import { resolveProjectEnvironments } from '../../util/integration/resolve-project-environments';
 import { IntegrationResourceConnectTelemetryClient } from '../../util/telemetry/commands/integration-resource/connect';
 import { connectSubcommand } from './command';
 
@@ -33,13 +31,13 @@ export async function connect(client: Client, argv: string[]) {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
   const skipConfirmation = !!parsedArguments.flags['--yes'];
@@ -53,46 +51,56 @@ export async function connect(client: Client, argv: string[]) {
 
   if (asJson && !skipConfirmation) {
     output.error('--json requires --yes to skip confirmation prompts');
-    return 1;
+    return 2;
   }
 
   if (parsedArguments.args.length < 1) {
     output.error('You must specify a resource. See `--help` for details.');
-    return 1;
+    return 2;
   }
 
   if (parsedArguments.args.length > 2) {
     output.error(
       'Too many arguments. Usage: `vercel integration resource connect <resource> [project]`.'
     );
-    return 1;
+    return 2;
   }
 
   if (prefix !== undefined && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(prefix)) {
     output.error(
       'Invalid --prefix value. It must start with a letter and contain only letters, digits, and underscores.'
     );
-    return 1;
+    return 2;
   }
 
-  let environments: string[];
-  if (environmentsFlag?.length) {
-    const envValidation = validateEnvironments(environmentsFlag);
-    if (!envValidation.valid) {
-      output.error(
-        `Invalid environment value: ${envValidation.invalid.map(e => `"${e}"`).join(', ')}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
-      );
-      return 1;
-    }
-    environments = environmentsFlag;
-  } else {
-    environments = [...VALID_ENVIRONMENTS];
+  // Without a terminal there is no prompt, so require --yes before any lookups.
+  if (!skipConfirmation && (client.nonInteractive || !client.stdin.isTTY)) {
+    const retryCommand = buildCommandWithYes(client.argv);
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: 'confirmation_required',
+        message:
+          'Connecting a resource requires confirmation. Re-run with --yes.',
+        next: [{ command: retryCommand }],
+      },
+      1
+    );
+    output.error(
+      `Connecting a resource without a terminal requires --yes. Re-run: ${retryCommand}`
+    );
+    return 2;
   }
 
-  const resourceName = parsedArguments.args[0];
+  const environments = environmentsFlag?.length
+    ? environmentsFlag
+    : [...VALID_ENVIRONMENTS];
+
+  const resourceReference = parsedArguments.args[0];
   const specifiedProject: string | undefined = parsedArguments.args[1];
 
-  telemetry.trackCliArgumentResource(resourceName);
+  telemetry.trackCliArgumentResource(resourceReference);
   telemetry.trackCliArgumentProject(specifiedProject);
 
   const { team } = await getScope(client);
@@ -104,13 +112,13 @@ export async function connect(client: Client, argv: string[]) {
 
   output.spinner('Retrieving resource…', 500);
   const resources = await getResources(client);
-  const targetedResource = resources.find(
-    resource => resource.name === resourceName
-  );
+  const targetedResource =
+    resources.find(resource => resource.name === resourceReference) ??
+    resources.find(resource => resource.id === resourceReference);
   output.stopSpinner();
 
   if (!targetedResource) {
-    output.error(`No resource ${chalk.bold(resourceName)} found.`);
+    output.error(`No resource ${chalk.bold(resourceReference)} found.`);
     return 1;
   }
 
@@ -152,30 +160,16 @@ export async function connect(client: Client, argv: string[]) {
     return 1;
   }
 
-  if (!skipConfirmation && client.nonInteractive) {
-    outputAgentError(
-      client,
-      {
-        status: 'error',
-        reason: 'confirmation_required',
-        message:
-          'Connecting a resource requires confirmation. Re-run with --yes.',
-        next: [{ command: buildCommandWithYes(client.argv) }],
-      },
-      1
-    );
-    output.error(
-      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
-    );
+  const environmentResult = await resolveProjectEnvironments(
+    client,
+    project,
+    environments
+  );
+  if (!environmentResult.valid) {
+    output.fatal(environmentResult.error);
     return 1;
   }
-
-  if (!skipConfirmation && !client.stdin.isTTY) {
-    output.error(
-      'Confirmation required. Use `--yes` to skip the confirmation prompt.'
-    );
-    return 1;
-  }
+  const connectionEnvironments = environmentResult.environments;
 
   if (!skipConfirmation) {
     output.log(
@@ -197,7 +191,7 @@ export async function connect(client: Client, argv: string[]) {
       client,
       project.id,
       targetedResource.id,
-      environments,
+      connectionEnvironments,
       prefix !== undefined ? { envVarPrefix: prefix } : undefined
     );
   } catch (error) {
@@ -208,12 +202,12 @@ export async function connect(client: Client, argv: string[]) {
       );
       if (conflict) {
         const varName = conflict[1];
-        // `vc env rm` accepts at most one environment positional; emit a single-env
+        // `vc env remove` accepts at most one --environment; emit a single-env
         // form when exactly one was specified, otherwise the no-env form that prompts.
         const envRmCmd =
           environments.length === 1
-            ? `vercel env rm ${varName} ${environments[0]}`
-            : `vercel env rm ${varName}`;
+            ? `vercel env remove ${varName} --environment ${environments[0]}`
+            : `vercel env remove ${varName}`;
         output.error(
           `Cannot connect: env var ${chalk.bold(varName)} already exists on project ${chalk.bold(projectName)} in one of the target environments (${environments.join(', ')}).`
         );

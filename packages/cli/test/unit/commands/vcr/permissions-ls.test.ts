@@ -164,6 +164,9 @@ describe('vcr permissions ls', () => {
     const exitCode = await vcr(client);
 
     expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput().includes('deprecated')).toBe(
+      flag === '--cursor'
+    );
   });
 
   it('errors when the API returns a 404', async () => {

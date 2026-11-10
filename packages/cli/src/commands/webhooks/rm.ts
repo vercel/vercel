@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import deleteWebhook from '../../util/webhooks/delete-webhook';
 import getWebhook from '../../util/webhooks/get-webhook';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
@@ -41,7 +41,7 @@ export default async function rm(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [webhookId] = args;
@@ -66,17 +66,19 @@ export default async function rm(client: Client, argv: string[]) {
             },
             {
               command: webhookCommandWithGlobalFlags(
-                'webhooks rm <id> --yes',
+                'webhooks delete <id> --yes',
                 client.argv
               ),
             },
           ],
         },
-        1
+        2
       );
     }
-    output.error(`${getCommandName(`webhooks rm <id>`)} expects one argument`);
-    return 1;
+    output.error(
+      `${getCommandName(`webhooks delete <id>`)} expects one argument`
+    );
+    return 2;
   }
 
   const skipConfirmation = opts['--yes'] || false;
@@ -86,22 +88,22 @@ export default async function rm(client: Client, argv: string[]) {
       {
         status: 'error',
         reason: 'confirmation_required',
-        message: 'Removing a webhook requires confirmation. Re-run with --yes.',
+        message: 'Deleting a webhook requires confirmation. Re-run with --yes.',
         next: [{ command: buildCommandWithYes(client.argv) }],
       },
       1
     );
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('webhooks rm <id>')}`
+        `${getCommandName('webhooks delete <id>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   // Verify the webhook exists before asking for confirmation
@@ -145,7 +147,7 @@ export default async function rm(client: Client, argv: string[]) {
   if (
     !skipConfirmation &&
     !(await client.input.confirm(
-      `Are you sure you want to remove webhook ${param(webhookId)} (${webhook.url})?`,
+      `Are you sure you want to delete webhook ${param(webhookId)} (${webhook.url})?`,
       false
     ))
   ) {
@@ -155,7 +157,7 @@ export default async function rm(client: Client, argv: string[]) {
 
   const removeStamp = stamp();
   if (!client.nonInteractive) {
-    output.spinner(`Removing webhook under ${chalk.bold(contextName)}`);
+    output.spinner(`Deleting webhook under ${chalk.bold(contextName)}`);
   }
 
   try {
@@ -167,7 +169,7 @@ export default async function rm(client: Client, argv: string[]) {
           {
             status: 'ok',
             webhook: { id: webhookId, url: webhook.url },
-            message: `Webhook ${webhookId} removed.`,
+            message: `Webhook ${webhookId} deleted.`,
           },
           null,
           2
@@ -175,7 +177,7 @@ export default async function rm(client: Client, argv: string[]) {
       );
       return 0;
     }
-    output.success(`Webhook ${chalk.bold(webhookId)} removed ${removeStamp()}`);
+    output.success(`Webhook ${chalk.bold(webhookId)} deleted ${removeStamp()}`);
     return 0;
   } catch (err: unknown) {
     output.stopSpinner();

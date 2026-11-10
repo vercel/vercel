@@ -7,10 +7,15 @@ import {
   outputJson,
   failFirewall,
   failFirewallApi,
+  failFirewallObservabilityPlan,
 } from '../shared';
 import { requireProjectContext } from '../../../util/projects/require-project-context';
-import { FIREWALL_ACTIVITY_PLAN_MESSAGE } from '../../../util/firewall/get-firewall-alerts';
-import { fetchFirewallPersistentActions } from '../../../util/firewall/get-firewall-events';
+import {
+  clampPersistentActionWindow,
+  fetchFirewallPersistentActions,
+  retentionLabel,
+} from '../../../util/firewall/get-firewall-events';
+import { fetchPlanInfo } from '../../../util/firewall/interactive-helpers';
 import {
   DEFAULT_PERSISTENT_ACTION_LIMIT,
   formatPersistentActionsList,
@@ -29,6 +34,10 @@ import {
 } from '../../../util/command-validation';
 
 export default async function list(client: Client, argv: string[]) {
+  // Read before the flags are: a relative `--since` resolves against the
+  // clock, and so does the plan's retention boundary further down. Both are
+  // measured from here so the two agree.
+  const startedAt = Date.now();
   const parsed = await parseSubcommandArgs(
     argv,
     persistentActionsListSubcommand,
@@ -74,7 +83,7 @@ export default async function list(client: Client, argv: string[]) {
     });
   }
 
-  const { from, to } = persistentActionWindow(
+  const requested = persistentActionWindow(
     sinceResult.value,
     untilResult.value
   );
@@ -99,6 +108,29 @@ export default async function list(client: Client, argv: string[]) {
   const asJson = Boolean(parsed.flags['--json']);
   const suggestedCommand = `firewall persistent-actions list${asJson ? ' --json' : ''}`;
 
+  // The API trims the start of the window to the plan's retention without
+  // saying so, so ask what the plan is and report the window the rows
+  // actually cover.
+  const { isEnterprise, known } = await fetchPlanInfo(client);
+  const window = clampPersistentActionWindow({
+    ...requested,
+    isEnterprise,
+    planKnown: known,
+    now: startedAt,
+  });
+  const { from, to } = window;
+  if (window.empty) {
+    return failFirewall(client, {
+      message: `This plan keeps ${retentionLabel(isEnterprise)} of persistent-action history, and the requested window is entirely older than that. Narrow it with --since and --until.`,
+      reason: AGENT_REASON.INVALID_ARGUMENTS,
+    });
+  }
+  if (window.requestedFrom && !asJson) {
+    output.warn(
+      `This plan keeps ${retentionLabel(isEnterprise)} of persistent-action history. Showing from ${from.toISOString()} rather than ${window.requestedFrom.toISOString()}.`
+    );
+  }
+
   output.spinner(`Fetching persistent actions for ${chalk.bold(project.name)}`);
 
   try {
@@ -117,6 +149,14 @@ export default async function list(client: Client, argv: string[]) {
         window: {
           startTime: from.toISOString(),
           endTime: to.toISOString(),
+          // Only when they differ, so a caller can tell a trimmed window
+          // from one the plan covered in full.
+          ...(window.requestedFrom
+            ? {
+                requestedStartTime: window.requestedFrom.toISOString(),
+                trimmedToPlanRetention: true as const,
+              }
+            : {}),
         },
         // Mapped rather than passed through: the API answers in snake_case
         // with timestamps `Date` cannot be trusted to parse, and this is a
@@ -141,10 +181,7 @@ export default async function list(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     if (isAPIError(e) && e.status === 402) {
-      return failFirewall(client, {
-        message: FIREWALL_ACTIVITY_PLAN_MESSAGE,
-        reason: AGENT_REASON.API_ERROR,
-      });
+      return failFirewallObservabilityPlan(client, e, project.name);
     }
     return failFirewallApi(client, e, {
       fallback: 'Failed to fetch persistent firewall actions',

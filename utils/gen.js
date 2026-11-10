@@ -74,12 +74,23 @@ const platformIdentity = {
       ? `${env.ImageOS}-${env.ImageVersion}`
       : 'local',
 };
+// Host OS and CPU only, for tasks whose output depends on the build host but not
+// on the Node version or runner image (for example, the python-analysis wasm).
+const hostIdentity = {
+  // Bump to invalidate every entry keyed on this file, for example after a bad
+  // artifact reaches the remote cache or when an output-affecting input cannot
+  // be recorded below.
+  cacheVersion: 1,
+  platform,
+  arch,
+};
 const nativeIdentity = {
   ...platformIdentity,
   go: getGoIdentity(),
 };
 
 for (const [name, identity] of [
+  ['turbo-host-cache-key.json', hostIdentity],
   ['turbo-platform-cache-key.json', platformIdentity],
   ['turbo-native-cache-key.json', nativeIdentity],
 ]) {

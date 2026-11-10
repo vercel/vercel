@@ -5,6 +5,7 @@ import { readFileSync, unlinkSync } from 'fs';
 import { delimiter, dirname, join } from 'path';
 import { fork, type ChildProcess } from 'child_process';
 import { createFunction } from '@vercel/fun';
+import { initializeFunRuntime } from './fun-runtime';
 import {
   type Builder,
   type BuildOptions,
@@ -40,10 +41,11 @@ import type {
   BuiltLambda,
 } from './types';
 import { normalizeRoutes, type Route } from '@vercel/routing-utils';
-import getUpdateCommand from '../get-update-command';
-import { getTitleName } from '../pkg-name';
 import { importBuilders } from '../../builders/import-builders';
+import { getUnsupportedBuilderVersionError } from './unsupported-builder-version';
 import output from '../../output-manager';
+import { isNativeBinaryInstall } from '../native-install';
+import { dev } from './diagnostics';
 
 interface BuildMessage {
   type: string;
@@ -191,7 +193,9 @@ async function createBuildProcess(
   const buildProcess = fork(builderWorkerPath, [], {
     cwd: workPath,
     execArgv: [],
-    execPath: nodeExecPath,
+    // The native entrypoint dispatches bundled workers inside its snapshot.
+    // An external Node process cannot read the virtual worker path.
+    execPath: isNativeBinaryInstall() ? process.execPath : nodeExecPath,
     env,
   });
   match.buildProcess = buildProcess;
@@ -364,13 +368,11 @@ export async function executeBuild(
     const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
 
     if (!output || (output as BuilderOutput).type !== 'Lambda') {
-      throw new Error('The result of "builder.build()" must be a `Lambda`');
+      throw dev.DEV_BUILDER_RESULT_NOT_LAMBDA();
     }
 
     if (output.maxDuration) {
-      throw new Error(
-        'The result of "builder.build()" must not contain `maxDuration`'
-      );
+      throw dev.DEV_BUILDER_RESULT_HAS_MAXDURATION();
     }
 
     if (output.affinity) {
@@ -386,9 +388,7 @@ export async function executeBuild(
     }
 
     if (output.memory) {
-      throw new Error(
-        'The result of "builder.build()" must not contain `memory`'
-      );
+      throw dev.DEV_BUILDER_RESULT_HAS_MEMORY();
     }
 
     for (const [src, func] of Object.entries(config.functions || {})) {
@@ -420,17 +420,13 @@ export async function executeBuild(
       },
     } as BuildResult;
   } else {
-    throw new Error(
-      `${getTitleName()} CLI does not support builder version ${
-        (builder as any).version
-      }.\nPlease run \`${await getUpdateCommand()}\` to update to the latest CLI.`
-    );
+    throw await getUnsupportedBuilderVersionError((builder as any).version);
   }
 
   // Normalize Builder Routes
   const normalized = normalizeRoutes(result.routes);
   if (normalized.error) {
-    throw new Error(normalized.error.message);
+    throw dev.DEV_INVALID_ROUTES({ message: normalized.error.message });
   } else {
     result.routes = normalized.routes || [];
   }
@@ -524,6 +520,7 @@ export async function executeBuild(
 
         const ZipFile = asset.zipBuffer || (await asset.createZip());
 
+        await initializeFunRuntime(asset.runtime);
         asset.fn = await createFunction({
           Code: { ZipFile },
           Handler: asset.handler,
@@ -543,6 +540,7 @@ export async function executeBuild(
     })
   );
 
+  match.buildResultVersion = effectiveVersion;
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
 
@@ -718,7 +716,7 @@ export async function getBuildMatches(
 
       const builderWithPkg = buildersWithPkgs.get(use);
       if (!builderWithPkg) {
-        throw new Error(`Failed to load Builder "${use}"`);
+        throw dev.DEV_BUILDER_LOAD_FAILED({ use });
       }
 
       matches.push({

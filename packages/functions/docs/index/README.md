@@ -23,6 +23,7 @@
 ## Variables
 
 - [~~experimental_attachDatabasePool~~](variables/experimental_attachDatabasePool.md)
+- [~~experimental_upgradeWebSocket~~](variables/experimental_upgradeWebSocket.md)
 
 ## Functions
 
@@ -30,7 +31,6 @@
 - [attachDatabasePool](functions/attachDatabasePool.md)
 - [dangerouslyDeleteBySrcImage](functions/dangerouslyDeleteBySrcImage.md)
 - [dangerouslyDeleteByTag](functions/dangerouslyDeleteByTag.md)
-- [experimental_upgradeWebSocket](functions/experimental_upgradeWebSocket.md)
 - [geolocation](functions/geolocation.md)
 - [getCache](functions/getCache.md)
 - [getDeadline](functions/getDeadline.md)
@@ -41,4 +41,5 @@
 - [metric](functions/metric.md)
 - [next](functions/next.md)
 - [rewrite](functions/rewrite.md)
+- [upgradeWebSocket](functions/upgradeWebSocket.md)
 - [waitUntil](functions/waitUntil.md)

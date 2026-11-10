@@ -5,18 +5,20 @@ import { parseArguments } from '../../util/get-args';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import { getCommandName } from '../../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import Now from '../../util';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import stamp from '../../util/output/stamp';
+import renderLink from '../../util/output/link';
 import ua from '../../util/ua';
 import { getFetchDispatcher } from '../../util/fetch';
 import type { VercelClientOptions } from '@vercel/client';
 import { help } from '../help';
 import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { applyDeprecatedTargetFlag } from '../../util/parse-target';
 import output from '../../output-manager';
 import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
 import type {
@@ -46,7 +48,7 @@ export default async function redeploy(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new RedeployTelemetryClient({
@@ -57,27 +59,37 @@ export default async function redeploy(client: Client): Promise<number> {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('redeploy');
-    output.print(help(redeployCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(redeployCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   const deployIdOrUrl = parsedArgs.args[1];
   if (!deployIdOrUrl) {
     output.error(
       `Missing required deployment id or url: ${getCommandName(
-        `redeploy <deployment-id-or-url>`
+        `redeploy <deployment>`
       )}`
     );
     return 1;
   }
 
-  telemetry.trackCliArgumentUrlOrDeploymentId(deployIdOrUrl);
+  telemetry.trackCliArgumentDeployment(deployIdOrUrl);
   telemetry.trackCliFlagNoWait(parsedArgs.flags['--no-wait']);
   telemetry.trackCliOptionTarget(parsedArgs.flags['--target']);
+  telemetry.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
 
-  const { contextName } = await getScope(client);
+  if (!applyDeprecatedTargetFlag(client, parsedArgs.flags)) {
+    return 2;
+  }
+
+  const contextName = await getContextName(client);
   const noWait = !!parsedArgs.flags['--no-wait'];
-  const targetArgument = parsedArgs.flags['--target'];
+  const targetArgument = parsedArgs.flags['--environment'];
 
   try {
     const fromDeployment = await getDeploymentByIdOrURL({
@@ -123,7 +135,24 @@ export default async function redeploy(client: Client): Promise<number> {
       output.error(
         `The provided argument "${targetArgument}" is not a valid target environment.`
       );
-      return 1;
+      return 2;
+    }
+
+    if (
+      fromDeployment.prebuilt &&
+      fromDeployment.manualProvisioning === undefined
+    ) {
+      output.warning(
+        [
+          `Deployment ${fromDeployment.id} is a prebuilt deployment. Redeploying reuses its prebuilt output, so it is not rebuilt from source and will not use the latest environment variables or project settings.`,
+          `To use the latest settings, create a new deployment instead: run ${getCommandName(
+            'pull'
+          )}, ${getCommandName('build')}, and ${getCommandName(
+            'deploy --prebuilt'
+          )} with the same ${chalk.bold('--environment')} option (for example ${chalk.bold('--environment production')}).`,
+          `Learn More: ${renderLink('https://vercel.com/docs/cli/deploy#prebuilt')}`,
+        ].join('\n')
+      );
     }
 
     const deployStamp = stamp();

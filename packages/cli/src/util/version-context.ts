@@ -1,20 +1,22 @@
 import pkg from './pkg';
-import { packageName } from './pkg-name';
 import { getInstallRoot, isNativeBinaryInstall } from './native-install';
 import {
   CURL_INSTALL_COMMAND,
-  getLinkedVersion,
-  getPinnedVersion,
-  getPrBuildSha,
   isCurlInstall,
+  readNativeInstallState,
 } from './native-self-update';
 import {
   getUpdateCommandInfo,
+  HOMEBREW_UPGRADE_COMMAND,
+  isHomebrewInstall,
   type PackageManagerName,
 } from './get-update-command';
 
 export { CURL_INSTALL_COMMAND };
 export type { PackageManagerName };
+
+/** Homebrew installs the native binary but has no npm-style upgrade metadata. */
+export type VersionPackageManager = PackageManagerName | 'homebrew';
 
 export type CliRuntime = 'native' | 'node';
 export type VersionManager = 'installer' | 'package-manager';
@@ -31,21 +33,27 @@ export interface InstallerVersionContext extends VersionContextBase {
   manager: 'installer';
   canSwitchVersions: true;
   installRoot: string;
-  linkedVersion: string | undefined;
-  pinnedVersion: string | undefined;
+  track: 'production' | 'pr' | undefined;
+  slot: 'a' | 'b' | undefined;
+  activeVersion: string | undefined;
+  pendingProduction:
+    | {
+        slot: 'a' | 'b';
+        version: string;
+      }
+    | undefined;
   prBuild:
     | {
-        name: string;
         number: number;
         sha: string | undefined;
       }
     | undefined;
 }
 
-export interface PackageManagerVersionContext extends VersionContextBase {
+interface SupportedPackageManagerVersionContext extends VersionContextBase {
   manager: 'package-manager';
   canSwitchVersions: false;
-  packageManager: PackageManagerName;
+  packageManager: VersionPackageManager;
   /**
    * True when the package manager was not detected and npm is the fallback.
    * The upgrade command still uses npm in that case.
@@ -54,6 +62,20 @@ export interface PackageManagerVersionContext extends VersionContextBase {
   global: boolean;
   upgradeCommand: string;
 }
+
+interface UnsupportedPackageManagerVersionContext extends VersionContextBase {
+  manager: 'package-manager';
+  canSwitchVersions: false;
+  packageManager: undefined;
+  packageManagerAssumed: false;
+  global: undefined;
+  upgradeCommand: undefined;
+  upgradeError: Error;
+}
+
+export type PackageManagerVersionContext =
+  | SupportedPackageManagerVersionContext
+  | UnsupportedPackageManagerVersionContext;
 
 /**
  * How this CLI process is installed and which version is active.
@@ -85,51 +107,38 @@ export function getPackageManagerInstallCommand(
   context: PackageManagerVersionContext,
   version = 'latest'
 ): string {
+  if (context.upgradeCommand === undefined) {
+    throw context.upgradeError;
+  }
   if (context.upgradeCommand.includes('@latest')) {
     return context.upgradeCommand.replace('@latest', `@${version}`);
   }
   return context.upgradeCommand;
 }
 
-async function resolvePrBuild(
-  linkedVersion: string | undefined
-): Promise<InstallerVersionContext['prBuild']> {
-  if (!linkedVersion?.startsWith('pr-')) {
-    return undefined;
-  }
-  const number = Number(linkedVersion.slice(3));
-  if (!Number.isSafeInteger(number) || number <= 0) {
-    return undefined;
-  }
-  return {
-    name: linkedVersion,
-    number,
-    sha: await getPrBuildSha(linkedVersion),
-  };
-}
-
-function assumedNpmContext(
-  version: string,
-  runtime: CliRuntime
-): PackageManagerVersionContext {
-  return {
-    version,
-    runtime,
-    manager: 'package-manager',
-    canSwitchVersions: false,
-    packageManager: 'npm',
-    packageManagerAssumed: true,
-    global: true,
-    upgradeCommand: `npm i -g ${packageName}@latest`,
-  };
+interface VersionContextOptions {
+  signal?: AbortSignal;
 }
 
 async function resolvePackageManagerContext(
   version: string,
-  runtime: CliRuntime
+  runtime: CliRuntime,
+  options: VersionContextOptions
 ): Promise<PackageManagerVersionContext> {
+  if (await isHomebrewInstall()) {
+    return {
+      version,
+      runtime,
+      manager: 'package-manager',
+      canSwitchVersions: false,
+      packageManager: 'homebrew',
+      packageManagerAssumed: false,
+      global: true,
+      upgradeCommand: HOMEBREW_UPGRADE_COMMAND,
+    };
+  }
   try {
-    const info = await getUpdateCommandInfo();
+    const info = await getUpdateCommandInfo(undefined, options.signal);
     return {
       version,
       runtime,
@@ -140,33 +149,57 @@ async function resolvePackageManagerContext(
       global: info.global,
       upgradeCommand: info.command,
     };
-  } catch {
-    return assumedNpmContext(version, runtime);
+  } catch (error) {
+    if (options.signal?.aborted) {
+      throw error;
+    }
+    const upgradeError =
+      error instanceof Error
+        ? error
+        : new Error(
+            'Could not detect a supported global npm, pnpm, Yarn, or Bun installation of Vercel CLI. Update it with the package manager that installed it.'
+          );
+    return {
+      version,
+      runtime,
+      manager: 'package-manager',
+      canSwitchVersions: false,
+      packageManager: undefined,
+      packageManagerAssumed: false,
+      global: undefined,
+      upgradeCommand: undefined,
+      upgradeError,
+    };
   }
 }
 
-export async function getVersionContext(): Promise<VersionContext> {
+export async function getVersionContext(
+  options: VersionContextOptions = {}
+): Promise<VersionContext> {
   const version = pkg.version;
   const runtime: CliRuntime = isNativeBinaryInstall() ? 'native' : 'node';
 
   if (await isCurlInstall()) {
-    const [linkedVersion, pinnedVersion] = await Promise.all([
-      getLinkedVersion(),
-      getPinnedVersion(),
-    ]);
+    const installRoot = getInstallRoot();
+    const state = await readNativeInstallState(installRoot);
     return {
       version,
       runtime: 'native',
       manager: 'installer',
       canSwitchVersions: true,
-      installRoot: getInstallRoot(),
-      linkedVersion,
-      pinnedVersion,
-      prBuild: await resolvePrBuild(linkedVersion),
+      installRoot,
+      track: state?.track,
+      slot: state?.slot,
+      activeVersion: state?.version,
+      pendingProduction: state?.pendingProduction,
+      prBuild:
+        state?.track === 'pr' && state.pr
+          ? { number: state.pr, sha: state.buildSha }
+          : undefined,
     };
   }
 
-  return resolvePackageManagerContext(version, runtime);
+  return resolvePackageManagerContext(version, runtime, options);
 }
 
 export function describeRuntime(context: VersionContext): string {
@@ -178,6 +211,12 @@ export function describeManager(context: VersionContext): string {
     return `Vercel installer (${context.installRoot})`;
   }
 
+  if (context.global === undefined) {
+    return 'package manager (unsupported installation)';
+  }
+  if (context.packageManager === 'homebrew') {
+    return 'Homebrew';
+  }
   const scope = context.global ? 'global' : 'local';
   if (context.packageManagerAssumed) {
     return `package manager (assumed ${context.packageManager}, ${scope})`;

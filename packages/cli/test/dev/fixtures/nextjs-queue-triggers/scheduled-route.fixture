@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import { handleSchedule } from '@vercel/schedules';
+import { record } from '../../../record';
+
+export const runtime = 'nodejs';
+
+export async function POST(request) {
+  assert.equal(await request.clone().text(), '');
+  assert.equal(request.headers.get('content-type'), null);
+  assert.equal(request.headers.get('ce-time'), null);
+  assert.equal(request.headers.get('ce-vssscheduleexecutionid'), null);
+  assert(request.headers.get('ce-id'));
+  assert(request.headers.get('ce-vssscheduledat'));
+  return handleSchedule(metadata => {
+    assert(metadata.scheduledAt instanceof Date);
+    assert.equal(
+      metadata.scheduledAt.toISOString(),
+      request.headers.get('ce-vssscheduledat')
+    );
+    assert.equal(metadata.executionId, request.headers.get('ce-id'));
+    assert(!Object.hasOwn(metadata, 'firedAt'));
+    return record('direct', 'v1', undefined, metadata);
+  })(request);
+}

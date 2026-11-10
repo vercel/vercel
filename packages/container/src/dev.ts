@@ -8,14 +8,19 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import {
-  debug,
-  devImageTag,
-  findDockerfile,
-  isDockerfileRef,
-  readString,
-  withSpan,
-} from './util';
+import { resolveImageSource } from './image-source';
+import { debug, devImageTag, normalizeCommand, withSpan } from './util';
+
+/**
+ * Callbacks the dev orchestrator provides so long-running child output is
+ * routed through the CLI's per-service prefixed logger rather than written to
+ * `process.stderr` directly (which would print unprefixed and interleave with
+ * other services).
+ */
+interface DevOutput {
+  onStdout?: (data: Buffer) => void;
+  onStderr?: (data: Buffer) => void;
+}
 
 /**
  * Host/shell environment variables that are meaningful only on the developer's
@@ -102,19 +107,20 @@ function useContainerHost(endpoint: string): string {
   return endpoint;
 }
 
-/**
- * Sink for all dev output. `vercel dev` runs many services in parallel and
- * prefixes each service's logs (e.g. `[api]`) by piping through per-service
- * `onStdout`/`onStderr` callbacks. So in dev we must route ALL output
- * (status lines, `docker build`, the container) through these callbacks rather
- * than writing to `process.stderr` directly (which would print unprefixed and
- * interleave with other services).
- */
-interface DevOutput {
-  onStdout?: (data: Buffer) => void;
-  onStderr?: (data: Buffer) => void;
+interface DevResourceEndpoints {
+  queues?: {
+    direct: string;
+    proxy: string;
+  };
+  runtimeCache?: {
+    direct: string;
+    proxy: string;
+  };
 }
 
+// All dev output must route through the per-service `DevOutput` callbacks;
+// writing to `process.stderr` directly would print unprefixed and interleave
+// with other services.
 function emit(out: DevOutput, line: string): void {
   if (out.onStderr) {
     out.onStderr(Buffer.from(`${line}\n`));
@@ -186,19 +192,6 @@ function runForwarded(
   });
 }
 
-function normalizeCommand(command: unknown): string[] | undefined {
-  if (typeof command === 'string') {
-    return [command];
-  }
-  if (
-    Array.isArray(command) &&
-    command.every(item => typeof item === 'string')
-  ) {
-    return command;
-  }
-  return undefined;
-}
-
 /**
  * Resolve the image to run locally: either a configured prebuilt image, or one
  * built locally from the service's Dockerfile.
@@ -210,39 +203,30 @@ async function resolveDevImage(
   options: StartDevServerOptions,
   out: DevOutput,
   span?: Span
-): Promise<string> {
-  const { config, workPath, entrypoint } = options;
+): Promise<{ image: string }> {
+  // Mirrors the build path (`resolveImageHandler`) so dev and deploy resolve
+  // the same image source.
+  const source = resolveImageSource(options, 'dev');
 
-  const entrypointRef = readString(entrypoint);
-  // An entrypoint that names a Dockerfile (including the `Dockerfile.vercel` /
-  // `Containerfile.vercel` opt-in markers) is built directly. Otherwise — e.g.
-  // when the `container` framework preset resolves its entrypoint via
-  // `<detect>` — discover an opt-in marker in the work directory. This mirrors
-  // the build path (`resolveImageHandler`) so dev and deploy resolve the same
-  // Dockerfile.
-  const dockerfileConfigured =
-    entrypointRef && isDockerfileRef(entrypointRef)
-      ? entrypointRef
-      : findDockerfile(workPath);
-  const dockerfileRel = dockerfileConfigured ?? 'Dockerfile';
-  const dockerfilePath = path.join(workPath, dockerfileRel);
-  const hasDockerfile =
-    dockerfileConfigured !== undefined || existsSync(dockerfilePath);
-
-  const prebuiltImage =
-    readString(config.handler) ?? (hasDockerfile ? undefined : entrypointRef);
-
-  if (!hasDockerfile) {
-    if (!prebuiltImage) {
-      throw new Error(
-        'Container service must specify an entrypoint: a prebuilt OCI image ' +
-          'reference, or a Dockerfile path to run with `vercel dev`.'
-      );
-    }
+  if (source.kind === 'prebuilt') {
     span?.setAttributes({ 'container.dev_mode': 'prebuilt' });
-    emit(out, `▲ container  vercel dev: using prebuilt image ${prebuiltImage}`);
-    return prebuiltImage;
+    emit(
+      out,
+      `▲ container  vercel dev: using prebuilt image ${source.imageRef}`
+    );
+    return { image: source.imageRef };
   }
+
+  if (source.kind === 'buildpack') {
+    // `vercel dev` runs buildpack-backed services natively and never reaches
+    // this builder for them; only Dockerfile and prebuilt images run in a
+    // local container.
+    throw new Error(
+      `Unexpected buildpack image source in \`vercel dev\` for "${options.workPath}".`
+    );
+  }
+
+  const { dockerfilePath } = source;
 
   if (!existsSync(dockerfilePath)) {
     throw new Error(
@@ -276,7 +260,7 @@ async function resolveDevImage(
     out
   );
   emit(out, `▲ container  built ${tag}`);
-  return tag;
+  return { image: tag };
 }
 
 /**
@@ -498,8 +482,11 @@ async function startContainer(
       // letting `docker build`/`docker run` fail later with a bare exit code.
       await assertDockerAvailable(out);
 
-      const image = await withSpan(span, 'container.dev.resolve_image', {}, s =>
-        resolveDevImage(options, out, s)
+      const { image } = await withSpan(
+        span,
+        'container.dev.resolve_image',
+        {},
+        s => resolveDevImage(options, out, s)
       );
 
       const containerPort = await resolveContainerPort(image, out);
@@ -526,22 +513,44 @@ async function startContainer(
           mergedEnv[key] = value;
         }
       }
+      const devResourceEndpoints = meta?.devResourceEndpoints as
+        | DevResourceEndpoints
+        | undefined;
       const runtimeCacheEndpoint = mergedEnv.RUNTIME_CACHE_ENDPOINT;
+      const runtimeCacheProxy = devResourceEndpoints?.runtimeCache;
+      const usesRuntimeCacheProxy =
+        runtimeCacheEndpoint === runtimeCacheProxy?.direct;
       const containerRuntimeCacheEndpoint = runtimeCacheEndpoint
-        ? useContainerHost(runtimeCacheEndpoint)
+        ? useContainerHost(
+            usesRuntimeCacheProxy && runtimeCacheProxy
+              ? runtimeCacheProxy.proxy
+              : runtimeCacheEndpoint
+          )
+        : undefined;
+      const queueBaseUrl = mergedEnv.VERCEL_QUEUE_BASE_URL;
+      const queueProxy = devResourceEndpoints?.queues;
+      const usesQueueProxy = queueBaseUrl === queueProxy?.direct;
+      const containerQueueBaseUrl = queueBaseUrl
+        ? useContainerHost(
+            usesQueueProxy && queueProxy ? queueProxy.proxy : queueBaseUrl
+          )
         : undefined;
       const needsHostGateway =
-        containerRuntimeCacheEndpoint !== undefined &&
-        containerRuntimeCacheEndpoint !== runtimeCacheEndpoint;
+        (containerRuntimeCacheEndpoint !== undefined &&
+          containerRuntimeCacheEndpoint !== runtimeCacheEndpoint) ||
+        (containerQueueBaseUrl !== undefined &&
+          containerQueueBaseUrl !== queueBaseUrl);
       if (containerRuntimeCacheEndpoint) {
         mergedEnv.RUNTIME_CACHE_ENDPOINT = containerRuntimeCacheEndpoint;
+      }
+      if (containerQueueBaseUrl) {
+        mergedEnv.VERCEL_QUEUE_BASE_URL = containerQueueBaseUrl;
       }
       mergedEnv.PORT = String(containerPort);
       const envFilePath = writeEnvFile(mergedEnv);
 
-      const command = normalizeCommand(
-        (config as { command?: unknown }).command
-      );
+      const rawCommand = (config as { command?: unknown }).command;
+      const command = normalizeCommand(rawCommand);
 
       // Honor the host port the orchestrator pre-allocated for this service
       // (passed via `meta.port`). Service bindings are built against this port

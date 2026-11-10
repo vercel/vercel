@@ -13,7 +13,10 @@ import {
   STATIC_BUILDERS,
   CONTAINER_ENTRYPOINT_CANDIDATES,
 } from './runtimes/constants';
-import { inferRuntimeFromFramework } from './runtimes/framework';
+import {
+  inferRuntimeFromFramework,
+  isFrontendFramework,
+} from './runtimes/framework';
 import { getBuilderForRuntime, inferRuntime } from './runtimes/runtime';
 import {
   isDockerfileEntrypoint,
@@ -21,10 +24,16 @@ import {
   stripTrailingSlash,
 } from './runtimes/entrypoint';
 import {
+  getGoPackageName,
+  hasBuildpackProjectMarker,
+  toBuildpackRuntime,
+} from '../buildpack-runtimes';
+import {
   getServiceFs,
   resolveEntrypointPath,
   detectFrameworkFromWorkspace,
 } from './resolve';
+import { hasFile } from './utils';
 import type { DetectorFilesystem } from '../detectors/filesystem';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
@@ -55,6 +64,19 @@ async function detectContainerEntrypoint(
     }
   }
   return undefined;
+}
+
+/** Whether a service's Go entrypoint file declares `package main`. */
+async function isGoMainPackage(
+  serviceFs: DetectorFilesystem,
+  entrypoint: string
+): Promise<boolean> {
+  try {
+    const source = await serviceFs.readFile(entrypoint);
+    return getGoPackageName(source.toString('utf8')) === 'main';
+  } catch {
+    return false;
+  }
 }
 
 function normalizeContainerCommand(
@@ -315,7 +337,45 @@ export async function resolveConfiguredServiceV2(
     });
   }
 
-  if (entrypointIsDirectory && !framework) {
+  // A runtime whose buildpack flag is on. `command` is a container-only
+  // setting: reject it for every such service, whether or not it ends up on
+  // the buildpack below, rather than letting a legacy build drop it silently.
+  const flaggedBuildpackRuntime = toBuildpackRuntime(
+    inferredRuntime as ServiceRuntime | undefined
+  );
+  if (flaggedBuildpackRuntime && config.command !== undefined) {
+    return {
+      error: {
+        code: 'INVALID_COMMAND',
+        message: `Service "${name}" can only specify "command" when using runtime "container".`,
+        serviceName: name,
+      },
+    };
+  }
+
+  // Build with the buildpack only when:
+  // - the service names no entrypoint file, or one the buildpack claims. Any
+  //   other file may be a handler rather than a server, so it keeps the
+  //   legacy runtime;
+  // - the service is not a frontend framework, which keeps its own builder;
+  // - the buildpack's project marker is at the service root.
+  const buildpackRuntime =
+    flaggedBuildpackRuntime &&
+    (!entrypointFile ||
+      // The Ruby buildpack discovers config.ru at the service root itself.
+      (flaggedBuildpackRuntime === 'ruby' && entrypointFile === 'config.ru') ||
+      // A Go `package main` entrypoint is a standalone server the buildpack
+      // builds from the entrypoint's package.
+      (flaggedBuildpackRuntime === 'go' &&
+        (await isGoMainPackage(serviceFs, entrypointFile)))) &&
+    !isFrontendFramework(framework) &&
+    (await hasBuildpackProjectMarker(flaggedBuildpackRuntime, marker =>
+      hasFile(serviceFs, marker)
+    ))
+      ? flaggedBuildpackRuntime
+      : undefined;
+
+  if (entrypointIsDirectory && !framework && !buildpackRuntime) {
     return {
       error: {
         code: 'MISSING_SERVICE_FRAMEWORK',
@@ -328,7 +388,12 @@ export async function resolveConfiguredServiceV2(
   }
 
   const frameworkRuntime = inferRuntimeFromFramework(framework);
-  if (detectedFramework && frameworkRuntime && !entrypointFile) {
+  if (
+    detectedFramework &&
+    frameworkRuntime &&
+    !entrypointFile &&
+    !buildpackRuntime
+  ) {
     return {
       error: {
         code: 'MISSING_SERVICE_CONFIG',
@@ -343,7 +408,10 @@ export async function resolveConfiguredServiceV2(
     : undefined;
   let builderUse: string;
   let builderSrc: string;
-  if (framework) {
+  if (buildpackRuntime) {
+    builderUse = '@vercel/container';
+    builderSrc = '<detect>';
+  } else if (framework) {
     builderUse = isNodeBackendFramework(framework)
       ? '@vercel/backends'
       : frameworkDefinition?.useRuntime?.use || '@vercel/static-build';
@@ -397,6 +465,20 @@ export async function resolveConfiguredServiceV2(
   }
   if (framework) {
     builderConfig.framework = framework;
+  }
+  if (buildpackRuntime) {
+    builderConfig.buildpack = buildpackRuntime;
+    // The builder only receives the `<detect>` sentinel, so name the package
+    // the Go buildpack builds: a `package main` entrypoint's package, or a
+    // directory entrypoint below the service root. The service root itself
+    // leaves discovery to the build, as when no entrypoint is set.
+    const goEntrypoint =
+      buildpackRuntime === 'go' && normalizedEntrypoint
+        ? stripTrailingSlash(normalizedEntrypoint)
+        : undefined;
+    if (goEntrypoint && goEntrypoint !== '.') {
+      builderConfig.buildpackEntrypoint = goEntrypoint;
+    }
   }
   if (config.outputDirectory) {
     builderConfig.outputDirectory = config.outputDirectory;

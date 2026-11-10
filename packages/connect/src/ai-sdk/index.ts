@@ -11,10 +11,12 @@
  * the AI SDK's own `toolApproval` primitive (and `wrapMcpTools` in
  * `@ai-sdk/policy-opa`). See `docs/ai-sdk-mcp-integration.md`.
  *
- * Both `ai` and `@ai-sdk/mcp` are optional peer dependencies:
- * importing this entrypoint requires them to be installed in the
- * consumer project, but the rest of `@vercel/connect` works without
- * them.
+ * This entrypoint has no runtime or type import of `ai` or
+ * `@ai-sdk/mcp`; `connectAuthProvider` returns the self-contained
+ * `ConnectOAuthClientProvider`, which the test suite asserts is
+ * assignable to `@ai-sdk/mcp`'s `OAuthClientProvider`. Both packages
+ * are declared as optional peers only to signal the tested version
+ * ranges.
  *
  * ```ts
  * import { createMCPClient } from '@ai-sdk/mcp';
@@ -49,9 +51,19 @@
  * ```
  */
 export {
+  CONNECT_DISCOVERY_STATE,
+  CONNECT_MANAGED_REDIRECT_URL,
   connectAuthProvider,
   ConsentRequiredError,
+  getConsentChallenge,
+  isConsentRequiredError,
   type ConnectAuthProviderOptions,
+  type ConnectConsentMode,
+  type ConnectOAuthClientInformation,
+  type ConnectOAuthClientMetadata,
+  type ConnectOAuthClientProvider,
+  type ConnectOAuthDiscoveryState,
+  type ConnectOAuthTokens,
   type ConsentChallenge,
 } from '../mcp/connect-auth-provider.js';
 
@@ -66,3 +78,14 @@ export {
   type ConnectTokenSubject,
   type ConnectVendorErrorPayload,
 } from '../token.js';
+
+export {
+  experimental_connectEventsAdapter,
+  type Experimental_ConnectEventsAdapter,
+  type Experimental_ConnectEventOperations,
+  type Experimental_ConnectEventsAdapterOptions,
+  type Experimental_ConnectEventsListInput,
+  type Experimental_ConnectEventsRequestOptions,
+  type Experimental_ConnectEventsSubscribeInput,
+  type Experimental_ConnectEventsSubscription,
+} from './connect-events-adapter.js';

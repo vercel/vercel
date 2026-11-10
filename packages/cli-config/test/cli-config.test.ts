@@ -68,6 +68,35 @@ describe('cli-config schema', () => {
     });
   });
 
+  it('preserves automatic enrollment separately from an explicit opt-out', () => {
+    const config = {
+      nativeBinaryAutoOptIn: true,
+      useNativeBinary: false,
+    };
+    expect(parseGlobalConfig(config)).toEqual(config);
+    expect(parseGlobalConfig({})).not.toHaveProperty('nativeBinaryAutoOptIn');
+  });
+
+  it.each([
+    true,
+    false,
+  ])('accepts boolean automatic enrollment %s', nativeBinaryAutoOptIn => {
+    const config = { nativeBinaryAutoOptIn };
+    expect(parseGlobalConfig(config)).toEqual(config);
+  });
+
+  it.each([
+    'vercel-team',
+    'unknown',
+    'true',
+    'false',
+    null,
+    0,
+    1,
+  ])('rejects invalid automatic enrollment %j', nativeBinaryAutoOptIn => {
+    expect(() => parseGlobalConfig({ nativeBinaryAutoOptIn })).toThrow();
+  });
+
   it('rejects invalid global config shapes', () => {
     expect(() =>
       parseGlobalConfig({

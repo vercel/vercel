@@ -20,7 +20,8 @@ const ifNoneMatchOption = {
 
 const accessOption = {
   name: 'access',
-  shorthand: 'a',
+  shorthand: null,
+  deprecatedShorthand: 'a',
   type: String,
   deprecated: false,
   description: 'Access level for the blob: public or private (required)',
@@ -28,16 +29,16 @@ const accessOption = {
   choices: ['public', 'private'],
 } as const;
 
-import { yesOption } from '../../util/arg-common';
+import { jsonOption, yesOption } from '../../util/arg-common';
 
 const environmentOption = {
   name: 'environment',
   shorthand: 'e',
   type: [String],
   deprecated: false,
-  argument: 'ENV',
+  argument: 'ENVIRONMENT',
   description:
-    'Environment to connect (can be repeated: production, preview, development). Defaults to all when --yes is used.',
+    'Environment to connect (can be repeated: production, preview, development) (default: all when --yes is used).',
 } as const;
 
 export const listSubcommand = {
@@ -48,7 +49,8 @@ export const listSubcommand = {
   options: [
     {
       name: 'limit',
-      shorthand: 'l',
+      shorthand: 'n',
+      deprecatedShorthand: 'l',
       type: Number,
       deprecated: false,
       description:
@@ -60,7 +62,8 @@ export const listSubcommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Continue from a previous response',
+      description:
+        'Show the next page using the cursor from the previous output',
       argument: 'CURSOR',
     },
     {
@@ -73,7 +76,8 @@ export const listSubcommand = {
     },
     {
       name: 'prefix',
-      shorthand: 'p',
+      shorthand: null,
+      deprecatedShorthand: 'p',
       type: String,
       deprecated: false,
       description: 'Prefix to filter Blobs by',
@@ -81,7 +85,8 @@ export const listSubcommand = {
     },
     {
       name: 'mode',
-      shorthand: 'm',
+      shorthand: null,
+      deprecatedShorthand: 'm',
       type: String,
       deprecated: false,
       description:
@@ -89,6 +94,7 @@ export const listSubcommand = {
       argument: 'String',
       choices: ['folded', 'expanded'],
     },
+    jsonOption,
   ],
   examples: [],
 } as const;
@@ -107,15 +113,16 @@ export const putSubcommand = {
     accessOption,
     {
       name: 'add-random-suffix',
-      shorthand: 'r',
+      shorthand: null,
+      deprecatedShorthand: 'r',
       type: Boolean,
       deprecated: false,
       description: 'Add a random suffix to the file name (default: false)',
-      argument: 'Boolean',
     },
     {
       name: 'pathname',
-      shorthand: 'p',
+      shorthand: null,
+      deprecatedShorthand: 'p',
       type: String,
       deprecated: false,
       description: 'Pathname to upload the file to (default: filename)',
@@ -123,16 +130,24 @@ export const putSubcommand = {
     },
     {
       name: 'multipart',
-      shorthand: 'u',
+      shorthand: null,
+      deprecatedShorthand: 'u',
       type: Boolean,
       deprecated: false,
       description:
-        'If true upload the file in multiple small chunks for performance and reliability (default: true)',
-      argument: 'Boolean',
+        'Upload the file in multiple small chunks for performance and reliability (default: true)',
+    },
+    {
+      name: 'no-multipart',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Upload the file in a single request',
     },
     {
       name: 'content-type',
-      shorthand: 't',
+      shorthand: null,
+      deprecatedShorthand: 't',
       type: String,
       deprecated: false,
       description:
@@ -141,7 +156,8 @@ export const putSubcommand = {
     },
     {
       name: 'cache-control-max-age',
-      shorthand: 'c',
+      shorthand: null,
+      deprecatedShorthand: 'c',
       type: Number,
       deprecated: false,
       description:
@@ -149,12 +165,19 @@ export const putSubcommand = {
       argument: 'Number',
     },
     {
-      name: 'allow-overwrite',
+      name: 'force',
       shorthand: null,
       type: Boolean,
       deprecated: false,
       description: 'Overwrite the file if it already exists (default: false)',
-      argument: 'Boolean',
+    },
+    // Hidden: `--allow-overwrite` is the old name of `--force`.
+    {
+      name: 'allow-overwrite',
+      shorthand: null,
+      type: Boolean,
+      deprecated: true,
+      description: 'Deprecated alias for `--force`',
     },
     ifMatchOption,
   ],
@@ -162,8 +185,8 @@ export const putSubcommand = {
 } as const;
 
 export const delSubcommand = {
-  name: 'del',
-  aliases: [],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete a file from the Blob store',
   arguments: [
     {
@@ -171,7 +194,13 @@ export const delSubcommand = {
       required: true,
     },
   ],
-  options: [ifMatchOption],
+  options: [
+    ifMatchOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting blobs',
+    },
+  ],
   examples: [],
 } as const;
 
@@ -193,15 +222,16 @@ export const copySubcommand = {
     accessOption,
     {
       name: 'add-random-suffix',
-      shorthand: 'r',
+      shorthand: null,
+      deprecatedShorthand: 'r',
       type: Boolean,
       deprecated: false,
       description: 'Add a random suffix to the file name',
-      argument: 'Boolean',
     },
     {
       name: 'content-type',
-      shorthand: 't',
+      shorthand: null,
+      deprecatedShorthand: 't',
       type: String,
       deprecated: false,
       description:
@@ -210,7 +240,8 @@ export const copySubcommand = {
     },
     {
       name: 'cache-control-max-age',
-      shorthand: 'c',
+      shorthand: null,
+      deprecatedShorthand: 'c',
       type: Number,
       deprecated: false,
       description:
@@ -248,6 +279,7 @@ export const getSubcommand = {
 } as const;
 
 export const putImageSubcommand = {
+  descriptionTone: 'normal',
   name: 'put-image',
   aliases: [],
   description:
@@ -262,7 +294,8 @@ export const putImageSubcommand = {
     accessOption,
     {
       name: 'width',
-      shorthand: 'w',
+      shorthand: null,
+      deprecatedShorthand: 'w',
       type: Number,
       deprecated: false,
       description:
@@ -271,7 +304,8 @@ export const putImageSubcommand = {
     },
     {
       name: 'quality',
-      shorthand: 'q',
+      shorthand: null,
+      deprecatedShorthand: 'q',
       type: Number,
       deprecated: false,
       description:
@@ -280,7 +314,8 @@ export const putImageSubcommand = {
     },
     {
       name: 'format',
-      shorthand: 'F',
+      shorthand: null,
+      deprecatedShorthand: 'F',
       type: String,
       deprecated: false,
       description:
@@ -290,7 +325,8 @@ export const putImageSubcommand = {
     },
     {
       name: 'pathname',
-      shorthand: 'p',
+      shorthand: null,
+      deprecatedShorthand: 'p',
       type: String,
       deprecated: false,
       description:
@@ -299,15 +335,16 @@ export const putImageSubcommand = {
     },
     {
       name: 'add-random-suffix',
-      shorthand: 'r',
+      shorthand: null,
+      deprecatedShorthand: 'r',
       type: Boolean,
       deprecated: false,
       description: 'Add a random suffix to the file name (default: false)',
-      argument: 'Boolean',
     },
     {
       name: 'cache-control-max-age',
-      shorthand: 'c',
+      shorthand: null,
+      deprecatedShorthand: 'c',
       type: Number,
       deprecated: false,
       description:
@@ -315,12 +352,19 @@ export const putImageSubcommand = {
       argument: 'Number',
     },
     {
-      name: 'allow-overwrite',
+      name: 'force',
       shorthand: null,
       type: Boolean,
       deprecated: false,
       description: 'Overwrite the file if it already exists (default: false)',
-      argument: 'Boolean',
+    },
+    // Hidden: `--allow-overwrite` is the old name of `--force`.
+    {
+      name: 'allow-overwrite',
+      shorthand: null,
+      type: Boolean,
+      deprecated: true,
+      description: 'Deprecated alias for `--force`',
     },
     {
       name: 'json',
@@ -352,15 +396,17 @@ export const signedTokenSubcommand = {
   options: [
     {
       name: 'pathname',
-      shorthand: 'p',
+      shorthand: null,
+      deprecatedShorthand: 'p',
       type: String,
       deprecated: false,
-      description: 'Pathname scope for the token. Defaults to "*" when omitted',
+      description: 'Pathname scope for the token (default: "*")',
       argument: 'STRING',
     },
     {
       name: 'operation',
-      shorthand: 'o',
+      shorthand: null,
+      deprecatedShorthand: 'o',
       type: [String],
       deprecated: false,
       description: 'Allowed operation(s): get, head, put, delete (repeatable)',
@@ -438,7 +484,8 @@ export const presignSubcommand = {
     accessOption,
     {
       name: 'operation',
-      shorthand: 'o',
+      shorthand: null,
+      deprecatedShorthand: 'o',
       type: String,
       deprecated: false,
       description:
@@ -548,6 +595,7 @@ export const presignSubcommand = {
     },
     {
       name: 'Generate a presigned URL from existing signed-token output',
+      placeholders: ['<delegationToken>', '<clientSigningToken>'],
       value:
         'vercel blob presign uploads/image.jpg --access private --operation put --delegation-token <delegationToken> --client-signing-token <clientSigningToken>',
     },
@@ -568,7 +616,8 @@ export const createStoreSubcommand = {
     accessOption,
     {
       name: 'region',
-      shorthand: 'r',
+      shorthand: null,
+      deprecatedShorthand: 'r',
       type: String,
       deprecated: false,
       description:
@@ -651,7 +700,7 @@ export const listStoresSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output results as JSON',
+      description: 'Output as JSON',
     },
     {
       name: 'no-projects',
@@ -699,7 +748,8 @@ export const blobCommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Read_Write_Token for the Blob store',
+      description:
+        'Use a read-write token instead of OIDC or environment credentials',
       argument: 'String',
     },
     {
@@ -708,16 +758,25 @@ export const blobCommand = {
       type: String,
       deprecated: false,
       description:
-        'OIDC token for the Blob store (must be passed together with --store-id)',
+        'OIDC token for the Blob store (must be passed together with --store)',
       argument: 'String',
     },
     {
-      name: 'store-id',
+      name: 'store',
       shorthand: null,
       type: String,
       deprecated: false,
       description:
         'Blob store id, with or without the "store_" prefix (must be passed together with --oidc-token)',
+      argument: 'STORE',
+    },
+    // Hidden: `--store-id` is the old name of `--store`.
+    {
+      name: 'store-id',
+      shorthand: null,
+      type: String,
+      deprecated: true,
+      description: 'Deprecated alias for `--store`',
       argument: 'String',
     },
   ],

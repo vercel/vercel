@@ -10,6 +10,11 @@ import {
 import { useStageRoutes } from '../../../mocks/routes';
 import { shellQuoteRouteIdentifierForSuggestion } from '../../../../src/commands/routes/shared';
 import routes from '../../../../src/commands/routes';
+import { help } from '../../../../src/commands/help';
+import {
+  reorderSubcommand,
+  routesCommand,
+} from '../../../../src/commands/routes/command';
 
 describe('routes reorder', () => {
   beforeEach(() => {
@@ -37,7 +42,7 @@ describe('routes reorder', () => {
   it('should show help with --help flag', async () => {
     client.setArgv('routes', 'reorder', '--help');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(2);
+    expect(exitCode).toEqual(0);
   });
 
   it('should reorder to first position with --first', async () => {
@@ -143,7 +148,7 @@ describe('routes reorder', () => {
       '--yes'
     );
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Invalid position');
   });
 
@@ -181,7 +186,7 @@ describe('routes reorder', () => {
     useStageRoutes();
     client.setArgv('routes', 'reorder');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
   });
 
   it('should error when route not found', async () => {
@@ -207,7 +212,7 @@ describe('routes reorder', () => {
     useStageRoutesWithSingleRoute();
     client.setArgv('routes', 'reorder', 'Only Route', '--first', '--yes');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('only one route');
   });
 
@@ -259,7 +264,7 @@ describe('routes reorder', () => {
     useStageRoutes();
     client.setArgv('routes', 'reorder', 'Route 1', '--position', '0', '--yes');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('must be 1 or greater');
   });
 
@@ -307,9 +312,85 @@ describe('routes reorder', () => {
         n.command.includes('--project explicit-routes')
       )
     ).toBe(true);
-    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(exitSpy).toHaveBeenCalledWith(2);
     logSpy.mockRestore();
     exitSpy.mockRestore();
     client.nonInteractive = false;
+  });
+
+  describe('subcommand name', () => {
+    it('warns when invoked as the deprecated reorder name', async () => {
+      useStageRoutes();
+      client.setArgv('routes', 'reorder', 'Route 3', '--first', '--yes');
+
+      expect(await routes(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel routes reorder` is deprecated. Use `vercel routes move`.'
+      );
+    });
+
+    it('does not warn when invoked as move', async () => {
+      useStageRoutes();
+      client.setArgv('routes', 'move', 'Route 3', '--first', '--yes');
+
+      expect(await routes(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:move', value: 'move' },
+      ]);
+    });
+
+    it('teaches move in suggestions', async () => {
+      useStageRoutes();
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_dummy';
+      useProject({
+        ...defaultProject,
+        id: 'explicit-routes',
+        name: 'explicit-routes',
+        accountId: 'team_dummy',
+      });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((() => undefined) as never);
+      client.nonInteractive = true;
+      client.setArgv(
+        'routes',
+        'reorder',
+        'Route 1',
+        '--position',
+        '0',
+        '--yes',
+        '--non-interactive',
+        '--project',
+        'explicit-routes'
+      );
+      await routes(client);
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      for (const { command } of payload.next) {
+        expect(command).toContain('routes move ');
+      }
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
+    it('shows only move in help', () => {
+      const groupHelp = help(routesCommand, {
+        stream: { isTTY: false },
+        columns: 120,
+      });
+      expect(groupHelp).toMatch(/^ {2}move\s/m);
+      expect(groupHelp).not.toContain('reorder');
+
+      const moveHelp = help(reorderSubcommand, {
+        stream: { isTTY: false },
+        parent: routesCommand,
+        columns: 120,
+      });
+      expect(moveHelp).toContain('routes move "Catch All" --first');
+      expect(moveHelp).not.toContain('reorder');
+    });
   });
 });

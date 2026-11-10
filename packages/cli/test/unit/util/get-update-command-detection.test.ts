@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { join, sep } from 'path';
 
 const { mockExecFile, mockIsNative } = vi.hoisted(() => ({
@@ -6,284 +6,514 @@ const { mockExecFile, mockIsNative } = vi.hoisted(() => ({
   mockIsNative: vi.fn(),
 }));
 
-vi.mock('child_process', () => {
-  const customSym = Symbol.for('nodejs.util.promisify.custom');
-  const execFile: any = vi.fn();
-  execFile[customSym] = (file: string, args: string[]) =>
-    mockExecFile(file, args);
-  return { execFile };
-});
-
-vi.mock('fs-extra', () => ({
-  realpath: vi.fn(),
-  readFile: vi.fn().mockResolvedValue(Buffer.from('')),
+vi.mock('child_process', () => ({
+  // The packaged native runtime wraps execFile without Node's promisify
+  // metadata. Exercise its callback API rather than mocking a custom promise.
+  execFile: (
+    file: string,
+    args: string[],
+    options: object,
+    callback: (error: Error | null, stdout?: string, stderr?: string) => void
+  ) => {
+    mockExecFile(file, args, options).then(
+      ({ stdout, stderr }: { stdout: string; stderr: string }) =>
+        callback(null, stdout, stderr),
+      (error: Error) => callback(error)
+    );
+  },
 }));
 
-vi.mock('@vercel/build-utils', () => ({ scanParentDirs: vi.fn() }));
-
+vi.mock('fs-extra', () => ({ realpath: vi.fn() }));
 vi.mock('../../../src/util/native-install', () => ({
   isNativeBinaryInstall: () => mockIsNative(),
 }));
-
 vi.mock('../../../src/util/pkg-name', () => ({ packageName: 'vercel' }));
 
-import { getUpdateCommandInfo } from '../../../src/util/get-update-command';
+import getUpdateCommand, {
+  getUpdateCommandInfo,
+  HomebrewInstallError,
+  isGlobal,
+  isHomebrewInstall,
+} from '../../../src/util/get-update-command';
+import {
+  trustedUpgradeDirectory,
+  trustedUpgradeEnvironment,
+} from '../../../src/util/upgrade-environment';
 import { realpath } from 'fs-extra';
-import { scanParentDirs } from '@vercel/build-utils';
 
 const realpathMock = vi.mocked(realpath);
-const scanParentDirsMock = vi.mocked(scanParentDirs);
 
 describe('getUpdateCommandInfo install detection', () => {
+  const originalArgv = process.argv;
+  const originalExecPath = process.execPath;
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    realpathMock.mockImplementation(async (p: any) => String(p));
+    vi.resetAllMocks();
+    process.argv = ['/usr/bin/node', '/install/vercel/dist/vc.js'];
     mockIsNative.mockReturnValue(false);
+    mockExecFile.mockRejectedValue(new Error('not installed'));
+    realpathMock.mockImplementation(async (path: any) => String(path));
   });
 
-  describe('global installed, local not', () => {
-    it('detects a global npm install under the npm global root', async () => {
-      const npmRoot = join(sep, 'gnm');
-      const installPath = join(npmRoot, 'vercel', 'dist');
-      realpathMock.mockResolvedValueOnce(installPath);
-      mockExecFile.mockImplementation(async (file: string) => {
-        if (file === 'npm') return { stdout: `${npmRoot}\n`, stderr: '' };
-        throw new Error('not installed');
-      });
+  afterEach(() => {
+    process.argv = originalArgv;
+    Object.defineProperty(process, 'execPath', { value: originalExecPath });
+  });
 
-      const info = await getUpdateCommandInfo();
+  it.each([
+    {
+      manager: 'npm',
+      output: `${join(sep, 'global', 'npm')}\n`,
+      installPath: join(sep, 'global', 'npm', 'vercel', 'dist', 'vc.js'),
+      command: 'npm i -g vercel@latest',
+    },
+    {
+      manager: 'pnpm',
+      output: JSON.stringify([
+        {
+          dependencies: {
+            vercel: { path: join(sep, 'global', 'pnpm', 'vercel') },
+          },
+        },
+      ]),
+      installPath: join(sep, 'global', 'pnpm', 'vercel', 'dist', 'vc.js'),
+      command: 'pnpm i -g vercel@latest --allow-build=esbuild',
+    },
+    {
+      manager: 'yarn',
+      output: `${join(sep, 'global', 'yarn')}\n`,
+      installPath: join(
+        sep,
+        'global',
+        'yarn',
+        'node_modules',
+        'vercel',
+        'dist',
+        'vc.js'
+      ),
+      command: 'yarn global add vercel@latest',
+    },
+  ])('uses positive $manager global-package detection', async ({
+    manager,
+    output,
+    installPath,
+    command,
+  }) => {
+    process.argv[1] = installPath;
+    mockExecFile.mockImplementation(async file => {
+      if (file === manager) return { stdout: output, stderr: '' };
+      throw new Error('not installed');
+    });
 
-      expect(info).toEqual({
-        command: 'npm i -g vercel@latest',
-        global: true,
+    await expect(getUpdateCommandInfo()).resolves.toEqual({
+      command,
+      global: true,
+      packageManager: manager,
+      assumed: false,
+    });
+  });
+
+  it('uses positive Bun global-binary detection', async () => {
+    const binRoot = join(sep, 'global', 'bun', 'bin');
+    const installPath = join(sep, 'global', 'bun', 'vercel', 'dist', 'vc.js');
+    process.argv[1] = installPath;
+    mockExecFile.mockImplementation(async file => {
+      if (file === 'bun') return { stdout: `${binRoot}\n`, stderr: '' };
+      throw new Error('not installed');
+    });
+    realpathMock.mockImplementation(async (path: any) =>
+      String(path) === join(binRoot, 'vercel') ? installPath : String(path)
+    );
+
+    await expect(getUpdateCommandInfo()).resolves.toEqual({
+      command: 'bun add -g vercel@latest',
+      global: true,
+      packageManager: 'bun',
+      assumed: false,
+    });
+  });
+
+  it('does not infer Bun from a path containing bun', async () => {
+    process.argv[1] = join(
+      sep,
+      'home',
+      'bun',
+      'project',
+      'node_modules',
+      'vercel',
+      'dist',
+      'vc.js'
+    );
+
+    await expect(getUpdateCommandInfo()).rejects.toThrow(
+      'Could not detect a supported global npm, pnpm, Yarn, or Bun installation'
+    );
+  });
+
+  it('rejects a local package-manager installation instead of producing a local command', async () => {
+    process.argv[1] = join(
+      sep,
+      'project',
+      'node_modules',
+      'vercel',
+      'dist',
+      'vc.js'
+    );
+
+    await expect(getUpdateCommandInfo()).rejects.toThrow(
+      'Update it with the package manager that installed it.'
+    );
+  });
+
+  it('uses the startup environment instead of later process mutations', async () => {
+    const installPath = join(sep, 'global', 'npm', 'vercel', 'dist', 'vc.js');
+    process.argv[1] = installPath;
+    const originalPath = process.env.PATH;
+    const originalTmpdir = process.env.TMPDIR;
+    process.env.PATH = join(sep, 'attacker');
+    process.env.TMPDIR = join(sep, 'attacker', 'project');
+    process.env.VERCEL_UPGRADE_NPM_COMMAND = join(sep, 'attacker', 'run');
+    mockExecFile.mockImplementation(async file => {
+      if (file === 'npm') {
+        return { stdout: `${join(sep, 'global', 'npm')}\n`, stderr: '' };
+      }
+      throw new Error('not installed');
+    });
+
+    try {
+      await expect(getUpdateCommandInfo()).resolves.toMatchObject({
         packageManager: 'npm',
-        assumed: false,
       });
+      const npmCall = mockExecFile.mock.calls.find(([file]) => file === 'npm');
+      expect(npmCall?.[2]).toEqual(
+        expect.objectContaining({
+          cwd: trustedUpgradeDirectory,
+          env: trustedUpgradeEnvironment,
+        })
+      );
+      expect(npmCall?.[2]?.env).not.toBe(process.env);
+    } finally {
+      if (originalPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = originalPath;
+      }
+      if (originalTmpdir === undefined) {
+        delete process.env.TMPDIR;
+      } else {
+        process.env.TMPDIR = originalTmpdir;
+      }
+      delete process.env.VERCEL_UPGRADE_NPM_COMMAND;
+    }
+  });
+
+  it('gives native subprocess wrappers fresh mutable copies of the startup environment', async () => {
+    const installPath = join(sep, 'global', 'vercel', 'dist', 'vc.js');
+    process.argv[1] = installPath;
+    mockExecFile.mockImplementation(async (file, _args, { env }) => {
+      expect(env).not.toBe(trustedUpgradeEnvironment);
+      expect(env.PKG_EXECPATH).toBe(trustedUpgradeEnvironment.PKG_EXECPATH);
+      // Model the native packager's child_process wrapper.
+      env.PKG_EXECPATH = 'native-runtime';
+      if (file === 'pnpm') {
+        return {
+          stdout: JSON.stringify([
+            {
+              dependencies: { vercel: { path: join(sep, 'global', 'vercel') } },
+            },
+          ]),
+          stderr: '',
+        };
+      }
+      throw new Error('not installed');
     });
 
-    it('detects a global pnpm install via the symlinked content-addressable store', async () => {
-      const npmRoot = join(sep, 'npm-gnm');
-      const pnpmRoot = join(sep, 'pnpm-gnm');
-      const pnpmStorePackage = join(sep, 'pnpm-store', 'vercel');
-      const installPath = join(pnpmStorePackage, 'dist');
-      realpathMock.mockResolvedValueOnce(installPath);
-      realpathMock.mockImplementation(async (p: any) => {
-        if (p === join(pnpmRoot, 'vercel')) return pnpmStorePackage;
-        return String(p);
-      });
-      mockExecFile.mockImplementation(async (file: string) => {
-        if (file === 'npm') return { stdout: `${npmRoot}\n`, stderr: '' };
-        if (file === 'pnpm') return { stdout: `${pnpmRoot}\n`, stderr: '' };
-        throw new Error('not installed');
-      });
+    await expect(getUpdateCommandInfo()).resolves.toMatchObject({
+      packageManager: 'pnpm',
+      command: 'pnpm i -g vercel@latest --allow-build=esbuild',
+    });
+    expect(mockExecFile).toHaveBeenCalledTimes(2);
+    expect(Object.isFrozen(trustedUpgradeEnvironment)).toBe(true);
+  });
 
-      const info = await getUpdateCommandInfo();
+  it('rejects unknown installs instead of assuming global npm', async () => {
+    process.argv[1] = join(sep, 'unknown', 'vercel', 'dist', 'vc.js');
 
-      expect(info).toEqual({
-        command: 'pnpm i -g vercel@latest --allow-build=esbuild',
-        global: true,
-        packageManager: 'pnpm',
-        assumed: false,
-      });
+    await expect(getUpdateCommandInfo()).rejects.toThrow(
+      'Could not detect a supported global npm, pnpm, Yarn, or Bun installation'
+    );
+    expect(mockExecFile).toHaveBeenCalledWith(
+      'npm',
+      ['root', '-g'],
+      expect.any(Object)
+    );
+  });
+
+  it('passes cancellation through to package-manager detection', async () => {
+    const controller = new AbortController();
+    mockExecFile.mockImplementation(
+      (_file, _args, { signal }: { signal: AbortSignal }) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(signal.reason), {
+            once: true,
+          });
+        })
+    );
+
+    const context = getUpdateCommandInfo(undefined, controller.signal);
+    const rejection = expect(context).rejects.toThrow('cancelled');
+    await vi.waitFor(() => expect(mockExecFile).toHaveBeenCalledOnce());
+    controller.abort(new Error('cancelled'));
+
+    await rejection;
+    expect(mockExecFile).toHaveBeenCalledWith(
+      'npm',
+      ['root', '-g'],
+      expect.objectContaining({ signal: controller.signal })
+    );
+  });
+
+  it.each([
+    'npm',
+    'pnpm',
+    'yarn',
+    'bun',
+  ] as const)('upgrades vercel through %s when its launcher uses a separate native package', async manager => {
+    mockIsNative.mockReturnValue(true);
+    const root = join(sep, 'global', manager);
+    const packageRoot =
+      manager === 'pnpm'
+        ? join(sep, 'store', 'links', 'vercel', 'node_modules', 'vercel')
+        : join(root, 'node_modules', 'vercel');
+    const entrypoint = join(packageRoot, 'dist', 'vc.js');
+    const nativeExecutable = join(
+      root,
+      'node_modules',
+      '@vercel',
+      'vc-native-darwin-arm64',
+      'bin',
+      'vercel'
+    );
+    const resolvedNativeExecutable = join(sep, 'native-store', manager, 'vc');
+    process.argv[1] = join(sep, 'snapshot', 'vercel', 'vc.js');
+    Object.defineProperty(process, 'execPath', {
+      value: resolvedNativeExecutable,
+    });
+    const output = {
+      npm: join(root, 'node_modules'),
+      pnpm: JSON.stringify([
+        { dependencies: { vercel: { path: packageRoot } } },
+      ]),
+      yarn: root,
+      bun: join(root, 'bin'),
+    }[manager];
+    mockExecFile.mockImplementation(async file => {
+      if (file === manager) return { stdout: `${output}\n`, stderr: '' };
+      throw new Error('not installed');
+    });
+    realpathMock.mockImplementation(async (path: any) => {
+      if (String(path) === nativeExecutable) return resolvedNativeExecutable;
+      if (String(path) === join(root, 'bin', 'vercel')) return entrypoint;
+      return String(path);
     });
 
-    it('detects a global yarn install and uses "yarn global add"', async () => {
-      const yarnDir = join(sep, 'ygd');
-      const installPath = join(yarnDir, 'node_modules', 'vercel', 'dist');
-      realpathMock.mockResolvedValueOnce(installPath);
-      mockExecFile.mockImplementation(async (file: string) => {
-        if (file === 'yarn') return { stdout: `${yarnDir}\n`, stderr: '' };
-        throw new Error('not installed');
-      });
+    const info = await getUpdateCommandInfo({
+      ...trustedUpgradeEnvironment,
+      VERCEL_CLI_PACKAGE_ENTRYPOINT: entrypoint,
+      VERCEL_CLI_PACKAGE_EXECUTABLE: nativeExecutable,
+    });
+    const commands = {
+      npm: 'npm i -g vercel@latest',
+      pnpm: 'pnpm i -g vercel@latest --allow-build=esbuild',
+      yarn: 'yarn global add vercel@latest',
+      bun: 'bun add -g vercel@latest',
+    };
+    expect(info).toEqual({
+      command: commands[manager],
+      global: true,
+      packageManager: manager,
+      assumed: false,
+    });
+    expect(info.command).not.toContain('@vercel/vc-native');
+    expect(info.command).not.toContain('--force');
+    expect(realpathMock).not.toHaveBeenCalledWith(process.argv[1]);
+    if (manager === 'pnpm') {
+      expect(mockExecFile).toHaveBeenCalledWith(
+        'pnpm',
+        ['list', '-g', 'vercel', '--depth=0', '--json'],
+        expect.any(Object)
+      );
+    }
+  });
 
-      const info = await getUpdateCommandInfo();
-
-      expect(info).toEqual({
-        command: 'yarn global add vercel@latest',
-        global: true,
-        packageManager: 'yarn',
-        assumed: false,
-      });
+  it('does not treat a local native launcher as a global vercel installation', async () => {
+    mockIsNative.mockReturnValue(true);
+    mockExecFile.mockImplementation(async file => {
+      if (file === 'npm') {
+        return { stdout: join(sep, 'global', 'node_modules'), stderr: '' };
+      }
+      throw new Error('not installed');
     });
 
-    it('detects a global fnm install from the install path when global-root queries miss', async () => {
-      const originalArgv = process.argv;
-      process.argv = ['/usr/bin/node', '/some/bin/vercel'];
-      try {
-        const installPath = join(
+    await expect(
+      getUpdateCommandInfo({
+        ...trustedUpgradeEnvironment,
+        VERCEL_CLI_PACKAGE_EXECUTABLE: process.execPath,
+        VERCEL_CLI_PACKAGE_ENTRYPOINT: join(
           sep,
-          'home',
-          '.local',
-          'share',
-          'fnm',
-          'node-versions',
-          'v24',
-          'installation',
-          'lib',
+          'project',
           'node_modules',
           'vercel',
-          'dist'
-        );
-        realpathMock.mockResolvedValueOnce(installPath);
-        mockExecFile.mockImplementation(async (file: string) => {
-          if (file === 'npm') {
-            return { stdout: `${join(sep, 'unrelated')}\n`, stderr: '' };
-          }
-          throw new Error('not installed');
-        });
-        scanParentDirsMock.mockResolvedValue({
-          cliType: 'npm',
-          lockfilePath: undefined,
-        } as any);
-
-        const info = await getUpdateCommandInfo();
-
-        expect(info).toEqual({
-          command: 'npm i -g vercel@latest',
-          global: true,
-          packageManager: 'npm',
-          assumed: true,
-        });
-      } finally {
-        process.argv = originalArgv;
-      }
-    });
+          'dist',
+          'vc.js'
+        ),
+      })
+    ).rejects.toThrow('Could not detect a supported global');
   });
 
-  describe('local installed, global not', () => {
-    it('uses a local pnpm command when the project has a pnpm lockfile', async () => {
-      const originalArgv = process.argv;
-      process.argv = ['/usr/bin/node', '/proj/node_modules/.bin/vercel'];
-      try {
-        realpathMock.mockImplementation(async (p: any) => {
-          const s = String(p);
-          if (s.endsWith(`${sep}vercel`)) return `${s}-elsewhere`;
-          return s;
-        });
-        realpathMock.mockResolvedValueOnce('/proj/node_modules/vercel/dist');
-        mockExecFile.mockRejectedValue(new Error('no package manager'));
-        scanParentDirsMock.mockResolvedValue({
-          cliType: 'pnpm',
-          lockfilePath: '/proj/pnpm-lock.yaml',
-        } as any);
-
-        const info = await getUpdateCommandInfo();
-
-        expect(info).toEqual({
-          command: 'pnpm i vercel@latest',
-          global: false,
-          packageManager: 'pnpm',
-          assumed: false,
-        });
-      } finally {
-        process.argv = originalArgv;
-      }
+  it('rejects native installs without a vercel launcher instead of upgrading the legacy wrapper', async () => {
+    mockIsNative.mockReturnValue(true);
+    Object.defineProperty(process, 'execPath', {
+      value: join(sep, 'global', '@vercel', 'vc-native', 'bin', 'vercel'),
     });
+    realpathMock.mockRejectedValue(new Error('snapshot path'));
 
-    it('uses a local npm command when the project has a package-lock', async () => {
-      const originalArgv = process.argv;
-      process.argv = ['/usr/bin/node', '/proj/node_modules/.bin/vercel'];
-      try {
-        realpathMock.mockResolvedValueOnce('/proj/node_modules/vercel/dist');
-        mockExecFile.mockRejectedValue(new Error('no package manager'));
-        scanParentDirsMock.mockResolvedValue({
-          cliType: 'npm',
-          lockfilePath: '/proj/package-lock.json',
-        } as any);
-
-        const info = await getUpdateCommandInfo();
-
-        expect(info).toEqual({
-          command: 'npm i vercel@latest',
-          global: false,
-          packageManager: 'npm',
-          assumed: false,
-        });
-      } finally {
-        process.argv = originalArgv;
-      }
-    });
-
-    it('uses "yarn add" for a local yarn install', async () => {
-      const originalArgv = process.argv;
-      process.argv = ['/usr/bin/node', '/proj/node_modules/.bin/vercel'];
-      try {
-        realpathMock.mockResolvedValueOnce('/proj/node_modules/vercel/dist');
-        mockExecFile.mockRejectedValue(new Error('no package manager'));
-        scanParentDirsMock.mockResolvedValue({
-          cliType: 'yarn',
-          lockfilePath: '/proj/yarn.lock',
-        } as any);
-
-        const info = await getUpdateCommandInfo();
-
-        expect(info).toEqual({
-          command: 'yarn add vercel@latest',
-          global: false,
-          packageManager: 'yarn',
-          assumed: false,
-        });
-      } finally {
-        process.argv = originalArgv;
-      }
-    });
+    await expect(
+      getUpdateCommandInfo({
+        ...trustedUpgradeEnvironment,
+        VERCEL_CLI_PACKAGE_ENTRYPOINT: undefined,
+        VERCEL_CLI_PACKAGE_EXECUTABLE: undefined,
+      })
+    ).rejects.toThrow('Could not resolve this Vercel CLI installation');
+    expect(mockExecFile).not.toHaveBeenCalled();
   });
 
-  describe('edge cases', () => {
-    it('defaults to global when the npm prefix path cannot be resolved', async () => {
-      const originalArgv = process.argv;
-      const originalPrefix = process.env.PREFIX;
-      process.argv = ['/usr/bin/node', '/opt/tool/vercel'];
-      process.env.PREFIX = '/broken-prefix';
-      try {
-        const installPath = '/opt/tool/vercel/dist';
-        realpathMock.mockResolvedValueOnce(installPath);
-        realpathMock.mockImplementation(async (p: any) => {
-          if (p === '/broken-prefix') throw new Error('ENOENT');
-          return String(p);
-        });
-        mockExecFile.mockRejectedValue(new Error('no package manager'));
-        scanParentDirsMock.mockResolvedValue({
-          cliType: 'npm',
-          lockfilePath: undefined,
-        } as any);
+  it('does not use an entrypoint introduced after startup', async () => {
+    mockIsNative.mockReturnValue(true);
+    const entrypoint = join(sep, 'global', 'vercel', 'dist', 'vc.js');
+    vi.stubEnv('VERCEL_CLI_PACKAGE_ENTRYPOINT', entrypoint);
+    vi.stubEnv('VERCEL_CLI_PACKAGE_EXECUTABLE', process.execPath);
+    realpathMock.mockImplementation(async (path: any) => {
+      if (String(path) === process.argv[1]) throw new Error('snapshot path');
+      return String(path);
+    });
+    mockExecFile.mockResolvedValue({ stdout: join(sep, 'global'), stderr: '' });
 
-        const info = await getUpdateCommandInfo();
+    try {
+      await expect(getUpdateCommandInfo()).rejects.toThrow(
+        'Could not resolve this Vercel CLI installation'
+      );
+      expect(mockExecFile).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
 
-        expect(info).toEqual({
-          command: 'npm i -g vercel@latest',
-          global: true,
-          packageManager: 'npm',
-          assumed: true,
-        });
-      } finally {
-        process.argv = originalArgv;
-        if (originalPrefix === undefined) {
-          delete process.env.PREFIX;
-        } else {
-          process.env.PREFIX = originalPrefix;
-        }
-      }
+  it('does not upgrade the parent installation when a child Node CLI inherits native markers', async () => {
+    mockIsNative.mockReturnValue(true);
+    const parentEntrypoint = join(sep, 'global', 'vercel', 'dist', 'vc.js');
+    const parentExecutable = join(
+      sep,
+      'global',
+      '@vercel',
+      'vc-native-darwin-arm64',
+      'bin',
+      'vercel'
+    );
+    mockExecFile.mockImplementation(async file => {
+      if (file === 'npm') return { stdout: join(sep, 'global'), stderr: '' };
+      throw new Error('not installed');
     });
 
-    it('uses the native package name and --force for a global native binary install', async () => {
-      mockIsNative.mockReturnValue(true);
-      const npmRoot = join(sep, 'gnm');
-      const installPath = join(npmRoot, '@vercel/vc-native', 'dist');
-      realpathMock.mockResolvedValueOnce(installPath);
-      mockExecFile.mockImplementation(async (file: string) => {
-        if (file === 'npm') return { stdout: `${npmRoot}\n`, stderr: '' };
-        throw new Error('not installed');
-      });
+    await expect(
+      getUpdateCommandInfo({
+        ...trustedUpgradeEnvironment,
+        VERCEL_CLI_PACKAGE_ENTRYPOINT: parentEntrypoint,
+        VERCEL_CLI_PACKAGE_EXECUTABLE: parentExecutable,
+      })
+    ).rejects.toThrow('Could not detect a supported global');
+    expect(realpathMock).not.toHaveBeenCalledWith(parentEntrypoint);
+    expect(realpathMock).toHaveBeenCalledWith(process.argv[1]);
+  });
 
-      const info = await getUpdateCommandInfo();
-
-      expect(info).toEqual({
-        command: 'npm i -g @vercel/vc-native@latest --force',
-        global: true,
-        packageManager: 'npm',
-        assumed: true,
-      });
+  it('ignores the native launcher environment when running in Node', async () => {
+    const entrypoint = join(sep, 'global', 'vercel', 'dist', 'vc.js');
+    mockExecFile.mockImplementation(async file => {
+      if (file === 'npm') return { stdout: join(sep, 'global'), stderr: '' };
+      throw new Error('not installed');
     });
+
+    await expect(
+      getUpdateCommandInfo({
+        ...trustedUpgradeEnvironment,
+        VERCEL_CLI_PACKAGE_ENTRYPOINT: entrypoint,
+      })
+    ).rejects.toThrow('Could not detect a supported global');
+  });
+});
+
+describe('Homebrew cask detection', () => {
+  const originalExecPath = process.execPath;
+  const caskBinary = join(
+    sep,
+    'opt',
+    'homebrew',
+    'Caskroom',
+    'vercel',
+    '64.0.2',
+    'package',
+    'bin',
+    'vercel'
+  );
+  const brewLink = join(sep, 'opt', 'homebrew', 'bin', 'vc');
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockIsNative.mockReturnValue(true);
+    mockExecFile.mockRejectedValue(new Error('not installed'));
+    realpathMock.mockImplementation(async (path: any) =>
+      String(path) === brewLink ? caskBinary : String(path)
+    );
+  });
+
+  afterEach(() => {
+    Object.defineProperty(process, 'execPath', { value: originalExecPath });
+  });
+
+  it('detects the native binary through the Homebrew bin symlink', async () => {
+    Object.defineProperty(process, 'execPath', { value: brewLink });
+
+    await expect(isHomebrewInstall()).resolves.toBe(true);
+    await expect(getUpdateCommand()).resolves.toBe('brew upgrade vercel');
+    await expect(isGlobal()).resolves.toBe(true);
+    await expect(getUpdateCommandInfo()).rejects.toThrow(HomebrewInstallError);
+    await expect(getUpdateCommandInfo()).rejects.toThrow(
+      'This Vercel CLI was installed with Homebrew. Update it with `brew upgrade vercel`.'
+    );
+    expect(mockExecFile).not.toHaveBeenCalled();
+  });
+
+  it('detects the cask path when realpath is unavailable', async () => {
+    Object.defineProperty(process, 'execPath', { value: caskBinary });
+    realpathMock.mockRejectedValue(new Error('snapshot path'));
+
+    await expect(isHomebrewInstall()).resolves.toBe(true);
+  });
+
+  it('ignores Caskroom paths for the Node.js CLI', async () => {
+    mockIsNative.mockReturnValue(false);
+    Object.defineProperty(process, 'execPath', { value: caskBinary });
+
+    await expect(isHomebrewInstall()).resolves.toBe(false);
+  });
+
+  it('ignores other casks and package-manager installs', async () => {
+    for (const execPath of [
+      join(sep, 'opt', 'homebrew', 'Caskroom', 'vercel-beta', 'bin', 'vercel'),
+      join(sep, 'global', '@vercel', 'vc-native-darwin-arm64', 'bin', 'vercel'),
+    ]) {
+      Object.defineProperty(process, 'execPath', { value: execPath });
+      await expect(isHomebrewInstall()).resolves.toBe(false);
+    }
   });
 });

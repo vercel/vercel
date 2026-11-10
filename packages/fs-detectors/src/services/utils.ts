@@ -65,6 +65,8 @@ export interface ReadVercelConfigResult {
     experimentalServices?: ExperimentalServices;
     services?: Services;
     experimentalServicesV2?: ExperimentalServicesV2;
+    /** Unvalidated; read by `detectDaemons`. */
+    daemons?: unknown;
   } | null;
   error: ServiceDetectionError | null;
 }

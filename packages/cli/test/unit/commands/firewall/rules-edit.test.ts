@@ -1,4 +1,5 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
+import stripAnsi from 'strip-ansi';
 import { client } from '../../../mocks/client';
 import firewall from '../../../../src/commands/firewall';
 import { useUser } from '../../../mocks/user';
@@ -14,7 +15,9 @@ import {
   lastPatchBody,
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import { setTeamBillingPlan, useTeams } from '../../../mocks/team';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
+import { quoteArg } from '../../../../src/util/flags/quote-arg';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 
 describe('firewall rules edit', () => {
@@ -81,7 +84,7 @@ describe('firewall rules edit', () => {
       client.setArgv('firewall', 'rules', 'edit', '--action', 'deny', '--yes');
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Missing required argument');
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should error on multiple matches in non-TTY', async () => {
@@ -201,7 +204,10 @@ describe('firewall rules edit', () => {
       expect(lastPatchBody.value.action.mitigate.actionDuration).toBe('30m');
     });
 
-    it('should disable a rule', async () => {
+    it.each([
+      ['--no-enable', false],
+      ['--disabled', true],
+    ])('should turn a rule off with %s', async (flag, deprecated) => {
       const active = createConfig({ rules: [createRule(1)] });
       useListFirewallConfigs(active, null);
       usePatchDraft();
@@ -210,9 +216,9 @@ describe('firewall rules edit', () => {
       client.setArgv(
         'firewall',
         'rules',
-        'edit',
+        'update',
         'Test Rule 1',
-        '--disabled',
+        flag,
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -220,9 +226,18 @@ describe('firewall rules edit', () => {
       expect(await exitCodePromise).toEqual(0);
 
       expect(lastPatchBody.value.active).toBe(false);
+      const stderr = client.stderr.getFullOutput();
+      if (deprecated) {
+        expect(stderr).toContain(`${flag} is deprecated. Use --no-enable.`);
+      } else {
+        expect(stderr).not.toContain('deprecated');
+      }
     });
 
-    it('should re-enable a rule', async () => {
+    it.each([
+      ['--enable', false],
+      ['--enabled', true],
+    ])('should turn a rule back on with %s', async (flag, deprecated) => {
       const rule = createRule(3); // index 3 is inactive
       const active = createConfig({ rules: [rule] });
       useListFirewallConfigs(active, null);
@@ -232,9 +247,9 @@ describe('firewall rules edit', () => {
       client.setArgv(
         'firewall',
         'rules',
-        'edit',
+        'update',
         'Test Rule 3',
-        '--enabled',
+        flag,
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -242,19 +257,25 @@ describe('firewall rules edit', () => {
       expect(await exitCodePromise).toEqual(0);
 
       expect(lastPatchBody.value.active).toBe(true);
+      const stderr = client.stderr.getFullOutput();
+      if (deprecated) {
+        expect(stderr).toContain(`${flag} is deprecated. Use --enable.`);
+      } else {
+        expect(stderr).not.toContain('deprecated');
+      }
     });
 
     it('should detect no changes', async () => {
       const active = createConfig({ rules: [createRule(1)] });
       useListFirewallConfigs(active, null);
 
-      // Pass --enabled on an already active rule — no change
+      // Pass --enable on an already active rule — no change
       client.setArgv(
         'firewall',
         'rules',
         'edit',
         'Test Rule 1',
-        '--enabled',
+        '--enable',
         '--yes'
       );
       const exitCodePromise = firewall(client);
@@ -302,7 +323,7 @@ describe('firewall rules edit', () => {
         'rules',
         'edit',
         'Test Rule 1',
-        '--json',
+        '--data',
         JSON.stringify({
           name: 'JSON Updated',
           active: true,
@@ -330,13 +351,13 @@ describe('firewall rules edit', () => {
         'rules',
         'edit',
         'Test Rule 1',
-        '--json',
+        '--data',
         '{bad',
         '--yes'
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Invalid JSON');
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should error on missing fields in JSON', async () => {
@@ -348,7 +369,7 @@ describe('firewall rules edit', () => {
         'rules',
         'edit',
         'Test Rule 1',
-        '--json',
+        '--data',
         '{"conditionGroup":[],"action":{}}',
         '--yes'
       );
@@ -399,7 +420,7 @@ describe('firewall rules edit', () => {
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput(
-        'Cannot use --ai, --json, and --condition'
+        'Cannot use --ai, --data, and --condition'
       );
       expect(await exitCodePromise).toEqual(1);
     });
@@ -420,7 +441,7 @@ describe('firewall rules edit', () => {
       (client.stdin as any).isTTY = false;
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Interactive mode is not available');
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should work with flags in non-TTY', async () => {
@@ -448,24 +469,28 @@ describe('firewall rules edit', () => {
   // ─── Edge cases ────────────────────────────────────────────────────
 
   describe('edge cases', () => {
-    it('should error when --enabled and --disabled are both passed', async () => {
+    it.each([
+      ['--enable', '--no-enable'],
+      ['--enabled', '--disabled'],
+      ['--enable', '--disabled'],
+    ])('should error when %s and %s are both passed', async (onFlag, offFlag) => {
       const active = createConfig({ rules: [createRule(1)] });
       useListFirewallConfigs(active, null);
 
       client.setArgv(
         'firewall',
         'rules',
-        'edit',
+        'update',
         'Test Rule 1',
-        '--enabled',
-        '--disabled',
+        onFlag,
+        offFlag,
         '--yes'
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput(
-        'Cannot use --enabled and --disabled together'
+        `Can't use ${onFlag} with ${offFlag}.`
       );
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should error when --name exceeds 160 characters', async () => {
@@ -602,13 +627,54 @@ describe('firewall rules edit', () => {
     // Interactive rule selection (TTY) is tested manually — requires multi-step
     // stdin simulation that's fragile in unit tests.
 
-    it('should error with no rules when no identifier in TTY', async () => {
+    it('prompts for a managed bot action when none was given', async () => {
       useListFirewallConfigs(createConfig({ rules: [] }), null);
 
       client.setArgv('firewall', 'rules', 'edit');
       const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('No custom rules configured');
-      expect(await exitCodePromise).toEqual(1);
+      await expect(client.stderr).toOutput('Select a rule to update');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Action?');
+      client.stdin.write('\n');
+      expect(await exitCodePromise).toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain('No changes detected');
+    });
+
+    it('does not reprint Rule/ID after Action? before confirming', async () => {
+      useListFirewallConfigs(createConfig({ rules: [] }), null);
+
+      client.setArgv('firewall', 'rules', 'edit');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Select a rule to update');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Action?');
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Save Bot Protection → Log?');
+      expect(
+        stripAnsi(client.stderr.getFullOutput()).match(/WAF ID/g)?.length
+      ).toBe(1);
+      client.stdin.write('n\n');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('edits a picked custom rule whose name matches a managed alias', async () => {
+      const rule = { ...createRule(1), name: 'AI Bots' };
+      useListFirewallConfigs(createConfig({ rules: [rule] }), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv('firewall', 'rules', 'edit', '--action', 'log', '--yes');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Select a rule to update');
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\x1B[B');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('updated and staged');
+      expect(await exitCodePromise).toEqual(0);
+      expect(lastPatchBody.action).toBe('rules.update');
+      expect(lastPatchBody.id).toBe('rule_001');
     });
   });
 
@@ -835,7 +901,7 @@ describe('firewall rules edit', () => {
         'rules',
         'edit',
         'Test Rule 1',
-        '--json',
+        '--data',
         JSON.stringify({
           name: 'Fully Replaced',
           description: 'Brand new description',
@@ -908,13 +974,278 @@ describe('firewall rules edit', () => {
     });
   });
 
+  describe('managed bot rules', () => {
+    it('stages a managedRules.update patch for Bot Protection', async () => {
+      const active = createConfig({
+        managedRules: {
+          bot_filter: { active: true, action: 'challenge' },
+        },
+      });
+      useListFirewallConfigs(active, null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'managed_bot_protection',
+        '--action',
+        'log',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('updated to Log');
+      expect(await exitCodePromise).toEqual(0);
+      expect(lastPatchBody.action).toBe('managedRules.update');
+      expect(lastPatchBody.id).toBe('bot_protection');
+      expect(lastPatchBody.value).toEqual({ active: true, action: 'log' });
+    });
+
+    it('stages botId.toggle for BotID Deep Analysis', async () => {
+      const active = createConfig({ botIdEnabled: false });
+      useListFirewallConfigs(active, null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'bot-id',
+        '--action',
+        'deep-analysis',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('npm i botid');
+      expect(await exitCodePromise).toEqual(0);
+      expect(lastPatchBody.action).toBe('botId.toggle');
+      expect(lastPatchBody.value).toBe(true);
+    });
+
+    it('requires --action on a managed bot rule in non-TTY', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      (client.stdin as any).isTTY = false;
+
+      client.setArgv('firewall', 'rules', 'edit', 'bot-protection');
+      const exitCode = await firewall(client);
+      expect(exitCode).toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain('Specify --action');
+    });
+
+    it('shows a traffic warning before the save prompt', async () => {
+      useListFirewallConfigs(createConfig(), null);
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'ai-bots',
+        '--action',
+        'deny'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('AI Bots deny blocks');
+      await expect(client.stderr).toOutput('Save AI Bots → Deny?');
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'this project. Save AI Bots'
+      );
+      client.stdin.write('n\n');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('rejects custom-rule flags on managed bot rules', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'ai-bots',
+        '--condition',
+        '{"type":"path","op":"pre","value":"/api"}',
+        '--action',
+        'deny',
+        '--yes'
+      );
+      const exitCode = await firewall(client);
+      expect(exitCode).toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain("Can't use --condition");
+    });
+
+    it('rejects BotID Deep Analysis on the Hobby plan', async () => {
+      setTeamBillingPlan('hobby');
+      useListFirewallConfigs(createConfig({ botIdEnabled: false }), null);
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'bot-id',
+        '--action',
+        'deep-analysis',
+        '--yes'
+      );
+      const exitCode = await firewall(client);
+      expect(exitCode).toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'not available on the Hobby plan'
+      );
+    });
+
+    // A plan limit is not a usage error, so agents get the same exit code 1.
+    it('exits 1 for the Hobby plan in non-interactive mode', async () => {
+      setTeamBillingPlan('hobby');
+      useListFirewallConfigs(createConfig({ botIdEnabled: false }), null);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+        code?: number
+      ) => {
+        throw new Error(`exit:${code}`);
+      }) as () => never);
+      client.nonInteractive = true;
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'bot-id',
+        '--action',
+        'deep-analysis',
+        '--yes'
+      );
+
+      try {
+        await expect(firewall(client)).rejects.toThrow('exit:1');
+        expect(client.stdout.getFullOutput()).toContain(
+          '"reason": "plan_upgrade_required"'
+        );
+      } finally {
+        exitSpy.mockRestore();
+        client.nonInteractive = false;
+      }
+    });
+  });
+
+  it('turns a Priority project 401 on rules edit into an upsell', async () => {
+    useListFirewallConfigs(createConfig({ rules: [createRule(1)] }), null);
+    client.scenario.patch(
+      '/v1/security/firewall/config/draft',
+      (_req: any, res: any) => {
+        res.status(401).json({
+          error: {
+            code: 'unauthorized',
+            message: 'This feature requires a Priority project',
+          },
+        });
+      }
+    );
+
+    client.setArgv(
+      'firewall',
+      'rules',
+      'edit',
+      'rule_001',
+      '--action',
+      'deny',
+      '--yes'
+    );
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+    const output = client.stderr.getFullOutput();
+    const team = teamCache.get('team_dummy');
+    expect(output).toContain(
+      `This rule requires a Priority project for firewall-test on team ${team?.slug}`
+    );
+    expect(output).toContain(
+      `project priority enable firewall-test --scope ${quoteArg(team?.slug ?? '')}`
+    );
+    expect(output).not.toContain('(401)');
+  });
+
+  it('turns a Priority project 401 on a managed bot edit into an upsell', async () => {
+    useListFirewallConfigs(createConfig(), null);
+    client.scenario.patch(
+      '/v1/security/firewall/config/draft',
+      (_req: any, res: any) => {
+        res.status(401).json({
+          error: {
+            code: 'unauthorized',
+            message: 'This feature requires a Priority project',
+          },
+        });
+      }
+    );
+
+    client.setArgv(
+      'firewall',
+      'rules',
+      'edit',
+      'ai-bots',
+      '--action',
+      'deny',
+      '--yes'
+    );
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+    const output = client.stderr.getFullOutput();
+    const team = teamCache.get('team_dummy');
+    expect(output).toContain(
+      `This rule requires a Priority project for firewall-test on team ${team?.slug}`
+    );
+    expect(output).toContain(
+      `project priority enable firewall-test --scope ${quoteArg(team?.slug ?? '')}`
+    );
+    expect(output).not.toContain('(401)');
+  });
+
   // ─── Help ──────────────────────────────────────────────────────────
 
   describe('help', () => {
     it('tracks help telemetry', async () => {
       client.setArgv('firewall', 'rules', 'edit', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
+    });
+  });
+
+  describe('subcommand name', () => {
+    function useRuleUpdate() {
+      useListFirewallConfigs(createConfig({ rules: [createRule(1)] }), null);
+      usePatchDraft();
+      useActivateConfig();
+    }
+
+    it('warns when invoked as the deprecated edit name', async () => {
+      useRuleUpdate();
+      client.setArgv(
+        'firewall',
+        'rules',
+        'edit',
+        'rule_001',
+        '--action',
+        'log',
+        '--yes'
+      );
+
+      expect(await firewall(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel firewall rules edit` is deprecated. Use `vercel firewall rules update`.'
+      );
+    });
+
+    it('does not warn when invoked as update', async () => {
+      useRuleUpdate();
+      client.setArgv(
+        'firewall',
+        'rules',
+        'update',
+        'rule_001',
+        '--action',
+        'log',
+        '--yes'
+      );
+
+      expect(await firewall(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     });
   });
 });

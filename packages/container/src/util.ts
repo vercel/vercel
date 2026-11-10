@@ -1,13 +1,28 @@
 import { getPlatformEnv } from '@vercel/build-utils';
 import type { Span } from '@vercel/build-utils';
 import { spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import type { Stats } from 'node:fs';
+import { lstat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 
 /** Verbose tracing for the container builder, gated on `BUILDER_DEBUG` like every other builder. */
 export const DEBUG = Boolean(getPlatformEnv('BUILDER_DEBUG'));
+
+/** Coerce a `command` config value to a string array, or `undefined`. */
+export function normalizeCommand(command: unknown): string[] | undefined {
+  if (typeof command === 'string') {
+    return [command];
+  }
+  if (
+    Array.isArray(command) &&
+    command.every(item => typeof item === 'string')
+  ) {
+    return command;
+  }
+  return undefined;
+}
 
 export function write(line: string): void {
   process.stderr.write(`${line}\n`);
@@ -16,6 +31,11 @@ export function write(line: string): void {
 /** Top-level milestone, prefixed with the Vercel mark. */
 export function info(message: string): void {
   write(`▲ container  ${message}`);
+}
+
+/** Something the build ignores or works around, without failing. */
+export function warn(message: string): void {
+  write(`▲ container  Warning: ${message}`);
 }
 
 /** A step that's starting. */
@@ -36,6 +56,18 @@ export function debug(message: string): void {
 
 export function elapsed(since: number): string {
   return `${((Date.now() - since) / 1000).toFixed(1)}s`;
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KiB', 'MiB', 'GiB'];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unit]}`;
 }
 
 /** Shorten a `sha256:…` digest for display. */
@@ -73,24 +105,9 @@ export function readString(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 }
 
-/**
- * Whether a path/entrypoint names a Dockerfile that this builder should build.
- *
- * Matches the same blessed set as the services resolver in
- * `@vercel/fs-detectors`: the basenames `Dockerfile`, `Containerfile`,
- * `Dockerfile.vercel`, and `Containerfile.vercel`. Keeping the two layers in
- * sync ensures the builder honors whatever Dockerfile entrypoint services
- * hands it, instead of silently falling back to a default `Dockerfile` or
- * treating the path as a prebuilt image.
- */
+/** Recognize explicit Dockerfile/Containerfile paths, with the name anywhere in the basename. */
 export function isDockerfileRef(ref: string): boolean {
-  const base = basename(ref).toLowerCase();
-  return (
-    base === 'dockerfile' ||
-    base === 'containerfile' ||
-    base === 'dockerfile.vercel' ||
-    base === 'containerfile.vercel'
-  );
+  return /(docker|container)file/i.test(basename(ref));
 }
 
 // Vercel-specific container opt-in markers, auto-discovered when the build
@@ -106,7 +123,8 @@ export const DOCKERFILE_CANDIDATES = [
  * Discover a Vercel container opt-in marker (`Dockerfile.vercel` /
  * `Containerfile.vercel`) in `workPath`. Used by both the build and dev paths
  * so they resolve the same Dockerfile when the entrypoint is the `<detect>`
- * sentinel.
+ * sentinel. A conventional `Dockerfile` is deliberately not a marker: only
+ * the `.vercel` suffix opts a project out of buildpack or framework builds.
  */
 export function findDockerfile(workPath: string): string | undefined {
   return DOCKERFILE_CANDIDATES.find(name => existsSync(join(workPath, name)));
@@ -127,17 +145,28 @@ export interface RunResult {
   stderr: string;
 }
 
+/** Rejection from {@link run} carrying the command's exit code. */
+export interface RunError extends Error {
+  exitCode?: number;
+}
+
 /**
  * Run a command, streaming its output to stderr while capturing it for parsing.
  */
 export function run(
   cmd: string,
   args: string[],
-  opts: { cwd?: string; input?: string; quiet?: boolean } = {}
+  opts: {
+    cwd?: string;
+    input?: string;
+    quiet?: boolean;
+    env?: NodeJS.ProcessEnv;
+  } = {}
 ): Promise<RunResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
       cwd: opts.cwd,
+      env: opts.env,
       stdio: [opts.input !== undefined ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     });
 
@@ -175,12 +204,12 @@ export function run(
         resolve({ stdout, stderr });
       } else {
         const detail = stderr.trim().split('\n').slice(-5).join('\n');
-        reject(
-          new Error(
-            `\`${cmd} ${args.join(' ')}\` exited with code ${code}` +
-              (detail ? `\n${detail}` : '')
-          )
+        const error: RunError = new Error(
+          `\`${cmd} ${args.join(' ')}\` exited with code ${code}` +
+            (detail ? `\n${detail}` : '')
         );
+        error.exitCode = code ?? undefined;
+        reject(error);
       }
     });
 
@@ -190,75 +219,28 @@ export function run(
   });
 }
 
+export async function hasCommand(name: string): Promise<boolean> {
+  try {
+    await run('which', [name], { quiet: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function lstatIfPresent(path: string): Promise<Stats | undefined> {
+  try {
+    return await lstat(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
 /** Pull a `Key: Value` field out of CLI diagnostic text. */
 export function extractField(text: string, label: string): string | undefined {
   const match = text.match(new RegExp(`^\\s*${label}:\\s*(.+)$`, 'm'));
   return match?.[1]?.trim();
-}
-
-export function tokenFingerprint(token: string | undefined): string {
-  if (!token) return 'absent';
-  const sha = createHash('sha256').update(token).digest('hex').slice(0, 8);
-  return `present(len=${token.length}, sha256=${sha})`;
-}
-
-export function debugTokenClaims(
-  label: string,
-  token: string | undefined
-): void {
-  if (!DEBUG) return;
-  if (!token) {
-    debug(`${label}: <absent>`);
-    return;
-  }
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) {
-      debug(`${label}: <not a JWT>`);
-      return;
-    }
-    const claims = JSON.parse(
-      Buffer.from(payload, 'base64url').toString('utf8')
-    ) as Record<string, unknown>;
-    const safe = {
-      iss: claims.iss,
-      aud: claims.aud,
-      sub: claims.sub,
-      scope: claims.scope,
-      owner: claims.owner,
-      owner_id: claims.owner_id,
-      project: claims.project,
-      project_id: claims.project_id,
-      exp:
-        typeof claims.exp === 'number'
-          ? `${new Date(claims.exp * 1000).toISOString()} (in ${Math.round(
-              (claims.exp * 1000 - Date.now()) / 1000
-            )}s)`
-          : claims.exp,
-    };
-    debug(`${label}: ${JSON.stringify(safe)}`);
-  } catch (err) {
-    debug(`${label}: <unparseable claims> (${(err as Error).message})`);
-  }
-}
-
-export interface OidcClaims {
-  owner?: string;
-  owner_id?: string;
-  project?: string;
-  project_id?: string;
-}
-
-export function decodeOidcClaims(token: string | undefined): OidcClaims {
-  if (!token) return {};
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return {};
-    const json = Buffer.from(payload, 'base64url').toString('utf8');
-    return JSON.parse(json) as OidcClaims;
-  } catch {
-    return {};
-  }
 }
 
 /**

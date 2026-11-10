@@ -32,7 +32,7 @@ export default async function block(client: Client, argv: string[]) {
   const ip = parsed.args[0];
   if (!ip) {
     output.error('Missing required argument: <ip>');
-    return 1;
+    return 2;
   }
 
   // Validate IP/CIDR

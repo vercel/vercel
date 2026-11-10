@@ -1,5 +1,5 @@
 // Write the App Store Connect API key JSON that rcodesign --api-key-file
-// expects. Used by realease-binary.yml.
+// expects. Used by native-binaries.yml.
 //
 // APPLE_API_KEY may be the JSON itself (GitHub UI / `gh secret set < file.json`)
 // or the historical base64-encoded JSON.

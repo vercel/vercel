@@ -123,10 +123,10 @@ export default async function edit(client: Client, argv: string[]) {
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'Route name or ID is required as the first argument after routes edit.',
+            'Route name or ID is required as the first argument after routes update.',
           next: [
             {
-              command: withGlobalFlags(client, 'routes edit <name-or-id>'),
+              command: withGlobalFlags(client, 'routes update <name-or-id>'),
               when: 'replace <name-or-id> with route name or id from routes list',
             },
             {
@@ -135,13 +135,13 @@ export default async function edit(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
-      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes edit <name-or-id>')}`
+      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes update <name-or-id>')}`
     );
-    return 1;
+    return 2;
   }
 
   // Check for existing staging version (for auto-promote logic)
@@ -167,7 +167,7 @@ export default async function edit(client: Client, argv: string[]) {
                 client,
                 'routes add --ai <description> --yes'
               ),
-              when: 'add a route first (or use full flags)',
+              when: 'add a route first (or use full options)',
             },
           ],
         },
@@ -194,7 +194,7 @@ export default async function edit(client: Client, argv: string[]) {
               when: 'to list routes and pick an exact name or id',
             },
             {
-              command: withGlobalFlags(client, 'routes edit <name-or-id>'),
+              command: withGlobalFlags(client, 'routes update <name-or-id>'),
               when: 'retry with a unique name or id',
             },
           ],
@@ -251,19 +251,19 @@ export default async function edit(client: Client, argv: string[]) {
               {
                 command: withGlobalFlags(
                   client,
-                  `routes edit ${shellQuoteRouteIdentifierForSuggestion(identifier)} --ai <description> --yes`
+                  `routes update ${shellQuoteRouteIdentifierForSuggestion(identifier)} --ai <description> --yes`
                 ),
                 when: 'use only --ai with route id/name already set',
               },
             ],
           },
-          1
+          2
         );
       }
       output.error(
         `Cannot use --ai with ${usedConflicts.join(', ')}. Use --ai alone to describe changes.`
       );
-      return 1;
+      return 2;
     }
 
     return await handleAIEdit(
@@ -313,17 +313,17 @@ export default async function edit(client: Client, argv: string[]) {
               {
                 command: withGlobalFlags(
                   client,
-                  `routes edit ${shellQuoteRouteIdentifierForSuggestion(identifier)} ...`
+                  `routes update ${shellQuoteRouteIdentifierForSuggestion(identifier)} ...`
                 ),
-                when: 'fix flags per message; see routes edit --help',
+                when: 'fix options per message; see routes update --help',
               },
             ],
           },
-          1
+          2
         );
       }
       output.error(error);
-      return 1;
+      return 2;
     }
   } else {
     // --- Interactive mode ---
@@ -335,25 +335,25 @@ export default async function edit(client: Client, argv: string[]) {
             status: 'error',
             reason: 'missing_arguments',
             message:
-              'No edit flags provided. In non-interactive mode pass flags such as --name, --src, --dest, --action, header flags, or --ai <description> --yes.',
+              'No update options provided. In non-interactive mode pass options such as --name, --src, --dest, --action, header options, or --ai <description> --yes.',
             next: [
               {
                 command: withGlobalFlags(
                   client,
-                  `routes edit ${shellQuoteRouteIdentifierForSuggestion(identifier)} --dest <dest> --yes`
+                  `routes update ${shellQuoteRouteIdentifierForSuggestion(identifier)} --dest <dest> --yes`
                 ),
-                when: 'example: set destination; see routes edit --help',
+                when: 'example: set destination; see routes update --help',
               },
             ],
-            hint: 'Run vercel routes edit --help for all flag options.',
+            hint: 'Run vercel routes update --help for all options.',
           },
-          1
+          2
         );
       }
       output.error(
-        `No edit flags provided. When running non-interactively, use flags like --name, --dest, --src, etc. Run ${withGlobalFlags(client, 'routes edit --help')} for all options.`
+        `No update options provided. When running non-interactively, use options like --name, --dest, --src, etc. Run ${withGlobalFlags(client, 'routes update --help')} for all options.`
       );
-      return 1;
+      return 2;
     }
 
     output.log(`\nEditing route "${originalRoute.name}"`);
@@ -361,7 +361,7 @@ export default async function edit(client: Client, argv: string[]) {
 
     // Offer AI or manual editing
     const editMode = await client.input.select({
-      message: 'How would you like to edit this route?',
+      message: 'How would you like to update this route?',
       choices: [
         { name: 'Describe changes (AI-powered)', value: 'ai' },
         { name: 'Edit manually (field by field)', value: 'manual' },
@@ -535,7 +535,7 @@ async function handleAIEdit(
 
   if (!client.stdin.isTTY) {
     output.error(
-      `Cannot interactively confirm route changes in a non-TTY environment. Use ${withGlobalFlags(client, 'routes edit <name-or-id> --ai "..." --yes')} to skip confirmation.`
+      `Cannot interactively confirm route changes in a non-TTY environment. Use ${withGlobalFlags(client, 'routes update <name-or-id> --ai "..." --yes')} to skip confirmation.`
     );
     return 1;
   }

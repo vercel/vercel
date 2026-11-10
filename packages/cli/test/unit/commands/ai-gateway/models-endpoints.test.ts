@@ -35,7 +35,7 @@ describe('ai-gateway models endpoints', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'models', 'endpoints', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:models', value: 'models' },
@@ -51,7 +51,7 @@ describe('ai-gateway models endpoints', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('Specify a model');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('lists endpoints for a model', async () => {

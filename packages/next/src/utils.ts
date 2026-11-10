@@ -1958,6 +1958,7 @@ export function addLocaleOrDefault(
 
 export type LambdaGroup = {
   pages: string[];
+  affinity?: NodejsLambda['affinity'];
   memory?: number;
   maxDuration?: number | 'max';
   maxConcurrency?: number;
@@ -2049,6 +2050,7 @@ export async function getPageLambdaGroups({
 
     let opts: {
       architecture?: NodejsLambda['architecture'];
+      affinity?: NodejsLambda['affinity'];
       memory?: number;
       maxDuration?: number | 'max';
       maxConcurrency?: number;
@@ -2172,6 +2174,7 @@ export async function getPageLambdaGroups({
           const matches =
             // Never merge a normal route into a large (single-route) group.
             (group.isLargeFunctions ?? false) === isLargeFunction &&
+            group.affinity?.mode === opts.affinity?.mode &&
             group.maxDuration === opts.maxDuration &&
             group.maxConcurrency === opts.maxConcurrency &&
             group.memory === opts.memory &&
@@ -3646,6 +3649,21 @@ export const onPrerenderRoute =
 
 export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
+export function validateStaticFiles(files: Files, staticPrefix: string) {
+  if (
+    Object.keys(files).some(file =>
+      file.startsWith(`${staticPrefix}immutable/`)
+    )
+  ) {
+    // These files can only be deployed using the adapter output.
+    throw new NowBuildError({
+      message:
+        'The Next.js build produced files in "_next/static/immutable" while the Next.js adapter was disabled. Use the Next.js Vercel Adapter instead of manually setting supportsImmutableAssets:true.',
+      code: 'NEXT_BUILDER_IMMUTABLE_STATIC_FILES',
+    });
+  }
+}
+
 export async function getStaticFiles(
   entryPath: string,
   entryDirectory: string,
@@ -3659,6 +3677,7 @@ export async function getStaticFiles(
     '**',
     path.join(entryPath, outputDirectory, 'static')
   );
+  validateStaticFiles(nextStaticFiles, '');
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
 
   let publicFolderFiles: UnwrapPromise<ReturnType<typeof glob>> = {};

@@ -11,7 +11,16 @@ import {
   mapFirewallApiError,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
-import { formatRuleDetail } from '../../../util/firewall/format';
+import {
+  formatRuleDetail,
+  formatManagedBotRuleDetail,
+} from '../../../util/firewall/format';
+import {
+  getManagedBotRule,
+  managedBotJson,
+  resolveManagedBotRuleId,
+  suggestedManagedBotAction,
+} from '../../../util/firewall/managed-bot-rules';
 import { outputAgentError } from '../../../util/agent-output';
 
 export default async function inspect(client: Client, argv: string[]) {
@@ -46,13 +55,13 @@ export default async function inspect(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
       `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules inspect <name-or-id>')}`
     );
-    return 1;
+    return 2;
   }
 
   const scope = await resolveFirewallScope(client, parsed.flags);
@@ -62,6 +71,28 @@ export default async function inspect(client: Client, argv: string[]) {
 
   try {
     const { active, draft } = await listFirewallConfigs(client, scope);
+
+    const config = draft ?? active;
+    const managedId =
+      scope.type === 'project'
+        ? resolveManagedBotRuleId(identifier)
+        : undefined;
+    if (managedId) {
+      const managed = getManagedBotRule(config, managedId);
+      if (parsed.flags['--json']) {
+        outputJson(client, managedBotJson(managed));
+        return 0;
+      }
+      output.print(`\n${formatManagedBotRuleDetail(managed)}\n`);
+      output.print(
+        `\n${chalk.dim('  Change this rule:')}\n  ${withGlobalFlags(
+          client,
+          `firewall rules update ${managed.id} --action ${suggestedManagedBotAction(managed)}`,
+          scope
+        )}\n\n`
+      );
+      return 0;
+    }
 
     // Resolve against draft (if exists) or active
     const currentRules = draft?.rules || active?.rules || [];

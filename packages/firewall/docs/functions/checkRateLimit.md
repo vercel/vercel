@@ -48,6 +48,12 @@ The entity being rate limited. Defaults to the client IP.
 
 The current request object. Optional.
 
+#### timeout?
+
+`number`
+
+The fetch timeout in milliseconds. Defaults to no timeout. Rejects with a `TimeoutError` when exceeded.
+
 ## Returns
 
 [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<\{ `error?`: `"not-found"` \| `"blocked"`; `rateLimited`: `boolean`; \}\>

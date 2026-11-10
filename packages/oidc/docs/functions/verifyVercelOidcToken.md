@@ -6,7 +6,7 @@
 
 > **verifyVercelOidcToken**\<`PayloadType`\>(`token`, `options?`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`JWTVerifyResult`\<`PayloadType`\>\>
 
-Defined in: [packages/oidc/src/verify-vercel-oidc-token.ts:53](https://github.com/vercel/vercel/blob/main/packages/oidc/src/verify-vercel-oidc-token.ts#L53)
+Defined in: [packages/oidc/src/verify-vercel-oidc-token.ts:63](https://github.com/vercel/vercel/blob/main/packages/oidc/src/verify-vercel-oidc-token.ts#L63)
 
 Verifies a Vercel OIDC token against Vercel's remote JWKS.
 

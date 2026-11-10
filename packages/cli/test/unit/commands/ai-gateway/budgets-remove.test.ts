@@ -20,6 +20,15 @@ function useListDefaults(defaults: unknown[]) {
   });
 }
 
+function useDeleteDefault() {
+  let query: unknown;
+  client.scenario.delete('/ai-gateway/budgets/defaults', (req, res) => {
+    query = req.query;
+    res.json({});
+  });
+  return () => query;
+}
+
 const apiKey = { id: 'key_123', name: 'prod-key', purpose: 'ai-gateway' };
 
 function useGetApiKey(key = apiKey) {
@@ -55,7 +64,7 @@ describe('ai-gateway budgets remove', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'budgets', 'remove', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:budgets', value: 'budgets' },
@@ -76,6 +85,21 @@ describe('ai-gateway budgets remove', () => {
     await expect(client.stderr).toOutput('team budget');
     expect(await exitCodePromise).toBe(0);
     expect(getQuery()).toMatchObject({ scopeType: 'team' });
+  });
+
+  it('warns that delete is deprecated', async () => {
+    const team = useTeam();
+    useUser();
+    useRemoveBudget();
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'budgets', 'delete', 'team', '--yes');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stderr).toOutput(
+      '`vercel ai-gateway budgets delete` is deprecated. Use `vercel ai-gateway budgets remove`.'
+    );
+    expect(await exitCodePromise).toBe(0);
   });
 
   it('removes a project budget, resolving the project name to an id', async () => {
@@ -157,7 +181,7 @@ describe('ai-gateway budgets remove', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('Expected a scope');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('rejects an unknown scope', async () => {
@@ -166,7 +190,7 @@ describe('ai-gateway budgets remove', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stderr).toOutput('Unknown scope');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('names the project default the budget falls back to', async () => {
@@ -261,6 +285,95 @@ describe('ai-gateway budgets remove', () => {
     expect(getQuery()).toMatchObject({
       scopeType: 'user',
       userId: teamMember.uid,
+    });
+  });
+
+  describe('--default', () => {
+    it('removes the per-user default with --yes', async () => {
+      const team = useTeam();
+      useUser();
+      useListDefaults([
+        {
+          scopeType: 'user',
+          limitAmount: 50,
+          refreshPeriod: 'monthly',
+          active: true,
+          createdAt: 1,
+          updatedAt: 2,
+        },
+      ]);
+      const getQuery = useDeleteDefault();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'rm',
+        'user',
+        '--default',
+        '--yes'
+      );
+
+      const exitCode = await aiGateway(client);
+
+      expect(exitCode).toBe(0);
+      const err = client.stderr.getFullOutput();
+      expect(err).toContain('Removed');
+      expect(err).toContain('user default');
+      expect(getQuery()).toMatchObject({ scopeType: 'user' });
+    });
+
+    it('requires --yes in non-interactive mode for a default', async () => {
+      const team = useTeam();
+      useUser();
+      client.config.currentTeam = team.id;
+      client.nonInteractive = true;
+      client.setArgv('ai-gateway', 'budgets', 'rm', 'project', '--default');
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput('re-run with --yes');
+      expect(await exitCodePromise).toBe(1);
+    });
+
+    it('rejects --default on the team scope', async () => {
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'rm',
+        'team',
+        '--default',
+        '--yes'
+      );
+
+      const exitCodePromise = aiGateway(client);
+
+      await expect(client.stderr).toOutput(
+        'team scope does not support --default'
+      );
+      expect(await exitCodePromise).toBe(2);
+    });
+
+    it('errors instead of reporting success when no default exists', async () => {
+      const team = useTeam();
+      useUser();
+      useListDefaults([]);
+      useDeleteDefault();
+      client.config.currentTeam = team.id;
+      client.setArgv(
+        'ai-gateway',
+        'budgets',
+        'rm',
+        'project',
+        '--default',
+        '--yes'
+      );
+
+      const exitCode = await aiGateway(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'No project budget default set'
+      );
     });
   });
 });

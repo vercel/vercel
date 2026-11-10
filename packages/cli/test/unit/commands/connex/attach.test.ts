@@ -52,7 +52,7 @@ describe('connex attach', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Missing connector ID or UID'
     );
@@ -64,7 +64,7 @@ describe('connex attach', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('--json requires --yes');
   });
 
@@ -637,23 +637,82 @@ describe('connex attach', () => {
   });
 
   describe('--triggers', () => {
-    it('rejects --trigger-branch without --triggers', async () => {
+    it.each([
+      '--git-branch',
+      '--trigger-branch',
+    ])('rejects %s without --triggers', async flag => {
       await setupLinkedProject(team);
+      client.setArgv('connect', 'attach', 'scl_abc123', flag, 'main', '--yes');
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--git-branch, --trigger-environment, and --trigger-path require --triggers'
+      );
+    });
+
+    it('rejects --trigger-branch with --git-branch before retrieving the connector', async () => {
+      await setupLinkedProject(team);
+      let connectorRequested = false;
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        connectorRequested = true;
+        res.json({});
+      });
       client.setArgv(
         'connect',
         'attach',
         'scl_abc123',
+        '--triggers',
         '--trigger-branch',
+        'staging',
+        '--git-branch',
         'main',
         '--yes'
       );
 
       const exitCode = await connect(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
+      expect(connectorRequested).toBe(false);
       expect(client.stderr.getFullOutput()).toContain(
-        '--trigger-branch, --trigger-environment, and --trigger-path require --triggers'
+        "Can't use --trigger-branch with --git-branch. Use --git-branch."
       );
+    });
+
+    it.each([
+      [['--json']],
+      [['--json', '--yes']],
+    ])('reports --trigger-branch with --git-branch as a JSON error with %j', async extraFlags => {
+      await setupLinkedProject(team);
+      let connectorRequested = false;
+      client.scenario.get('/v1/connect/connectors/:clientId', (_req, res) => {
+        connectorRequested = true;
+        res.json({});
+      });
+      client.setArgv(
+        'connect',
+        'attach',
+        'scl_abc123',
+        '--triggers',
+        '--git-branch',
+        'main',
+        '--trigger-branch',
+        'staging',
+        ...extraFlags
+      );
+
+      const exitCode = await connect(client);
+
+      expect(exitCode).toBe(2);
+      expect(connectorRequested).toBe(false);
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+        message:
+          "Can't use --trigger-branch with --git-branch. Use --git-branch.",
+      });
+      expect(client.stderr.getFullOutput()).not.toContain("Can't use");
     });
 
     it('rejects --trigger-environment without --triggers', async () => {
@@ -681,7 +740,7 @@ describe('connex attach', () => {
         'attach',
         'scl_abc123',
         '--triggers',
-        '--trigger-branch',
+        '--git-branch',
         'staging',
         '--trigger-environment',
         'qa',
@@ -690,9 +749,9 @@ describe('connex attach', () => {
 
       const exitCode = await connect(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(client.stderr.getFullOutput()).toContain(
-        '--trigger-branch and --trigger-environment are mutually exclusive'
+        '--git-branch and --trigger-environment are mutually exclusive'
       );
     });
 
@@ -736,9 +795,9 @@ describe('connex attach', () => {
 
       const exitCode = await connect(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(client.stderr.getFullOutput()).toContain(
-        '--trigger-branch and --trigger-environment are mutually exclusive'
+        '--git-branch and --trigger-environment are mutually exclusive'
       );
     });
 
@@ -810,7 +869,10 @@ describe('connex attach', () => {
       expect(stderr).toContain('trigger destination');
     });
 
-    it('passes branch and path through to the PATCH', async () => {
+    it.each([
+      ['--git-branch', false],
+      ['--trigger-branch', true],
+    ])('passes %s and path through to the PATCH', async (flag, deprecated) => {
       await setupLinkedProject(team);
       let patchBody:
         | {
@@ -857,7 +919,7 @@ describe('connex attach', () => {
         'attach',
         'scl_abc123',
         '--triggers',
-        '--trigger-branch',
+        flag,
         'staging',
         '--trigger-path',
         '/slack-events',
@@ -870,6 +932,12 @@ describe('connex attach', () => {
       expect(patchBody?.destinations).toEqual([
         { projectId: PROJECT_ID, branch: 'staging', path: '/slack-events' },
       ]);
+      const warning = '! --trigger-branch is deprecated. Use --git-branch.';
+      if (deprecated) {
+        expect(client.stderr.getFullOutput()).toContain(warning);
+      } else {
+        expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      }
     });
 
     it('resolves a custom-environment slug to its stable ID for the PATCH', async () => {

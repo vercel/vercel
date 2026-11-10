@@ -283,6 +283,19 @@ describe('verifyVercelOidcToken', () => {
     );
   });
 
+  test('distinguishes token identity failures from signing-key outages', async () => {
+    mockVerifiedPayload({ project_id: 'prj_other' });
+    const failure = verifyVercelOidcToken('token');
+    await expect(failure).rejects.toBeInstanceOf(TypeError);
+    await expect(failure).rejects.toMatchObject({
+      code: 'ERR_VERCEL_OIDC_TOKEN_VALIDATION',
+    });
+
+    const outage = new TypeError('fetch failed');
+    vi.mocked(jwtVerify).mockRejectedValueOnce(outage);
+    await expect(verifyVercelOidcToken('token')).rejects.toBe(outage);
+  });
+
   test('rejects a token from a different owner', async () => {
     mockVerifiedPayload({
       owner_id: 'team_other',

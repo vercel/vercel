@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
+import { getTypedOptionName, parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
@@ -27,10 +27,21 @@ import {
 } from './output';
 import { getDefaultCustomMetricAggregation } from './metric-units';
 import { formatText } from './text-output';
+import {
+  alignTimeRangeToGranularity,
+  canonicalResponseToMetricsResponse,
+  createCanonicalMetricsRequest,
+} from './canonical-query';
 import { computeGranularity } from './time-utils';
+import {
+  FILTER_DEPRECATION_WARNING,
+  usesODataSyntax,
+} from '../../util/metrics/filter-syntax';
+import { warnIfFidMetric } from '../../util/metrics/fid-deprecation';
+import { warnDeprecatedProdFlag } from '../../util/parse-target';
+import { getRenamedOption } from '../../util/renamed-option';
 import { resolveTimeRange } from '../../util/time-utils';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
-import { isCanonicalAggregation } from './types';
 import type {
   Aggregation,
   CanonicalMetricSelection,
@@ -67,26 +78,21 @@ function handleValidationError(
   return 1;
 }
 
-const PRODUCTION_ENVIRONMENT_FILTER = "environment eq 'production'";
-const PRODUCTION_ENVIRONMENT_KQL_FILTER = 'environment:production';
-const CUSTOM_METRIC_VALUE_ALIAS = 'value';
-const CUSTOM_METRIC_COUNT_ALIAS = '__seriesCount';
+// Environment slugs, like production, preview, or a custom environment.
+const ENVIRONMENT_PATTERN = /^[a-z0-9][a-z0-9-]*$/i;
 const SUM_DEFAULT_METRIC_UNITS = new Set(['bytes', 'count', 'usd', 'units']);
-const FILTER_DEPRECATION_WARNING =
-  'OData support in --filter is deprecated and will be removed soon. KQL will be the only supported filter syntax.';
-
 function combineFilters(
   filters: string[] | undefined,
-  prod: boolean | undefined,
+  environment: string | undefined,
   syntax: 'odata' | 'kql' = 'odata'
 ): string | undefined {
   const nonEmptyFilters = [
     ...(filters?.filter(filter => filter.length > 0) ?? []),
-    ...(prod
+    ...(environment
       ? [
           syntax === 'kql'
-            ? PRODUCTION_ENVIRONMENT_KQL_FILTER
-            : PRODUCTION_ENVIRONMENT_FILTER,
+            ? `environment:${environment}`
+            : `environment eq '${environment}'`,
         ]
       : []),
   ];
@@ -103,19 +109,6 @@ function combineFilters(
   return nonEmptyFilters.map(filter => `(${filter})`).join(conjunction);
 }
 
-function usesODataSyntax(filters: string[] | undefined): boolean {
-  return (
-    filters?.some(filter => {
-      const unquoted = filter.replace(/"(?:\\.|[^"\\])*"|'(?:''|[^'])*'/g, '');
-
-      return (
-        /\s(?:eq|ne|gt|ge|lt|le|in)\s/i.test(unquoted) ||
-        /\b(?:contains|startswith|endswith)\s*\(/i.test(unquoted)
-      );
-    }) ?? false
-  );
-}
-
 function getRequestOrderBy(
   metric: string,
   aggregation: string,
@@ -124,24 +117,6 @@ function getRequestOrderBy(
   return orderBy === 'value'
     ? getRollupColumnName(metric, aggregation)
     : undefined;
-}
-
-function toBucketSeconds(granularity: MetricsQueryRequest['granularity']) {
-  if ('minutes' in granularity) return granularity.minutes * 60;
-  if ('hours' in granularity) return granularity.hours * 60 * 60;
-  return granularity.days * 24 * 60 * 60;
-}
-
-function alignTimeRangeToGranularity(
-  startTime: Date,
-  endTime: Date,
-  granularity: MetricsQueryRequest['granularity']
-): { startTime: Date; endTime: Date } {
-  const bucketMs = toBucketSeconds(granularity) * 1000;
-  return {
-    startTime: new Date(Math.floor(startTime.getTime() / bucketMs) * bucketMs),
-    endTime: new Date(Math.ceil(endTime.getTime() / bucketMs) * bucketMs),
-  };
 }
 
 function getCatalogDefaultAggregation(
@@ -164,22 +139,25 @@ function getCatalogDefaultAggregation(
   return metric.aggregations.includes('sum') ? 'sum' : metric.aggregations[0];
 }
 
+function getUndiscoveredDefaultAggregation(metric: string): 'count' | 'sum' {
+  return metric.startsWith('vercel.') && metric.endsWith('.count')
+    ? 'count'
+    : 'sum';
+}
+
 function toCanonicalMetricSelection(
   metric: string,
   aggregation: string,
   supportedAggregations: readonly string[] | undefined
-): CanonicalMetricSelection | ValidationError {
+): CanonicalMetricSelection {
   const [aggregationName, ...dimensionParts] = aggregation.split('/');
   const dimension = dimensionParts.join('/') || undefined;
-  const countOnlyMetric =
-    supportedAggregations?.includes('count') === true &&
-    !supportedAggregations.includes('sum');
-  const additiveAggregation = supportedAggregations?.includes('sum')
-    ? 'sum'
-    : countOnlyMetric ||
-        (supportedAggregations === undefined && metric.endsWith('.count'))
+  const additiveAggregation = supportedAggregations
+    ? supportedAggregations.includes('count') &&
+      !supportedAggregations.includes('sum')
       ? 'count'
-      : 'sum';
+      : 'sum'
+    : getUndiscoveredDefaultAggregation(metric);
 
   if (aggregation === 'persecond') {
     return { metric, aggregation: additiveAggregation, per: 'second' };
@@ -187,150 +165,24 @@ function toCanonicalMetricSelection(
   if (aggregation === 'percent') {
     return { metric, aggregation: additiveAggregation, normalize: 'percent' };
   }
-  if (aggregationName === 'unique') {
-    if (dimension) {
-      return { metric, aggregation: 'unique', dimensions: [dimension] };
-    }
-    return {
-      valid: false,
-      code: 'UNSUPPORTED_AGGREGATION',
-      message:
-        'The unique aggregation requires a dimension, for example "unique/visitorId".',
-    };
+  if (aggregationName === 'unique' && dimension) {
+    return { metric, aggregation: 'unique', dimensions: [dimension] };
   }
-  if (isCanonicalAggregation(aggregation)) {
-    return { metric, aggregation };
-  }
-  return {
-    valid: false,
-    code: 'INVALID_AGGREGATION',
-    message: `Aggregation "${aggregation}" is not supported by the Observability query API.`,
-  };
+  return { metric, aggregation };
 }
 
 function getCanonicalOrderBy(
   orderBy: OrderBy | undefined,
   selection: CanonicalMetricSelection,
   supportedAggregations: readonly string[] | undefined
-): OrderBy | ValidationError {
-  if (orderBy === 'value') {
-    return 'value';
+): OrderBy {
+  if (orderBy) {
+    return orderBy;
   }
   const supportsCount =
     supportedAggregations === undefined ||
     supportedAggregations.includes('count');
-  if (selection.aggregation === 'count' || supportsCount) {
-    return 'count';
-  }
-  if (orderBy === 'count') {
-    return {
-      valid: false,
-      code: 'INVALID_ORDER_BY',
-      message:
-        '--order-by count is not available because this metric does not support the count aggregation. Use --order-by value.',
-      allowedValues: ['value'],
-    };
-  }
-  return 'value';
-}
-
-function createCanonicalMetricsRequest(options: {
-  scope: Scope;
-  metric: string;
-  selection: CanonicalMetricSelection;
-  startTime: Date;
-  endTime: Date;
-  granularity: MetricsQueryRequest['granularity'];
-  groupBy: string[];
-  filter: string | undefined;
-  limit: number;
-  orderBy: OrderBy | undefined;
-  orderDirection: 'asc' | 'desc' | undefined;
-}): CanonicalMetricsQueryRequest {
-  const metrics: Record<string, CanonicalMetricSelection> = {
-    [CUSTOM_METRIC_VALUE_ALIAS]: options.selection,
-  };
-  let rankMetric = CUSTOM_METRIC_VALUE_ALIAS;
-  if (
-    options.groupBy.length > 0 &&
-    options.orderBy === 'count' &&
-    options.selection.aggregation !== 'count'
-  ) {
-    metrics[CUSTOM_METRIC_COUNT_ALIAS] = {
-      metric: options.metric,
-      aggregation: 'count',
-    };
-    rankMetric = CUSTOM_METRIC_COUNT_ALIAS;
-  }
-
-  return {
-    scope: {
-      ownerId: options.scope.ownerId,
-      ...(options.scope.type === 'project'
-        ? { projectIds: options.scope.projectIds }
-        : {}),
-    },
-    timeRange: {
-      start: options.startTime.toISOString(),
-      end: options.endTime.toISOString(),
-    },
-    bucketSeconds: toBucketSeconds(options.granularity),
-    ...(options.groupBy.length > 0 ? { groupBy: options.groupBy } : {}),
-    ...(options.filter ? { filter: options.filter } : {}),
-    metrics,
-    outputs: [CUSTOM_METRIC_VALUE_ALIAS],
-    ...(options.groupBy.length > 0
-      ? {
-          seriesSelection: {
-            limit: options.limit,
-            mode: 'exact',
-            rankBy: [
-              {
-                metric: rankMetric,
-                direction: options.orderDirection ?? 'desc',
-              },
-            ],
-          },
-        }
-      : {}),
-  };
-}
-
-function canonicalResponseToMetricsResponse(
-  response: CanonicalMetricsQueryResponse,
-  rollupColumn: string,
-  orderBy: OrderBy | undefined,
-  orderDirection: 'asc' | 'desc' | undefined
-): MetricsQueryResponse {
-  const toRow = (point: {
-    dimensions: Record<string, string | null>;
-    values: Record<string, number | null>;
-  }) => ({
-    ...point.dimensions,
-    [rollupColumn]: point.values[CUSTOM_METRIC_VALUE_ALIAS] ?? null,
-  });
-  return {
-    ...(response.series
-      ? {
-          data: response.series.map(point => ({
-            timestamp: point.timestamp,
-            ...toRow(point),
-          })),
-        }
-      : {}),
-    summary: response.summary.map(toRow),
-    statistics: {
-      rowsRead: response.meta.statistics.rowsRead,
-      bytesRead: response.meta.statistics.bytesRead,
-      dbTimeSeconds: response.meta.statistics.databaseElapsedMs / 1_000,
-      engineTimeSeconds: response.meta.statistics.elapsedMs / 1_000,
-      queryTable: [...new Set(response.meta.sources.map(source => source.id))]
-        .sort()
-        .join(','),
-    },
-    ...(orderBy ? { orderBy } : {}),
-    ...(orderDirection ? { orderDirection } : {}),
-  };
+  return selection.aggregation === 'count' || supportsCount ? 'count' : 'value';
 }
 
 async function resolveQueryScope(
@@ -432,8 +284,8 @@ export default async function query(
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     telemetry.trackCliError('INVALID_ARGUMENTS');
-    printError(err);
-    return 1;
+    printError(err, client);
+    return 2;
   }
 
   const flags = parsedArgs.flags;
@@ -446,7 +298,7 @@ export default async function query(
   if (!formatResult.valid) {
     telemetry.trackCliError('INVALID_OUTPUT_FORMAT');
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
 
@@ -463,7 +315,7 @@ export default async function query(
     typeof flags['--order'] === 'string'
       ? flags['--order'].trim().toLowerCase()
       : undefined;
-  const filters = flags['--filter'];
+  const environmentFlag = flags['--environment'];
   const prod = flags['--prod'];
   const since = flags['--since'];
   const until = flags['--until'];
@@ -479,7 +331,9 @@ export default async function query(
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionOrderBy(orderByInput);
   telemetry.trackCliOptionOrder(orderInput);
-  telemetry.trackCliOptionFilter(filters);
+  telemetry.trackCliOptionQuery(flags['--query']);
+  telemetry.trackCliOptionFilter(flags['--filter']);
+  telemetry.trackCliOptionEnvironment(environmentFlag);
   telemetry.trackCliFlagProd(prod);
   telemetry.trackCliOptionSince(since);
   telemetry.trackCliOptionUntil(until);
@@ -488,6 +342,58 @@ export default async function query(
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliFlagAll(all);
   telemetry.trackCliOptionFormat(flags['--format']);
+
+  const queryOption = getRenamedOption<string[]>(flags, '--query', '--filter', {
+    json: jsonOutput,
+    typedName: getTypedOptionName(
+      client.argv.slice(2),
+      getFlagsSpecification(metricsCommand.options),
+      '--filter'
+    ),
+  });
+  if ('error' in queryOption) {
+    handleValidationError(
+      { valid: false, code: 'CONFLICTING_OPTIONS', message: queryOption.error },
+      jsonOutput,
+      client,
+      telemetry
+    );
+    return 2;
+  }
+  const filters = queryOption.value;
+
+  // Both are usage errors, so they exit 2 like other flag conflicts.
+  if (prod && environmentFlag !== undefined) {
+    handleValidationError(
+      {
+        valid: false,
+        code: 'CONFLICTING_OPTIONS',
+        message: "Can't use --prod with --environment. Use --environment.",
+      },
+      jsonOutput,
+      client,
+      telemetry
+    );
+    return 2;
+  }
+  if (
+    environmentFlag !== undefined &&
+    !ENVIRONMENT_PATTERN.test(environmentFlag)
+  ) {
+    handleValidationError(
+      {
+        valid: false,
+        code: 'INVALID_ENVIRONMENT',
+        message: `Can't query metrics for environment ${JSON.stringify(environmentFlag)}. Environments use letters, numbers, and hyphens, like production or preview.`,
+      },
+      jsonOutput,
+      client,
+      telemetry
+    );
+    return 2;
+  }
+  warnDeprecatedProdFlag(client, flags);
+  const environment = environmentFlag ?? (prod ? 'production' : undefined);
 
   const orderByResult = validateOrderBy(orderByInput);
   if (!orderByResult.valid) {
@@ -501,6 +407,7 @@ export default async function query(
     return handleValidationError(requiredMetric, jsonOutput, client, telemetry);
   }
   const metric = requiredMetric.value;
+  warnIfFidMetric(metric);
 
   const mutualResult = validateAllProjectMutualExclusivity(all, project);
   if (!mutualResult.valid) {
@@ -536,7 +443,7 @@ export default async function query(
   }
   const filter = combineFilters(
     filters,
-    prod,
+    environment,
     useCanonicalQuery && !filterUsesOData ? 'kql' : 'odata'
   );
 
@@ -554,7 +461,7 @@ export default async function query(
     );
   }
 
-  let metricUnit: string;
+  let metricUnit: string | undefined;
   let aggregationInput: string;
   let canonicalAggregations: readonly string[] | undefined;
   if (useCanonicalQuery) {
@@ -571,42 +478,13 @@ export default async function query(
       return catalogOrExitCode;
     }
     const catalogMetric = catalogOrExitCode.find(item => item.id === metric);
-    if (!catalogMetric) {
-      return handleValidationError(
-        {
-          valid: false,
-          code: 'UNKNOWN_METRIC',
-          message: `Unknown metric "${metric}".`,
-          allowedValues: catalogOrExitCode.map(item => item.id),
-        },
-        jsonOutput,
-        client,
-        telemetry
-      );
-    }
-    metricUnit = catalogMetric.unit;
-    canonicalAggregations = catalogMetric.aggregations;
-    if (aggregationFlag) {
-      aggregationInput = aggregationFlag;
-    } else {
-      const defaultAggregation = getCatalogDefaultAggregation(
-        catalogMetric,
-        isPlatformMetric
-      );
-      if (!defaultAggregation) {
-        return handleValidationError(
-          {
-            valid: false,
-            code: 'INVALID_AGGREGATION',
-            message: `Metric "${metric}" does not support any query aggregations.`,
-          },
-          jsonOutput,
-          client,
-          telemetry
-        );
-      }
-      aggregationInput = defaultAggregation;
-    }
+    metricUnit = catalogMetric?.unit;
+    canonicalAggregations = catalogMetric?.aggregations;
+    aggregationInput =
+      aggregationFlag ??
+      (catalogMetric &&
+        getCatalogDefaultAggregation(catalogMetric, isPlatformMetric)) ??
+      getUndiscoveredDefaultAggregation(metric);
   } else {
     const detailOrExitCode = await fetchMetricDetailOrExit(
       client,
@@ -675,39 +553,10 @@ export default async function query(
       aggregation,
       canonicalAggregations
     );
-    if ('valid' in selection) {
-      return handleValidationError(selection, jsonOutput, client, telemetry);
-    }
-    const supportedAggregation = selection.aggregation;
-    if (
-      canonicalAggregations &&
-      !canonicalAggregations.includes(supportedAggregation)
-    ) {
-      return handleValidationError(
-        {
-          valid: false,
-          code: 'INVALID_AGGREGATION',
-          message: `Aggregation "${aggregation}" is not valid for metric "${metric}".`,
-          allowedValues: [...canonicalAggregations],
-        },
-        jsonOutput,
-        client,
-        telemetry
-      );
-    }
-    const canonicalOrderByResult =
+    canonicalOrderBy =
       groupBy.length > 0
         ? getCanonicalOrderBy(orderByMode, selection, canonicalAggregations)
         : undefined;
-    if (canonicalOrderByResult && typeof canonicalOrderByResult !== 'string') {
-      return handleValidationError(
-        canonicalOrderByResult,
-        jsonOutput,
-        client,
-        telemetry
-      );
-    }
-    canonicalOrderBy = canonicalOrderByResult;
     body = createCanonicalMetricsRequest({
       scope,
       metric,
@@ -763,7 +612,18 @@ export default async function query(
   } catch (err: unknown) {
     if (isAPIError(err)) {
       telemetry.trackCliError(err.code ?? 'API_ERROR', err.status);
-      return handleApiError(err, jsonOutput, client);
+      return handleApiError(
+        err,
+        jsonOutput,
+        client,
+        {},
+        {
+          scope: accountId.startsWith('team_')
+            ? teamName || accountId
+            : undefined,
+          projectName,
+        }
+      );
     }
     const errMsg = err instanceof Error ? err.message : String(err);
     telemetry.trackCliError('NETWORK_ERROR');
@@ -794,7 +654,8 @@ export default async function query(
           ...(resolvedOrderBy ? { orderBy: resolvedOrderBy } : {}),
           ...(orderDirection ? { orderDirection } : {}),
         },
-        response
+        response,
+        [queryOption.warning]
       )
     );
   } else {

@@ -17,6 +17,7 @@ export interface DeploymentFileSummary {
   ignoredCount: number;
   files: DeploymentFileItem[];
   ignored: string[];
+  warning?: string;
 }
 
 export async function inspectDeploymentFiles(
@@ -34,7 +35,7 @@ export async function inspectDeploymentFiles(
 ): Promise<DeploymentFileSummary> {
   const { path } = clientOptions;
   const debug = createDebug(clientOptions.debug);
-  const { filesMap, workPath, isDirectory, ignoreList } =
+  const { filesMap, workPath, isDirectory, ignoreList, warning } =
     await collectDeploymentFiles(path, { ...clientOptions }, debug);
 
   const files: DeploymentFileItem[] = [];
@@ -69,5 +70,6 @@ export async function inspectDeploymentFiles(
     ignoredCount: ignoreList.length,
     files,
     ignored: ignoreList.sort(),
+    warning,
   };
 }

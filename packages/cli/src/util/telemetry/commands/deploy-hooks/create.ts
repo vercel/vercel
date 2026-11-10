@@ -10,16 +10,26 @@ export class DeployHooksCreateTelemetryClient
     if (name) {
       this.trackCliArgument({
         arg: 'name',
-        value: name,
+        value: this.redactedValue,
       });
     }
   }
 
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
+    if (gitBranch) {
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionRef(ref: string | undefined) {
     if (ref) {
       this.trackCliOption({
         option: 'ref',
-        value: ref,
+        value: this.redactedValue,
       });
     }
   }

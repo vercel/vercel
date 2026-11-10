@@ -25,6 +25,17 @@ export class TracesConfigSetTelemetryClient
     }
   }
 
+  trackCliOptionEnvironment(environment: string | undefined) {
+    if (environment) {
+      this.trackCliOption({
+        option: 'environment',
+        value: isRuleEnvironment(environment)
+          ? (environment satisfies RuleEnvironment)
+          : this.redactedValue,
+      });
+    }
+  }
+
   trackCliArgumentRate(rate: string | undefined) {
     if (rate) {
       this.trackCliArgument({

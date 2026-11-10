@@ -3,17 +3,26 @@
  * team-level config that applies to every project in the team (`--team-level`).
  */
 export type FirewallScope =
-  | { type: 'project'; projectId: string; teamId?: string; displayName: string }
+  | {
+      type: 'project';
+      projectId: string;
+      teamId?: string;
+      /** Team slug, when the project belongs to a team. Pins `--scope` on the Priority upsell. */
+      teamSlug?: string;
+      displayName: string;
+    }
   | { type: 'team'; teamId: string; displayName: string };
 
 export function projectScope(
   project: { id: string; name: string },
-  teamId: string | undefined
+  teamId: string | undefined,
+  teamSlug?: string
 ): FirewallScope {
   return {
     type: 'project',
     projectId: project.id,
     teamId,
+    ...(teamSlug ? { teamSlug } : {}),
     displayName: project.name,
   };
 }

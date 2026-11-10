@@ -29,22 +29,6 @@ export function resolveBaseUrl({
 }
 
 /**
- * A JOSE Flattened JWS, as returned by the message-signing endpoint.
- *
- * @see https://datatracker.ietf.org/doc/html/rfc7515#section-7.2.2
- */
-export interface FlattenedJWS {
-  /** Base64url-encoded JWS payload. */
-  payload: string;
-  /** Base64url-encoded JWS signature. */
-  signature: string;
-  /** Base64url-encoded protected header. */
-  protected?: string;
-  /** Optional unprotected JWS header. */
-  header?: Record<string, unknown>;
-}
-
-/**
  * Performs an authenticated POST to a Vercel KMS sign endpoint and returns the
  * parsed JSON body. Throws {@link VercelKmsError} on a non-2xx response.
  */

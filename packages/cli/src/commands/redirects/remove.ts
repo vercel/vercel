@@ -53,11 +53,11 @@ export default async function remove(client: Client, argv: string[]) {
           message: `${error} Run: ${cmd}`,
           next: [{ command: cmd, when: 'to remove a redirect' }],
         },
-        1
+        2
       );
     }
     output.error(error);
-    return 1;
+    return 2;
   }
 
   const link = await requireProjectContext(

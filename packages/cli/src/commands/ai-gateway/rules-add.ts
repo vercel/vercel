@@ -31,7 +31,7 @@ export default async function add(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { flags: opts } = parsedArgs;
 
@@ -51,25 +51,27 @@ export default async function add(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
   if (!type || !RULE_TYPES.includes(type as RuleType)) {
     output.error(
-      `The --type flag is required and must be one of: ${RULE_TYPES.join(', ')}.`
+      `The --type option is required and must be one of: ${RULE_TYPES.join(', ')}.`
     );
-    return 1;
+    return 2;
   }
   if (!source) {
-    output.error('The --source flag is required (the model the rule matches).');
-    return 1;
+    output.error(
+      'The --source option is required (the model the rule matches).'
+    );
+    return 2;
   }
   if (type === 'rewrite' && !destination) {
     output.error(
       'A rewrite rule requires --destination (the model to route to).'
     );
-    return 1;
+    return 2;
   }
   if (type === 'deny' && destination) {
     output.error('A deny rule cannot set --destination.');

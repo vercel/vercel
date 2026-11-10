@@ -11,7 +11,7 @@ describe('domains auto-renew', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -26,7 +26,7 @@ describe('domains auto-renew', () => {
     useUser();
     client.setArgv('domains', 'auto-renew');
     const exitCode = await domains(client);
-    expect(exitCode, 'exit code for "domains"').toEqual(1);
+    expect(exitCode, 'exit code for "domains"').toEqual(2);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
@@ -41,7 +41,7 @@ describe('domains auto-renew', () => {
     client.setArgv('domains', 'auto-renew', 'example.com', 'maybe');
     const exitCodePromise = domains(client);
     await expect(client.stderr).toOutput('Invalid state "maybe"');
-    await expect(exitCodePromise).resolves.toEqual(1);
+    await expect(exitCodePromise).resolves.toEqual(2);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
@@ -55,8 +55,8 @@ describe('domains auto-renew', () => {
     ]);
   });
 
-  describe('on', () => {
-    it('turns auto-renew on and records the enum value', async () => {
+  describe('enable', () => {
+    it('turns auto-renew on', async () => {
       useUser();
       let body: Record<string, unknown> | undefined;
       client.scenario.patch(
@@ -67,14 +67,90 @@ describe('domains auto-renew', () => {
         }
       );
 
-      client.setArgv('domains', 'auto-renew', 'example.com', 'on');
+      client.setArgv('domains', 'auto-renew', 'enable', 'example.com');
       const exitCodePromise = domains(client);
       await expect(client.stderr).toOutput(
-        'Automatic renewal turned on for "example.com"'
+        'Enabled automatic renewal for "example.com"'
       );
       await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(body).toEqual({ autoRenew: true });
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'subcommand:auto-renew',
+          value: 'auto-renew',
+        },
+        {
+          key: 'subcommand:enable',
+          value: 'enable',
+        },
+        {
+          key: 'argument:domain',
+          value: '[REDACTED]',
+        },
+      ]);
+    });
+
+    it('requires a domain', async () => {
+      useUser();
+      client.setArgv('domains', 'auto-renew', 'enable');
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput(
+        'Usage: `vercel domains auto-renew enable <domain>`'
+      );
+      await expect(exitCodePromise).resolves.toEqual(2);
+    });
+  });
+
+  describe('disable', () => {
+    it('turns auto-renew off', async () => {
+      useUser();
+      let body: Record<string, unknown> | undefined;
+      client.scenario.patch(
+        '/v1/registrar/domains/example.com/auto-renew',
+        (req, res) => {
+          body = req.body;
+          res.status(204).end();
+        }
+      );
+
+      client.setArgv('domains', 'auto-renew', 'disable', 'example.com');
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput(
+        'Disabled automatic renewal for "example.com"'
+      );
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(body).toEqual({ autoRenew: false });
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+    });
+  });
+
+  describe('the old <domain> <on|off> form', () => {
+    it.each([
+      ['on', true, 'enable'],
+      ['off', false, 'disable'],
+    ])('still turns auto-renew %s, with a warning', async (state, autoRenew, action) => {
+      useUser();
+      let body: Record<string, unknown> | undefined;
+      client.scenario.patch(
+        '/v1/registrar/domains/example.com/auto-renew',
+        (req, res) => {
+          body = req.body;
+          res.status(204).end();
+        }
+      );
+
+      client.setArgv('domains', 'auto-renew', 'example.com', state);
+      const exitCodePromise = domains(client);
+      await expect(client.stderr).toOutput(
+        `\`vercel domains auto-renew example.com ${state}\` is deprecated. Use \`vercel domains auto-renew ${action} example.com\`.`
+      );
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(body).toEqual({ autoRenew });
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -87,32 +163,24 @@ describe('domains auto-renew', () => {
         },
         {
           key: 'argument:state',
-          value: 'on',
+          value: state,
         },
       ]);
     });
-  });
 
-  describe('off', () => {
-    it('turns auto-renew off', async () => {
+    it('keeps stderr clean with --json', async () => {
       useUser();
-      let body: Record<string, unknown> | undefined;
       client.scenario.patch(
         '/v1/registrar/domains/example.com/auto-renew',
-        (req, res) => {
-          body = req.body;
+        (_req, res) => {
           res.status(204).end();
         }
       );
 
-      client.setArgv('domains', 'auto-renew', 'example.com', 'off');
-      const exitCodePromise = domains(client);
-      await expect(client.stderr).toOutput(
-        'Automatic renewal turned off for "example.com"'
-      );
-      await expect(exitCodePromise).resolves.toEqual(0);
-
-      expect(body).toEqual({ autoRenew: false });
+      client.setArgv('domains', 'auto-renew', 'example.com', 'on', '--json');
+      expect(await domains(client)).toEqual(0);
+      expect(JSON.parse(client.stdout.getFullOutput()).autoRenew).toBe(true);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
     });
   });
 
@@ -130,8 +198,8 @@ describe('domains auto-renew', () => {
       client.setArgv(
         'domains',
         'auto-renew',
+        'enable',
         'example.com',
-        'on',
         '--non-interactive'
       );
       const exitCode = await domains(client);
@@ -199,7 +267,7 @@ describe('domains auto-renew', () => {
       expect(payload.status).toBe('error');
       expect(payload.reason).toBe('invalid_arguments');
       expect(payload.message).toContain('Invalid state "maybe"');
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(exitSpy).toHaveBeenCalledWith(2);
 
       exitSpy.mockRestore();
       client.nonInteractive = false;
@@ -260,7 +328,7 @@ describe('domains auto-renew', () => {
       useUser();
       client.setArgv('domains', 'auto-renew', 'example.com', 'maybe', '--json');
       const exitCode = await domains(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
 
       const payload = JSON.parse(client.stdout.getFullOutput());
       expect(payload.status).toBe('error');

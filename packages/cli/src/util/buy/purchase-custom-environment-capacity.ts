@@ -74,7 +74,7 @@ export async function purchaseCustomEnvironmentCapacity(
     output.error(
       `Packs must be between ${minPacks} and ${maxPacks} for this project (${minEnvironments}-${maxEnvironments} purchased environments).`
     );
-    return 1;
+    return 2;
   }
 
   if (packs === purchasedPacks) {

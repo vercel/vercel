@@ -1,147 +1,75 @@
-import chalk from 'chalk';
+import { createHelpTheme } from '../output/help-theme';
 import { packageName } from '../pkg-name';
-import { getVisibleOptions, isHiddenOnCreate } from './format-schema-help';
+import {
+  buildCommandExampleLines,
+  type CommandExample,
+} from '../../commands/help';
+import {
+  formatMetadataExample,
+  getVisibleOptions,
+  isHiddenOnCreate,
+} from './format-schema-help';
 import type { IntegrationProduct } from './types';
+import { formatHelpSelector } from './format-help-selector';
 
-/**
- * Format dynamic CLI examples using the actual integration slug and product schemas.
- * Replaces the static "acme" examples when we know the real integration.
- */
+/** Examples use the fetched integration's real product slugs and schema. */
 export function formatDynamicExamples(
   integrationSlug: string,
   products: IntegrationProduct[],
-  commandName = 'integration add'
+  commandName = 'integration add',
+  columns = 80,
+  theme = createHelpTheme()
 ): string {
-  const lines: string[] = [];
-  lines.push('');
-  lines.push(`  ${chalk.dim('Examples:')}`);
-
-  // Basic install
-  lines.push('');
-  lines.push(`  ${chalk.dim('-')} Install ${integrationSlug}`);
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug}`)}`
-  );
-
-  // Slash syntax for multi-product
-  if (products.length > 1) {
-    const firstProduct = products[0];
-    lines.push('');
-    lines.push(`  ${chalk.dim('-')} Install a specific product`);
-    lines.push('');
-    lines.push(
-      `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug}/${firstProduct.slug}`)}`
-    );
-  }
-
-  // Custom name
-  lines.push('');
-  lines.push(`  ${chalk.dim('-')} Install with a custom resource name`);
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --name my-resource`)}`
-  );
-
-  // Metadata example — pick the first product with a schema and build a real example
-  const metadataExample = buildMetadataExample(
-    integrationSlug,
-    products,
-    commandName
-  );
-  if (metadataExample) {
-    lines.push('');
-    lines.push(`  ${chalk.dim('-')} Install with metadata`);
-    lines.push('');
-    lines.push(`    ${chalk.cyan(`$ ${metadataExample}`)}`);
-  }
-
-  // Billing plan
-  lines.push('');
-  lines.push(`  ${chalk.dim('-')} Install with a specific billing plan`);
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --plan pro`)}`
-  );
-
-  // Environment
-  lines.push('');
-  lines.push(
-    `  ${chalk.dim('-')} Install and connect to specific environments only`
-  );
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} -e production -e preview`)}`
-  );
-
-  // No-connect
-  lines.push('');
-  lines.push(
-    `  ${chalk.dim('-')} Install without connecting to the current project`
-  );
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --no-connect`)}`
-  );
-
-  // No-env-pull
-  lines.push('');
-  lines.push(
-    `  ${chalk.dim('-')} Install without pulling environment variables`
-  );
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --no-env-pull`)}`
-  );
-
-  // Prefix
-  lines.push('');
-  lines.push(
-    `  ${chalk.dim('-')} Install with a prefix for environment variable names`
-  );
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --prefix NEON2_`)}`
-  );
-
-  // JSON output
-  lines.push('');
-  lines.push(`  ${chalk.dim('-')} Output as JSON`);
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --json`)}`
-  );
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --format json`)}`
-  );
-
-  lines.push('');
-  lines.push(`  ${chalk.dim('-')} Install using a specific installation`);
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --installation-id <id>`)}`
-  );
-
-  // Claim a sandbox resource immediately after provisioning
-  lines.push('');
-  lines.push(
-    `  ${chalk.dim('-')} Claim a sandbox resource immediately after provisioning`
-  );
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --claim`)}`
-  );
-
-  // Skip the offer to claim a sandbox resource
-  lines.push('');
-  lines.push(`  ${chalk.dim('-')} Skip the offer to claim a sandbox resource`);
-  lines.push('');
-  lines.push(
-    `    ${chalk.cyan(`$ ${packageName} ${commandName} ${integrationSlug} --no-claim`)}`
-  );
-
-  lines.push('');
-
-  return lines.join('\n');
+  const invocation = `${packageName} ${commandName} ${formatHelpSelector(integrationSlug, '<INTEGRATION>')}`;
+  const examples: CommandExample[] = [
+    { name: `Install ${integrationSlug}`, value: invocation },
+  ];
+  if (products.length > 1)
+    examples.push({
+      name: 'Install a specific product',
+      value: `${invocation}/${formatHelpSelector(products[0].slug, '<PRODUCT>')}`,
+    });
+  examples.push({
+    name: 'Install with a custom resource name',
+    value: `${invocation} --name my-resource`,
+  });
+  const metadata = buildMetadataExample(integrationSlug, products, commandName);
+  if (metadata)
+    examples.push({ name: 'Install with metadata', value: metadata });
+  for (const [name, flags] of [
+    ['Install with a specific billing plan', '--billing-plan <PLAN>'],
+    [
+      'Install and connect to specific environments only',
+      '-e production -e preview',
+    ],
+    ['Install without connecting to the current project', '--no-connect'],
+    ['Install without pulling environment variables', '--no-env-pull'],
+    ['Install with a prefix for environment variable names', '--prefix NEON2_'],
+    ['Output as JSON', '--json'],
+    [
+      'Install using a specific installation',
+      '--installation <INSTALLATION_ID>',
+    ],
+    ['Claim a sandbox resource immediately after provisioning', '--claim'],
+    ['Skip the offer to claim a sandbox resource', '--no-claim'],
+  ])
+    examples.push({
+      name,
+      value: `${invocation} ${flags}`,
+    });
+  const placeholders = [
+    '<INTEGRATION>',
+    '<PRODUCT>',
+    '<KEY>',
+    '<VALUE>',
+    '<PLAN>',
+    '<INSTALLATION_ID>',
+  ];
+  return `\n${buildCommandExampleLines(
+    { examples: examples.map(example => ({ ...example, placeholders })) },
+    columns,
+    theme
+  )}\n`;
 }
 
 function buildMetadataExample(
@@ -161,16 +89,18 @@ function buildMetadataExample(
       }
 
       if (prop.type === 'boolean') {
-        flags.push(`-m ${key}=true`);
+        flags.push(formatMetadataExample(key, 'true'));
       } else if (prop.type === 'array') {
         const visible = getVisibleOptions(prop);
         if (visible && visible.length > 0) {
-          flags.push(`-m "${key}=${visible.slice(0, 2).join(',')}"`);
+          flags.push(
+            formatMetadataExample(key, visible.slice(0, 2).join(','), true)
+          );
         }
       } else {
         const visible = getVisibleOptions(prop);
         if (visible && visible.length > 0) {
-          flags.push(`-m ${key}=${visible[0]}`);
+          flags.push(formatMetadataExample(key, visible[0]));
         }
       }
 
@@ -181,8 +111,8 @@ function buildMetadataExample(
     if (flags.length > 0) {
       const slug =
         products.length > 1
-          ? `${integrationSlug}/${product.slug}`
-          : integrationSlug;
+          ? `${formatHelpSelector(integrationSlug, '<INTEGRATION>')}/${formatHelpSelector(product.slug, '<PRODUCT>')}`
+          : formatHelpSelector(integrationSlug, '<INTEGRATION>');
       return `${packageName} ${commandName} ${slug} ${flags.join(' ')}`;
     }
   }

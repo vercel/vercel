@@ -30,7 +30,7 @@ export async function list(client: Client) {
     parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new IntegrationListTelemetryClient({
@@ -48,7 +48,7 @@ export async function list(client: Client) {
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -66,8 +66,8 @@ export async function list(client: Client) {
 
   if (parsedArguments.args.length === 2) {
     if (parsedArguments.flags['--all']) {
-      output.error('Cannot specify a project when using the `--all` flag.');
-      return 1;
+      output.error('Cannot specify a project when using the `--all` option.');
+      return 2;
     }
 
     project = { name: parsedArguments.args[1] };
@@ -90,7 +90,7 @@ export async function list(client: Client) {
     });
     if (!project) {
       output.error(
-        'No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
+        'No project linked. Either use `vc link` to link a project, or the `--all` option to list all resources.'
       );
       return 1;
     }

@@ -2,11 +2,11 @@
 
 ---
 
-# Function: signToken()
+# ~~Function: signToken()~~
 
 > **signToken**(`options`): [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`string`\>
 
-Defined in: [packages/kms/src/sign-token.ts:41](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L41)
+Defined in: [packages/kms/src/sign-token.ts:19](https://github.com/vercel/vercel/blob/main/packages/kms/src/sign-token.ts#L19)
 
 Signs a JWT for an issuer using its managed signing key and returns the
 compact JWT string.
@@ -15,11 +15,16 @@ compact JWT string.
 
 ### options
 
-[`SignTokenOptions`](../interfaces/SignTokenOptions.md)
+[`SignJWTOptions`](../interfaces/SignJWTOptions.md)
 
 ## Returns
 
 [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`string`\>
+
+## Deprecated
+
+Use [signJWT](signJWT.md) instead, which returns the signed JWT plus
+the signing key's `keyId`, `algorithm`, and `fingerprint`.
 
 ## Throws
 

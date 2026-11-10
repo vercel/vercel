@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "app/route.api.js": {
+      "experimentalTriggers": [{ "type": "queue/v2beta", "topic": "ignored" }]
+    }
+  }
+}

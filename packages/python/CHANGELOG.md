@@ -1,5 +1,295 @@
 # @vercel/python
 
+## 29.0.0
+
+### Patch Changes
+
+- Updated dependencies [5f55ccc]
+- Updated dependencies [d0629bd]
+  - @vercel/build-utils@15.1.0
+
+## 28.0.2
+
+### Patch Changes
+
+- 2f0edaf: Report the runtime preset for services without a framework.
+- Updated dependencies [2f0edaf]
+  - @vercel/build-utils@15.0.2
+
+## 28.0.1
+
+### Patch Changes
+
+- a4c0116: Update uv and uv_build to 0.13.5, including rejection of certificate chains containing compromised eMudhra intermediate keys.
+- Updated dependencies [1a379a3]
+  - @vercel/build-utils@15.0.1
+
+## 28.0.0
+
+### Patch Changes
+
+- Updated dependencies [9b1b587]
+- Updated dependencies [fec2df1]
+- Updated dependencies [d123652]
+  - @vercel/build-utils@15.0.0
+
+## 27.0.0
+
+### Minor Changes
+
+- 01fb583: Fix concurrent requests starting duplicate python dev servers.
+
+### Patch Changes
+
+- Updated dependencies [7fea9e0]
+- Updated dependencies [9abaa6d]
+- Updated dependencies [179d4ab]
+- Updated dependencies [d39dd61]
+- Updated dependencies [5aa1b58]
+  - @vercel/python-analysis@0.15.2
+  - @vercel/build-utils@14.23.0
+
+## 26.0.1
+
+### Patch Changes
+
+- Updated dependencies [bdb4ecb]
+  - @vercel/python-analysis@0.15.1
+
+## 26.0.0
+
+### Patch Changes
+
+- c12c8e1: Python builds and `vercel dev` no longer fail when `UV_REQUIRE_HASHES=true` is set, or when `require-hashes` is enabled in uv config. The packages Vercel installs on top of your dependencies, such as `vercel-runtime`, have no hashes in their pins, so their install now ignores that setting. Installing your own dependencies is unchanged.
+- Updated dependencies [a19979c]
+- Updated dependencies [a2e9f5d]
+  - @vercel/build-utils@14.22.0
+
+## 25.1.3
+
+### Patch Changes
+
+- Updated dependencies [bb42e81]
+  - @vercel/build-utils@14.21.3
+
+## 25.1.2
+
+### Patch Changes
+
+- b365ba2: Leave the `pip` that the build seeds into its virtualenv out of the function bundle unless the project's `uv.lock` includes it. This saves about 5 MB per function, which leaves more room for precompiled bytecode in functions near the size limit.
+
+## 25.1.1
+
+### Patch Changes
+
+- Updated dependencies [cd68435]
+  - @vercel/build-utils@14.21.2
+
+## 25.1.0
+
+### Minor Changes
+
+- 3d616ad: Normalize dependency group names when loading manifest.
+- 9716b20: Support python proxies in vc dev.
+
+### Patch Changes
+
+- Updated dependencies [3d616ad]
+- Updated dependencies [1336097]
+  - @vercel/python-analysis@0.15.0
+  - @vercel/build-utils@14.21.1
+
+## 25.0.0
+
+### Patch Changes
+
+- Updated dependencies [24a7e04]
+- Updated dependencies [7e396f7]
+  - @vercel/build-utils@14.21.0
+
+## 24.0.1
+
+### Patch Changes
+
+- Updated dependencies [42cc083]
+  - @vercel/build-utils@14.20.1
+
+## 24.0.0
+
+### Patch Changes
+
+- Updated dependencies [e041037]
+  - @vercel/build-utils@14.20.0
+
+## 23.0.0
+
+### Patch Changes
+
+- Updated dependencies [e58b37a]
+  - @vercel/build-utils@14.19.0
+
+## 22.0.0
+
+### Minor Changes
+
+- 8bece00: Update fastapi static file handling for 0.140.
+- 3eeaad5: Move static file copying to build utils.
+- 59cbb00: Update static file fixtures to latest fastapi.
+
+### Patch Changes
+
+- Updated dependencies [94f6cea]
+- Updated dependencies [3eeaad5]
+- Updated dependencies [8ac5320]
+  - @vercel/build-utils@14.18.0
+
+## 21.0.0
+
+### Patch Changes
+
+- Updated dependencies [28a7ab7]
+- Updated dependencies [28a7ab7]
+  - @vercel/build-utils@14.17.0
+
+## 20.0.0
+
+### Patch Changes
+
+- Updated dependencies [20c5940]
+  - @vercel/build-utils@14.16.0
+
+## 19.0.0
+
+### Patch Changes
+
+- 6434298: `vercel dev` serves Python schedule functions from the project's virtual environment, through the same dev server as Python apps, instead of running them as local Lambdas with the `python3` on `PATH`.
+- Updated dependencies [a7ef28c]
+  - @vercel/build-utils@14.15.0
+
+## 18.0.0
+
+### Patch Changes
+
+- Updated dependencies [deb48cd]
+  - @vercel/build-utils@14.14.0
+
+## 17.0.2
+
+### Patch Changes
+
+- Updated dependencies [ff3d2f7]
+  - @vercel/build-utils@14.13.2
+
+## 17.0.1
+
+### Patch Changes
+
+- 5082546: Build Python schedule entrypoints. A `.py` entrypoint such as `jobs/nightly.py` runs as a script once per firing in a private function under `_vercel/schedules/`. Entrypoints with the same `functions` config share one function, which runs the script for the dispatched schedule name, so the project's dependencies are bundled once per distinct config instead of once per script. Entrypoints without `functions` config share `_vercel/schedules/default`; the others' function is named after the `functions` patterns their config came from, such as `_vercel/schedules/jobs/report`. Schedule names must be unique within a shared function.
+
+  Declared schedule entrypoints are not served as static files, but other files follow the normal static rules. When a project with Python schedule entrypoints publishes other `.py` files from its root, through the zero-config static fallback or `outputDirectory: "."`, `vercel build` now warns and lists them.
+
+  Add `findMatchingFunction` to `@vercel/build-utils`, which returns the `functions` entry that applies to a function.
+
+- Updated dependencies [5082546]
+  - @vercel/build-utils@14.13.1
+
+## 17.0.0
+
+### Patch Changes
+
+- Updated dependencies [34b2c8e]
+  - @vercel/build-utils@14.13.0
+
+## 16.0.0
+
+### Minor Changes
+
+- a12aba1: Build raw python proxies.
+
+### Patch Changes
+
+- Updated dependencies [6e68e60]
+  - @vercel/build-utils@14.12.0
+
+## 15.0.0
+
+### Minor Changes
+
+- c6a6ad5: Factor out helper functions for python builder.
+
+### Patch Changes
+
+- Updated dependencies [888f59e]
+- Updated dependencies [7eb63c0]
+  - @vercel/build-utils@14.11.0
+
+## 14.2.1
+
+### Patch Changes
+
+- Updated dependencies [53a6086]
+  - @vercel/build-utils@14.10.2
+
+## 14.2.0
+
+### Minor Changes
+
+- 9fb771e: Replace FastAPI static shadow routes with miss and rewrite routes.
+
+## 14.1.1
+
+### Patch Changes
+
+- 8d92b22: Expand native npm release acceptance coverage for authentication, VLT cache validation, host Node execution, TypeScript configuration, and cross-runtime services.
+
+## 14.1.0
+
+### Minor Changes
+
+- 4d6b3e5: Move Lambda catch-all to handle: 'rewrite' phase.
+- 7b375d2: Fix FastAPI CDN collision when a frontend collides with another from a sub-router.
+- 08ee268: Fix dependency-guarded frontend leaving its CDN prefix unshadowed.
+
+### Patch Changes
+
+- 9ce46da: Unify Python runtime request handling by proxying non-IPC invocations through the same local HTTP server used for IPC invocations.
+- Updated dependencies [f9d0e90]
+- Updated dependencies [8a277e4]
+- Updated dependencies [66e443e]
+- Updated dependencies [08b0be2]
+  - @vercel/build-utils@14.10.1
+
+## 14.0.0
+
+### Patch Changes
+
+- d2c8e05: Honor `includeFiles` and `excludeFiles` from the matching `functions` entry.
+- Updated dependencies [2a57243]
+- Updated dependencies [54a6d73]
+- Updated dependencies [3d16792]
+  - @vercel/build-utils@14.10.0
+
+## 13.0.4
+
+### Patch Changes
+
+- b5ca4f0: Pin `vercel-internal-shared-vendored-deps` to 0.1.1 when injecting queue adapter bundles so Celery, Dramatiq, and APScheduler subscribers keep importing vendored `httpx`.
+
+## 13.0.3
+
+### Patch Changes
+
+- 0f64eff: Add `VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL` to bundle all Python dependencies instead of installing them at cold start. Set it to `1` to disable runtime installation, or `0` to keep the existing behavior. Deployment size limits and Hive eligibility still apply.
+- Updated dependencies [55e8d1e]
+  - @vercel/build-utils@14.9.3
+
+## 13.0.2
+
+### Patch Changes
+
+- Updated dependencies [b174f14]
+  - @vercel/build-utils@14.9.2
+
 ## 13.0.1
 
 ### Patch Changes

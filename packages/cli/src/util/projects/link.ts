@@ -1,5 +1,4 @@
 import fs from 'fs';
-import AJV from 'ajv';
 import { join, relative } from 'path';
 import { ensureDir } from 'fs-extra';
 import { promisify } from 'util';
@@ -69,24 +68,20 @@ function isOwnerLookupUnavailableError(error: unknown): boolean {
   );
 }
 
-const linkSchema = {
-  type: 'object',
-  required: ['projectId', 'orgId'],
-  properties: {
-    projectId: {
-      type: 'string',
-      minLength: 1,
-    },
-    orgId: {
-      type: 'string',
-      minLength: 1,
-    },
-    projectName: {
-      type: 'string',
-      minLength: 1,
-    },
-  },
-};
+// Project links allow additional settings, but these identifiers (and an
+// optional display name) must be nonempty strings.
+function isValidProjectLink(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const link = value as Record<string, unknown>;
+  return (
+    typeof link.projectId === 'string' &&
+    link.projectId.length > 0 &&
+    typeof link.orgId === 'string' &&
+    link.orgId.length > 0 &&
+    (link.projectName === undefined ||
+      (typeof link.projectName === 'string' && link.projectName.length > 0))
+  );
+}
 
 /**
  * Returns the `<cwd>/.vercel` directory for the current project
@@ -219,16 +214,30 @@ async function getProjectLinkFromRepoLink(
   return null;
 }
 
+/**
+ * The linked project ID in `dir`, read synchronously for exit listeners, which
+ * can't await. Matches what `getLinkFromDir()` accepts as a link.
+ */
+export function getLinkedProjectIdSync(dir: string): string | undefined {
+  try {
+    const link = JSON.parse(
+      fs.readFileSync(join(dir, VERCEL_DIR_PROJECT), 'utf8')
+    );
+    return isValidProjectLink(link) ? link.projectId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function getLinkFromDir<T = ProjectLink>(
   dir: string
 ): Promise<T | null> {
   try {
     const json = await readFile(join(dir, VERCEL_DIR_PROJECT), 'utf8');
 
-    const ajv = new AJV();
     const link: T = JSON.parse(json);
 
-    if (!ajv.validate(linkSchema, link)) {
+    if (!isValidProjectLink(link)) {
       const raw = link as Record<string, unknown>;
       const projectId = raw.projectId;
       const orgId = raw.orgId;
@@ -353,6 +362,10 @@ async function hasProjectLink(
 }
 
 export interface GetLinkedProjectOptions {
+  /** Suppress human progress and diagnostics so the caller can format errors. */
+  quiet?: boolean;
+  /** Keep file deployment linking in its parent directory, without service detection. */
+  skipProjectRootResolution?: boolean;
   cwd?: string;
   projectName?: string;
   projectNameIsExplicit?: boolean;
@@ -362,6 +375,11 @@ export interface GetLinkedProjectOptions {
    * linked project, but cannot fetch the owning user/team.
    */
   allowOwnerLookupFallback?: boolean;
+  /**
+   * Fetches the project without fetching its owner. Preserves existing account
+   * scoping; callers must handle an empty org slug without inferring owner labels.
+   */
+  skipOwnerLookup?: boolean;
   /** Uses local link metadata without fetching the owner or project. */
   skipRemoteLookup?: boolean;
 }
@@ -376,7 +394,9 @@ export async function getLinkedProject(
   options: GetLinkedProjectOptions = {}
 ): Promise<ProjectLinkResultWithOrgId> {
   let path = options.cwd ?? client.cwd;
-  path = await resolveProjectCwd(path);
+  if (!options.skipProjectRootResolution) {
+    path = await resolveProjectCwd(path);
+  }
 
   const VERCEL_ORG_ID = getPlatformEnv('ORG_ID');
   const VERCEL_PROJECT_ID = getPlatformEnv('PROJECT_ID');
@@ -392,13 +412,15 @@ export async function getLinkedProject(
     (VERCEL_ORG_ID || VERCEL_PROJECT_ID) &&
     !shouldUseEnv
   ) {
-    output.error(
-      `You specified ${
-        VERCEL_ORG_ID ? '`VERCEL_ORG_ID`' : '`VERCEL_PROJECT_ID`'
-      } but you forgot to specify ${
-        VERCEL_ORG_ID ? '`VERCEL_PROJECT_ID`' : '`VERCEL_ORG_ID`'
-      }. You need to specify both to deploy to a custom project.\n`
-    );
+    if (!options.quiet) {
+      output.error(
+        `You specified ${
+          VERCEL_ORG_ID ? '`VERCEL_ORG_ID`' : '`VERCEL_PROJECT_ID`'
+        } but you forgot to specify ${
+          VERCEL_ORG_ID ? '`VERCEL_PROJECT_ID`' : '`VERCEL_ORG_ID`'
+        }. You need to specify both to deploy to a custom project.\n`
+      );
+    }
     return { status: 'error', exitCode: 1 };
   }
 
@@ -512,13 +534,21 @@ export async function getLinkedProject(
     };
   }
 
-  output.spinner('Retrieving project…', 1000);
+  if (!options.quiet) output.spinner('Retrieving project…', 1000);
   let org: Org | null = null;
   let project: Project | ProjectNotFound | null = null;
   let ownerLookupUnavailable = false;
   try {
     const [orgResult, projectResult] = await Promise.allSettled([
-      getOrgById(client, link.orgId),
+      options.skipOwnerLookup
+        ? Promise.resolve<Org>({
+            // Match the API client's scoping for legacy personal accounts.
+            type: link.orgId.startsWith('team_') ? 'team' : 'user',
+            id: link.orgId,
+            // Owner metadata is unknown; display only the project name.
+            slug: '',
+          })
+        : getOrgById(client, link.orgId),
       explicitlyResolvedProject
         ? Promise.resolve(explicitlyResolvedProject)
         : getProjectByIdOrName(client, link.projectId, link.orgId),
@@ -599,21 +629,25 @@ export async function getLinkedProject(
 
   if (!org || !project || project instanceof ProjectNotFound) {
     if (shouldUseEnvContext) {
-      output.error(
-        `Project not found (${JSON.stringify({
-          VERCEL_PROJECT_ID,
-          VERCEL_ORG_ID,
-        })})\n`
-      );
+      if (!options.quiet) {
+        output.error(
+          `Project not found (${JSON.stringify({
+            VERCEL_PROJECT_ID,
+            VERCEL_ORG_ID,
+          })})\n`
+        );
+      }
       return { status: 'error', exitCode: 1, orgId };
     }
 
-    output.print(
-      prependEmoji(
-        'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
-        emoji('warning')
-      )
-    );
+    if (!options.quiet) {
+      output.print(
+        prependEmoji(
+          'Your Project was either deleted, transferred to a new Team, or you don’t have access to it anymore.\n',
+          emoji('warning')
+        )
+      );
+    }
     return {
       status: 'not_linked',
       org: null,

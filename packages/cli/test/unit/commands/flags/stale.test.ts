@@ -301,7 +301,7 @@ describe('flags stale', () => {
   it('rejects a --limit below 1', async () => {
     client.setArgv('flags', 'stale', '--limit', '0');
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'The --limit option must be an integer between 1 and 100.'
     );
@@ -310,7 +310,7 @@ describe('flags stale', () => {
   it('rejects a --limit above 100', async () => {
     client.setArgv('flags', 'stale', '--limit', '101');
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'The --limit option must be an integer between 1 and 100.'
     );

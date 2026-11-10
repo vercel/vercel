@@ -7,16 +7,20 @@ import {
   buildSetupPlan,
   applyPlan,
   applySessionMigrations,
+  enforcePlanModes,
   type SetupPlan,
 } from './apply';
 import { buildAgentPrompt } from './render';
 import { storeKeyInKeychain } from './keychain';
 import type { KeySource } from './key-source';
-import type { CodingAgent } from './types';
+import type { CodingAgent, CodingAgentsSetupResult } from './types';
+import type { TopModel } from './top-models';
+import type { Model } from '../models';
 
 export async function runMachine(args: {
   client: Client;
   selected: CodingAgent[];
+  tokenPass?: boolean;
   unsupported: string[];
   warnings: Array<{ agent: string; code: string; message: string }>;
   consentSkipped: Array<{ target: string; reason: string; message: string }>;
@@ -29,11 +33,13 @@ export async function runMachine(args: {
   overrides?: Record<string, string>;
   shellRcOverride?: string;
   baseUrlOverride?: string;
+  topModels?: TopModel[];
   home: string;
   alreadyConfigured: boolean;
   reconfigure: boolean;
+  gatewayModels?: Model[];
   promptMode?: boolean;
-}): Promise<number> {
+}): Promise<CodingAgentsSetupResult> {
   const { client, selected, previewPlan, dryRun, backup, home } = args;
 
   const errored = previewPlan.changes.filter(c => c.status === 'error');
@@ -87,12 +93,15 @@ export async function runMachine(args: {
         2
       )}\n`
     );
-    return 0;
+    return { exitCode: 0, outcome: 'dry_run' };
   }
 
   // Idempotent by default: if nothing needs writing and we weren't asked to
   // reconfigure, report the no-op without minting a fresh key.
   if (args.alreadyConfigured && !args.reconfigure) {
+    if (!args.promptMode) {
+      await enforcePlanModes(previewPlan);
+    }
     const consentSkips = args.consentSkipped.length > 0;
     // '--reconfigure' is dead advice for a consent-skipped agent (skipped[]
     // carries the '--agent <id>' hint), so only name the agents this run
@@ -119,7 +128,7 @@ export async function runMachine(args: {
             2
           )}\n`
         );
-        return 1;
+        return { exitCode: 1, outcome: 'failed' };
       }
       message =
         selected.length > 0
@@ -140,7 +149,7 @@ export async function runMachine(args: {
         2
       )}\n`
     );
-    return 0;
+    return { exitCode: 0, outcome: 'already_configured' };
   }
 
   const sessionOnly =
@@ -160,9 +169,10 @@ export async function runMachine(args: {
         skipped,
         warnings: args.warnings,
       });
-      return 0;
+      return { exitCode: 0, outcome: 'agent_prompt' };
     }
 
+    await enforcePlanModes(previewPlan);
     const migrated = await applySessionMigrations(previewPlan);
     writeJson(client, {
       status: migrated.errors.length > 0 ? AGENT_STATUS.ERROR : AGENT_STATUS.OK,
@@ -179,7 +189,9 @@ export async function runMachine(args: {
       skipped: [...skipped, ...migrationSkips(migrated.errors)],
       warnings: args.warnings,
     });
-    return migrated.errors.length > 0 ? 1 : 0;
+    return migrated.errors.length > 0
+      ? { exitCode: 1, outcome: 'failed' }
+      : { exitCode: 0, outcome: 'configured' };
   }
 
   const applicable = previewPlan.changes.filter(
@@ -204,7 +216,7 @@ export async function runMachine(args: {
         2
       )}\n`
     );
-    return 1;
+    return { exitCode: 1, outcome: 'failed' };
   }
 
   const migrated = args.promptMode
@@ -221,7 +233,7 @@ export async function runMachine(args: {
       skipped: [...skipped, ...migrationSkips(migrated.errors)],
       warnings: args.warnings,
     });
-    return 1;
+    return { exitCode: 1, outcome: 'failed' };
   }
   if (applicable.length === 0 && errored.length > 0) {
     writeJson(client, {
@@ -234,7 +246,7 @@ export async function runMachine(args: {
       skipped,
       warnings: args.warnings,
     });
-    return 1;
+    return { exitCode: 1, outcome: 'failed' };
   }
 
   let key: string;
@@ -258,11 +270,14 @@ export async function runMachine(args: {
     selected,
     {
       apiKey: key,
+      tokenPass: args.tokenPass,
       home,
       useKeychain,
       overrides: args.overrides,
       shellRcOverride: args.shellRcOverride,
       baseUrlOverride: args.baseUrlOverride,
+      topModels: args.topModels,
+      gatewayModels: args.gatewayModels,
     },
     previewPlan.migrations
   );
@@ -283,7 +298,7 @@ export async function runMachine(args: {
           2
         )}\n`
       );
-      return 1;
+      return { exitCode: 1, outcome: 'failed' };
     }
     client.stdout.write(
       `${JSON.stringify(
@@ -304,7 +319,7 @@ export async function runMachine(args: {
         2
       )}\n`
     );
-    return 0;
+    return { exitCode: 0, outcome: 'agent_prompt' };
   }
 
   const results = await applyPlan(finalPlan, { backup });
@@ -337,7 +352,7 @@ export async function runMachine(args: {
       2
     )}\n`
   );
-  return 0;
+  return { exitCode: 0, outcome: 'configured' };
 }
 
 function migrationSkips(
