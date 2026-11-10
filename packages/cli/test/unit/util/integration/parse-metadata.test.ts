@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatIgnoredMetadataKeyWarning,
-  isSchemaKey,
   parseMetadataFlags,
   validateRequiredMetadata,
 } from '../../../../src/util/integration/parse-metadata';
@@ -432,6 +431,17 @@ describe('parseMetadataFlags error details', () => {
     ]);
   });
 
+  it('treats an empty key as a format error', () => {
+    const result = parseMetadataFlags(['=us-east-1', ' =x'], schema);
+    expect(result.errors.map(({ kind, key }) => ({ kind, key }))).toEqual([
+      { kind: 'invalid_format', key: '' },
+      { kind: 'invalid_format', key: '' },
+    ]);
+    expect(messages(result)[0]).toEqual(
+      `Invalid metadata format: "=us-east-1". Expected KEY=VALUE. ${validKeys}`
+    );
+  });
+
   it('suggests the closest value for an invalid select value', () => {
     const result = parseMetadataFlags(['region=us-east'], schema);
     expect(result.errors).toEqual([
@@ -482,6 +492,35 @@ describe('parseMetadataFlags error details', () => {
     ]);
   });
 
+  it('does not crash on malformed remote schemas', () => {
+    const malformed = {
+      type: 'object',
+      properties: {
+        size: {
+          type: 'string',
+          'ui:control': 'select',
+          'ui:options': [1, 2, 4],
+        },
+        tier: {
+          type: 'string',
+          'ui:control': 'select',
+          'ui:options': [{ label: 'No value' }, { label: 'Pro', value: 'pro' }],
+        },
+        broken: null,
+      },
+    } as unknown as MetadataSchema;
+    expect(() => parseMetadataFlags(['size=3'], malformed)).not.toThrow();
+    expect(
+      messages(parseMetadataFlags(['tier=x', 'zzz=1'], malformed))
+    ).toEqual([
+      'Metadata "tier" must be one of: pro, got: "x"',
+      'Unknown metadata key: "zzz". Valid keys: size, tier',
+    ]);
+    expect(parseMetadataFlags(['broken=1'], malformed).errors[0].kind).toBe(
+      'unknown_key'
+    );
+  });
+
   it('strips control characters from schema values in messages', () => {
     const result = parseMetadataFlags(['tier=x'], {
       type: 'object',
@@ -524,22 +563,6 @@ describe('formatIgnoredMetadataKeyWarning', () => {
     expect(formatIgnoredMetadataKeyWarning(error, schema)).toEqual(
       'Ignoring unknown metadata key: "plan". Valid keys: region, name'
     );
-  });
-});
-
-describe('isSchemaKey', () => {
-  const schema: MetadataSchema = {
-    type: 'object',
-    properties: {
-      region: { type: 'string', 'ui:control': 'input' },
-    },
-  };
-
-  it('is true only for keys the schema defines', () => {
-    expect(isSchemaKey(schema, 'region')).toBe(true);
-    expect(isSchemaKey(schema, 'regoin')).toBe(false);
-    expect(isSchemaKey(schema, 'constructor')).toBe(false);
-    expect(isSchemaKey(schema, '__proto__')).toBe(false);
   });
 });
 
@@ -631,6 +654,29 @@ describe('validateRequiredMetadata', () => {
     it('skips vercel-region and multi-vercel-region fields', () => {
       const errors = validateRequiredMetadata({ name: 'my-db' }, regionSchema);
       expect(errors).toEqual([]);
+    });
+
+    it('does not report keys that failed to parse as missing', () => {
+      const errors = validateRequiredMetadata(
+        {},
+        regionSchema,
+        new Set(['name'])
+      );
+      expect(errors).toEqual([]);
+    });
+
+    it('does not read required keys off Object.prototype', () => {
+      const errors = validateRequiredMetadata(
+        {},
+        {
+          type: 'object',
+          properties: {
+            constructor: { type: 'string', 'ui:control': 'input' },
+          },
+          required: ['constructor'],
+        }
+      );
+      expect(errors).toEqual(['Required metadata missing: "constructor"']);
     });
 
     it('still errors on non-region required fields', () => {

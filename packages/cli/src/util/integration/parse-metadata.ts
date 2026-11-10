@@ -34,6 +34,16 @@ interface ParseMetadataResult {
 
 const SUGGESTION_THRESHOLD = 0.7;
 
+/**
+ * Option values as strings. Remote schemas are not validated, so an option can
+ * be a number or lack its value.
+ */
+function optionStrings(values: readonly unknown[]): string[] {
+  return values.flatMap(v =>
+    v === undefined || v === null || v === '' ? [] : [String(v)]
+  );
+}
+
 /** The closest candidate to `input`, ignoring case, if any is close enough. */
 function closestMatch(
   input: string,
@@ -61,7 +71,7 @@ function didYouMeanHint(
   const match = closestMatch(input, candidates);
   return match === undefined
     ? undefined
-    : `Did you mean ${JSON.stringify(remoteText(match))}?`;
+    : `Did you mean "${remoteText(match)}"?`;
 }
 
 function formatList(values: readonly string[]): string {
@@ -84,7 +94,9 @@ function sentences(...parts: (string | undefined)[]): string {
 
 /** The keys to offer: those shown in `--help`, or every key if all are hidden. */
 function listedKeys(schema: MetadataSchema): string[] {
-  const keys = Object.keys(schema.properties);
+  const keys = Object.keys(schema.properties).filter(key =>
+    getProperty(schema, key)
+  );
   const visible = keys.filter(key => !isHiddenOnCreate(schema.properties[key]));
   return visible.length > 0 ? visible : keys;
 }
@@ -104,8 +116,11 @@ function unknownKeyHint(key: string, schema: MetadataSchema): string {
 }
 
 /** The values to offer: those shown in `--help`, or every value if all are hidden. */
-function listedOptions(prop: MetadataSchemaProperty): string[] | undefined {
-  return getVisibleOptions(prop) ?? getAllOptionValues(prop);
+function listedOptions(
+  prop: MetadataSchemaProperty,
+  validValues: readonly string[]
+): string[] {
+  return optionStrings(getVisibleOptions(prop) ?? validValues);
 }
 
 function getProperty(
@@ -113,17 +128,10 @@ function getProperty(
   key: string
 ): MetadataSchemaProperty | undefined {
   // `Object.hasOwn`, so keys like "constructor" are not read off the prototype
-  return Object.hasOwn(schema.properties, key)
+  const prop = Object.hasOwn(schema.properties, key)
     ? schema.properties[key]
     : undefined;
-}
-
-/**
- * Whether `key` is defined by the schema, so it is a partner's field name
- * rather than arbitrary user input.
- */
-export function isSchemaKey(schema: MetadataSchema, key: string): boolean {
-  return getProperty(schema, key) !== undefined;
+  return prop ?? undefined;
 }
 
 /**
@@ -156,10 +164,11 @@ export function parseMetadataFlags(
 
   for (const item of rawMetadata) {
     const eqIndex = item.indexOf('=');
-    if (eqIndex === -1) {
+    const key = eqIndex === -1 ? item.trim() : item.slice(0, eqIndex).trim();
+    if (eqIndex === -1 || key === '') {
       errors.push({
         kind: 'invalid_format',
-        key: item.trim(),
+        key,
         message: sentences(
           `Invalid metadata format: "${item}". Expected KEY=VALUE`,
           validKeysHint(schema)
@@ -168,7 +177,6 @@ export function parseMetadataFlags(
       continue;
     }
 
-    const key = item.slice(0, eqIndex).trim();
     const value = item.slice(eqIndex + 1).trim();
     const invalidValue = (message: string) => {
       errors.push({ kind: 'invalid_value', key, message });
@@ -265,7 +273,7 @@ export function parseMetadataFlags(
         // are accepted, but only the visible ones are listed and suggested.
         const validValues = getAllOptionValues(propSchema);
         if (validValues) {
-          const listed = listedOptions(propSchema) ?? validValues;
+          const listed = listedOptions(propSchema, validValues);
           const prevErrorCount = errors.length;
           for (const item of items) {
             if (!validValues.includes(item)) {
@@ -289,7 +297,7 @@ export function parseMetadataFlags(
       const validValues = getAllOptionValues(propSchema);
       if (validValues) {
         if (!validValues.includes(value)) {
-          const listed = listedOptions(propSchema) ?? validValues;
+          const listed = listedOptions(propSchema, validValues);
           invalidValue(
             sentences(
               `Metadata "${key}" must be one of: ${formatList(listed)}, got: "${value}"`,
@@ -310,16 +318,20 @@ export function parseMetadataFlags(
  * Validate that all required metadata fields are provided.
  * Region fields (vercel-region / multi-vercel-region) are always skipped
  * because the server handles region selection automatically.
+ *
+ * `failedKeys` are keys that were passed but failed to parse; they already
+ * have their own error, so they are not also reported as missing.
  */
 export function validateRequiredMetadata(
   metadata: Metadata,
-  schema: MetadataSchema
+  schema: MetadataSchema,
+  failedKeys: ReadonlySet<string> = new Set()
 ): string[] {
   const errors: string[] = [];
   const required = schema.required ?? [];
 
   for (const key of required) {
-    const propSchema = schema.properties[key];
+    const propSchema = getProperty(schema, key);
 
     // Skip hidden fields (they use defaults server-side)
     if (propSchema && isHiddenOnCreate(propSchema)) {
@@ -332,7 +344,13 @@ export function validateRequiredMetadata(
     }
 
     // Check if value is provided or has a default
-    if (metadata[key] === undefined && propSchema?.default === undefined) {
+    const provided =
+      Object.hasOwn(metadata, key) && metadata[key] !== undefined;
+    if (
+      !provided &&
+      !failedKeys.has(key) &&
+      propSchema?.default === undefined
+    ) {
       errors.push(`Required metadata missing: "${key}"`);
     }
   }

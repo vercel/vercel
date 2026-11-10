@@ -268,7 +268,7 @@ export async function addAutoProvision(
     mergeMetadataSchemas(product.metadataSchema, integration.metadataSchema) ??
     product.metadataSchema;
   for (const key of Object.keys(integrationSchemaProps)) {
-    if (key in productSchemaProps) {
+    if (Object.hasOwn(productSchemaProps, key)) {
       output.debug(
         `Metadata key "${key}" exists in both product and installation schemas — product definition wins`
       );
@@ -276,6 +276,9 @@ export async function addAutoProvision(
   }
   let metadata: Metadata;
   let installationMetadata: Metadata = {};
+  // Unknown `--meta` keys that were dropped; with `--format json` they go in
+  // the result's `warnings` instead of stderr.
+  const metadataWarnings: string[] = [];
   if (options.metadata?.length) {
     // Parse metadata from CLI flags against merged schema (accepts all keys)
     output.debug(
@@ -289,12 +292,15 @@ export async function addAutoProvision(
     // warning when every required field is still satisfied. Any other parse
     // error, or an unknown key while a required field is missing, fails.
     // Required fields are checked against the merged schema (both product
-    // and installation required).
+    // and installation required); a key that was passed but failed to parse
+    // already has its own error, so it is not also reported as missing.
     const unknownKeyErrors = errors.filter(e => e.kind === 'unknown_key');
     const otherErrors = errors.filter(e => e.kind !== 'unknown_key');
-    const missingRequired = otherErrors.length
-      ? []
-      : validateRequiredMetadata(parsed, mergedParsingSchema);
+    const missingRequired = validateRequiredMetadata(
+      parsed,
+      mergedParsingSchema,
+      new Set(otherErrors.map(e => e.key))
+    );
     if (
       otherErrors.length ||
       (unknownKeyErrors.length && missingRequired.length)
@@ -313,9 +319,20 @@ export async function addAutoProvision(
       return 1;
     }
     for (const error of unknownKeyErrors) {
-      output.warning(
+      metadataWarnings.push(
         formatIgnoredMetadataKeyWarning(error, mergedParsingSchema)
       );
+    }
+    if (metadataWarnings.length) {
+      if (!options.asJson) {
+        for (const warning of metadataWarnings) {
+          output.warning(warning);
+        }
+      }
+      telemetry.trackMarketplaceEvent('marketplace_install_metadata_ignored', {
+        ...baseProps,
+        ignored_key_count: metadataWarnings.length,
+      });
     }
     if (missingRequired.length) {
       for (const error of missingRequired) {
@@ -334,8 +351,8 @@ export async function addAutoProvision(
     const installMeta: Metadata = {};
     for (const [key, value] of Object.entries(parsed)) {
       if (value === undefined) continue;
-      const inProduct = key in productSchemaProps;
-      const inInstallation = key in integrationSchemaProps;
+      const inProduct = Object.hasOwn(productSchemaProps, key);
+      const inInstallation = Object.hasOwn(integrationSchemaProps, key);
       if (inProduct) {
         productMeta[key] = value;
       } else if (inInstallation) {
@@ -740,6 +757,7 @@ export async function addAutoProvision(
     const warnings: string[] = (options.deprecations ?? []).flatMap(warning =>
       warning ? [warning.message] : []
     );
+    warnings.push(...metadataWarnings);
     if (setupResult.connectError) {
       warnings.push(
         `Failed to connect to project: ${setupResult.connectError}`

@@ -1,10 +1,7 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { addSubcommand } from '../../../../commands/integration/command';
-import {
-  isSchemaKey,
-  type MetadataParseError,
-} from '../../../integration/parse-metadata';
+import type { MetadataParseError } from '../../../integration/parse-metadata';
 import type { MetadataSchema } from '../../../integration/types';
 
 export class IntegrationAddTelemetryClient
@@ -126,7 +123,9 @@ export class IntegrationAddTelemetryClient
       ...props,
       reason: 'metadata_parse_error',
       metadata_error: error.kind,
-      metadata_key: isSchemaKey(schema, error.key) ? error.key : null,
+      metadata_key: Object.hasOwn(schema.properties, error.key)
+        ? error.key
+        : null,
     });
   }
 

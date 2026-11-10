@@ -1692,11 +1692,23 @@ describe('integration add (auto-provision)', () => {
       await expect(client.stderr).toOutput('successfully provisioned');
       expect(await exitCodePromise).toEqual(0);
 
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Error: Unknown metadata key'
+      );
+
       expect(requestBodies).toHaveLength(1);
       expect((requestBodies[0] as Record<string, unknown>).metadata).toEqual(
         {}
       );
       expect(droppedEvent()).toBeUndefined();
+      const ignored = client.telemetryEventStore.readonlyEvents.find(
+        e => e.key === 'output:marketplace_install_metadata_ignored'
+      );
+      expect(JSON.parse(String(ignored?.value))).toMatchObject({
+        integration_slug: 'acme',
+        ignored_key_count: 1,
+      });
+      expect(String(ignored?.value)).not.toContain('unknown');
     });
 
     it('should send the valid keys and suggest a fix for the ignored one', async () => {
@@ -1777,6 +1789,48 @@ describe('integration add (auto-provision)', () => {
         metadata_error: 'invalid_value',
         metadata_key: 'auth',
       });
+    });
+
+    it('should report a missing required field alongside an invalid value', async () => {
+      // acme-full-schema requires region, which has no default
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--meta',
+        'auth=yes'
+      );
+      const exitCodePromise = integrationCommand(client);
+      await expect(client.stderr).toOutput(
+        'Error: Metadata "auth" must be "true" or "false", got: "yes"'
+      );
+      await expect(client.stderr).toOutput(
+        'Error: Required metadata missing: "region"'
+      );
+      expect(await exitCodePromise).toEqual(1);
+      expect(droppedEvent()).toMatchObject({
+        reason: 'metadata_parse_error',
+        metadata_error: 'invalid_value',
+        metadata_key: 'auth',
+      });
+    });
+
+    it('should not report a required field as missing when its value is invalid', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--meta',
+        'region=iad'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Metadata "region" must be one of: iad1, sfo1, got: "iad". Did you mean "iad1"?'
+      );
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Required metadata missing'
+      );
     });
 
     it('should record a flag without "=" as a format error', async () => {
@@ -2736,6 +2790,25 @@ describe('integration add (auto-provision)', () => {
       expect(jsonOutput.environments).toEqual([]);
       expect(jsonOutput.envPulled).toBe(false);
       expect(jsonOutput.warnings).toEqual([]);
+    });
+
+    it('should put ignored --meta keys in warnings instead of stderr', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--format=json',
+        '--meta',
+        'regoin=us-east-1'
+      );
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(0);
+      const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+      expect(jsonOutput.warnings).toEqual([
+        'Ignoring unknown metadata key: "regoin". Did you mean "region"? Valid keys: region',
+      ]);
+      expect(client.stderr.getFullOutput()).not.toContain('regoin');
     });
 
     it('should include project and environments in JSON when connected', async () => {
