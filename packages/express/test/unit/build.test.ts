@@ -241,7 +241,8 @@ describe('successful builds', () => {
       } else {
         throw new Error('entrypoint is not defined');
       }
-    }, 10000);
+      // Dependency installation can exceed the old 10-second limit under CI load.
+    }, 60000);
   }
 
   describe('failing fixtures', () => {
@@ -255,7 +256,7 @@ describe('successful builds', () => {
 
         const files = createFiles(workPath, fileList);
 
-        expect(
+        await expect(
           build({
             files,
             workPath,

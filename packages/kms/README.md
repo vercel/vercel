@@ -1,0 +1,90 @@
+# `@vercel/kms`
+
+Runtime KMS signing helpers intended to be used with your Vercel Functions.
+
+`@vercel/kms` calls the Vercel KMS signing API to sign JWTs and arbitrary
+messages with an issuer's managed signing key. It authenticates using the
+function's [Vercel OIDC token](https://vercel.com/docs/oidc) (fetched
+automatically via [`@vercel/oidc`](https://www.npmjs.com/package/@vercel/oidc)).
+
+## Usage
+
+### Signing a JWT
+
+```typescript
+import { signJWT } from '@vercel/kms';
+
+// Returns `{ token, keyId, algorithm, fingerprint }`.
+const { token, keyId, algorithm, fingerprint } = await signJWT({
+  issuerId: 'issuer_abc123',
+  claims: { sub: 'user_123', scope: 'read:data' },
+  ttl: 300, // seconds; defaults to 300
+});
+```
+
+### Signing a message
+
+```typescript
+import { signMessage } from '@vercel/kms';
+
+// `message` is a UTF-8 string or raw bytes (Uint8Array); it is base64-encoded
+// internally. Returns `{ signature, keyId, algorithm, fingerprint }`.
+const { signature, keyId, algorithm, fingerprint } = await signMessage({
+  issuerId: 'issuer_abc123',
+  message: 'hello world',
+});
+```
+
+### Providing a token explicitly
+
+By default the OIDC token is fetched via `getVercelOidcToken()`. To supply your
+own token, pass `token`:
+
+```typescript
+const { token } = await signJWT({
+  issuerId: 'issuer_abc123',
+  token: myOidcToken,
+});
+```
+
+## API
+
+### `signJWT(options)`
+
+Signs a JWT for an issuer.
+
+**Options:**
+
+- `issuerId: string` — The ID of the issuer.
+- `claims?: Record<string, unknown>` — Claims to include in the token.
+- `headers?: Record<string, unknown>` — Additional JWT headers.
+- `ttl?: number | null` — Time-to-live in seconds (default: `300`).
+- `token?: string` — Explicit OIDC token; skips automatic retrieval.
+- `region?: string` — Region for the regional KMS API host, e.g. `sfo1`, producing `https://api-<region>.vercel.com/v1`. Defaults to the `VERCEL_REGION` environment variable, falling back to `https://api.vercel.com/v1`. Ignored when `baseUrl` is set.
+- `baseUrl?: string` — Override the API base URL. Takes precedence over `region`.
+
+Returns `Promise<{ token: string, keyId: string, algorithm: string, fingerprint: string }>` — the compact JWT, plus the key id, algorithm, and public-key fingerprint of the signing key.
+
+### `signToken(options)`
+
+Deprecated: use `signJWT` instead.
+
+Signs a JWT for an issuer and returns only the compact JWT string.
+
+**Options:** same as `signJWT`.
+
+Returns `Promise<string>` — the compact JWT.
+
+### `signMessage(options)`
+
+Signs a message for an issuer.
+
+**Options:**
+
+- `issuerId: string` — The ID of the issuer.
+- `message: Uint8Array | string` — The message to sign. A `string` is treated as UTF-8 text; a `Uint8Array` is signed as raw bytes. The value is base64-encoded internally before being sent to the KMS API.
+- `token?: string` — Explicit OIDC token; skips automatic retrieval.
+- `region?: string` — Region for the regional KMS API host, e.g. `sfo1`, producing `https://api-<region>.vercel.com/v1`. Defaults to the `VERCEL_REGION` environment variable, falling back to `https://api.vercel.com/v1`. Ignored when `baseUrl` is set.
+- `baseUrl?: string` — Override the API base URL. Takes precedence over `region`.
+
+Returns `Promise<{ signature: Uint8Array, keyId: string, algorithm: string, fingerprint: string }>` — the raw signature bytes, plus the key id, algorithm, and public-key fingerprint of the signing key.

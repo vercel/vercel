@@ -1,12 +1,20 @@
 import output from '../output-manager';
 import chalk from 'chalk';
 
-export function suggestNextCommands(commands: string[]) {
+export interface SuggestedNextCommand {
+  command: string;
+  description: string;
+}
+
+export function suggestNextCommands(commands: SuggestedNextCommand[]) {
   output.print(
     chalk.dim(
       [
-        `Common next commands:`,
-        ...commands.map(command => `- ${command}`),
+        `Next steps:`,
+        ...commands.flatMap(({ command, description }) => [
+          `- ${description}:`,
+          `  ${command}`,
+        ]),
       ].join('\n')
     )
   );

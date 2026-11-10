@@ -1,12 +1,18 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import type { ConnectAuthorizationDetail } from './authorization-details.js';
+import { resolveBaseUrl } from './internal/base-url.js';
+import {
+  normalizeTokenParams,
+  normalizeTokenSubject,
+} from './internal/normalize-token-params.js';
 
-export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer';
+export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer' | 'token';
 
 export type ConnectTokenSubject =
   | ConnectAppTokenSubject
   | ConnectUserTokenSubject
-  | ConnectJwtBearerTokenSubject;
+  | ConnectJwtBearerTokenSubject
+  | ConnectTokenExchangeSubject;
 
 export interface ConnectAppTokenSubject {
   type: 'app';
@@ -16,6 +22,15 @@ export interface ConnectUserTokenSubject {
   type: 'user';
   id: string;
   issuer?: string;
+  /**
+   * When specified, `id` and `issuer` identify the user in the namespace of
+   * this IDP connector. The connector must be configured as an IDP.
+   * The XAA/ID-JAG protocol is used to resolve the target access token when
+   * configured by the target connector.
+   *
+   * @experimental Subject to change.
+   */
+  experimental_idp?: string;
 }
 
 export interface ConnectJwtBearerTokenSubject {
@@ -28,10 +43,20 @@ export interface ConnectJwtBearerTokenSubject {
   additionalClaims?: Record<string, unknown>;
 }
 
+export interface ConnectTokenExchangeSubject {
+  /** Inferred as `'token'` when omitted. */
+  type?: 'token';
+  token: string;
+}
+
 export interface ConnectTokenParams {
   subject: ConnectTokenSubject;
   installationId?: string;
   audience?: string[];
+  /**
+   * Access scopes to request. Defaults to `['*']`, which requests the default
+   * scopes for the specified subject type.
+   */
   scopes?: string[];
   resources?: string[];
   authorizationDetails?: ConnectAuthorizationDetail[];
@@ -46,6 +71,11 @@ export interface ConnectTokenParams {
 
 export interface ConnectTokenResponse {
   token: string;
+  /**
+   * Per-issuance identifier for the token (`stk_…`), stable for its lifetime;
+   * use it to correlate the token with its usage in Vercel observability data.
+   */
+  tokenId?: string;
   /** Token expiration timestamp in milliseconds since epoch. */
   expiresAt: number;
   connector: {
@@ -62,6 +92,8 @@ export interface ConnectTokenResponse {
   externalSubject?: string;
   /** Driver-specific metadata stored during OAuth */
   metadata?: Record<string, unknown>;
+  /** Allow-listed claims propagated from the upstream OAuth token. */
+  claims?: Record<string, unknown>;
 }
 
 export type ConnectVendorErrorPayload = Record<string, unknown>;
@@ -112,6 +144,26 @@ export class ConnectorInstallationRequiredError extends ConnectError {
 
 export interface ConnectOptions {
   vercelToken?: string;
+
+  /**
+   * Bypass the in-process token cache and re-fetch from Vercel Connect.
+   *
+   * The cache normally serves any token that is not within
+   * {@link ConnectTokenParams.validityBufferMs} of expiry. That means a
+   * grant the user revoked server-side keeps being handed back from the
+   * local cache until it expires. Set `forceRefresh` when the caller
+   * needs Connect to re-validate the grant on this call — a revoked grant
+   * then surfaces as `no_token` / `user_authorization_required` instead of
+   * a stale bearer.
+   */
+  forceRefresh?: boolean;
+
+  /**
+   * Region to send the request to, e.g. `sfo1`. Defaults to the
+   * `VERCEL_REGION` environment variable; override it to target a
+   * different region.
+   */
+  region?: string;
 }
 
 export async function getToken(
@@ -128,22 +180,28 @@ export async function getTokenResponse(
   params: ConnectTokenParams,
   options?: ConnectOptions
 ): Promise<ConnectTokenResponse> {
-  const bufferMs = params.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
-  const cacheKey = JSON.stringify({ connector, ...params });
+  const requestParams = normalizeTokenParams(params);
+  const bufferMs = requestParams.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
+  const cacheKey = tokenCacheKey(connector, requestParams);
 
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    const now = Date.now();
-    if (cached.response.expiresAt - now > bufferMs) {
-      cached.lastUsed = now;
-      return cached.response;
-    }
+  if (options?.forceRefresh) {
     cache.delete(cacheKey);
+  } else {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      const now = Date.now();
+      if (cached.response.expiresAt - now > bufferMs) {
+        cached.lastUsed = now;
+        return cached.response;
+      }
+      cache.delete(cacheKey);
+    }
   }
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
 
-  const endpoint = `https://api.vercel.com/v1/connect/token/${encodeURIComponent(connector)}`;
+  const baseUrl = resolveBaseUrl(options);
+  const endpoint = `${baseUrl}/v1/connect/token/${encodeURIComponent(connector)}`;
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -152,7 +210,7 @@ export async function getTokenResponse(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${vercelToken}`,
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify(requestParams),
   });
 
   if (!response.ok) {
@@ -169,6 +227,65 @@ export async function getTokenResponse(
   return data;
 }
 
+export async function revokeToken(
+  connector: string,
+  params: {
+    subject: ConnectTokenSubject;
+    installationId?: string;
+  },
+  options?: ConnectOptions
+): Promise<void> {
+  const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
+  const baseUrl = resolveBaseUrl(options);
+  const endpoint = `${baseUrl}/v1/connect/connectors/${encodeURIComponent(connector)}/tokens`;
+
+  const response = await fetch(endpoint, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${vercelToken}`,
+    },
+    body: JSON.stringify({
+      ...params,
+      subject: normalizeTokenSubject(params.subject),
+    }),
+  });
+
+  if (!response.ok) {
+    throw await createConnectErrorFromResponse(
+      response,
+      'Failed to revoke token'
+    );
+  }
+
+  cache.clear();
+}
+
+/**
+ * Remove a single cached token entry for `(connector, params)` from the
+ * in-process cache.
+ *
+ * Targeted counterpart to {@link revokeToken}'s `cache.clear()`: it drops
+ * exactly the entry {@link getTokenResponse} would serve for these
+ * arguments, leaving every other connector/principal untouched. Use it
+ * when a credential is known to be bad (the resource server rejected the
+ * bearer with a `401`) so the next {@link getTokenResponse} re-fetches
+ * instead of re-serving the rejected token — without paying for a Connect
+ * round trip on every call the way {@link ConnectOptions.forceRefresh}
+ * does.
+ *
+ * The cache key is derived from `connector` plus every field of `params`,
+ * so pass the same `params` used for the original {@link getTokenResponse}
+ * call. No-op when no matching entry exists.
+ */
+export function deleteTokenCacheEntry(
+  connector: string,
+  params: ConnectTokenParams
+): void {
+  cache.delete(tokenCacheKey(connector, normalizeTokenParams(params)));
+}
+
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;
 const MAX_CACHE_SIZE = 100;
 
@@ -178,6 +295,15 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
+
+/**
+ * Cache key for a `(connector, params)` pair. Stable across calls with
+ * equal arguments so {@link getTokenResponse} and
+ * {@link deleteTokenCacheEntry} address the same entry.
+ */
+function tokenCacheKey(connector: string, params: ConnectTokenParams): string {
+  return JSON.stringify({ connector, ...params });
+}
 
 function evictLru(): void {
   let oldestKey: string | undefined;

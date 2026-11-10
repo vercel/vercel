@@ -1,5 +1,5 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, yesOption } from '../../util/arg-common';
+import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -7,18 +7,18 @@ export const listSubcommand = {
   description: 'Show all webhooks',
   default: true,
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List all webhooks as JSON',
-      value: `${packageName} webhooks ls --format json`,
+      value: `${packageName} webhooks list --json`,
     },
   ],
 } as const;
 
 export const getSubcommand = {
-  name: 'get',
-  aliases: ['inspect'],
+  name: 'inspect',
+  aliases: ['get'],
   description: 'Displays information related to a webhook',
   arguments: [
     {
@@ -26,7 +26,7 @@ export const getSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [],
 } as const;
 
@@ -43,7 +43,8 @@ export const createSubcommand = {
   options: [
     {
       name: 'event',
-      shorthand: 'e',
+      shorthand: null,
+      deprecatedShorthand: 'e',
       type: [String],
       argument: 'EVENT',
       deprecated: false,
@@ -68,9 +69,9 @@ export const createSubcommand = {
 } as const;
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm', 'delete'],
-  description: 'Remove a webhook',
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
+  description: 'Delete a webhook',
   arguments: [
     {
       name: 'id',
@@ -80,7 +81,7 @@ export const removeSubcommand = {
   options: [
     {
       ...yesOption,
-      description: 'Skip the confirmation prompt when removing a webhook',
+      description: 'Skip the confirmation prompt when deleting a webhook',
     },
   ],
   examples: [],

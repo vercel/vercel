@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import stripAnsi from 'strip-ansi';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import query from '../../../../src/commands/metrics/query';
 import { MetricsTelemetryClient } from '../../../../src/util/telemetry/commands/metrics';
 import * as linkModule from '../../../../src/util/projects/link';
 import getScope from '../../../../src/util/get-scope';
 import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
+import type { Team } from '@vercel-internals/types';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/get-scope');
@@ -97,9 +101,77 @@ function mockMetricDetail(
   );
 }
 
+function mockCustomMetricCatalog(
+  metricId = 'checkout.latency',
+  overrides: Partial<{
+    description: string;
+    unit: string;
+    aggregations: string[];
+    dimensions: string[];
+    activeSince: string;
+  }> = {}
+) {
+  client.scenario.get('/metrics/v1', (req, res) => {
+    expect(req.query).toEqual({
+      kind: 'custom',
+      limit: '250',
+      search: metricId,
+      activeSince: overrides.activeSince ?? '2026-07-29T09:00:42.123Z',
+      teamId: 'team_dummy',
+    });
+    res.json({
+      metrics: [
+        {
+          id: metricId,
+          description: overrides.description ?? 'Checkout latency',
+          unit: overrides.unit ?? 'milliseconds',
+          aggregations: overrides.aggregations ?? [
+            'count',
+            'sum',
+            'avg',
+            'p75',
+            'p95',
+          ],
+          dimensions: overrides.dimensions ?? ['source', 'functionRegion'],
+        },
+      ],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+  });
+}
+
+function mockSystemMetricCatalog(
+  metricId = 'vercel.request.count',
+  aggregations = ['count', 'unique'],
+  unit = 'count'
+) {
+  client.scenario.get('/metrics/v1', (req, res) => {
+    expect(req.query).toEqual({
+      kind: 'system',
+      limit: '250',
+      search: metricId,
+      activeSince: '2026-07-29T09:00:42.123Z',
+      teamId: 'team_dummy',
+    });
+    res.json({
+      metrics: [
+        {
+          id: metricId,
+          description: 'Requests Count',
+          unit,
+          aggregations,
+          dimensions: ['httpStatus', 'route'],
+        },
+      ],
+      pagination: { hasMore: false, nextCursor: null },
+    });
+  });
+}
+
 function mockApiSuccess(
   data: Record<string, unknown>[] = [],
-  summary: Record<string, unknown>[] = []
+  summary: Record<string, unknown>[] = [],
+  extra: Record<string, unknown> = {}
 ) {
   client.scenario.post('/v2/observability/query', (req, res) => {
     postedBody =
@@ -110,11 +182,51 @@ function mockApiSuccess(
       data,
       summary,
       statistics: { rowsRead: 100 },
+      ...extra,
+    });
+  });
+}
+
+function mockCanonicalApiSuccess() {
+  client.scenario.post('/metrics/v1', (req, res) => {
+    postedBody =
+      typeof req.body === 'string'
+        ? JSON.parse(req.body)
+        : (req.body as Record<string, unknown>);
+    res.json({
+      series: [
+        {
+          timestamp: '2026-07-29T10:00:00.000Z',
+          dimensions: { source: 'edge' },
+          values: { value: 125 },
+        },
+      ],
+      summary: [
+        {
+          dimensions: { source: 'edge' },
+          values: { value: 125 },
+        },
+      ],
+      queryId: 'query_custom',
+      meta: {
+        outputs: {},
+        sources: [{ id: 'vercel-main-custom-metrics' }],
+        statistics: {
+          elapsedMs: 25,
+          databaseElapsedMs: 20,
+          rowsRead: 100,
+          bytesRead: 2048,
+        },
+      },
     });
   });
 }
 
 describe('metrics query v2', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -122,6 +234,7 @@ describe('metrics query v2', () => {
     mockedGetProjectByNameOrId.mockReset();
     mockLinkedProject();
     mockTeamScope();
+    vi.stubEnv('FF_LEGACY_METRICS', '1');
   });
 
   describe('missing metric', () => {
@@ -138,7 +251,7 @@ describe('metrics query v2', () => {
   });
 
   describe('positional metric', () => {
-    it('should accept a positional metric id', async () => {
+    it('queries built-in metrics through the legacy endpoint when FF_LEGACY_METRICS is enabled', async () => {
       mockMetricDetail();
       mockApiSuccess();
       client.setArgv('metrics', 'vercel.request.count', '--since', '1h');
@@ -148,20 +261,808 @@ describe('metrics query v2', () => {
       expect(exitCode).toBe(0);
       expect(postedBody?.metric).toBe('vercel.request.count');
     });
+
+    it('queries built-in metrics through v1 by default', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'httpStatus >= 500',
+        '--prod',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        scope: {
+          ownerId: 'team_dummy',
+          projectIds: ['prj_metricstest'],
+        },
+        timeRange: {
+          start: '2026-07-29T09:00:00.000Z',
+          end: '2026-07-29T10:01:00.000Z',
+        },
+        filter: '(httpStatus >= 500) AND (environment:production)',
+        metrics: {
+          value: {
+            metric: 'vercel.request.count',
+            aggregation: 'count',
+          },
+        },
+      });
+    });
+
+    it('surfaces v1 query rate limits without retrying', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog();
+      let requestCount = 0;
+      client.scenario.post('/metrics/v1', (_req, res) => {
+        requestCount += 1;
+        res
+          .set('Retry-After', '60')
+          .status(429)
+          .json({
+            error: {
+              code: 'rate_limited',
+              message: 'Too many requests - try again in 60s',
+            },
+          });
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(requestCount).toBe(1);
+      expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+        error: {
+          code: 'rate_limited',
+          message: 'Too many requests - try again in 60s',
+          hint: 'Wait at least 60 seconds before trying again.',
+          retryable: true,
+          retryAfterMs: 60000,
+        },
+      });
+    });
+
+    it('defaults byte metrics to sum in v1', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog(
+        'vercel.request.fdt_out_bytes',
+        ['count', 'sum', 'avg'],
+        'bytes'
+      );
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.fdt_out_bytes',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: {
+            metric: 'vercel.request.fdt_out_bytes',
+            aggregation: 'sum',
+          },
+        },
+      });
+    });
+
+    it('sends an explicit aggregation missing from the metric catalog to the API', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--aggregation',
+        'sum',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: { metric: 'vercel.request.count', aggregation: 'sum' },
+        },
+      });
+    });
+
+    it('falls back to the name-based default when the catalog lists no aggregations', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog('vercel.request.count', []);
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: { metric: 'vercel.request.count', aggregation: 'count' },
+        },
+      });
+    });
+
+    it('combines --prod with KQL containing OData function names', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'route:"/contains(foo)"',
+        '--prod',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(
+        '(route:"/contains(foo)") AND (environment:production)'
+      );
+    });
+
+    it('sends explicit count ordering to the API when the catalog lacks count', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog(
+        'vercel.speed_insights.lcp_ms',
+        ['p75'],
+        'milliseconds'
+      );
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--group-by',
+        'route',
+        '--order-by',
+        'count',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          __seriesCount: {
+            metric: 'vercel.speed_insights.lcp_ms',
+            aggregation: 'count',
+          },
+        },
+        seriesSelection: {
+          rankBy: [{ metric: '__seriesCount', direction: 'desc' }],
+        },
+      });
+    });
+
+    it('uses value ordering by default when v1 does not support count', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog(
+        'vercel.speed_insights.lcp_ms',
+        ['p75'],
+        'milliseconds'
+      );
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--group-by',
+        'route',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.seriesSelection).toEqual({
+        limit: 10,
+        mode: 'exact',
+        rankBy: [{ metric: 'value', direction: 'desc' }],
+      });
+      expect(client.stdout.getFullOutput()).toContain('> Order By: value desc');
+    });
+
+    it('reports implicit value ordering in v1 JSON output', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog(
+        'vercel.speed_insights.lcp_ms',
+        ['p75'],
+        'milliseconds'
+      );
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--group-by',
+        'route',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.query).toMatchObject({
+        orderBy: 'value',
+        orderDirection: 'desc',
+      });
+      expect(result).toMatchObject({
+        orderBy: 'value',
+        orderDirection: 'desc',
+      });
+    });
+
+    it('warns when the v1 endpoint receives an OData filter', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'httpStatus ge 500',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+        '! OData support in --query is deprecated and will be removed soon. KQL will be the only supported filter syntax.'
+      );
+    });
+
+    it('warns that FID is deprecated', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog(
+        'vercel.speed_insights.fid_ms',
+        ['p75'],
+        'milliseconds'
+      );
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.fid_ms',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+        '! First Input Delay will be sunset on November 1st. Use Interaction to Next Paint instead (vercel.speed_insights.inp_ms). Learn more: https://web.dev/articles/fid'
+      );
+    });
+
+    it('does not warn about FID for other Speed Insights metrics', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog(
+        'vercel.speed_insights.inp_ms',
+        ['p75'],
+        'milliseconds'
+      );
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.inp_ms',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('First Input Delay');
+    });
+
+    it('translates qualified unique aggregations for v1', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--aggregation',
+        'unique/visitorId',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: {
+            metric: 'vercel.request.count',
+            aggregation: 'unique',
+            dimensions: ['visitorId'],
+          },
+        },
+      });
+    });
+
+    it('passes stddev aggregations to v1', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog('vercel.request.route_cpu_duration_ms', [
+        'avg',
+        'stddev',
+      ]);
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.route_cpu_duration_ms',
+        '--aggregation',
+        'stddev',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: {
+            metric: 'vercel.request.route_cpu_duration_ms',
+            aggregation: 'stddev',
+          },
+        },
+      });
+    });
+
+    it('formats platform metric values using the schema unit', async () => {
+      mockMetricDetail('vercel.request.route_cpu_duration_ms', {
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+      });
+      mockApiSuccess([
+        {
+          timestamp: '2026-07-29T10:00:00.000Z',
+          vercel_request_route_cpu_duration_ms_p75: 1_500,
+        },
+      ]);
+      client.setArgv(
+        'metrics',
+        'vercel.request.route_cpu_duration_ms',
+        '--since',
+        '2026-07-29T09:00:00.000Z',
+        '--until',
+        '2026-07-29T10:01:00.000Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(client.stdout.getFullOutput()).toContain('1.5s');
+    });
+
+    it('queries custom metrics with a complete bucket range', async () => {
+      mockCustomMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'checkout.latency',
+        '--group-by',
+        'source',
+        '--filter',
+        "source eq 'edge'",
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        scope: {
+          ownerId: 'team_dummy',
+          projectIds: ['prj_metricstest'],
+        },
+        timeRange: {
+          start: '2026-07-29T09:00:00.000Z',
+          end: '2026-07-29T10:01:00.000Z',
+        },
+        bucketSeconds: 60,
+        groupBy: ['source'],
+        filter: "source eq 'edge'",
+        metrics: {
+          value: { metric: 'checkout.latency', aggregation: 'p75' },
+          __seriesCount: {
+            metric: 'checkout.latency',
+            aggregation: 'count',
+          },
+        },
+        outputs: ['value'],
+        seriesSelection: {
+          limit: 10,
+          mode: 'exact',
+          rankBy: [{ metric: '__seriesCount', direction: 'desc' }],
+        },
+      });
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.query).toMatchObject({
+        startTime: '2026-07-29T09:00:00.000Z',
+        endTime: '2026-07-29T10:01:00.000Z',
+      });
+      expect(result.data).toEqual([
+        {
+          timestamp: '2026-07-29T10:00:00.000Z',
+          source: 'edge',
+          checkout_latency_p75: 125,
+        },
+      ]);
+      expect(result.summary).toEqual([
+        { source: 'edge', checkout_latency_p75: 125 },
+      ]);
+    });
+
+    it('formats custom metric values using the catalog unit', async () => {
+      mockCustomMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'checkout.latency',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(client.stdout.getFullOutput()).toContain('125ms');
+    });
+
+    it('expands a short custom metric range to one complete bucket', async () => {
+      mockCustomMetricCatalog('checkout.latency', {
+        activeSince: '2026-07-29T10:00:42.123Z',
+      });
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'checkout.latency',
+        '--since',
+        '2026-07-29T10:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:45.456Z',
+        '--granularity',
+        '1m',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.timeRange).toEqual({
+        start: '2026-07-29T10:00:00.000Z',
+        end: '2026-07-29T10:01:00.000Z',
+      });
+    });
+
+    it('uses the first advertised aggregation when sum is unavailable', async () => {
+      mockCustomMetricCatalog('checkout.latency', {
+        aggregations: ['avg', 'p95'],
+      });
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'checkout.latency',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: { metric: 'checkout.latency', aggregation: 'avg' },
+        },
+      });
+    });
+
+    it('returns the catalog error instead of defaulting to sum', async () => {
+      const metric = `checkout.${'x'.repeat(101)}`;
+      client.scenario.get('/metrics/v1', (req, res) => {
+        expect(req.query.search).toBe(metric);
+        res.status(400).json({
+          error: {
+            code: 'invalid_query',
+            message: 'search cannot exceed 100 characters',
+          },
+        });
+      });
+      client.setArgv(
+        'metrics',
+        metric,
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+        error: {
+          code: 'invalid_query',
+          message: 'search cannot exceed 100 characters',
+        },
+      });
+    });
+  });
+
+  describe('metrics omitted from discovery', () => {
+    beforeEach(() => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      client.scenario.get('/metrics/v1', (_req, res) => {
+        res.json({
+          metrics: [],
+          pagination: { hasMore: false, nextCursor: null },
+        });
+      });
+    });
+
+    it.each([
+      ['vercel.daemon.count', 'count'],
+      ['vercel.daemon.cpu_time_ms', 'sum'],
+      ['vercel.drive_read.bytes', 'sum'],
+      ['checkout.latency', 'sum'],
+      ['checkout.count', 'sum'],
+    ])('queries %s with the %s default', async (metric, aggregation) => {
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        metric,
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        scope: {
+          ownerId: 'team_dummy',
+          projectIds: ['prj_metricstest'],
+        },
+        metrics: { value: { metric, aggregation } },
+      });
+      expect(client.stdout.getFullOutput()).toContain(metric);
+      expect(client.stdout.getFullOutput()).not.toContain('125ms');
+      expect(client.stderr.getFullOutput()).not.toContain('Unknown metric');
+    });
+
+    it('preserves explicit aggregations and dimensions in JSON queries', async () => {
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.daemon.count',
+        '--aggregation',
+        'unique/instanceId',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: {
+            metric: 'vercel.daemon.count',
+            aggregation: 'unique',
+            dimensions: ['instanceId'],
+          },
+        },
+      });
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        query: {
+          metric: 'vercel.daemon.count',
+          aggregation: 'unique/instanceId',
+        },
+      });
+    });
+
+    it.each([
+      ['checkout.count', 'persecond', { aggregation: 'sum', per: 'second' }],
+      [
+        'checkout.count',
+        'percent',
+        { aggregation: 'sum', normalize: 'percent' },
+      ],
+      [
+        'vercel.daemon.count',
+        'persecond',
+        { aggregation: 'count', per: 'second' },
+      ],
+      [
+        'vercel.daemon.count',
+        'percent',
+        { aggregation: 'count', normalize: 'percent' },
+      ],
+    ])('queries %s with %s using the correct additive aggregation', async (metric, aggregation, selection) => {
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        metric,
+        '--aggregation',
+        aggregation,
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: { value: { metric, ...selection } },
+      });
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        query: { metric, aggregation },
+      });
+    });
+
+    describe('unknown metrics rejected by the query API', () => {
+      beforeEach(() => {
+        client.scenario.post('/metrics/v1', (req, res) => {
+          postedBody = req.body as Record<string, unknown>;
+          res.status(400).json({
+            error: {
+              code: 'unknown_metric',
+              message: 'Unknown metric "vercel.bogus".',
+            },
+          });
+        });
+      });
+
+      it('surfaces the API error in text output', async () => {
+        client.setArgv(
+          'metrics',
+          'vercel.bogus',
+          '--since',
+          '2026-07-29T09:00:42.123Z',
+          '--until',
+          '2026-07-29T10:00:42.123Z'
+        );
+
+        const exitCode = await query(client, new MockTelemetry());
+
+        expect(exitCode).toBe(1);
+        expect(postedBody).toMatchObject({
+          metrics: { value: { metric: 'vercel.bogus', aggregation: 'sum' } },
+        });
+        expect(client.stderr.getFullOutput()).toContain(
+          'Unknown metric "vercel.bogus"'
+        );
+        expect(client.stdout.getFullOutput()).toBe('');
+      });
+
+      it('surfaces the API error in JSON output', async () => {
+        client.setArgv(
+          'metrics',
+          'vercel.bogus',
+          '--since',
+          '2026-07-29T09:00:42.123Z',
+          '--until',
+          '2026-07-29T10:00:42.123Z',
+          '--format=json'
+        );
+
+        const exitCode = await query(client, new MockTelemetry());
+
+        expect(exitCode).toBe(1);
+        expect(postedBody).toMatchObject({
+          metrics: { value: { metric: 'vercel.bogus', aggregation: 'sum' } },
+        });
+        expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+          error: {
+            code: 'unknown_metric',
+            message: 'Unknown metric "vercel.bogus".',
+          },
+        });
+      });
+    });
   });
 
   describe('metric validation', () => {
     it('should return error with available metrics', async () => {
-      client.scenario.get('/v2/observability/schema/bogus', (_req, res) => {
-        res.status(400).json({
-          error: {
-            code: 'unknown_metric',
-            message: 'Unknown metric "bogus".',
-            allowedValues: ['vercel.request.count'],
-          },
-        });
-      });
-      client.setArgv('metrics', 'bogus');
+      client.scenario.get(
+        '/v2/observability/schema/vercel.bogus',
+        (_req, res) => {
+          res.status(400).json({
+            error: {
+              code: 'unknown_metric',
+              message: 'Unknown metric "bogus".',
+              allowedValues: ['vercel.request.count'],
+            },
+          });
+        }
+      );
+      client.setArgv('metrics', 'vercel.bogus');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -173,16 +1074,19 @@ describe('metrics query v2', () => {
     });
 
     it('should return JSON error with --format=json', async () => {
-      client.scenario.get('/v2/observability/schema/bogus', (_req, res) => {
-        res.status(400).json({
-          error: {
-            code: 'unknown_metric',
-            message: 'Unknown metric "bogus".',
-            allowedValues: ['vercel.request.count'],
-          },
-        });
-      });
-      client.setArgv('metrics', 'bogus', '--format=json');
+      client.scenario.get(
+        '/v2/observability/schema/vercel.bogus',
+        (_req, res) => {
+          res.status(400).json({
+            error: {
+              code: 'unknown_metric',
+              message: 'Unknown metric "bogus".',
+              allowedValues: ['vercel.request.count'],
+            },
+          });
+        }
+      );
+      client.setArgv('metrics', 'vercel.bogus', '--format=json');
 
       const exitCode = await query(client, new MockTelemetry());
 
@@ -247,7 +1151,7 @@ describe('metrics query v2', () => {
     });
 
     it('should default to avg for duration metrics', async () => {
-      mockMetricDetail('vercel.function_invocation.request_duration_ms', {
+      mockMetricDetail('vercel.function_invocation.function_duration_ms', {
         description: 'Request Duration',
         unit: 'milliseconds',
         aggregations: ['avg', 'p95'],
@@ -256,7 +1160,7 @@ describe('metrics query v2', () => {
       mockApiSuccess();
       client.setArgv(
         'metrics',
-        'vercel.function_invocation.request_duration_ms'
+        'vercel.function_invocation.function_duration_ms'
       );
 
       const exitCode = await query(client, new MockTelemetry());
@@ -586,10 +1490,165 @@ describe('metrics query v2', () => {
       expect(output).toContain('No data');
       expect(output).not.toContain('sparklines:');
     });
+
+    it('should hide returned ordering metadata for ungrouped text output', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_request_count_sum',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).not.toContain('> Order By:');
+      expect(output).not.toContain('> Order Direction:');
+      expect(output).not.toContain('vercel_request_count_sum');
+    });
+
+    it('should show returned ordering metadata for grouped text output', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count', '--group-by', 'route');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('> Order By:');
+      expect(output).toContain('count desc (default)');
+      expect(output).not.toContain('defaultOrderingRollup');
+      expect(output).not.toContain('> Order Direction:');
+    });
+
+    it('should show Speed Insights default count ordering metadata', async () => {
+      mockMetricDetail('vercel.speed_insights.lcp_ms', {
+        description: 'Largest Contentful Paint',
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_count_sum',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--aggregation',
+        'p75',
+        '--group-by',
+        'route'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('> Order By:');
+      expect(output).toContain('count desc (default)');
+      expect(output).not.toContain('vercel_speed_insights_lcp_count_sum');
+      expect(output).not.toContain('> Order Direction:');
+    });
+
+    it('should show value ordering metadata when the API returns the selected metric rollup', async () => {
+      mockMetricDetail('vercel.speed_insights.lcp_ms', {
+        description: 'Largest Contentful Paint',
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_ms_p75',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--aggregation',
+        'p75',
+        '--group-by',
+        'route',
+        '--order-by',
+        'value'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('> Order By:');
+      expect(output).toContain('value desc');
+      expect(output).not.toContain('vercel_speed_insights_lcp_ms_p75');
+      expect(output).not.toContain('> Order Direction:');
+    });
+
+    it('should show event count default ordering metadata for non-count metrics', async () => {
+      mockMetricDetail('vercel.request.route_cpu_duration_ms', {
+        description: 'Request Duration',
+        unit: 'milliseconds',
+        aggregations: ['p95'],
+        defaultAggregation: 'p95',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.json({
+          data: [],
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        });
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.request.route_cpu_duration_ms',
+        '--aggregation',
+        'p95',
+        '--group-by',
+        'route'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toContain('> Order By:');
+      expect(output).toContain('count desc (default)');
+      expect(output).not.toContain('vercel_request_route_cpu_duration_ms_p95');
+      expect(output).not.toContain('> Order Direction:');
+    });
   });
 
   describe('JSON output', () => {
-    it('should output full JSON structure with --format=json', async () => {
+    it('should output the query and results with --format=json', async () => {
       mockMetricDetail();
       client.scenario.post('/v2/observability/query', (_req, res) => {
         res.json({
@@ -608,7 +1667,6 @@ describe('metrics query v2', () => {
       expect(parsed.query.metric).toBe('vercel.request.count');
       expect(parsed.data).toHaveLength(1);
       expect(parsed.summary).toHaveLength(1);
-      expect(parsed.statistics).toBeDefined();
       expect(client.stderr.getFullOutput()).toBe('');
     });
 
@@ -635,6 +1693,24 @@ describe('metrics query v2', () => {
       expect(parsed.query.granularity).toEqual({ hours: 4 });
       expect(client.stderr.getFullOutput()).toBe('');
     });
+
+    it('should include returned ordering metadata with --format=json', async () => {
+      mockMetricDetail();
+      mockApiSuccess([], [], {
+        orderBy: 'defaultOrderingRollup',
+        orderDirection: 'desc',
+      });
+      client.setArgv('metrics', 'vercel.request.count', '--format=json');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.orderBy).toBe('count');
+      expect(parsed.orderDirection).toBe('desc');
+      expect(parsed.query.orderBy).toBe('count');
+      expect(parsed.query.orderDirection).toBe('desc');
+    });
   });
 
   describe('--limit flag', () => {
@@ -647,6 +1723,169 @@ describe('metrics query v2', () => {
 
       expect(exitCode).toBe(0);
       expect(postedBody?.limit).toBe(50);
+    });
+  });
+
+  describe('--order-by and --order flags', () => {
+    it('should pass value ordering to the API and JSON metadata', async () => {
+      mockMetricDetail('vercel.speed_insights.lcp_ms', {
+        description: 'Largest Contentful Paint',
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--aggregation',
+        'p75',
+        '--group-by',
+        'route',
+        '--order-by',
+        'value',
+        '--order',
+        'DESC',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.orderBy).toBe('vercel_speed_insights_lcp_ms_p75');
+      expect(postedBody?.orderDirection).toBe('desc');
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.query.orderBy).toBe('value');
+      expect(parsed.query.orderDirection).toBe('desc');
+      expect(parsed.orderBy).toBe('value');
+      expect(parsed.orderDirection).toBe('desc');
+    });
+
+    it('should support shorthand aliases for limit and time bounds', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--order',
+        'asc',
+        '-l',
+        '5',
+        '-s',
+        '2025-01-15T00:00:00Z',
+        '-u',
+        '2025-01-15T01:00:00Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.orderBy).toBeUndefined();
+      expect(postedBody?.orderDirection).toBe('asc');
+      expect(postedBody?.limit).toBe(5);
+      expect(postedBody?.startTime).toBe('2025-01-15T00:00:00.000Z');
+      expect(postedBody?.endTime).toBe('2025-01-15T01:00:00.000Z');
+    });
+
+    it('should omit orderBy when ordering by count', async () => {
+      mockMetricDetail('vercel.request.route_cpu_duration_ms', {
+        description: 'Request Duration',
+        unit: 'milliseconds',
+        aggregations: ['p95'],
+        defaultAggregation: 'p95',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      mockApiSuccess([], [], {
+        orderBy: 'defaultOrderingRollup',
+        orderDirection: 'asc',
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.request.route_cpu_duration_ms',
+        '--aggregation',
+        'p95',
+        '--group-by',
+        'route',
+        '--order-by',
+        'count',
+        '--order',
+        'asc',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.orderBy).toBeUndefined();
+      expect(postedBody?.orderDirection).toBe('asc');
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.orderBy).toBe('count');
+      expect(parsed.orderDirection).toBe('asc');
+    });
+
+    it('should omit orderBy and direction when ordering by count without explicit direction', async () => {
+      mockMetricDetail('vercel.speed_insights.lcp_ms', {
+        description: 'Largest Contentful Paint',
+        unit: 'milliseconds',
+        aggregations: ['p75'],
+        defaultAggregation: 'p75',
+        dimensions: [{ name: 'route', label: 'Route' }],
+      });
+      mockApiSuccess([], [], {
+        orderBy: 'defaultOrderingRollup',
+        orderDirection: 'desc',
+      });
+      client.setArgv(
+        'metrics',
+        'vercel.speed_insights.lcp_ms',
+        '--aggregation',
+        'p75',
+        '--group-by',
+        'route',
+        '--order-by',
+        'count',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.orderBy).toBeUndefined();
+      expect(postedBody?.orderDirection).toBeUndefined();
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.orderBy).toBe('count');
+      expect(parsed.orderDirection).toBe('desc');
+    });
+
+    it('should reject invalid order values', async () => {
+      client.setArgv('metrics', 'vercel.request.count', '--order', 'ascending');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(postedBody).toBeUndefined();
+      expect(client.stderr.getFullOutput()).toContain(
+        'Invalid order "ascending"'
+      );
+    });
+
+    it('should reject invalid order-by values', async () => {
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--order-by',
+        'latency'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(postedBody).toBeUndefined();
+      const error = client.stderr.getFullOutput();
+      expect(error).toContain('Invalid order-by "latency"');
+      expect(error).toContain('value');
+      expect(error).toContain('count');
     });
   });
 
@@ -665,6 +1904,164 @@ describe('metrics query v2', () => {
 
       expect(exitCode).toBe(0);
       expect(postedBody?.filter).toBe('http_status ge 500');
+    });
+
+    it('should AND repeated filter strings before sending them to API', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'http_status ge 500',
+        '-f',
+        "contains(request_path, '/api')"
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(
+        "(http_status ge 500) and (contains(request_path, '/api'))"
+      );
+    });
+
+    it('should pass production filter to API with --prod', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--prod');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe("environment eq 'production'");
+    });
+
+    it('keeps --prod working with a deprecation warning', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--prod');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--prod is deprecated. Use --environment production.'
+      );
+    });
+
+    it.each([
+      ['--environment', 'preview', "environment eq 'preview'"],
+      ['-e', 'production', "environment eq 'production'"],
+      ['--environment', 'staging-2', "environment eq 'staging-2'"],
+    ])('should pass %s %s to the API as a filter', async (flag, value, filter) => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', flag, value);
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(filter);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+    });
+
+    it('should pass --environment as a KQL filter on the canonical endpoint', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog();
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'httpStatus >= 500',
+        '--environment',
+        'preview',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(
+        '(httpStatus >= 500) AND (environment:preview)'
+      );
+    });
+
+    it('should reject --prod together with --environment', async () => {
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--prod',
+        '--environment',
+        'preview'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(2);
+      expect(postedBody).toBeUndefined();
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use --prod with --environment. Use --environment."
+      );
+    });
+
+    it.each([
+      [['--prod', '--environment', 'preview'], 'CONFLICTING_OPTIONS'],
+      [['--environment', 'pre view'], 'INVALID_ENVIRONMENT'],
+    ])('should report %j as a JSON error with --json', async (args, code) => {
+      client.setArgv('metrics', 'vercel.request.count', ...args, '--json');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(2);
+      expect(postedBody).toBeUndefined();
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        error: { code },
+      });
+    });
+
+    it.each([
+      "prod'uction",
+      'pre view',
+      '',
+    ])('should reject the environment %j before querying', async environment => {
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        `--environment=${environment}`
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(2);
+      expect(postedBody).toBeUndefined();
+      expect(client.stderr.getFullOutput()).toContain(
+        'Environments use letters, numbers, and hyphens'
+      );
+    });
+
+    it('should AND production filter with explicit filters', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--filter',
+        'http_status ge 500',
+        '--prod'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.filter).toBe(
+        "(http_status ge 500) and (environment eq 'production')"
+      );
     });
   });
 
@@ -690,6 +2087,109 @@ describe('metrics query v2', () => {
       );
     });
 
+    it('should point a 402 at the command that buys the add-on', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'PAYMENT_REQUIRED',
+            message: 'Observability Plus is required to run this query',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      // The CLI can complete the purchase itself, so the billing dashboard is
+      // a detour.
+      expect(client.stderr.getFullOutput()).toContain(
+        'buy addon observability-plus'
+      );
+    });
+
+    it('pins a linked-team 402 to that team plan, not the selected team', async () => {
+      const hobby = {
+        id: 'team_hobby',
+        slug: 'hobby-team',
+        billing: { plan: 'hobby' },
+      } as Team;
+      const pro = {
+        id: 'team_pro',
+        slug: 'pro-team',
+        billing: { plan: 'pro' },
+      } as Team;
+      for (const team of [hobby, pro]) {
+        teamCache.set(team.id, team);
+        teamCache.set(team.slug, team);
+      }
+      const previousTeam = client.config.currentTeam;
+      client.config.currentTeam = pro.id;
+      mockedGetLinkedProject.mockResolvedValue({
+        status: 'linked',
+        project: {
+          id: 'prj_linked',
+          name: 'linked-app',
+          accountId: hobby.id,
+          updatedAt: Date.now(),
+          createdAt: Date.now(),
+        },
+        org: { id: hobby.id, slug: hobby.slug, type: 'team' },
+      });
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'PAYMENT_REQUIRED',
+            message: 'Observability Plus is required to run this query',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      try {
+        const exitCode = await query(client, new MockTelemetry());
+
+        expect(exitCode).toBe(1);
+        const printed = client.stderr.getFullOutput();
+        expect(printed).toContain('buy pro --scope hobby-team');
+        expect(printed).not.toContain('pro-team');
+      } finally {
+        client.config.currentTeam = previousTeam;
+        for (const key of [hobby.id, hobby.slug, pro.id, pro.slug]) {
+          teamCache.delete(key);
+        }
+      }
+    });
+
+    it('should include conditional subscription guidance in JSON output', async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'PAYMENT_REQUIRED',
+            message: 'Observability Plus is required to run this query',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count', '--format=json');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      const parsed = JSON.parse(client.stdout.getFullOutput());
+      expect(parsed.error.code).toBe('PAYMENT_REQUIRED');
+      expect(parsed.error.hint).toContain(
+        'Check whether Observability Plus is disabled'
+      );
+      expect(parsed.error.retryable).toBe(false);
+      expect(parsed.error.next[0].command).toContain(
+        'buy addon observability-plus'
+      );
+      expect(parsed.error.next[0].when).toContain('approved');
+    });
+
     it('should surface the API quota message for 402 responses', async () => {
       mockMetricDetail();
       client.scenario.post('/v2/observability/query', (_req, res) => {
@@ -709,6 +2209,31 @@ describe('metrics query v2', () => {
       expect(client.stderr.getFullOutput()).toContain(
         'You have reached the daily observability metrics query limit'
       );
+      // A spent quota is not a missing subscription, and the team may well
+      // already hold one. Buying a second does not raise the limit.
+      expect(client.stderr.getFullOutput()).not.toContain('buy addon');
+    });
+
+    it("should keep the purchase hint off another product's 402", async () => {
+      mockMetricDetail();
+      client.scenario.post('/v2/observability/query', (_req, res) => {
+        res.status(402).json({
+          error: {
+            code: 'payment_required',
+            message:
+              'Accessing Analytics custom events requires an Enterprise or Pro plan.',
+          },
+        });
+      });
+      client.setArgv('metrics', 'vercel.request.count');
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      // Every paid product on this endpoint refuses with 402, so the status
+      // alone would sell Observability Plus to answer a Web Analytics gate.
+      expect(client.stderr.getFullOutput()).toContain('Enterprise or Pro plan');
+      expect(client.stderr.getFullOutput()).not.toContain('buy addon');
     });
 
     it('should handle 403 forbidden', async () => {
@@ -771,6 +2296,11 @@ describe('metrics query v2', () => {
       expect(client.stderr.getFullOutput()).toContain(
         'Too many requests. Please wait and try again.'
       );
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'error_code', value: 'rate_limited' },
+        { key: 'error_status', value: '429' },
+      ]);
     });
 
     it('should handle API error in JSON mode', async () => {
@@ -846,6 +2376,50 @@ describe('metrics query v2', () => {
       ]);
     });
 
+    it('should track order options', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--order-by',
+        'value',
+        '--order',
+        'desc'
+      );
+
+      await query(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:order-by', value: 'value' },
+        { key: 'option:order', value: 'desc' },
+      ]);
+    });
+
+    it('should track options before invalid order-by returns', async () => {
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--order-by',
+        'latency',
+        '--filter',
+        'http_status ge 500',
+        '--prod'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(1);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:order-by', value: 'latency' },
+        { key: 'option:filter', value: '[REDACTED]' },
+        { key: 'flag:prod', value: 'TRUE' },
+        { key: 'error_code', value: 'INVALID_ORDER_BY' },
+      ]);
+    });
+
     it('should track filter option as redacted', async () => {
       mockMetricDetail();
       mockApiSuccess();
@@ -861,6 +2435,37 @@ describe('metrics query v2', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:filter', value: '[REDACTED]' },
+      ]);
+    });
+
+    it('should track --prod flag', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv('metrics', 'vercel.request.count', '--prod');
+
+      await query(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'flag:prod', value: 'TRUE' },
+      ]);
+    });
+
+    it('should track --environment', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--environment',
+        'preview'
+      );
+
+      await query(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:environment', value: 'preview' },
       ]);
     });
 
@@ -901,6 +2506,24 @@ describe('metrics query v2', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'argument:metric-id', value: 'vercel.request.count' },
         { key: 'option:granularity', value: '5m' },
+      ]);
+    });
+
+    it('should track bucket-timezone option', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--bucket-timezone',
+        'Europe/Paris'
+      );
+
+      await query(client, new MockTelemetry());
+
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:metric-id', value: 'vercel.request.count' },
+        { key: 'option:bucket-timezone', value: 'Europe/Paris' },
       ]);
     });
 
@@ -951,6 +2574,137 @@ describe('metrics query v2', () => {
       expect(postedBody?.aggregation).toBe('p95');
       expect(postedBody?.groupBy).toEqual(['http_status']);
       expect(postedBody?.granularity).toEqual({ minutes: 15 });
+      expect(postedBody?.orderDirection).toBeUndefined();
     });
+
+    it('should preserve exact time bounds for platform metrics', async () => {
+      mockMetricDetail();
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--since',
+        '2025-01-15T10:03:00Z',
+        '--until',
+        '2025-01-15T10:58:00Z',
+        '--granularity',
+        '15m'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.startTime).toBe('2025-01-15T10:03:00.000Z');
+      expect(postedBody?.endTime).toBe('2025-01-15T10:58:00.000Z');
+    });
+
+    it('should pass bucket-timezone through to the query endpoint', async () => {
+      mockMetricDetail('vercel.analytics_pageview.count');
+      mockApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.analytics_pageview.count',
+        '--since',
+        '2026-05-28',
+        '--until',
+        '2026-05-29',
+        '--granularity',
+        '1d',
+        '--bucket-timezone',
+        'Europe/Paris'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody?.bucketTimezone).toBe('Europe/Paris');
+    });
+  });
+});
+
+describe('metrics --query', () => {
+  // Runs a metrics query with a fresh client, recording the query body.
+  async function run(...args: string[]) {
+    client.reset();
+    vi.clearAllMocks();
+    postedBody = undefined;
+    mockedGetProjectByNameOrId.mockReset();
+    mockLinkedProject();
+    mockTeamScope();
+    vi.stubEnv('FF_LEGACY_METRICS', '');
+    mockSystemMetricCatalog();
+    mockCanonicalApiSuccess();
+    client.setArgv(
+      'metrics',
+      'vercel.request.count',
+      '--since',
+      '2026-07-29T09:00:42.123Z',
+      '--until',
+      '2026-07-29T10:00:42.123Z',
+      ...args
+    );
+    const exitCode = await query(client, new MockTelemetry());
+    return {
+      exitCode,
+      body: postedBody,
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  const twoFilters = ['httpStatus >= 500', 'route:"/api"'];
+
+  it('ANDs repeated --query expressions together', async () => {
+    const result = await run(
+      '--query',
+      twoFilters[0],
+      '--query',
+      twoFilters[1]
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.body).toMatchObject({
+      filter: '(httpStatus >= 500) AND (route:"/api")',
+    });
+    expect(result.stderr).not.toContain('deprecated');
+  });
+
+  it.each([
+    ['--filter', ['--filter', twoFilters[0], '--filter', twoFilters[1]]],
+    ['-f', ['-f', twoFilters[0], '-f', twoFilters[1]]],
+    ['-f', ['-f', twoFilters[0], '--filter', twoFilters[1]]],
+  ])('still accepts %s, with one warning that names --query', async (typed, oldArgs) => {
+    const now = await run('--query', twoFilters[0], '--query', twoFilters[1]);
+    const before = await run(...oldArgs);
+
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.body).toEqual(now.body);
+    expect(before.stdout).toBe(now.stdout);
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain(`! ${typed} is deprecated. Use --query.\n`);
+  });
+
+  it('puts the warning in the JSON result with --json', async () => {
+    const now = await run('--query', twoFilters[0], '--json');
+    const before = await run('--filter', twoFilters[0], '--json');
+
+    expect(before.exitCode).toBe(0);
+    expectDeprecationInJson(
+      before.stdout,
+      now.stdout,
+      '--filter is deprecated. Use --query.'
+    );
+    expect(before.stderr).not.toContain('deprecated');
+  });
+
+  it.each([
+    [['--query', 'a:1', '--filter', 'b:2'], "Can't use --query with --filter."],
+    [['--query', 'a:1', '-f', 'b:2'], "Can't use --query with -f."],
+  ])('rejects %j before any query', async (args, message) => {
+    const result = await run(...args);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(message);
+    expect(result.body).toBeUndefined();
   });
 });

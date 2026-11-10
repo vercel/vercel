@@ -1,0 +1,15 @@
+[project]
+name = "celery-subscriber"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "celery>=5.3.0",
+    "vercel",
+]
+
+# Declares a background worker compiled into a queue-triggered Lambda alongside
+# the FastAPI app. With no "topics" filter, the subscriber consumes every
+# subscription introspected from the Celery app's queues.
+[[tool.vercel.subscribers]]
+entrypoint = "worker:app"

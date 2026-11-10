@@ -19,15 +19,22 @@ import {
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
   RUNTIME_MANIFESTS,
-} from './types';
+} from './runtimes/constants';
+import {
+  BUILDPACK_PROJECT_MARKERS,
+  toBuildpackRuntime,
+} from '../buildpack-runtimes';
 import {
   filterFrameworksByRuntime,
-  getBuilderForRuntime,
-  hasFile,
   inferRuntimeFromFramework,
-  inferServiceRuntime,
-  INTERNAL_SERVICE_PREFIX,
-} from './utils';
+} from './runtimes/framework';
+import { getBuilderForRuntime, inferRuntime } from './runtimes/runtime';
+import {
+  parsePyModuleAttrEntrypoint,
+  isDockerfileEntrypoint,
+  stripTrailingSlash,
+} from './runtimes/entrypoint';
+import { hasFile, INTERNAL_SERVICE_PREFIX } from './utils';
 import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
@@ -35,26 +42,6 @@ import { normalizeRoutePrefix } from '@vercel/routing-utils';
 import { isNodeBackendFramework } from '@vercel/build-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
-
-/**
- * Match a Python `module:attr` entrypoint (e.g. `backend.jobs.scheduled:cleanup`).
- * Kept inline to avoid coupling fs-detectors to a Python-specific package.
- * Real verification would happen at the build time.
- */
-const PYTHON_MODULE_ATTR_RE =
-  /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
-
-export function parsePyModuleAttrEntrypoint(entrypoint: string): {
-  attrName: string;
-  filePath: string;
-} | null {
-  const match = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
-  if (!match) return null;
-  return {
-    attrName: match[2],
-    filePath: match[1].replace(/\./g, '/') + '.py',
-  };
-}
 
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
@@ -64,6 +51,14 @@ const ENTRYPOINT_REQUIRED_RUNTIMES = new Set<ServiceRuntime>([
   'python',
   'go',
 ]);
+
+function isContainerRuntime(config: ConfiguredServiceConfig): boolean {
+  return config.runtime === 'container';
+}
+
+function normalizeContainerCommand(command: string | string[]): string[] {
+  return Array.isArray(command) ? command : [command];
+}
 
 type ConfiguredServiceConfig = ExperimentalServiceConfig;
 
@@ -83,7 +78,9 @@ export async function getServiceFs(
   if (!root) {
     return { fs };
   }
-  const normalizedRoot = posixPath.normalize(root);
+  // Strip any trailing slash `posixPath.normalize` leaves behind so the chdir
+  // path matches what callers persist as the service `root`.
+  const normalizedRoot = stripTrailingSlash(posixPath.normalize(root));
   if (!(await fs.hasPath(normalizedRoot))) {
     return {
       fs,
@@ -673,9 +670,33 @@ export function validateServiceConfig(
     };
   }
   if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
+    // Entrypoint-free builds exist only under `services`: `experimentalServices`
+    // is deprecated, shares one output directory across services, and routes
+    // functions by their Lambda output path, none of which fits a container
+    // image. Point at the migration rather than at a bare missing field.
+    const buildpackRuntime = config.builder
+      ? undefined
+      : toBuildpackRuntime(config.runtime);
+    if (buildpackRuntime) {
+      const markers = BUILDPACK_PROJECT_MARKERS.get(buildpackRuntime) ?? [];
+      return {
+        code: 'BUILDPACK_REQUIRES_SERVICES',
+        message:
+          `Service "${name}" must specify "entrypoint" when using "runtime" with "experimentalServices". ` +
+          `Move it to "services" to build without an "entrypoint" from a ${markers.join(' or ')} at the service root.`,
+        serviceName: name,
+      };
+    }
     return {
       code: 'MISSING_ENTRYPOINT',
       message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
+      serviceName: name,
+    };
+  }
+  if (config.command !== undefined && !isContainerRuntime(config)) {
+    return {
+      code: 'INVALID_COMMAND',
+      message: `Service "${name}" can only specify "command" when using runtime "container".`,
       serviceName: name,
     };
   }
@@ -697,7 +718,7 @@ export function validateServiceEntrypoint(
     !config.runtime &&
     !config.framework
   ) {
-    const runtime = inferServiceRuntime({
+    const runtime = inferRuntime({
       ...config,
       entrypoint: resolvedEntrypoint.normalized,
     });
@@ -746,8 +767,26 @@ export async function resolveConfiguredService(
   const routePrefixWasConfigured =
     routingResult.routing?.routePrefixConfigured ?? false;
 
+  const containerEntrypoint =
+    isContainerRuntime(config) && typeof rawEntrypoint === 'string'
+      ? rawEntrypoint
+      : undefined;
+  // A container entrypoint is either a Dockerfile path to build & push, or a
+  // prebuilt image reference to pass through unchanged.
+  const containerDockerfile =
+    containerEntrypoint && isDockerfileEntrypoint(containerEntrypoint)
+      ? posixPath.normalize(containerEntrypoint)
+      : undefined;
+  const containerImage =
+    containerEntrypoint && !containerDockerfile
+      ? containerEntrypoint
+      : undefined;
   let resolvedEntrypointPath = resolvedEntrypoint;
-  if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
+  if (
+    !containerEntrypoint &&
+    !resolvedEntrypointPath &&
+    typeof rawEntrypoint === 'string'
+  ) {
     const entrypointToResolve = moduleAttrParsed
       ? moduleAttrParsed.filePath
       : rawEntrypoint;
@@ -758,7 +797,11 @@ export async function resolveConfiguredService(
     });
     resolvedEntrypointPath = resolved.entrypoint;
   }
-  if (typeof rawEntrypoint === 'string' && !resolvedEntrypointPath) {
+  if (
+    !containerEntrypoint &&
+    typeof rawEntrypoint === 'string' &&
+    !resolvedEntrypointPath
+  ) {
     throw new Error(
       `Failed to resolve entrypoint "${rawEntrypoint}" for service "${name}".`
     );
@@ -766,7 +809,7 @@ export async function resolveConfiguredService(
   const normalizedEntrypoint = resolvedEntrypointPath?.normalized;
   const entrypointIsDirectory = Boolean(resolvedEntrypointPath?.isDirectory);
 
-  const inferredRuntime = inferServiceRuntime({
+  const inferredRuntime = inferRuntime({
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
@@ -859,7 +902,10 @@ export async function resolveConfiguredService(
     } else {
       builderUse = getBuilderForRuntime(inferredRuntime);
     }
-    builderSrc = resolvedEntrypointFile!;
+    builderSrc =
+      inferredRuntime === 'container' && typeof containerEntrypoint === 'string'
+        ? containerEntrypoint
+        : resolvedEntrypointFile!;
   }
 
   const normalizedSubdomain =
@@ -920,6 +966,12 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (containerImage) {
+    builderConfig.handler = containerImage;
+  }
+  if (config.command !== undefined) {
+    builderConfig.command = normalizeContainerCommand(config.command);
+  }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
   }
@@ -931,7 +983,7 @@ export async function resolveConfiguredService(
     trigger,
     group,
     workspace,
-    entrypoint: resolvedEntrypointFile,
+    entrypoint: containerImage ?? containerDockerfile ?? resolvedEntrypointFile,
     routePrefix,
     routePrefixSource: resolvedRoutePrefixSource,
     subdomain: normalizedSubdomain,
@@ -988,7 +1040,10 @@ export async function resolveAllConfiguredServices(
     const serviceFs = serviceFsResult.fs;
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
-    if (typeof serviceConfig.entrypoint === 'string') {
+    if (
+      typeof serviceConfig.entrypoint === 'string' &&
+      !isContainerRuntime(serviceConfig)
+    ) {
       const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
       const entrypointToResolve =
         moduleAttr?.filePath ?? serviceConfig.entrypoint;
@@ -1030,7 +1085,7 @@ export async function resolveAllConfiguredServices(
     let resolvedConfig = serviceConfig;
     if (!serviceConfig.framework && resolvedEntrypoint) {
       if (resolvedEntrypoint.isDirectory) {
-        const inferredRuntime = inferServiceRuntime({
+        const inferredRuntime = inferRuntime({
           ...serviceConfig,
         });
         const workspace = resolvedEntrypoint.normalized;
@@ -1057,7 +1112,7 @@ export async function resolveAllConfiguredServices(
           framework,
         };
       } else {
-        const inferredRuntime = inferServiceRuntime({
+        const inferredRuntime = inferRuntime({
           ...serviceConfig,
           entrypoint: resolvedEntrypoint.normalized,
         });

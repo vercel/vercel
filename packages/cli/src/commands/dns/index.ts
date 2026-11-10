@@ -3,14 +3,18 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import add from './add';
 import importZone from './import';
+import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
+import update from './update';
 import {
   addSubcommand,
   dnsCommand,
   importSubcommand,
+  inspectSubcommand,
   listSubcommand,
   removeSubcommand,
+  updateSubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -22,8 +26,10 @@ import { getCommandAliases } from '..';
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   import: getCommandAliases(importSubcommand),
+  inspect: getCommandAliases(inspectSubcommand),
   ls: getCommandAliases(listSubcommand),
   rm: getCommandAliases(removeSubcommand),
+  update: getCommandAliases(updateSubcommand),
 };
 
 export default async function dns(client: Client) {
@@ -37,7 +43,7 @@ export default async function dns(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const telemetry = new DnsTelemetryClient({
@@ -55,13 +61,22 @@ export default async function dns(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('dns', subcommand);
-    output.print(help(dnsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(dnsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: dnsCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: dnsCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -70,7 +85,7 @@ export default async function dns(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
@@ -78,23 +93,39 @@ export default async function dns(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(importSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandImport(subcommandOriginal);
       return importZone(client, args);
+    case 'inspect':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('dns', subcommandOriginal);
+        printHelp(inspectSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      return inspect(client, args);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rm(client, args);
+    case 'update':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('dns', subcommandOriginal);
+        printHelp(updateSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      return update(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('dns', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);

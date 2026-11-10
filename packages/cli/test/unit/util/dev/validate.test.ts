@@ -1,11 +1,585 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
-  describe('experimentalServicesV2', () => {
-    it('should not error with a valid config', () => {
+  it.each([
+    { jitter: 1, valid: true },
+    { jitter: 15, valid: true },
+    { jitter: 0, valid: false },
+    { jitter: 16, valid: false },
+    { jitter: 1440, valid: false },
+    { jitter: 1.5, valid: false },
+    { jitter: '5m', valid: false },
+    { jitter: '60s', valid: false },
+    { jitter: '0.25h', valid: false },
+    { jitter: '15', valid: false },
+    { jitter: null, valid: false },
+  ])('validates schedule jitter $jitter', ({ jitter, valid }) => {
+    const error = validateConfig({
+      schedules: {
+        'hourly-jobs': {
+          schedule: '0 * * * *',
+          jitter,
+          topic: 'hourly-jobs',
+        },
+      },
+    } as unknown as Parameters<typeof validateConfig>[0]);
+    expect(error === null).toBe(valid);
+  });
+
+  describe('schedules', () => {
+    it('accepts schedules without changing the config', () => {
+      const schedule = {
+        schedule: '0 9 * * *',
+        topic: 'reports',
+        timezone: 'America/New_York',
+        jitter: 5,
+      };
+      const config = { schedules: { 'daily-report': schedule } };
+      const original = structuredClone(config);
+      expect(validateConfig(config)).toBeNull();
+      expect(config).toEqual(original);
+      expect(config.schedules['daily-report']).toBe(schedule);
+    });
+
+    it('rejects a name inside a schedule', () => {
+      expect(
+        validateConfig({
+          schedules: {
+            cron: { name: 'cron', schedule: '0 9 * * *', path: '/api/cron' },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it('rejects more than 100 schedules', () => {
+      expect(
+        validateConfig({
+          schedules: Object.fromEntries(
+            Array.from({ length: 101 }, (_, i) => [
+              `job-${i}`,
+              { schedule: '0 9 * * *', topic: 'jobs' },
+            ])
+          ),
+        })
+      ).not.toBeNull();
+    });
+
+    it.each([
+      'nightly',
+      { nightly: 'nope' },
+    ])('rejects malformed schedules %j', schedules => {
+      expect(
+        validateConfig({ schedules } as unknown as Parameters<
+          typeof validateConfig
+        >[0])
+      ).not.toBeNull();
+    });
+
+    it.each([
+      'GET',
+      'POST',
+    ] as const)('accepts requestMethod %s on path schedules', requestMethod => {
+      expect(
+        validateConfig({
+          schedules: {
+            cron: {
+              schedule: '0 9 * * *',
+              path: '/api/cron',
+              requestMethod,
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('accepts a service on function schedules', () => {
+      expect(
+        validateConfig({
+          schedules: {
+            job: {
+              schedule: '0 9 * * *',
+              function: 'index',
+              service: 'worker',
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      [{ schedule: '0 9 * * *' }],
+      [
+        {
+          schedule: '0 9 * * *',
+          path: '/api/cron',
+          service: 'worker',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          topic: 'jobs',
+          service: 'worker',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          entrypoint: 'jobs/nightly.ts',
+          service: 'worker',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          function: 'index',
+          service: 'Worker',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          path: '/api/cron',
+          topic: 'jobs',
+        },
+      ],
+      [{ topic: 'jobs' }],
+      [
+        {
+          schedule: '0 9 * * *',
+          topic: 'jobs',
+          requestMethod: 'GET',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          path: '/api/cron',
+          requestMethod: 'PUT',
+        },
+      ],
+      [
+        {
+          expression: { cron: '0 9 * * *' },
+          target: { topic: 'reports' },
+        },
+      ],
+    ])('rejects %j', schedule => {
+      expect(
+        validateConfig({
+          schedules: { job: schedule },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it.each(['bad name', '-leading', ''])('rejects invalid name %j', name => {
+      expect(
+        validateConfig({
+          schedules: { [name]: { schedule: '0 9 * * *', topic: 'reports' } },
+        })
+      ).not.toBeNull();
+    });
+  });
+
+  it('rejects the array format', () => {
+    expect(
+      validateConfig({
+        schedules: [
+          { name: 'daily-report', schedule: '0 9 * * *', topic: 'reports' },
+        ],
+      } as unknown as Parameters<typeof validateConfig>[0])
+    ).not.toBeNull();
+  });
+
+  describe('schedules timezone', () => {
+    it.each([
+      undefined,
+      'UTC',
+      'America/New_York',
+      'Asia/Kathmandu',
+      'Etc/GMT+5',
+    ])('accepts %s without changing the config', timezone => {
+      const schedule = {
+        schedule: '0 9 * * *',
+        topic: 'reports',
+        ...(timezone !== undefined ? { timezone } : {}),
+      };
+      const original = structuredClone(schedule);
+      expect(
+        validateConfig({ schedules: { 'daily-report': schedule } })
+      ).toBeNull();
+      expect(schedule).toEqual(original);
+    });
+
+    it.each([
+      'Not/A_Timezone',
+      ' ',
+      ' UTC',
+      '+01:00',
+      '-0800',
+    ])('rejects invalid IANA timezone %j', timezone => {
       const error = validateConfig({
-        experimentalServicesV2: {
+        schedules: {
+          'daily-report': {
+            schedule: '0 9 * * *',
+            topic: 'reports',
+            timezone,
+          },
+        },
+      });
+      expect(error?.code).toBe('INVALID_SCHEDULE_TIMEZONE');
+      expect(error?.message).toBe(
+        'Invalid vercel.json - `schedules.daily-report.timezone` must be a valid IANA timezone, such as "America/New_York". Omit it to use UTC.'
+      );
+    });
+
+    it.each([
+      '',
+      'a'.repeat(51),
+      null,
+      123,
+    ])('rejects malformed timezone %j', timezone => {
+      expect(
+        validateConfig({
+          schedules: {
+            'daily-report': {
+              schedule: '0 9 * * *',
+              topic: 'reports',
+              timezone,
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+  });
+
+  describe('schedule entrypoints', () => {
+    it.each([
+      'jobs/nightly.ts',
+      'jobs/nightly.py',
+    ])('accepts runtime-specific entrypoint %j', entrypoint => {
+      expect(
+        validateConfig({
+          schedules: { nightly: { schedule: '0 0 * * *', entrypoint } },
+        })
+      ).toBeNull();
+    });
+
+    // Like a daemon `root`, it may point above the project.
+    it.each([
+      ['.', 'Dockerfile'],
+      ['.', 'jobs/Containerfile.prod'],
+      ['../../jobs', 'Dockerfile'],
+    ])('accepts a command with root %s and %s', (root, entrypoint) => {
+      const config = {
+        schedules: {
+          nightly: {
+            schedule: '0 0 * * *',
+            root,
+            entrypoint,
+            command: ['python', 'jobs/nightly.py', ''],
+          },
+        },
+      };
+      const original = structuredClone(config);
+      expect(validateConfig(config)).toBeNull();
+      expect(config).toEqual(original);
+    });
+
+    it.each([
+      [],
+      ['  '],
+      'python jobs/nightly.py',
+      [123],
+      ['python', 123],
+    ])('rejects an invalid command %j', command => {
+      expect(
+        validateConfig({
+          schedules: {
+            nightly: {
+              schedule: '0 0 * * *',
+              root: '.',
+              entrypoint: 'Dockerfile',
+              command,
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it.each([
+      { entrypoint: 'jobs/nightly.py' },
+      { entrypoint: 'Dockerfile/' },
+      { function: 'api/nightly' },
+    ])('rejects commands for a non-container target %j', target => {
+      expect(
+        validateConfig({
+          schedules: {
+            nightly: {
+              schedule: '0 0 * * *',
+              ...target,
+              root: '.',
+              command: ['python', 'job.py'],
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    // A command schedule is built as a service named after the schedule.
+    const job = {
+      schedule: '0 0 * * *',
+      root: 'jobs',
+      entrypoint: 'Dockerfile',
+      command: ['job'],
+    };
+    it.each([
+      [{ schedules: { 'nightly-2': job } }, 'must be a valid service name'],
+      [{ schedules: { Nightly: job } }, 'must be a valid service name'],
+      [
+        { schedules: { web: job }, services: { web: { root: 'web' } } },
+        'already the name of a service or daemon',
+      ],
+      [
+        {
+          schedules: { worker: job },
+          daemons: {
+            worker: {
+              root: 'worker',
+              entrypoint: 'Dockerfile',
+              command: ['work'],
+              instances: { sfo1: 1 },
+            },
+          },
+        },
+        'already the name of a service or daemon',
+      ],
+    ])('rejects a command schedule that cannot be its service name %j', (config, error) => {
+      expect(
+        validateConfig(config as Parameters<typeof validateConfig>[0])?.message
+      ).toContain(error);
+    });
+
+    const { root, ...withoutRoot } = job;
+    const { command, ...withoutCommand } = job;
+    it.each([
+      ['no root', withoutRoot, 'missing required property `root`'],
+      [
+        'root without command',
+        withoutCommand,
+        'missing required property `command`',
+      ],
+    ])('rejects a command schedule with %s', (_, nightly, error) => {
+      expect(
+        validateConfig({
+          schedules: { nightly },
+        } as unknown as Parameters<typeof validateConfig>[0])?.message
+      ).toContain(error);
+    });
+
+    it.each([
+      { function: 'api/nightly' },
+      { topic: 'nightly' },
+      { entrypoint: 'jobs/nightly.ts' },
+    ])('rejects a static payload for schedule target %j', target => {
+      expect(
+        validateConfig({
+          schedules: {
+            nightly: {
+              schedule: '0 0 * * *',
+              ...target,
+              payload: { mode: 'full' },
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it.each([
+      '',
+      'a'.repeat(513),
+      null,
+      123,
+    ])('rejects malformed entrypoint %j', entrypoint => {
+      expect(
+        validateConfig({
+          schedules: { nightly: { schedule: '0 0 * * *', entrypoint } },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it('rejects a schedule with both entrypoint and function', () => {
+      expect(
+        validateConfig({
+          schedules: {
+            nightly: {
+              schedule: '0 0 * * *',
+              entrypoint: 'jobs/nightly.py',
+              function: 'jobs/nightly',
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+  });
+
+  describe('schedule path targets', () => {
+    it.each([
+      '/',
+      '/api/cron',
+      '/api/cron?task=cleanup',
+    ])('accepts path target %j', path => {
+      expect(
+        validateConfig({
+          schedules: { cleanup: { schedule: '0 0 * * *', path } },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      '',
+      'api/cron',
+      `/${'a'.repeat(512)}`,
+    ])('rejects invalid path target %j', path => {
+      expect(
+        validateConfig({
+          schedules: { cleanup: { schedule: '0 0 * * *', path } },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+  });
+
+  describe('proxy', () => {
+    it.each([
+      'proxy.js',
+      'src/proxy.ts',
+    ])('accepts the supported entrypoint %s', entrypoint => {
+      expect(validateConfig({ proxy: { entrypoint } })).toBeNull();
+    });
+
+    it.each([
+      '/api/:func*',
+      ['/api/:func*', '/dashboard/:path*'],
+    ])('accepts the matcher %j', matcher => {
+      expect(
+        validateConfig({ proxy: { entrypoint: 'proxy.ts', matcher } })
+      ).toBeNull();
+    });
+
+    it('accepts functions configuration for the proxy', () => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            'proxy.ts': {
+              maxDuration: 10,
+              memory: 1024,
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      'proxy.ts',
+      '**/*.ts',
+    ])('accepts a functions runtime targeting the proxy through %s', pattern => {
+      expect(
+        validateConfig({
+          proxy: { entrypoint: 'proxy.ts' },
+          functions: {
+            [pattern]: {
+              runtime: 'some-runtime@1.0.0',
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('requires an entrypoint', () => {
+      const error = validateConfig({
+        // @ts-expect-error - testing invalid configuration
+        proxy: {},
+      });
+
+      expect(error?.message).toBe(
+        'Invalid vercel.json - `proxy` missing required property `entrypoint`.'
+      );
+    });
+
+    it('rejects unsupported entrypoint extensions', () => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.mjs' },
+      });
+
+      expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
+      expect(error?.message).toBe(
+        'The `proxy.entrypoint` must be a `.js` or `.ts` file path, or a Python `module:attr`.'
+      );
+    });
+
+    it('accepts proxy together with services', () => {
+      expect(
+        validateConfig({
+          services: {
+            web: { root: 'apps/web', framework: 'nextjs' },
+            vr: { root: 'apps/vr' },
+          },
+          rewrites: [
+            { source: '/app/(.*)', destination: { service: 'vr' } },
+            { source: '/(.*)', destination: { service: 'web' } },
+          ],
+          proxy: { entrypoint: 'proxy.ts' },
+        })
+      ).toBeNull();
+    });
+
+    it('rejects proxy together with builds', () => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.ts' },
+        builds: [{ src: 'api/index.ts', use: '@vercel/node' }],
+      });
+
+      expect(error?.code).toBe('PROXY_AND_BUILDS');
+      expect(error?.message).toBe(
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.'
+      );
+    });
+
+    it.each([
+      '/proxy.ts',
+      '../proxy.ts',
+      'src\\proxy.ts',
+      'proxy.ts?x=1',
+    ])('rejects the unsafe entrypoint %s', entrypoint => {
+      const error = validateConfig({ proxy: { entrypoint } });
+
+      expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
+      expect(error?.message).toBe(
+        'The `proxy.entrypoint` path must be relative to the project root and cannot contain traversal, query, fragment, or control characters.'
+      );
+    });
+
+    it.each([
+      'api/:func*',
+      ['/api/:func*', 'dashboard/:path*'],
+    ])('rejects the invalid matcher %j', matcher => {
+      const error = validateConfig({
+        proxy: { entrypoint: 'proxy.ts', matcher },
+      });
+
+      expect(error?.code).toBe('INVALID_PROXY_MATCHER');
+      expect(error?.message).toBe(
+        'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.'
+      );
+    });
+  });
+
+  describe('services', () => {
+    it('should not error with a valid canonical config', () => {
+      const error = validateConfig({
+        services: {
           my_frontend: {
             root: 'frontend/',
             framework: 'nextjs',
@@ -28,6 +602,48 @@ describe('validateConfig', () => {
       expect(error).toBeNull();
     });
 
+    it('should keep experimentalServicesV2 as a backwards-compatible alias', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          api: { root: 'api', framework: 'express' },
+        },
+      });
+
+      expect(error).toBeNull();
+    });
+
+    it('should reject services together with experimentalServicesV2', () => {
+      const error = validateConfig({
+        services: { web: { root: '.', framework: 'nextjs' } },
+        experimentalServicesV2: {
+          api: { root: 'api', framework: 'express' },
+        },
+      });
+
+      expect(error?.code).toBe('SERVICES_AND_EXPERIMENTAL_SERVICES_V2');
+    });
+
+    it('should report canonical services validation errors', () => {
+      const error = validateConfig({
+        services: {
+          web: {
+            root: '.',
+            bindings: [
+              {
+                type: 'service',
+                service: 'ghost',
+                format: 'url',
+                env: 'GHOST_URL',
+              },
+            ],
+          },
+        },
+      });
+
+      expect(error?.code).toBe('SERVICES_BINDING_UNKNOWN_SERVICE');
+      expect(error?.message).toContain('`services`');
+    });
+
     it('should not error with a service-local route table and functions', () => {
       const error = validateConfig({
         experimentalServicesV2: {
@@ -42,6 +658,35 @@ describe('validateConfig', () => {
           },
         },
       });
+      expect(error).toBeNull();
+    });
+
+    it('should accept a request path transform on a service rewrite', () => {
+      const error = validateConfig({
+        experimentalServicesV2: {
+          my_backend: {
+            root: 'backend/',
+          },
+        },
+        rewrites: [
+          {
+            source: '/api/:path*',
+            destination: {
+              type: 'service',
+              service: 'my_backend',
+              path: '/:path*',
+            },
+            transforms: [
+              {
+                type: 'request.path',
+                op: 'set',
+                args: '/:path*',
+              },
+            ],
+          },
+        ],
+      } as unknown as Parameters<typeof validateConfig>[0]);
+
       expect(error).toBeNull();
     });
 
@@ -114,6 +759,19 @@ describe('validateConfig', () => {
       expect(error?.code).toBe(
         'EXPERIMENTAL_SERVICES_V2_BINDING_UNKNOWN_SERVICE'
       );
+    });
+
+    it('should accept a binding with `type` omitted', () => {
+      const error = validateConfig({
+        services: {
+          web: { root: '.' },
+          api: {
+            root: 'api/',
+            bindings: [{ service: 'web', format: 'url', env: 'WEB_URL' }],
+          },
+        },
+      } as any);
+      expect(error).toBeNull();
     });
 
     it('should reject a binding missing a required field', () => {
@@ -204,14 +862,15 @@ describe('validateConfig', () => {
   it('should not error with complete config', async () => {
     const config = {
       version: 2,
-      public: true,
       regions: ['sfo1', 'iad1'],
       cleanUrls: true,
       headers: [{ source: '/', headers: [{ key: 'x-id', value: '123' }] }],
       rewrites: [{ source: '/help', destination: '/support' }],
       redirects: [{ source: '/kb', destination: 'https://example.com' }],
       trailingSlash: false,
-      functions: { 'api/user.go': { memory: 128, maxDuration: 5 } },
+      functions: {
+        'api/user.go': { memory: 128, maxDuration: 5, maxConcurrency: 8 },
+      },
     };
     const error = validateConfig(config);
     expect(error).toBeNull();
@@ -226,6 +885,421 @@ describe('validateConfig', () => {
     } as unknown as Parameters<typeof validateConfig>[0];
     const error = validateConfig(config);
     expect(error).toBeNull();
+  });
+
+  it.each([
+    0, -1, 1.5,
+  ])('should reject maxConcurrency set to %s', maxConcurrency => {
+    const error = validateConfig({
+      functions: { 'api/user.go': { maxConcurrency } },
+    } as Parameters<typeof validateConfig>[0]);
+    expect(error).not.toBeNull();
+    expect(error?.message).toContain('maxConcurrency');
+  });
+
+  describe('daemons', () => {
+    const daemon = {
+      root: 'daemon',
+      entrypoint: 'Dockerfile',
+      command: ['python', 'daemon.py'],
+      instances: { sfo1: 1 },
+      resources: { requests: { memory: '1Gi' } },
+      terminationGracePeriodSeconds: 60,
+      livenessProbe: { httpGet: { path: '/healthz', port: 8080 } },
+    };
+    const validate = (config: Record<string, unknown>) =>
+      validateConfig(config as Parameters<typeof validateConfig>[0]);
+
+    it('accepts daemons alongside a regular app', () => {
+      expect(
+        validate({ framework: 'nextjs', daemons: { heartbeat: daemon } })
+      ).toBeNull();
+    });
+
+    it('accepts daemons alongside services', () => {
+      expect(
+        validate({
+          services: { web: { root: 'web' } },
+          daemons: { heartbeat: daemon },
+        })
+      ).toBeNull();
+    });
+
+    it('accepts nested Dockerfile entrypoints', () => {
+      expect(
+        validate({
+          daemons: {
+            heartbeat: { ...daemon, entrypoint: 'docker/Dockerfile.vercel' },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      'Dockerfile.worker',
+      'Containerfile.scheduler',
+      'docker/Dockerfile.worker',
+      'Dockerfile.worker.test',
+      'DOCKERFILE.worker',
+      'worker_Dockerfile',
+      'worker.Containerfile',
+      'myDockerfile.worker',
+    ])('accepts the explicit daemon entrypoint %s', entrypoint => {
+      expect(
+        validate({ daemons: { heartbeat: { ...daemon, entrypoint } } })
+      ).toBeNull();
+    });
+
+    it('accepts any region key with a non-negative count', () => {
+      expect(
+        validate({
+          daemons: {
+            heartbeat: { ...daemon, instances: { fra1: 10, iad1: 0 } },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('accepts the deprecated replicas field', () => {
+      const { instances, ...legacy } = daemon;
+      expect(
+        validate({ daemons: { heartbeat: { ...legacy, replicas: instances } } })
+      ).toBeNull();
+    });
+
+    it.each([
+      [
+        { instances: { sfo1: -1 } },
+        "`daemons['heartbeat'].instances['sfo1']` should be >= 0.",
+      ],
+      [
+        { resources: { requests: { memory: '3Gi' } } },
+        "`daemons['heartbeat'].resources.requests.memory` should be equal to one of the allowed values.",
+      ],
+      [
+        { terminationGracePeriodSeconds: -1 },
+        "`daemons['heartbeat'].terminationGracePeriodSeconds` should be >= 0.",
+      ],
+      [
+        { livenessProbe: { httpGet: { port: 0 } } },
+        "`daemons['heartbeat'].livenessProbe.httpGet.port` should be >= 1.",
+      ],
+      [
+        { framework: 'nextjs' },
+        "`daemons['heartbeat']` should NOT have additional property `framework`. Please remove it.",
+      ],
+      [
+        { runtime: 'container' },
+        "`daemons['heartbeat']` should NOT have additional property `runtime`. Please remove it.",
+      ],
+      [
+        { type: 'daemon' },
+        "`daemons['heartbeat']` should NOT have additional property `type`. Please remove it.",
+      ],
+      [
+        { command: 'python daemon.py' },
+        "`daemons['heartbeat'].command` should be array.",
+      ],
+      [
+        { command: [] },
+        "`daemons['heartbeat'].command` should NOT have fewer than 1 items.",
+      ],
+      [
+        { instances: undefined },
+        "`daemons['heartbeat']` missing required property `instances`.",
+      ],
+      [
+        { entrypoint: undefined },
+        "`daemons['heartbeat']` missing required property `entrypoint`.",
+      ],
+    ])('rejects invalid daemon config: %j', (override, message) => {
+      const error = validate({
+        daemons: { heartbeat: { ...daemon, ...override } },
+      });
+      expect(error?.code).toBe('INVALID_VERCEL_CONFIG');
+      expect(error?.message).toBe(`Invalid vercel.json - ${message}`);
+    });
+
+    it.each([
+      'Heartbeat',
+      'worker1',
+      'a___b',
+      'a_-b',
+      'a-_b',
+      'a__-b',
+    ])('rejects the daemon name %s', name => {
+      expect(validate({ daemons: { [name]: daemon } })?.code).toBe(
+        'INVALID_VERCEL_CONFIG'
+      );
+    });
+
+    it.each([
+      'a',
+      'a_b',
+      'a__b',
+      'a-b',
+      'a--b',
+      'celery_beat-worker',
+    ])('accepts the daemon name %s', name => {
+      expect(validate({ daemons: { [name]: daemon } })).toBeNull();
+    });
+
+    it('treats backslash entrypoints the same on every OS', () => {
+      expect(
+        validate({
+          daemons: {
+            heartbeat: { ...daemon, entrypoint: 'docker\\Dockerfile' },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('caps the number of daemons', () => {
+      const letter = (n: number) => String.fromCharCode(97 + n);
+      const daemons = Object.fromEntries(
+        Array.from({ length: 101 }, (_, i) => [
+          letter(Math.floor(i / 26)) + letter(i % 26),
+          daemon,
+        ])
+      );
+      expect(validate({ daemons })?.message).toBe(
+        'Invalid vercel.json - `daemons` should NOT have more than 100 properties.'
+      );
+      delete daemons.dw;
+      expect(validate({ daemons })).toBeNull();
+    });
+
+    it.each([
+      'services',
+      'experimentalServicesV2',
+    ])('rejects daemons declared under %s', key => {
+      const error = validate({
+        [key]: { heartbeat: { type: 'daemon', ...daemon } },
+      });
+      expect(error?.code).toBe('INVALID_VERCEL_CONFIG');
+      expect(error?.message).toBe(
+        `Invalid vercel.json - \`${key}['heartbeat']\` should NOT have additional property \`type\`. Please remove it.`
+      );
+    });
+
+    it('keeps daemon-only fields off regular services', () => {
+      expect(
+        validate({ services: { web: { root: 'web', replicas: { sfo1: 1 } } } })
+          ?.message
+      ).toBe(
+        "Invalid vercel.json - `services['web']` should NOT have additional property `replicas`. Please remove it."
+      );
+    });
+
+    it.each([
+      'main.py',
+      'docker/main.py',
+      'Dockerfile/hello.txt',
+    ])('rejects the non-Dockerfile entrypoint %s', entrypoint => {
+      const error = validate({
+        daemons: { heartbeat: { ...daemon, entrypoint } },
+      });
+      expect(error?.code).toBe('INVALID_DAEMON');
+      expect(error?.message).toBe(
+        'Daemon "heartbeat" must set `entrypoint` to a Dockerfile or Containerfile.'
+      );
+    });
+
+    it('allows a daemon and a service with the same name', () => {
+      expect(
+        validate({
+          services: {
+            heartbeat: { root: 'heartbeat' },
+            web: {
+              root: 'web',
+              bindings: [{ service: 'heartbeat', format: 'url', env: 'URL' }],
+              rewrites: [
+                { source: '/(.*)', destination: { service: 'heartbeat' } },
+              ],
+            },
+          },
+          daemons: { heartbeat: daemon },
+        })
+      ).toBeNull();
+    });
+
+    describe('daemon bindings', () => {
+      const apiBinding = {
+        type: 'service',
+        service: 'api',
+        format: 'url',
+        env: 'API_URL',
+      };
+
+      it('accepts a binding to a service', () => {
+        expect(
+          validate({
+            services: { api: { root: 'api' } },
+            daemons: { heartbeat: { ...daemon, bindings: [apiBinding] } },
+          })
+        ).toBeNull();
+      });
+
+      it('requires the binding type, like the API does', () => {
+        const { type: _type, ...untyped } = apiBinding;
+        const error = validate({
+          services: { api: { root: 'api' } },
+          daemons: { heartbeat: { ...daemon, bindings: [untyped] } },
+        });
+        expect(error?.code).toBe('INVALID_VERCEL_CONFIG');
+        expect(error?.message).toContain(
+          "`daemons['heartbeat'].bindings[0]` missing required property `type`"
+        );
+      });
+
+      it('accepts a binding to a service under experimentalServicesV2', () => {
+        expect(
+          validate({
+            experimentalServicesV2: { api: { root: 'api' } },
+            daemons: { heartbeat: { ...daemon, bindings: [apiBinding] } },
+          })
+        ).toBeNull();
+      });
+
+      it('rejects a binding to an unknown service', () => {
+        const error = validate({
+          services: { web: { root: 'web' } },
+          daemons: { heartbeat: { ...daemon, bindings: [apiBinding] } },
+        });
+        expect(error?.code).toBe('INVALID_DAEMON');
+        expect(error?.message).toBe(
+          'Daemon "heartbeat" declares a binding to unknown service "api". Add "api" to `services` or fix the binding.'
+        );
+      });
+
+      it('rejects a binding to another daemon', () => {
+        const error = validate({
+          daemons: {
+            api: daemon,
+            heartbeat: { ...daemon, bindings: [apiBinding] },
+          },
+        });
+        expect(error?.code).toBe('INVALID_DAEMON');
+      });
+
+      it('rejects two bindings that write the same environment variable', () => {
+        const error = validate({
+          services: { api: { root: 'api' }, web: { root: 'web' } },
+          daemons: {
+            heartbeat: {
+              ...daemon,
+              bindings: [apiBinding, { ...apiBinding, service: 'web' }],
+            },
+          },
+        });
+        expect(error?.message).toBe(
+          'Daemon "heartbeat" declares more than one binding for the environment variable "API_URL".'
+        );
+      });
+
+      it('rejects a binding with an unsupported format', () => {
+        const error = validate({
+          services: { api: { root: 'api' } },
+          daemons: {
+            heartbeat: {
+              ...daemon,
+              bindings: [{ ...apiBinding, format: 'host' }],
+            },
+          },
+        });
+        expect(error?.code).toBe('INVALID_VERCEL_CONFIG');
+      });
+    });
+
+    it('rejects bindings to daemons', () => {
+      expect(
+        validate({
+          daemons: { heartbeat: daemon },
+          services: {
+            web: {
+              root: 'web',
+              bindings: [{ service: 'heartbeat', format: 'url', env: 'URL' }],
+            },
+          },
+        })?.message
+      ).toBe(
+        'Service "web" cannot bind to daemon "heartbeat" because daemons do not receive traffic.'
+      );
+    });
+
+    it.each([
+      {
+        rewrites: [{ source: '/(.*)', destination: { service: 'heartbeat' } }],
+      },
+      { routes: [{ src: '/(.*)', destination: { service: 'heartbeat' } }] },
+      {
+        services: {
+          web: {
+            root: 'web',
+            routes: [{ src: '/(.*)', destination: { service: 'heartbeat' } }],
+          },
+        },
+      },
+      {
+        services: {
+          web: {
+            root: 'web',
+            rewrites: [
+              { source: '/(.*)', destination: { service: 'heartbeat' } },
+            ],
+          },
+        },
+      },
+    ])('rejects traffic routed to daemons: %j', extra => {
+      const error = validate({ daemons: { heartbeat: daemon }, ...extra });
+      expect(error?.code).toBe('INVALID_DAEMON');
+      expect(error?.message).toBe(
+        'Rewrites and routes cannot target daemon "heartbeat" because daemons do not receive traffic.'
+      );
+    });
+  });
+
+  // Regression test for honoring the env var when it is set *after* this module
+  // is imported: `validateConfig` (and therefore `@vercel/build-utils`' functions
+  // schema) is imported at the top of this file, before the env var below is ever
+  // set. The gate must still take effect, which only works if the validator reads
+  // the env var at validation time instead of baking the bound in at module load.
+  describe('VERCEL_CLI_SKIP_MAX_DURATION_LIMIT', () => {
+    const ENV = 'VERCEL_CLI_SKIP_MAX_DURATION_LIMIT';
+
+    afterEach(() => {
+      delete process.env[ENV];
+    });
+
+    const configWith = (maxDuration: number) =>
+      ({ functions: { 'api/*.js': { maxDuration } } }) satisfies Parameters<
+        typeof validateConfig
+      >[0];
+
+    it('rejects maxDuration above the default 3600s bound when unset', () => {
+      const error = validateConfig(configWith(3700));
+      expect(error).not.toBeNull();
+      expect(error?.message).toMatch(/3600/);
+    });
+
+    it('allows maxDuration above 3600s when set to "1" (defers to the server)', () => {
+      process.env[ENV] = '1';
+      expect(validateConfig(configWith(3600))).toBeNull();
+      expect(validateConfig(configWith(3700))).toBeNull();
+    });
+
+    it('still enforces the lower bound and integer check when skipped', () => {
+      process.env[ENV] = '1';
+      expect(validateConfig(configWith(0))).not.toBeNull();
+      expect(validateConfig(configWith(1.5))).not.toBeNull();
+    });
+
+    it('re-applies the 3600s bound once the variable is unset again', () => {
+      process.env[ENV] = '1';
+      expect(validateConfig(configWith(3700))).toBeNull();
+      delete process.env[ENV];
+      expect(validateConfig(configWith(3700))).not.toBeNull();
+    });
   });
 
   it('should not error with experimentalServices mount config', async () => {
@@ -254,9 +1328,7 @@ describe('validateConfig', () => {
     expect(error).toBeNull();
   });
 
-  it('should ignore the removed `services` property', () => {
-    // The CLI config schema is `additionalProperties: true`,
-    // so the error would come from the API
+  it('should validate the `services` property', () => {
     const error = validateConfig({
       services: {
         frontend: {
@@ -265,7 +1337,142 @@ describe('validateConfig', () => {
         },
       },
     } as any);
+    expect(error).not.toBeNull();
+  });
+
+  it('should allow strict affinity outside a service', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          affinity: { mode: 'strict' },
+        },
+      },
+    });
     expect(error).toBeNull();
+  });
+
+  it('should reject strict affinity with the all function region', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          affinity: { mode: 'strict' },
+          regions: ['all'],
+        },
+      },
+    });
+    expect(error?.code).toBe('INVALID_FUNCTION_AFFINITY_REGIONS');
+  });
+
+  it('should reject strict affinity with multiple project function regions', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          affinity: { mode: 'strict' },
+          regions: ['iad1', 'sfo1'],
+        },
+      },
+    });
+    expect(error?.code).toBe('INVALID_FUNCTION_AFFINITY_REGIONS');
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should reject strict affinity with multiple function regions in `%s`', configKey => {
+    const error = validateConfig({
+      [configKey]: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+              regions: ['iad1', 'sfo1'],
+            },
+          },
+        },
+      },
+    });
+    expect(error?.code).toBe('INVALID_FUNCTION_AFFINITY_REGIONS');
+  });
+
+  it('should allow strict affinity to inherit multiple project regions', () => {
+    const error = validateConfig({
+      regions: ['iad1', 'sfo1'],
+      functions: {
+        'api/test.js': {
+          affinity: { mode: 'strict' },
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should reject invalid service names in `%s`', configKey => {
+    for (const name of ['Bad', 'api1', 'api.service', 'api_', 'api-']) {
+      const error = validateConfig({
+        [configKey]: {
+          [name]: {
+            root: 'api',
+          },
+        },
+      } as any);
+
+      expect(error).not.toBeNull();
+    }
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should reject service names longer than 64 characters in `%s`', configKey => {
+    const error = validateConfig({
+      [configKey]: {
+        ['a'.repeat(65)]: {
+          root: 'api',
+        },
+      },
+    } as any);
+
+    expect(error).not.toBeNull();
+  });
+
+  it.each([
+    'services',
+    'experimentalServicesV2',
+  ] as const)('should accept service names matching the API schema in `%s`', configKey => {
+    const error = validateConfig({
+      [configKey]: {
+        ['a'.repeat(64)]: {
+          root: 'api',
+        },
+        my_service: {
+          root: 'worker',
+        },
+        'my-service': {
+          root: 'web',
+        },
+      },
+    } as any);
+
+    expect(error).toBeNull();
+  });
+
+  it('should reject invalid `experimentalServicesV2` service binding names', () => {
+    const error = validateConfig({
+      experimentalServicesV2: {
+        web: {
+          root: 'web',
+          bindings: [
+            { type: 'service', service: 'Api', format: 'url', env: 'API_URL' },
+          ],
+        },
+      },
+    } as any);
+
+    expect(error).not.toBeNull();
   });
 
   it('should not error with experimentalServices static schedule arrays', () => {
@@ -1136,6 +2343,37 @@ describe('validateConfig', () => {
       },
     });
     expect(error).toBeNull();
+  });
+
+  it('should allow strict function affinity', () => {
+    const error = validateConfig({
+      services: {
+        api: {
+          root: 'api',
+          functions: {
+            'test.js': {
+              affinity: { mode: 'strict' },
+            },
+          },
+        },
+      },
+    });
+    expect(error).toBeNull();
+  });
+
+  it.each([
+    {},
+    { mode: 'loose' },
+    { mode: 'strict', extra: true },
+  ])('should reject invalid function affinity %o', affinity => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          affinity: affinity as any,
+        },
+      },
+    });
+    expect(error).not.toBeNull();
   });
 
   it('should error with invalid supportsCancellation type', () => {

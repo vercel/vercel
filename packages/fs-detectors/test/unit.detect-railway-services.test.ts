@@ -23,7 +23,7 @@ describe('detectRailwayServices', () => {
       expect(Object.keys(result.services!)).toHaveLength(1);
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
-        routePrefix: '/',
+        mountPath: '/',
         buildCommand: 'npm run build',
       });
       expect(result.services!.web.entrypoint).toBeUndefined();
@@ -48,7 +48,7 @@ describe('detectRailwayServices', () => {
       expect(result.services).not.toBeNull();
       expect(result.services!.web).toMatchObject({
         framework: 'fastapi',
-        routePrefix: '/',
+        mountPath: '/',
         buildCommand: "echo 'test'",
       });
     });
@@ -67,7 +67,7 @@ describe('detectRailwayServices', () => {
       expect(result.services).not.toBeNull();
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
-        routePrefix: '/',
+        mountPath: '/',
       });
       expect(result.services!.web.buildCommand).toBeUndefined();
     });
@@ -95,12 +95,12 @@ describe('detectRailwayServices', () => {
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
         root: 'web',
-        routePrefix: '/',
+        mountPath: '/',
       });
       expect(result.services!.api).toMatchObject({
         framework: 'fastapi',
         root: 'api',
-        routePrefix: '/_/api',
+        mountPath: '/api/api',
         buildCommand: "echo 'test'",
       });
     });
@@ -132,11 +132,11 @@ describe('detectRailwayServices', () => {
       // "web" is preferred to be at /
       expect(result.services!.web).toMatchObject({
         root: 'web',
-        routePrefix: '/',
+        mountPath: '/',
       });
-      expect(result.services!.dashboard.routePrefix).toBe('/_/dashboard');
-      expect(result.services!.api.routePrefix).toBe('/_/api');
-      expect(result.services!.workers.routePrefix).toBe('/_/workers');
+      expect(result.services!.dashboard.mountPath).toBe('/api/dashboard');
+      expect(result.services!.api.mountPath).toBe('/api/api');
+      expect(result.services!.workers.mountPath).toBe('/api/workers');
 
       const warning = result.warnings.find(
         w => w.code === 'MULTIPLE_FRONTENDS'
@@ -326,11 +326,11 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.web.routePrefix).toBe('/');
-      expect(result.services!.api.routePrefix).toBe('/_/api');
+      expect(result.services!.web.mountPath).toBe('/');
+      expect(result.services!.api.mountPath).toBe('/api/api');
     });
 
-    it('should assign all to /_/ when no frontend detected', async () => {
+    it('should assign all to /api/ when no frontend detected', async () => {
       const fs = new VirtualFilesystem({
         'beta/railway.json': JSON.stringify({}),
         'beta/pyproject.toml': '[project]\ndependencies = ["fastapi"]',
@@ -342,8 +342,8 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.alpha.routePrefix).toBe('/_/alpha');
-      expect(result.services!.beta.routePrefix).toBe('/_/beta');
+      expect(result.services!.alpha.mountPath).toBe('/api/alpha');
+      expect(result.services!.beta.mountPath).toBe('/api/beta');
     });
 
     it('should warn and pick first alphabetically when multiple frontends', async () => {
@@ -365,9 +365,9 @@ describe('detectRailwayServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services).not.toBeNull();
-      expect(result.services!['site-a'].routePrefix).toBe('/');
-      expect(result.services!['site-b'].routePrefix).toBe('/_/site-b');
-      expect(result.services!.api.routePrefix).toBe('/_/api');
+      expect(result.services!['site-a'].mountPath).toBe('/');
+      expect(result.services!['site-b'].mountPath).toBe('/api/site-b');
+      expect(result.services!.api.mountPath).toBe('/api/api');
 
       const warning = result.warnings.find(
         w => w.code === 'MULTIPLE_FRONTENDS'
@@ -392,8 +392,8 @@ describe('detectRailwayServices', () => {
       const result = await detectRailwayServices({ fs });
 
       expect(result.errors).toEqual([]);
-      expect(result.services!.web.routePrefix).toBe('/');
-      expect(result.services!.admin.routePrefix).toBe('/_/admin');
+      expect(result.services!.web.mountPath).toBe('/');
+      expect(result.services!.admin.mountPath).toBe('/api/admin');
     });
 
     it('should assign / to single service', async () => {
@@ -405,7 +405,7 @@ describe('detectRailwayServices', () => {
 
       const result = await detectRailwayServices({ fs });
 
-      expect(result.services!.api.routePrefix).toBe('/');
+      expect(result.services!.api.mountPath).toBe('/');
     });
   });
 
@@ -613,8 +613,8 @@ describe('detectServices with Railway detection', () => {
     expect(result.inferred).not.toBeNull();
     expect(result.inferred!.source).toBe('railway');
     expect(result.inferred!.services).toHaveLength(1);
-    expect(result.inferred!.services[0].routePrefix).toBe('/');
     expect(result.inferred!.services[0].name).toBe('backend');
+    expect(result.inferred!.config.backend.mountPath).toBe('/');
   });
 
   it('should prefer Vercel config over Railway', async () => {
@@ -623,7 +623,7 @@ describe('detectServices with Railway detection', () => {
         experimentalServices: {
           api: {
             entrypoint: 'api/main.py',
-            routePrefix: '/api',
+            mountPath: '/api',
           },
         },
       }),
@@ -673,7 +673,7 @@ describe('detectServices with Railway detection', () => {
         framework: 'fastapi',
         root: 'api',
         entrypoint: 'main:app',
-        routePrefix: '/_/api',
+        mountPath: '/api/api',
       });
     });
 

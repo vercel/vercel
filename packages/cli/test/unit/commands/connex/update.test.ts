@@ -6,6 +6,7 @@ import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connect from '../../../../src/commands/connex';
+import { fakeConnexClient } from '../../../mocks/connex';
 
 vi.setConfig({ testTimeout: 15000 });
 
@@ -26,23 +27,6 @@ async function writeTmpFile(name: string, bytes: Buffer): Promise<string> {
   return path;
 }
 
-function fakeConnexClient(overrides: Record<string, unknown> = {}) {
-  return {
-    id: 'scl_test123',
-    ownerId: 'team_abc',
-    createdAt: 0,
-    updatedAt: 0,
-    uid: 'slack/my-bot',
-    type: 'slack',
-    name: 'my-bot',
-    data: {},
-    typeName: 'Slack',
-    supportedSubjectTypes: ['user'],
-    supportsInstallation: false,
-    ...overrides,
-  };
-}
-
 describe('connex update', () => {
   let team: { id: string; slug: string };
 
@@ -59,7 +43,7 @@ describe('connex update', () => {
     const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Missing connector ID');
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
   });
 
   it('should error when no flags are provided', async () => {
@@ -70,7 +54,7 @@ describe('connex update', () => {
     await expect(client.stderr).toOutput(
       'Specify at least one of: --icon, --background-color, --accent-color'
     );
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
   });
 
   it('should error on invalid hex color before any network call', async () => {

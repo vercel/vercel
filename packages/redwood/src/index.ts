@@ -16,6 +16,9 @@ import {
   download,
   glob,
   debug,
+  createDiagnostics,
+  generateProjectManifest,
+  getReportedServiceType,
   getNodeVersion,
   getPrefixedEnvVars,
   runNpmInstall,
@@ -53,6 +56,9 @@ export const build: BuildV2 = async ({
   entrypoint,
   meta = {},
   config = {},
+  service,
+  diagnosticsValues,
+  span,
 }) => {
   await download(files, workPath, meta);
 
@@ -77,8 +83,10 @@ export const build: BuildV2 = async ({
 
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
@@ -86,6 +94,8 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -109,6 +119,22 @@ export const build: BuildV2 = async ({
       { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
+    );
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath: entrypointFsDirname,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: diagnosticsValues?.framework,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write redwood manifest: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 
@@ -278,7 +304,7 @@ export const build: BuildV2 = async ({
 
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
 
-    const staticConfig = getConfig(project, sourceFile);
+    const staticConfig = getConfig(project, sourceFile, undefined, span);
 
     const regions = staticConfig?.regions;
     if (regions && !Array.isArray(regions)) {
@@ -338,3 +364,5 @@ function hasScript(scriptName: string, pkg: PackageJson | null) {
 export const prepareCache: PrepareCache = ({ repoRootPath, workPath }) => {
   return glob(defaultCachePathGlob, repoRootPath || workPath);
 };
+
+export const diagnostics = createDiagnostics('node');

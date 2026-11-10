@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "engines": {
+    "bun": "1.x"
+  }
+}

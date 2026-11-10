@@ -30,6 +30,9 @@ import {
   detectPackageManager,
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
+  createDiagnostics,
+  generateProjectManifest,
+  getReportedServiceType,
   type TriggerEvent,
 } from '@vercel/build-utils';
 import { Route, RouteWithHandle, RouteWithSrc } from '@vercel/routing-utils';
@@ -94,14 +97,18 @@ import {
   PseudoLayerResult,
   updateRouteSrc,
   validateEntrypoint,
+  validateStaticFiles,
   getOperationType,
   isApiPage,
   getFunctionsConfigManifest,
   require_,
   getServerlessPages,
   RenderingMode,
+  getDefaultNextDeploymentId,
 } from './utils';
 import { getAppRouterPathnameFilesMap } from './metadata';
+
+export { getDevManifest } from './dev-manifest';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -275,8 +282,10 @@ export const build: BuildV2 = async buildOptions => {
   const nodeVersion = await getNodeVersion(entryPath, undefined, config, meta);
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entryPath, true);
 
@@ -284,6 +293,8 @@ export const build: BuildV2 = async buildOptions => {
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -511,14 +522,22 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
-  if (
+  const isAdapterEnabled =
     // integration tests expect outputs object
     !process.env.NEXT_BUILDER_INTEGRATION &&
     process.env.NEXT_ENABLE_ADAPTER === '1' &&
-    semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION)
-  ) {
+    semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION);
+
+  if (isAdapterEnabled) {
     env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
     env.NEXT_ADAPTER_VERCEL_CONFIG = JSON.stringify(config);
+  } else {
+    // Adapter builds get `deploymentId` assigned via the adapter's
+    // `modifyConfig` instead.
+    const defaultNextDeploymentId = getDefaultNextDeploymentId(env);
+    if (defaultNextDeploymentId) {
+      env.NEXT_DEPLOYMENT_ID = defaultNextDeploymentId;
+    }
   }
 
   const shouldRunCompileStep =
@@ -578,6 +597,24 @@ export const build: BuildV2 = async buildOptions => {
     await buildCallback(buildOptions);
   }
 
+  try {
+    await generateProjectManifest({
+      workPath,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: buildOptions.diagnosticsValues?.framework,
+      serviceType: buildOptions.service
+        ? getReportedServiceType(buildOptions.service)
+        : undefined,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write next manifest: ${err instanceof Error ? err.message : String(err)}`
+    );
+  }
+
   let buildOutputVersion: undefined | number;
 
   try {
@@ -612,9 +649,11 @@ export const build: BuildV2 = async buildOptions => {
       }
     }
 
+    // This is the intended codepath if isAdapterEnabled, where the adapter itself outputs .next/output.
     return {
       buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,
+      framework: { slug: 'nextjs', version: nextVersion },
     } as BuildResultBuildOutput;
   }
 
@@ -1017,6 +1056,7 @@ export const build: BuildV2 = async buildOptions => {
 
     // This handles pages, `public/`, and `static/`.
     const filesAfterBuild = await glob('**', outDirectory);
+    validateStaticFiles(filesAfterBuild, '_next/static/');
 
     const output: Files = {
       ...filesAfterBuild,
@@ -1855,6 +1895,8 @@ export const build: BuildV2 = async buildOptions => {
       isApiLambda: boolean;
       lambdaIdentifier: string;
       lambdaCombinedBytes: number;
+      affinity?: NodejsLambda['affinity'];
+      maxConcurrency?: number;
     };
     const apiLambdaGroups: Array<LambdaGroup> = [];
     const pageLambdaGroups: Array<LambdaGroup> = [];
@@ -1980,6 +2022,8 @@ export const build: BuildV2 = async buildOptions => {
               isApiLambda: !!routeIsApi,
               pseudoLayer: group.pseudoLayer,
               lambdaCombinedBytes: group.pseudoLayerBytes,
+              affinity: group.affinity,
+              maxConcurrency: group.maxConcurrency,
               lambdaIdentifier: path.join(
                 entryDirectory,
                 `__NEXT_${
@@ -2086,8 +2130,10 @@ export const build: BuildV2 = async buildOptions => {
           };
           let lambdaOptions: {
             architecture?: NodejsLambda['architecture'];
+            affinity?: NodejsLambda['affinity'];
             memory?: number;
             maxDuration?: number | 'max';
+            maxConcurrency?: number;
             regions?: string[];
             experimentalTriggers?: TriggerEvent[];
             supportsCancellation?: boolean;
@@ -2377,6 +2423,8 @@ export const build: BuildV2 = async buildOptions => {
                 ),
                 operationType,
                 runtime: nodeVersion.runtime,
+                affinity: group.affinity,
+                maxConcurrency: group.maxConcurrency,
                 nextVersion,
               });
           }
@@ -2983,11 +3031,14 @@ export const build: BuildV2 = async buildOptions => {
   };
 };
 
+const packageManifestDiagnostics = createDiagnostics('node');
+
 export const diagnostics: Diagnostics = async ({
   config,
   entrypoint,
   workPath,
   repoRootPath,
+  ...rest
 }) => {
   const entryDirectory = path.dirname(entrypoint);
   const entryPath = path.join(workPath, entryDirectory);
@@ -3000,6 +3051,13 @@ export const diagnostics: Diagnostics = async ({
   );
 
   return {
+    ...(await packageManifestDiagnostics({
+      config,
+      entrypoint,
+      workPath,
+      repoRootPath,
+      ...rest,
+    })),
     // Collect output in `.next/diagnostics`
     ...(await glob(
       '*',

@@ -34,7 +34,7 @@ describe('detectRenderServices', () => {
       expect(result.services!.web).toMatchObject({
         type: 'web',
         framework: 'nextjs',
-        routePrefix: '/',
+        mountPath: '/',
         buildCommand: 'npm run build',
       });
       expect(result.services!.web.entrypoint).toBeUndefined();
@@ -64,7 +64,7 @@ describe('detectRenderServices', () => {
         type: 'web',
         framework: 'nextjs',
         root: './web',
-        routePrefix: '/',
+        mountPath: '/',
         buildCommand: 'npm run build',
       });
     });
@@ -103,12 +103,12 @@ describe('detectRenderServices', () => {
       expect(result.services!.web).toMatchObject({
         framework: 'nextjs',
         root: './frontend',
-        routePrefix: '/',
+        mountPath: '/',
       });
       expect(result.services!.api).toMatchObject({
         framework: 'fastapi',
         root: './api',
-        routePrefix: '/_/api',
+        mountPath: '/api/api',
         buildCommand: "echo 'test'",
       });
     });
@@ -141,8 +141,8 @@ describe('detectRenderServices', () => {
 
       expect(result.errors).toEqual([]);
       expect(result.services).not.toBeNull();
-      expect(result.services!.web.routePrefix).toBe('/');
-      expect(result.services!.dashboard.routePrefix).toBe('/_/dashboard');
+      expect(result.services!.web.mountPath).toBe('/');
+      expect(result.services!.dashboard.mountPath).toBe('/api/dashboard');
 
       // we inferred that we want "web" to be at `/`,
       // but we still want to let a user know that they might
@@ -186,7 +186,7 @@ describe('detectRenderServices', () => {
       expect(hint!.message).toContain('internal-api');
       expect(hint!.message).toContain('not yet supported');
       expect(hint!.message).toContain('"entrypoint": "./api"');
-      expect(hint!.message).toContain('"routePrefix": "/_/internal-api"');
+      expect(hint!.message).toContain('"mountPath": "/api/internal-api"');
     });
   });
 
@@ -385,7 +385,7 @@ describe('detectRenderServices', () => {
       expect(result.services).not.toBeNull();
       expect(result.services!.custom).toMatchObject({
         framework: 'nextjs',
-        routePrefix: '/',
+        mountPath: '/',
       });
     });
 
@@ -466,7 +466,7 @@ describe('detectRenderServices', () => {
         type: 'web',
         framework: 'vite',
         root: './docs',
-        routePrefix: '/',
+        mountPath: '/',
         buildCommand: 'npm run build',
       });
     });
@@ -638,7 +638,7 @@ describe('detectRenderServices', () => {
         framework: 'fastapi',
         root: './api',
         entrypoint: 'main:app',
-        routePrefix: '/',
+        mountPath: '/',
       });
     });
 
@@ -718,7 +718,7 @@ describe('detectServices with Render detection', () => {
         experimentalServices: {
           api: {
             entrypoint: 'api/main.py',
-            routePrefix: '/api',
+            mountPath: '/api',
           },
         },
       }),

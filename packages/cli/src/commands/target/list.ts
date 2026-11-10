@@ -66,11 +66,11 @@ export default async function list(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const validationResult = validateLsArgs({
-    commandName: 'target ls',
+    commandName: 'environments list',
     args: parsedArgs.args,
     maxArgs: 0,
     exitCode: 2,
@@ -82,14 +82,18 @@ export default async function list(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
   const link = await ensureLink(targetCommand.name, client, cwd, {
     autoConfirm,
+    projectName,
+    failIfNotFound: Boolean(projectName),
   });
   if (typeof link === 'number') {
     return link;

@@ -65,12 +65,15 @@ export default async function listStores(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const showAll = parsedArgs.flags['--all'] ?? false;
   const jsonOutput = parsedArgs.flags['--json'] ?? false;
   const noProjects = parsedArgs.flags['--no-projects'] ?? false;
+
+  const interactive =
+    client.stdin.isTTY && client.stdout.isTTY && !client.nonInteractive;
 
   const telemetryClient = new BlobListStoresTelemetryClient({
     opts: {
@@ -157,7 +160,7 @@ export default async function listStores(
       : `Blob stores:`;
     output.log(header);
 
-    if (!client.stdin.isTTY || !client.stdout.isTTY) {
+    if (!interactive) {
       output.print(
         table(buildTableRows(stores, noProjects), { hsep: 3 }).replace(
           /^/gm,

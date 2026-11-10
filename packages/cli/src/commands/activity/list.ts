@@ -11,7 +11,12 @@ import { getLinkedProject } from '../../util/projects/link';
 import getScope from '../../util/get-scope';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound, isAPIError } from '../../util/errors-ts';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
+import {
+  INVALID_NEXT_MESSAGE,
+  parseNumericCursor,
+} from '../../util/get-pagination-opts';
+import { printNextPageCommand } from '../../util/pagination';
 import getCommandFlags from '../../util/get-command-flags';
 import {
   type ValidatedResult,
@@ -60,7 +65,7 @@ interface ListFlags {
   '--project'?: string;
   '--all'?: boolean;
   '--limit'?: number;
-  '--next'?: number;
+  '--next'?: string;
   '--format'?: string;
 }
 
@@ -77,27 +82,20 @@ type PaginatedEvents = {
 };
 
 function validateNext(
-  next: number | undefined
+  cursor: string | undefined
 ): ValidatedResult<Date | undefined> {
+  const next = parseNumericCursor(cursor);
   if (next === undefined) {
     return { valid: true, value: undefined };
   }
 
-  if (Number.isNaN(next)) {
-    return {
-      valid: false,
-      code: 'INVALID_NEXT',
-      message: 'Please provide a number for flag `--next`.',
-    };
-  }
-
+  // The cursor is a timestamp in milliseconds.
   const date = new Date(next);
   if (Number.isNaN(date.getTime())) {
     return {
       valid: false,
       code: 'INVALID_NEXT',
-      message:
-        'Please provide a valid unix timestamp in milliseconds for `--next`.',
+      message: INVALID_NEXT_MESSAGE,
     };
   }
 
@@ -211,7 +209,7 @@ function parseFlags(client: Client): ListFlags | number {
     return parsedArgs.flags as ListFlags;
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 }
 
@@ -422,10 +420,8 @@ function printScopeHeader(scope: ActivityScope) {
 
 function printNextPageHint(flags: ListFlags, next: number) {
   const commandFlags = getCommandFlags(flags, ['--next']);
-  output.log(
-    `To display the next page, run ${getCommandName(
-      `activity${commandFlags} --next ${next}`
-    )}`
+  printNextPageCommand(
+    getCommandNamePlain(`activity${commandFlags} --next ${next}`)
   );
 }
 
@@ -441,7 +437,7 @@ export default async function list(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
 

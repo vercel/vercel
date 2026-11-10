@@ -29,7 +29,7 @@ describe('redirects promote', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = redirects(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -194,7 +194,7 @@ describe('redirects promote', () => {
 
       await expect(client.stderr).toOutput('Version version-1 is already live');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when version is not staging', async () => {
@@ -205,7 +205,7 @@ describe('redirects promote', () => {
 
       await expect(client.stderr).toOutput('Version version-1 is not staged');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when no version-id provided', async () => {
@@ -216,7 +216,7 @@ describe('redirects promote', () => {
         'Missing required argument: version-id'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
   });
 

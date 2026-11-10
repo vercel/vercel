@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "projectSettings": {
+    "framework": "rust"
+  },
+  "rewrites": [
+    {
+      "source": "/old",
+      "destination": "/new"
+    }
+  ]
+}

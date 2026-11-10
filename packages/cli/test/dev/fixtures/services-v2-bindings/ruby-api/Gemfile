@@ -1,0 +1,6 @@
+source "https://rubygems.org"
+
+# `rack` ~> 2 matches the `Rack::Handler::WEBrick` API used by the vc dev Ruby
+# shim; `webrick` is a gem (not stdlib) on Ruby 3+, where the shim requires it.
+gem "rack", "~> 2.0"
+gem "webrick"

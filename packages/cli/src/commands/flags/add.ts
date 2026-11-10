@@ -1,10 +1,8 @@
-import { randomBytes } from 'node:crypto';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { createFlag } from '../../util/flags/create-flag';
 import output from '../../output-manager';
@@ -12,25 +10,26 @@ import { FlagsCreateTelemetryClient } from '../../util/telemetry/commands/flags/
 import { createSubcommand } from './command';
 import { formatProject } from '../../util/projects/format-project';
 import { printFlagDetails } from '../../util/flags/print-flag-details';
+import {
+  generateVariantId,
+  parseVariantInput,
+  validateVariantValue,
+} from '../../util/flags/variant-input';
 import type {
   CreateFlagRequest,
   FlagEnvironmentConfig,
   FlagKind,
   FlagVariant,
-  FlagVariantValue,
 } from '../../util/flags/types';
+import { resolveVariantOrThrow } from '../../util/flags/resolve-variant';
+import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
+import {
+  STANDARD_ENVIRONMENTS,
+  type StandardEnvironment,
+} from '../../util/target/standard-environments';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
-// Generate a variant ID (21 chars, alphanumeric)
-function variantId(size = 21): string {
-  const alphabet =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const bytes = randomBytes(size);
-  let id = '';
-  for (let i = 0; i < size; i++) {
-    id += alphabet[bytes[i] % alphabet.length];
-  }
-  return id;
-}
+type EnvironmentVariantSelectors = Partial<Record<StandardEnvironment, string>>;
 
 export default async function create(
   client: Client,
@@ -48,7 +47,7 @@ export default async function create(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -57,16 +56,26 @@ export default async function create(
   if (!slug) {
     output.error('Please provide a slug for the feature flag');
     output.log(`Example: ${getCommandName('flags create my-feature')}`);
-    return 1;
+    return 2;
   }
 
   const kind = (flags['--kind'] as FlagKind | undefined) || 'boolean';
   const description = flags['--description'] as string | undefined;
   const variantInputs = (flags['--variant'] as string[] | undefined) || [];
+  const defaultVariantSelector = normalizeOptionalInput(
+    flags['--default-variant'] as string | undefined
+  );
+  const environmentVariantInputs =
+    (flags['--environment-variant'] as string[] | undefined) || [];
+  const projectName = getProjectNameFromFlags(flags);
 
   telemetryClient.trackCliArgumentSlug(slug);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionKind(kind);
   telemetryClient.trackCliOptionDescription(description);
+  telemetryClient.trackCliOptionVariant(variantInputs);
+  telemetryClient.trackCliOptionDefaultVariant(defaultVariantSelector);
+  telemetryClient.trackCliOptionEnvironmentVariant(environmentVariantInputs);
 
   if (
     kind !== 'boolean' &&
@@ -77,15 +86,25 @@ export default async function create(
     output.error(
       `Invalid kind: ${kind}. Must be one of: boolean, string, number, json`
     );
-    return 1;
+    return 2;
   }
 
-  const link = await getLinkedProject(client);
+  let environmentVariantSelectors: EnvironmentVariantSelectors;
+  try {
+    environmentVariantSelectors = parseEnvironmentVariantInputs(
+      environmentVariantInputs
+    );
+  } catch (err) {
+    output.error((err as Error).message);
+    return 2;
+  }
+
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -104,24 +123,25 @@ export default async function create(
     return 1;
   }
 
+  let environments: CreateFlagRequest['environments'];
+  try {
+    environments = resolveEnvironments(
+      kind,
+      variants,
+      defaultVariantSelector,
+      environmentVariantSelectors
+    );
+  } catch (err) {
+    output.error((err as Error).message);
+    return 2;
+  }
+
   const request: CreateFlagRequest = {
     slug,
     kind,
     description: description || '',
     variants,
-    environments: {
-      production: createEnvironmentConfig(
-        variants[0].id,
-        variants[0].id,
-        false
-      ),
-      preview: createEnvironmentConfig(variants[0].id, variants[0].id, false),
-      development: createEnvironmentConfig(
-        kind === 'boolean' ? variants[1].id : variants[0].id,
-        kind === 'boolean' ? variants[1].id : variants[0].id,
-        false
-      ),
-    },
+    environments,
   };
 
   try {
@@ -171,7 +191,7 @@ async function getVariants(
 
   if (!client.stdin.isTTY) {
     throw new Error(
-      'Missing required flag --variant. Use --variant <value>[=label] (repeat as needed), or run interactively in a terminal.'
+      'Missing required option --variant. Use --variant <value>[=label] (repeat as needed), or run interactively in a terminal.'
     );
   }
 
@@ -214,6 +234,94 @@ async function collectVariantsInteractively(
   return variants;
 }
 
+function parseEnvironmentVariantInputs(
+  inputs: string[]
+): EnvironmentVariantSelectors {
+  const selectors: EnvironmentVariantSelectors = {};
+
+  for (const input of inputs) {
+    const separatorIndex = input.indexOf('=');
+    const environment =
+      separatorIndex === -1
+        ? input.trim()
+        : input.slice(0, separatorIndex).trim();
+    const variant =
+      separatorIndex === -1 ? '' : input.slice(separatorIndex + 1).trim();
+
+    if (!environment || !variant) {
+      throw new Error(
+        `Invalid --environment-variant ${chalk.bold(input)}. Use ENVIRONMENT=VARIANT, for example development=true.`
+      );
+    }
+
+    if (!STANDARD_ENVIRONMENTS.includes(environment as StandardEnvironment)) {
+      throw new Error(
+        `Invalid environment in --environment-variant ${chalk.bold(input)}. Must be one of: ${STANDARD_ENVIRONMENTS.join(', ')}`
+      );
+    }
+
+    const standardEnvironment = environment as StandardEnvironment;
+    if (selectors[standardEnvironment] !== undefined) {
+      throw new Error(
+        `--environment-variant was passed more than once for ${chalk.bold(environment)}. Pass each environment once.`
+      );
+    }
+
+    selectors[standardEnvironment] = variant;
+  }
+
+  return selectors;
+}
+
+function resolveEnvironments(
+  kind: FlagKind,
+  variants: FlagVariant[],
+  defaultVariantSelector: string | undefined,
+  environmentVariantSelectors: EnvironmentVariantSelectors
+): CreateFlagRequest['environments'] {
+  const defaultVariant = defaultVariantSelector
+    ? resolveVariantOrThrow(
+        defaultVariantSelector,
+        variants,
+        '--default-variant'
+      )
+    : undefined;
+
+  const environments: CreateFlagRequest['environments'] = {};
+  for (const environment of STANDARD_ENVIRONMENTS) {
+    const selector = environmentVariantSelectors[environment];
+    const variant = selector
+      ? resolveVariantOrThrow(
+          selector,
+          variants,
+          '--environment-variant',
+          `${environment}=${selector}`
+        )
+      : (defaultVariant ??
+        getDefaultEnvironmentVariant(kind, variants, environment));
+
+    environments[environment] = createEnvironmentConfig(
+      variant.id,
+      variant.id,
+      false
+    );
+  }
+
+  return environments;
+}
+
+function getDefaultEnvironmentVariant(
+  kind: FlagKind,
+  variants: FlagVariant[],
+  environment: StandardEnvironment
+): FlagVariant {
+  if (kind === 'boolean' && environment === 'development') {
+    return variants[1];
+  }
+
+  return variants[0];
+}
+
 function createEnvironmentConfig(
   pausedVariantId: string,
   fallthroughVariantId: string,
@@ -243,134 +351,18 @@ function formatVariantInput(valueInput: string, label: string): string {
   return trimmedLabel ? `${valueInput}=${trimmedLabel}` : valueInput;
 }
 
-function parseVariantInput(
-  input: string,
-  kind: 'string' | 'number' | 'json',
-  index: number
-): FlagVariant {
-  const { rawValue, rawLabel } = splitVariantInput(input, kind);
-
-  const validationError = validateVariantValue(rawValue, kind);
-  if (validationError) {
-    throw new Error(`Invalid variant "${input}": ${validationError}`);
-  }
-
-  return {
-    id: variantId(),
-    value: parseVariantValue(rawValue, kind),
-    label: getVariantLabel(rawLabel, kind, index),
-    description: '',
-  };
-}
-
-function splitVariantInput(
-  input: string,
-  kind: 'string' | 'number' | 'json'
-): { rawValue: string; rawLabel?: string } {
-  if (kind !== 'json') {
-    const separatorIndex = input.indexOf('=');
-    return {
-      rawValue:
-        separatorIndex === -1
-          ? input.trim()
-          : input.slice(0, separatorIndex).trim(),
-      rawLabel:
-        separatorIndex === -1
-          ? undefined
-          : input.slice(separatorIndex + 1).trim() || undefined,
-    };
-  }
-
-  const trimmed = input.trim();
-  if (isValidJsonVariantValue(trimmed)) {
-    return { rawValue: trimmed };
-  }
-
-  for (let index = trimmed.length - 1; index >= 0; index--) {
-    if (trimmed[index] !== '=') {
-      continue;
-    }
-
-    const rawValue = trimmed.slice(0, index).trim();
-    const rawLabel = trimmed.slice(index + 1).trim();
-    if (!rawValue || !isValidJsonVariantValue(rawValue)) {
-      continue;
-    }
-
-    return {
-      rawValue,
-      rawLabel: rawLabel || undefined,
-    };
-  }
-
-  return { rawValue: trimmed };
-}
-
-function getVariantLabel(
-  rawLabel: string | undefined,
-  kind: 'string' | 'number' | 'json',
-  index: number
-): string | undefined {
-  if (rawLabel) {
-    return rawLabel;
-  }
-
-  if (kind === 'json') {
-    return `Variant ${index + 1}`;
-  }
-
-  return undefined;
-}
-
-function validateVariantValue(
-  value: string,
-  kind: 'string' | 'number' | 'json'
-): string | null {
-  if (!value.trim()) {
-    return 'value cannot be empty';
-  }
-
-  if (kind === 'number') {
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed)) {
-      return 'number variants must be valid numeric values';
-    }
-  }
-
-  if (kind === 'json' && !isValidJsonVariantValue(value)) {
-    return 'JSON variants must be valid JSON';
-  }
-
-  return null;
-}
-
-function parseVariantValue(
-  value: string,
-  kind: 'string' | 'number' | 'json'
-): FlagVariantValue {
-  if (kind === 'number') {
-    return Number(value);
-  }
-
-  if (kind === 'json') {
-    return JSON.parse(value) as FlagVariantValue;
-  }
-
-  return value;
-}
-
 function getDefaultVariants(kind: FlagKind): FlagVariant[] {
   switch (kind) {
     case 'boolean':
       return [
         {
-          id: variantId(),
+          id: generateVariantId(),
           value: false,
           label: 'Off',
           description: 'not enabled',
         },
         {
-          id: variantId(),
+          id: generateVariantId(),
           value: true,
           label: 'On',
           description: 'enabled',
@@ -380,14 +372,5 @@ function getDefaultVariants(kind: FlagKind): FlagVariant[] {
     case 'number':
     case 'json':
       throw new Error(`Default variants are not supported for kind: ${kind}`);
-  }
-}
-
-function isValidJsonVariantValue(value: string): boolean {
-  try {
-    JSON.parse(value);
-    return true;
-  } catch {
-    return false;
   }
 }

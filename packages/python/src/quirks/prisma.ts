@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { isAbsolute, join, relative } from 'path';
+import { isAbsolute, join, posix, relative } from 'path';
 import execa from 'execa';
 import { NowBuildError, debug } from '@vercel/build-utils';
 import { extendDistRecord } from '@vercel/python-analysis';
@@ -150,7 +150,7 @@ export const prismaQuirk: Quirk = {
     // The runtime cache dir is where the engine binary and openssl shim
     // will live inside the Lambda bundle.  Derived from resolveVendorDir()
     // so it stays in sync with the vendor directory used by the builder.
-    const runtimeCacheDir = join(
+    const runtimeCacheDir = posix.join(
       LAMBDA_ROOT,
       resolveVendorDir(),
       'prisma',

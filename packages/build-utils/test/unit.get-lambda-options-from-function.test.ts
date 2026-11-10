@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { getLambdaOptionsFromFunction } from '../src/lambda';
+import {
+  getLambdaOptionsFromFunction,
+  sanitizeConsumerName,
+} from '../src/lambda';
 import type { Config } from '../src/types';
 
 describe('getLambdaOptionsFromFunction', () => {
@@ -10,6 +13,8 @@ describe('getLambdaOptionsFromFunction', () => {
           architecture: 'arm64',
           memory: 1024,
           maxDuration: 60,
+          affinity: { mode: 'strict' },
+          maxConcurrency: 8,
           regions: ['sfo1', 'iad1'],
           functionFailoverRegions: ['dub1'],
         },
@@ -25,6 +30,8 @@ describe('getLambdaOptionsFromFunction', () => {
       architecture: 'arm64',
       memory: 1024,
       maxDuration: 60,
+      affinity: { mode: 'strict' },
+      maxConcurrency: 8,
       regions: ['sfo1', 'iad1'],
       functionFailoverRegions: ['dub1'],
     });
@@ -66,5 +73,128 @@ describe('getLambdaOptionsFromFunction', () => {
     });
 
     expect(options).toEqual({});
+  });
+
+  it('derives the queue/v2beta consumer from the function pattern', async () => {
+    const config: Pick<Config, 'functions'> = {
+      functions: {
+        'api/worker.js': {
+          experimentalTriggers: [{ type: 'queue/v2beta', topic: 'orders' }],
+        },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/worker.js',
+      config,
+    });
+
+    expect(options.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: sanitizeConsumerName('api/worker.js'),
+      },
+    ]);
+  });
+
+  it('scopes the queue/v2beta consumer by serviceName when set', async () => {
+    const config: Pick<Config, 'functions' | 'serviceName'> = {
+      serviceName: 'orders-worker',
+      functions: {
+        'api/worker.js': {
+          experimentalTriggers: [{ type: 'queue/v2beta', topic: 'orders' }],
+        },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/worker.js',
+      config,
+    });
+
+    expect(options.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: sanitizeConsumerName('orders-worker~api/worker.js'),
+      },
+    ]);
+
+    // Two services that share the same function path derive distinct consumers.
+    const other = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/worker.js',
+      config: { ...config, serviceName: 'shipping-worker' },
+    });
+    expect(other.experimentalTriggers![0].consumer).not.toBe(
+      options.experimentalTriggers![0].consumer
+    );
+  });
+
+  it('does not scope non-v2beta triggers by serviceName', async () => {
+    const config: Pick<Config, 'functions' | 'serviceName'> = {
+      serviceName: 'orders-worker',
+      functions: {
+        'api/worker.js': {
+          experimentalTriggers: [
+            { type: 'queue/v1beta', topic: 'orders', consumer: 'fixed' },
+          ],
+        },
+      },
+    };
+
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'api/worker.js',
+      config,
+    });
+
+    expect(options.experimentalTriggers).toEqual([
+      { type: 'queue/v1beta', topic: 'orders', consumer: 'fixed' },
+    ]);
+  });
+
+  it('adds the schedule trigger for a schedule entrypoint', async () => {
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'jobs/nightly.ts',
+      isScheduleEntrypoint: true,
+    });
+
+    expect(options.experimentalTriggers).toEqual([{ type: 'schedule/v1beta' }]);
+  });
+
+  it('preserves matching function options for a schedule entrypoint', async () => {
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'jobs/nightly.ts',
+      config: {
+        functions: {
+          'jobs/*.ts': {
+            memory: 1024,
+            experimentalTriggers: [{ type: 'schedule/v1beta' }],
+          },
+        },
+      },
+      isScheduleEntrypoint: true,
+    });
+
+    expect(options).toMatchObject({
+      memory: 1024,
+      experimentalTriggers: [{ type: 'schedule/v1beta' }],
+    });
+  });
+
+  it('rejects a conflicting trigger for a schedule entrypoint', async () => {
+    await expect(
+      getLambdaOptionsFromFunction({
+        sourceFile: 'jobs/nightly.ts',
+        config: {
+          functions: {
+            'jobs/*.ts': {
+              experimentalTriggers: [{ type: 'queue/v2beta', topic: 'orders' }],
+            },
+          },
+        },
+        isScheduleEntrypoint: true,
+      })
+    ).rejects.toThrow('conflicts with the schedule entrypoint trigger');
   });
 });

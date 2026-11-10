@@ -200,7 +200,9 @@ module.exports = {};
       nitropack: 'latest',
     },
   }),
-  'nitro/.npmrc': 'shamefully-hoist=true\nstrict-peer-dependencies=false\n',
+  // `legacy-peer-deps`: npm 10.8 crashes resolving vite's optional devtools -> vitest peers.
+  'nitro/.npmrc':
+    'shamefully-hoist=true\nstrict-peer-dependencies=false\nlegacy-peer-deps=true\n',
   'nitro/nitro.config.ts': `
 export default defineNitroConfig({
   preset: 'vercel',
@@ -425,6 +427,21 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
+    'repo-root-next-js': {
+      'pages/index.js':
+        'export default () => <div><h1>Repo root deployment</h1></div>',
+      'package.json': JSON.stringify({
+        private: true,
+        scripts: {
+          build: 'next build',
+        },
+        dependencies: {
+          next: 'latest',
+          react: 'latest',
+          'react-dom': 'latest',
+        },
+      }),
+    },
     'zero-config-next-js-functions-warning': {
       'pages/index.js':
         'export default () => <div><h1>Vercel CLI test</h1><p>Zero-config + Next.js</p></div>',
@@ -445,7 +462,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
     },
     'zero-config-next-js-nested': {
       // `pnpm-workspace.yaml` makes this fixture a workspace, which is what
-      // triggers the "In which directory is your code located?" prompt under
+      // triggers the "Code directory?" prompt under
       // the new input-root-directory behavior (prompt fires only when
       // `getWorkspaces()` returns non-empty).
       'pnpm-workspace.yaml': "packages:\n  - 'app'\n",
@@ -511,7 +528,10 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         },
       }),
     },
-    'lambda-with-1000-second-timeout': {
+    // Above the 1800-second ceiling the API accepts on any plan, so the
+    // deployment always fails server-side validation. It stays below the
+    // CLI's client-side limit (3600) so the check isn't short-circuited.
+    'lambda-with-2000-second-timeout': {
       'api/wait-for/[sleep].js': `
         const sleep = t => new Promise(r => setTimeout(r, t));
 
@@ -524,7 +544,7 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
         functions: {
           'api/**/*.js': {
             memory: 128,
-            maxDuration: 1000,
+            maxDuration: 2000,
           },
         },
       }),
@@ -694,10 +714,6 @@ module.exports = async function prepare(session, binaryPath, tmpFixturesDir) {
       getNextGeneratedNitroServiceFixture('experimentalServices'),
     'vc-build-next-generated-experimental-services-v2-nitro-service':
       getNextGeneratedNitroServiceFixture('experimentalServicesV2'),
-    'vercel-json-configuration-overrides': {
-      'vercel.json': '{}',
-      'package.json': '{}',
-    },
     'vercel-json-configuration-overrides-merging-prompts': {
       'vercel.json': JSON.stringify({
         buildCommand: 'mkdir -p output && echo "1" > output/index.txt',

@@ -17,14 +17,14 @@ export default async function getOidcToken(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags } = parsedArgs;
 
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -36,7 +36,7 @@ export default async function getOidcToken(client: Client, argv: string[]) {
         `${getCommandName('project token <name>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
   const [name] = args;
   const project = await getProjectByCwdOrLink({

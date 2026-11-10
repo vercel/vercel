@@ -26,11 +26,15 @@
 import { customFetch } from '@auth/core';
 import type { OAuth2Config } from '@auth/core/providers';
 import { getVercelOidcToken } from '@vercel/oidc';
-import { tryGetVercelTeamId, withTeamId } from '../internal/team-id.js';
+import {
+  tryGetVercelAuthorizationContext,
+  withAuthorizationContext,
+} from '../internal/authorization-context.js';
 
 const CONNECT_AUTHORIZATION_URL = 'https://connect.vercel.com/oauth/authorize';
 const CONNECT_TOKEN_URL = 'https://connect.vercel.com/oauth/token';
 const CONNECT_USERINFO_URL = 'https://connect.vercel.com/oauth/userinfo';
+const DEFAULT_SCOPES = ['openid', 'profile', 'email'] as const;
 
 /** Userinfo payload returned by Vercel Connect's OIDC userinfo endpoint. */
 export interface ConnectProfile {
@@ -63,7 +67,7 @@ export interface AuthJsConnectOptions {
   /**
    * Scopes to request. `offline_access` is added automatically so
    * the Vercel Connect side can mint refresh tokens. Defaults to
-   * `["openid"]`.
+   * `["openid", "profile", "email"]`.
    */
   readonly scopes?: readonly string[];
 
@@ -84,7 +88,7 @@ export function connect(
 ): OAuth2Config<ConnectProfile> {
   const fetchVercelToken = options.getVercelOidcToken ?? getVercelOidcToken;
   const scope = Array.from(
-    new Set([...(options.scopes ?? ['openid']), 'offline_access'])
+    new Set([...(options.scopes ?? DEFAULT_SCOPES), 'offline_access'])
   ).join(' ');
 
   return {
@@ -99,10 +103,13 @@ export function connect(
     client: { token_endpoint_auth_method: 'none' },
     authorization: {
       // Best-effort: scope the Vercel Connect consent UI to the
-      // deployment's Vercel team when we can read it from the OIDC
-      // token. Falls back to the unqualified URL when the token isn't
-      // present (e.g. running outside Vercel).
-      url: withTeamId(CONNECT_AUTHORIZATION_URL, tryGetVercelTeamId()),
+      // deployment's team, project, and environment from the OIDC token.
+      // Falls back to the unqualified URL when the token isn't present
+      // (e.g. running outside Vercel).
+      url: withAuthorizationContext(
+        CONNECT_AUTHORIZATION_URL,
+        tryGetVercelAuthorizationContext()
+      ),
       params: { scope },
     },
     token: CONNECT_TOKEN_URL,

@@ -6,7 +6,9 @@ import {
   BuildResultV2Typical,
   debug,
   execCommand,
+  generateProjectManifest,
   getEnvForPackageManager,
+  getReportedServiceType,
   getNodeVersion,
   glob,
   runNpmInstall,
@@ -24,6 +26,7 @@ import {
   getReactRouterDataPaths,
   getRegExpFromPath,
   getPackageVersion,
+  getSkewProtectionRoute,
   hasScript,
   logNftWarnings,
   shouldRegisterSsrForPrerenderedRoute,
@@ -288,6 +291,8 @@ export const build: BuildV2 = async ({
   repoRootPath,
   config,
   meta = {},
+  service,
+  diagnosticsValues,
 }) => {
   const { installCommand, buildCommand } = config;
   const mountpoint = dirname(entrypoint);
@@ -308,9 +313,11 @@ export const build: BuildV2 = async ({
 
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJson,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
@@ -318,6 +325,8 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -340,6 +349,22 @@ export const build: BuildV2 = async ({
       { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
+    );
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath: entrypointFsDirname,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: diagnosticsValues?.framework,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write remix manifest: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 
@@ -526,6 +551,7 @@ export const build: BuildV2 = async ({
   const prerenderRewrites: { src: string; dest: string }[] = [];
 
   const routes: any[] = [];
+  let hasReactRouterIndexFunction = false;
 
   for (const [id, functionId] of Object.entries(
     buildManifest.routeIdToServerBundleId ?? {}
@@ -573,6 +599,9 @@ export const build: BuildV2 = async ({
 
     output[path] = func;
     if (isReactRouter) {
+      if (path === 'index') {
+        hasReactRouterIndexFunction = true;
+      }
       // Emit parallel entries so the filesystem handle resolves the
       // single-fetch URL(s) for this route to the same bundle. Note that
       // the root index route uses `/_root.data` rather than `/index.data`.
@@ -612,14 +641,31 @@ export const build: BuildV2 = async ({
   // the static lookup.
   routes.unshift(...prerenderRewrites, { handle: 'filesystem' });
 
+  // When Skew Protection is enabled, the routing layer stamps the `__vdpl`
+  // deployment ID cookie onto document responses instead of the rendering
+  // function, so the origin response stays free of `Set-Cookie` and remains
+  // cacheable by the CDN. This must be the first route (before the
+  // filesystem handle) so the cookie is applied to cache HITs and
+  // prerendered static files as well.
+  if (isReactRouter) {
+    const skewProtectionRoute = getSkewProtectionRoute();
+    if (skewProtectionRoute) {
+      routes.unshift(skewProtectionRoute);
+    }
+  }
+
   // For the 404 case, invoke the Function (or serve the static file
   // for `ssr: false` mode) at the `/` path. Remix will serve its 404 route.
-  // React Router uses the `index` output key (not `/`) so runtime-only paths
-  // like `/__manifest` reach the SSR handler instead of a prerendered
-  // `index.html` when the root route was statically generated.
+  // React Router SSR builds use the `index` output key (not `/`) so
+  // runtime-only paths like `/__manifest` reach the SSR handler instead of a
+  // prerendered `index.html`. SPA builds do not emit that function, so their
+  // catch-all must continue to resolve through `/` and serve `index.html`.
   routes.push({
     src: '/(.*)',
-    dest: isReactRouter ? getReactRouterCatchAllDest() : '/',
+    dest:
+      isReactRouter && hasReactRouterIndexFunction
+        ? getReactRouterCatchAllDest()
+        : '/',
   });
 
   // Routes to call after a file has been matched.

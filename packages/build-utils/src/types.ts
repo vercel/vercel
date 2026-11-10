@@ -1,9 +1,11 @@
 import type FileRef from './file-ref';
 import type FileFsRef from './file-fs-ref';
 import type FileBlob from './file-blob';
-import type { Lambda, LambdaArchitecture } from './lambda';
+import type { Lambda, LambdaAffinity, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
+import type { ContainerImage } from './container-image';
+import type { DaemonConfig, DaemonOutput } from './daemons';
 import type { Span } from './trace';
 import type {
   HasField,
@@ -30,6 +32,33 @@ export interface Files {
   [filePath: string]: File;
 }
 
+/** Data surrounding file content in a build-output upload. */
+export interface ExtendedBodyData {
+  prefix: string;
+  suffix: string;
+}
+
+export interface ScheduleFunctionEntrypoint {
+  /** Runtime-specific entrypoint locator from `vercel.json`. */
+  entrypoint: string;
+  /** Project-relative source file that contains the entrypoint. */
+  sourceFile: string;
+  /** Names of the schedules that dispatch to this entrypoint, in config order. */
+  scheduleNames: string[];
+}
+
+/**
+ * One function built from schedule entrypoints. Runtimes that pack several
+ * entrypoints into a single function receive them all here and dispatch on
+ * the schedule name at runtime; runtimes that build one function per
+ * entrypoint receive exactly one.
+ */
+export interface ScheduleFunctionBuildConfig {
+  /** Function output path every schedule in this build targets. */
+  outputPath: string;
+  entrypoints: [ScheduleFunctionEntrypoint, ...ScheduleFunctionEntrypoint[]];
+}
+
 export interface Config {
   bunVersion?: string;
   maxLambdaSize?: string;
@@ -51,12 +80,28 @@ export interface Config {
   framework?: string | null;
   nodeVersion?: string;
   middleware?: boolean;
+  /** Enforced runtime for explicitly configured Routing Middleware. */
+  middlewareRuntime?: 'nodejs';
+  /** Matcher supplied outside of the middleware source module. */
+  middlewareMatcher?: string | string[];
+  /** Owning service name; scopes per-function config such as the v2beta consumer. */
+  serviceName?: string;
+  /** Buildpack runtime slug (e.g. "ruby"). */
+  buildpack?: string;
+  /** Set when this build produces a function for schedule entrypoints. */
+  scheduleFunction?: ScheduleFunctionBuildConfig;
+  /** Set when this build produces the named daemon. */
+  daemon?: DaemonConfig & { name: string };
   [key: string]: unknown;
 }
 
 export type { HasField };
 
 export interface Meta {
+  daemonContext?: {
+    projectRoot: string;
+    daemons: Record<string, DaemonConfig>;
+  };
   isDev?: boolean;
   devCacheDir?: string;
   skipDownload?: boolean;
@@ -65,6 +110,7 @@ export interface Meta {
   filesRemoved?: string[];
   env?: Env;
   buildEnv?: Env;
+  port?: number;
   [key: string]: unknown;
 }
 
@@ -147,6 +193,14 @@ export interface BuildOptions {
     /** Cron schedule expression(s) (e.g., "0 0 * * *"). Only present for cron services. */
     schedule?: string | string[];
   };
+
+  /** Values to report in diagnostics output. Does not affect the build. */
+  diagnosticsValues?: DiagnosticsValues;
+}
+
+export interface DiagnosticsValues {
+  /** Framework slug to report (e.g. "fastapi"). */
+  framework?: string;
 }
 
 export interface PrepareCacheOptions {
@@ -264,10 +318,36 @@ export interface StartDevServerSuccess {
   shutdown?: () => Promise<void>;
 
   /**
+   * Whether the builder owns this dev server's lifecycle across requests.
+   * Persistent servers are still shut down when `vercel dev` exits.
+   */
+  persistent?: boolean;
+
+  /**
    * Cron entries produced by the builder for this service.
    * Used by the dev orchestrator to schedule cron triggers.
    */
   crons?: Cron[];
+
+  /**
+   * Queue subscriptions registered by this dev server's code, introspected
+   * from the runtime SDK. When present, the dev queue broker delivers with
+   * these consumer groups (matching production trigger behavior) instead of
+   * the synthesized per-service consumer name.
+   */
+  queueSubscriptions?: DevQueueSubscription[];
+}
+
+/**
+ * A queue subscription registered by a dev server's code, keyed the way the
+ * queue SDK dispatches deliveries: by consumer group and topic pattern.
+ */
+export interface DevQueueSubscription {
+  topic: string;
+  consumer: string;
+  retryAfterSeconds?: number;
+  initialDelaySeconds?: number;
+  maxDeliveries?: number;
 }
 
 /**
@@ -332,6 +412,17 @@ export namespace PackageJson {
     node?: string;
     npm?: string;
     pnpm?: string;
+    bun?: string;
+  }
+
+  export interface DevEnginePackageManager {
+    name?: string;
+    version?: string;
+    onFail?: 'download' | 'error' | 'warn' | 'ignore';
+  }
+
+  export interface DevEngines {
+    packageManager?: DevEnginePackageManager | DevEnginePackageManager[];
   }
 
   export interface PublishConfig {
@@ -375,6 +466,7 @@ export interface PackageJson {
   readonly optionalDependencies?: PackageJson.DependencyMap;
   readonly bundledDependencies?: string[];
   readonly engines?: PackageJson.Engines;
+  readonly devEngines?: PackageJson.DevEngines;
   readonly os?: string[];
   readonly cpu?: string[];
   readonly preferGlobal?: boolean;
@@ -445,17 +537,27 @@ export interface BuilderFunctions {
     architecture?: LambdaArchitecture;
     memory?: number;
     maxDuration?: MaxDuration;
+    affinity?: LambdaAffinity;
+    maxConcurrency?: number;
     regions?: string[];
     functionFailoverRegions?: string[];
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
+    /**
+     * Overrides how dependencies are installed for this function. An empty
+     * string skips the install. Only honored by `@vercel/node`.
+     */
+    installCommand?: string;
     experimentalTriggers?: TriggerEventInput[];
     supportsCancellation?: boolean;
   };
 }
 
 export interface ProjectSettings {
+  vercelFlags?: {
+    enabledAt?: number;
+  };
   framework?: string | null;
   devCommand?: string | null;
   installCommand?: string | null;
@@ -472,6 +574,93 @@ export interface ProjectSettings {
   commandForIgnoringBuildStep?: string | null;
 }
 
+export interface GetDevSidecarsOptions {
+  workPath: string;
+  /** Original build configuration before source expansion or dev filtering. */
+  build: Builder;
+  /** Resolved Services V2 service when collecting its sidecars. */
+  service?: ExperimentalServiceV2;
+}
+
+export interface DevSubscriber {
+  type: 'subscriber';
+  name: string;
+  consumer: string;
+  workspace: string;
+  framework?: string;
+  runtime?: string;
+  builder: Builder;
+  topics: ServiceTopics;
+}
+
+export type DevSidecar = DevSubscriber;
+
+/** Returns additional processes that a builder needs alongside its primary dev server. */
+export type GetDevSidecars = (
+  options: GetDevSidecarsOptions
+) => Promise<DevSidecar[]>;
+
+/** A deployment function identity and its local execution target. */
+export interface DevFunction {
+  /** Build output function path, without a leading slash or .func suffix. */
+  outputPath: string;
+  /** Source path relative to workPath, when this is a source-backed function. */
+  sourceFile?: string;
+  invocation:
+    | {
+        type: 'http';
+        /** Root-relative pathname within the owning dev server, including basePath. */
+        pathname: string;
+      }
+    | {
+        type: 'entrypoint';
+        /** Select this builder entrypoint directly, without public URL routing. */
+        entrypoint: string;
+      };
+  /** Normalized deployment trigger metadata, including Queue consumer identity. */
+  experimentalTriggers?: TriggerEvent[];
+}
+
+export interface GetDevManifestOptions {
+  /** Absolute project or service root. */
+  workPath: string;
+  /** Original builder entry, before source expansion or dev-command filtering. */
+  build: Builder;
+  /** Real source paths relative to workPath, using forward slashes. No aliases. */
+  files: string[];
+  /** Resolved authored configuration for this scope, including functions. */
+  config: Config;
+  /** Effective development environment. Do not mutate this object. */
+  env: Env;
+}
+
+export interface DevManifest {
+  /** Complete replacement snapshot for the invoking builder scope. */
+  functions: DevFunction[];
+  /** Native framework schedules keyed by name, using the static Build Output API schema. */
+  schedules?: Schedules;
+  /** Authored functions keys resolved by this provider, for unmatched diagnostics. */
+  matchedFunctionPatterns: string[];
+}
+
+/**
+ * Discover deployment function identities and optional native schedules without
+ * starting an application server, scheduler, or delivery loop. The host owns
+ * runtime origins, readiness, and trigger registration. Functions do not need a
+ * Queue trigger to be discoverable; direct Schedule targets use outputPath.
+ * Called before framework builders are filtered for a native dev command, and
+ * again on source/config/environment changes. An empty snapshot removes this
+ * owner's registrations. Errors must leave the last valid snapshot in place.
+ * An absent hook permits the host's conventional per-entrypoint fallback; an
+ * explicitly empty manifest is authoritative and must not enable that fallback.
+ */
+export type GetDevManifest = (
+  options: GetDevManifestOptions
+) => Promise<DevManifest>;
+
+/** Return plain-text startup warnings without starting a development server. */
+export type GetDevWarnings = (options: BuildOptions) => Promise<string[]>;
+
 /*
  * This is a builder whose build output version may dynamically change.
  */
@@ -482,6 +671,9 @@ export interface BuilderVX {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
+  getDevManifest?: GetDevManifest;
+  getDevWarnings?: GetDevWarnings;
 }
 
 export interface BuilderV2 {
@@ -491,6 +683,9 @@ export interface BuilderV2 {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
+  getDevManifest?: GetDevManifest;
+  getDevWarnings?: GetDevWarnings;
 }
 
 export interface BuilderV3 {
@@ -500,6 +695,9 @@ export interface BuilderV3 {
   prepareCache?: PrepareCache;
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
+  getDevSidecars?: GetDevSidecars;
+  getDevManifest?: GetDevManifest;
+  getDevWarnings?: GetDevWarnings;
 }
 
 type ImageFormat = 'image/avif' | 'image/webp';
@@ -583,12 +781,59 @@ export interface BuildResultBuildOutput {
    * @example "/path/to/.vercel/output"
    */
   buildOutputPath: string;
+  framework?: {
+    slug: string;
+    version: string;
+  };
 }
 
 export interface Cron {
   path: string;
   schedule: string;
 }
+
+export type ScheduleRequestMethod = 'GET' | 'POST';
+
+/**
+ * A schedule without its name, which is its key in `schedules`.
+ */
+export type ScheduleDefinition = {
+  /** Cron expression describing when the schedule fires (REQUIRED) */
+  schedule: string;
+  /** IANA timezone for cron evaluation, e.g. "America/New_York". Defaults to UTC. */
+  timezone?: string;
+  /** Maximum random delay applied to each firing, from 1 to 15 whole minutes (OPTIONAL) */
+  jitter?: number;
+} & (
+  | {
+      /** Deployment path to invoke over HTTP, like `crons[].path`. Must start with `/`. */
+      path: string;
+      /** HTTP method used to invoke `path`. Defaults to `POST`. */
+      requestMethod?: ScheduleRequestMethod;
+    }
+  | {
+      /**
+       * Build output path of the function to invoke, e.g. "api/cron". With
+       * `service`, the path within that service.
+       */
+      function: string;
+      /** Service that owns `function`, from `services` (OPTIONAL) */
+      service?: string;
+    }
+  | {
+      /** Name of the queue topic to publish to */
+      topic: string;
+    }
+);
+
+/** Schedules keyed by name, as in Build Output `config.json#schedules`. */
+export type Schedules = Record<string, ScheduleDefinition>;
+
+/** A schedule with its name. */
+export type Schedule = {
+  /** Unique name of the schedule within the deployment (REQUIRED) */
+  name: string;
+} & ScheduleDefinition;
 
 export interface ServiceQueueTopic {
   topic: string;
@@ -647,6 +892,8 @@ export interface ExperimentalServiceV2 {
   runtime?: string;
   /** Resolved entrypoint, relative to the service root. */
   entrypoint?: string;
+  /** Command override for `runtime: "container"` services. */
+  command?: string[];
   /** Builder selected by the resolver. */
   builder: Builder;
   installCommand?: string;
@@ -767,6 +1014,17 @@ export interface FunctionFramework {
   version?: string;
 }
 
+export interface AfterCacheCondition {
+  type: 'request.header' | 'cache.response.header';
+  key: string;
+  value?: HasField[number]['value'];
+}
+
+export interface AfterCacheBypassRule {
+  name?: string;
+  hasAll: AfterCacheCondition[];
+}
+
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
@@ -774,9 +1032,11 @@ export interface FunctionFramework {
 export interface BuildResultV2Typical {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
+  /** Bypass cached responses when every condition in any rule matches. */
+  afterCacheBypass?: AfterCacheBypassRule[];
   images?: Images;
   output: {
-    [key: string]: File | Lambda | Prerender | EdgeFunction;
+    [key: string]: File | Lambda | Prerender | EdgeFunction | ContainerImage;
   };
   wildcard?: Array<{
     domain: string;
@@ -796,6 +1056,8 @@ export interface BuildResultV2Typical {
    */
   deploymentId?: string;
   crons?: Cron[];
+  /** Daemon descriptors, written to `daemons/<name>/.vc-config.json`. */
+  daemons?: Record<string, DaemonOutput>;
 }
 
 export type BuildResultVX =
@@ -863,7 +1125,7 @@ export interface Chain {
   headers: Record<string, string>;
 }
 
-interface TriggerEventBase {
+interface QueueTriggerEventBase {
   /** Name of the queue topic to consume from (REQUIRED) */
   topic: string;
 
@@ -900,7 +1162,7 @@ interface TriggerEventBase {
  * Queue trigger input event for v1beta (from vercel.json config).
  * Requires explicit consumer name.
  */
-export interface TriggerEventInputV1 extends TriggerEventBase {
+export interface QueueTriggerEventInputV1 extends QueueTriggerEventBase {
   /** Event type - must be "queue/v1beta" (REQUIRED) */
   type: 'queue/v1beta';
 
@@ -913,22 +1175,30 @@ export interface TriggerEventInputV1 extends TriggerEventBase {
  * Consumer name is implicitly derived from the function path.
  * Only one trigger per function is allowed.
  */
-export interface TriggerEventInputV2 extends TriggerEventBase {
+export interface QueueTriggerEventInputV2 extends QueueTriggerEventBase {
   /** Event type - must be "queue/v2beta" (REQUIRED) */
   type: 'queue/v2beta';
 }
 
+export interface ScheduleTriggerEventInputV1 {
+  /** Event type - must be "schedule/v1beta" (REQUIRED) */
+  type: 'schedule/v1beta';
+}
+
 /**
- * Queue trigger input event from vercel.json config.
+ * Queue or Schedule trigger input event from vercel.json config.
  * v1beta requires explicit consumer, v2beta derives consumer from function path.
  */
-export type TriggerEventInput = TriggerEventInputV1 | TriggerEventInputV2;
+export type TriggerEventInput =
+  | QueueTriggerEventInputV1
+  | QueueTriggerEventInputV2
+  | ScheduleTriggerEventInputV1;
 
 /**
  * Processed queue trigger event for Lambda.
  * Consumer is always present (explicitly provided for v1beta, derived for v2beta).
  */
-export interface TriggerEvent extends TriggerEventBase {
+export interface QueueTriggerEvent extends QueueTriggerEventBase {
   /** Event type */
   type: 'queue/v1beta' | 'queue/v2beta';
 
@@ -936,7 +1206,20 @@ export interface TriggerEvent extends TriggerEventBase {
   consumer: string;
 }
 
-export type ServiceRuntime = 'node' | 'python' | 'go' | 'rust' | 'ruby';
+/**
+ * Schedule trigger event is the same as the input event.
+ */
+export type ScheduleTriggerEvent = ScheduleTriggerEventInputV1;
+
+export type TriggerEvent = QueueTriggerEvent | ScheduleTriggerEvent;
+
+export type ServiceRuntime =
+  | 'node'
+  | 'python'
+  | 'go'
+  | 'rust'
+  | 'ruby'
+  | 'container';
 
 export type ServiceType = 'web' | 'cron' | 'worker' | 'job';
 
@@ -977,8 +1260,10 @@ export interface ExperimentalServiceConfig {
   framework?: string;
   /** Builder to use, e.g. @vercel/node, @vercel/python */
   builder?: string;
-  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14 */
+  /** Specific lambda runtime to use, e.g. nodejs24.x, python3.14, container */
   runtime?: string;
+  /** Optional command override for container image services. */
+  command?: string | string[];
 
   workspace?: string;
   buildCommand?: string;
@@ -1027,10 +1312,10 @@ export type ExperimentalServices = Record<string, ExperimentalServiceConfig>;
  */
 export type ExperimentalServiceGroups = Record<string, string[]>;
 
-export interface ExperimentalServiceV2Binding {
-  /** Must be `"service"` for Service-to-Service HTTP bindings. */
-  type: 'service';
-  /** Target service name from `experimentalServicesV2`. */
+export interface ServiceBinding {
+  /** If present, must be `"service"` for Service-to-Service HTTP bindings. */
+  type?: 'service';
+  /** Target service name from `services`. */
   service: string;
   /** Generated value shape, must be `"url"`. */
   format: 'url';
@@ -1038,12 +1323,8 @@ export interface ExperimentalServiceV2Binding {
   env: string;
 }
 
-/**
- * Configuration for a service in `experimentalServicesV2` in `vercel.json`.
- *
- * @experimental This feature is experimental and may change.
- */
-export interface ExperimentalServiceV2Config {
+/** Configuration for a service in `vercel.json#services`. */
+export interface ServiceConfig {
   /** Path to the service root, relative to `vercel.json`. */
   root: string;
   /** Framework for this service. */
@@ -1053,8 +1334,12 @@ export interface ExperimentalServiceV2Config {
   /**
    * Service entrypoint, relative to the service root directory.
    * Can be a file path or a module specification (for Python).
+   * For `runtime: "container"`, a Dockerfile path (built & pushed) or a
+   * prebuilt OCI image reference.
    */
   entrypoint?: string;
+  /** Command override for `runtime: "container"` services. */
+  command?: string | string[];
 
   /* Service-level build setting overrides. */
   installCommand?: string;
@@ -1064,7 +1349,7 @@ export interface ExperimentalServiceV2Config {
   outputDirectory?: string;
 
   /** Caller-side bindings that grant this service access to another service. */
-  bindings?: ExperimentalServiceV2Binding[];
+  bindings?: ServiceBinding[];
 
   /** Function configuration scoped to this service root. */
   functions?: BuilderFunctions;
@@ -1078,15 +1363,17 @@ export interface ExperimentalServiceV2Config {
   trailingSlash?: boolean;
 }
 
-/**
- * Map of service name to service configuration for `experimentalServicesV2`.
- *
- * @experimental This feature is experimental and may change.
- */
-export type ExperimentalServicesV2 = Record<
-  string,
-  ExperimentalServiceV2Config
->;
+/** Map of service name to service configuration for `vercel.json#services`. */
+export type Services = Record<string, ServiceConfig>;
+
+/** @deprecated Use `ServiceBinding` instead. */
+export type ExperimentalServiceV2Binding = ServiceBinding;
+
+/** @deprecated Use `ServiceConfig` instead. */
+export type ExperimentalServiceV2Config = ServiceConfig;
+
+/** @deprecated Use `Services` instead. */
+export type ExperimentalServicesV2 = Services;
 
 /**
  * Result of a runtime builder's normalized entrypoint detection.

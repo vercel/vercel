@@ -1,3 +1,4 @@
+import chalk from 'chalk';
 import open from 'open';
 import type Client from '../../util/client';
 import output from '../../output-manager';
@@ -6,19 +7,18 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { getLinkedProject } from '../../util/projects/link';
 import type { ProjectLinkResult } from '@vercel-internals/types';
-import getTeamById from '../../util/teams/get-team-by-id';
-import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../../util/errors-ts';
-import { outputAgentError } from '../../util/agent-output';
+import getTeamByIdOrSlug from '../../util/teams/get-team-by-id-or-slug';
+import { outputAgentError, writeAgentError } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { help } from '../help';
 import { getSubcommand, tracesCommand } from './command';
 import { fetchTrace } from './fetch-trace';
+import { resolveRootSpan } from './analyze';
 import { renderMarkdown } from './render-markdown';
 import { resolveScope } from './scope-resolver';
 import type { TracesTelemetryClient } from '../../util/telemetry/commands/traces';
 
-const VIEW_OPTIONS = ['timeline', 'tree', 'gantt'] as const;
+const VIEW_OPTIONS = ['timeline', 'tree', 'waterfall'] as const;
 type View = (typeof VIEW_OPTIONS)[number];
 
 function isView(value: string): value is View {
@@ -47,14 +47,12 @@ function buildDashboardUrl({
 async function resolveDashboardScope({
   client,
   scopeFlag,
-  projectFlag,
-  teamId,
+  projectName,
   linkedProject,
 }: {
   client: Client;
   scopeFlag: string | undefined;
-  projectFlag: string | undefined;
-  teamId: string;
+  projectName: string;
   linkedProject: ProjectLinkResult;
 }): Promise<
   { teamSlug: string; projectName: string } | { error: string; reason: string }
@@ -63,7 +61,7 @@ async function resolveDashboardScope({
   if (scopeFlag) {
     // Team ids start with `team_`; anything else is already a slug.
     if (scopeFlag.startsWith('team_')) {
-      const team = await getTeamById(client, scopeFlag);
+      const team = await getTeamByIdOrSlug(client, scopeFlag);
       teamSlug = team.slug;
     } else {
       teamSlug = scopeFlag;
@@ -73,25 +71,6 @@ async function resolveDashboardScope({
   } else {
     return {
       error: 'Unable to resolve team slug for the dashboard URL.',
-      reason: AGENT_REASON.NOT_LINKED,
-    };
-  }
-
-  let projectName: string;
-  if (projectFlag) {
-    const project = await getProjectByNameOrId(client, projectFlag, teamId);
-    if (project instanceof ProjectNotFound) {
-      return {
-        error: `Project not found: ${projectFlag}`,
-        reason: AGENT_REASON.NOT_FOUND,
-      };
-    }
-    projectName = project.name;
-  } else if (linkedProject.status === 'linked') {
-    projectName = linkedProject.project.name;
-  } else {
-    return {
-      error: 'Unable to resolve project name for the dashboard URL.',
       reason: AGENT_REASON.NOT_LINKED,
     };
   }
@@ -109,19 +88,26 @@ export default async function get(
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const positional = parsedArgs.args.slice(1);
-  const requestId =
-    positional[0] === getSubcommand.name ? positional[1] : positional[0];
+  const subcommandNames: readonly string[] = [
+    getSubcommand.name,
+    ...getSubcommand.aliases,
+  ];
+  const identifiers = subcommandNames.includes(positional[0])
+    ? positional.slice(1)
+    : positional;
+  const id = identifiers[0];
+  const isTraceId = id !== undefined && /^[a-fA-F0-9]{32}$/.test(id);
   const json = parsedArgs.flags['--json'];
-  const scopeFlag = parsedArgs.flags['--scope'];
+  const scopeFlag = parsedArgs.flags['--scope']?.trim() || undefined;
   const projectFlag = parsedArgs.flags['--project'];
   const openFlag = parsedArgs.flags['--open'];
   const viewFlag = parsedArgs.flags['--view'];
 
-  telemetry.trackCliArgumentRequestId(requestId);
+  telemetry.trackCliArgumentId(id, isTraceId ? 'traceId' : 'requestId');
   telemetry.trackCliFlagJson(json);
   telemetry.trackCliOptionProject(projectFlag);
   telemetry.trackCliFlagOpen(openFlag);
@@ -137,7 +123,7 @@ export default async function get(
       });
     }
     output.error(msg);
-    return 1;
+    return 2;
   }
 
   if (viewFlag && !openFlag) {
@@ -150,7 +136,7 @@ export default async function get(
       });
     }
     output.error(msg);
-    return 1;
+    return 2;
   }
 
   let view: View | undefined;
@@ -165,14 +151,15 @@ export default async function get(
         });
       }
       output.error(msg);
-      return 1;
+      return 2;
     }
     view = viewFlag;
   }
 
-  if (!requestId) {
+  if (!id) {
     output.print(
       help(getSubcommand, {
+        stream: client.stderr,
         parent: tracesCommand,
         columns: client.stderr.columns,
       })
@@ -180,42 +167,67 @@ export default async function get(
     return 2;
   }
 
+  if (identifiers.length > 1) {
+    const msg = 'Provide one trace ID or request ID.';
+    if (client.nonInteractive) {
+      writeAgentError(client, {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+      });
+    }
+    output.fatal(msg);
+    return 2;
+  }
+
+  const target = isTraceId ? { traceId: id.toLowerCase() } : { requestId: id };
+
   let teamId: string;
   let projectId: string;
   let linkedProject: ProjectLinkResult | undefined;
-  if (scopeFlag && projectFlag && !openFlag) {
-    teamId = scopeFlag;
-    projectId = projectFlag;
-  } else {
-    linkedProject = await getLinkedProject(client);
-    if (linkedProject.status === 'error') {
-      if (scopeFlag && projectFlag) {
-        // Both flags were provided so we can proceed without a linked project.
-        linkedProject = { status: 'not_linked', org: null, project: null };
-      } else {
-        return linkedProject.exitCode;
-      }
+  linkedProject = await getLinkedProject(client);
+  if (linkedProject.status === 'error') {
+    if (scopeFlag && projectFlag) {
+      // Both flags were provided so we can proceed without a linked project.
+      linkedProject = { status: 'not_linked', org: null, project: null };
+    } else {
+      return linkedProject.exitCode;
     }
-    const scope = resolveScope({
+  }
+  let scope: Awaited<ReturnType<typeof resolveScope>>;
+  try {
+    scope = await resolveScope({
+      client,
       flags: { scope: scopeFlag, project: projectFlag },
       linkedProject,
     });
-    if ('message' in scope) {
-      output.error(scope.message);
-      return 1;
-    }
-    teamId = scope.teamId;
-    projectId = scope.projectId;
+  } catch (err) {
+    printError(err);
+    return 1;
   }
+  if ('message' in scope) {
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: AGENT_STATUS.ERROR,
+        reason: scope.reason,
+        message: scope.message,
+      });
+    }
+    output.error(scope.message);
+    return 1;
+  }
+  teamId = scope.teamId;
+  projectId = scope.projectId;
 
   output.spinner('Fetching trace…');
   let trace;
+  let partial;
   try {
-    ({ trace } = await fetchTrace({
+    ({ trace, partial } = await fetchTrace({
       client,
       teamId,
       projectId,
-      requestId,
+      ...target,
     }));
   } catch (err) {
     output.stopSpinner();
@@ -223,6 +235,16 @@ export default async function get(
     return 1;
   }
   output.stopSpinner();
+  const rootRequestId =
+    resolveRootSpan(trace)?.attributes?.['vercel.request_id'];
+  const requestId =
+    target.requestId ??
+    (typeof rootRequestId === 'string' && rootRequestId.trim() !== ''
+      ? rootRequestId
+      : undefined);
+  if (partial) {
+    output.warn('Trace is incomplete because it exceeded the span limit.');
+  }
 
   if (openFlag) {
     if (!linkedProject) {
@@ -241,8 +263,7 @@ export default async function get(
     const resolved = await resolveDashboardScope({
       client,
       scopeFlag,
-      projectFlag,
-      teamId,
+      projectName: scope.projectName,
       linkedProject,
     });
     if ('error' in resolved) {
@@ -273,6 +294,29 @@ export default async function get(
   }
 
   client.stdout.write(renderMarkdown(trace, { requestId }));
+  try {
+    const resolved = await resolveDashboardScope({
+      client,
+      scopeFlag,
+      projectName: scope.projectName,
+      linkedProject,
+    });
+    if ('error' in resolved) {
+      output.warn(resolved.error);
+    } else {
+      const url = buildDashboardUrl({
+        ...resolved,
+        traceId: trace.traceId,
+        view,
+      });
+      output.log(`View trace: ${url}`);
+    }
+  } catch (err) {
+    output.print(
+      `${chalk.yellow('!')} Failed to resolve the dashboard URL. Use --open to retry.\n`
+    );
+    output.debug(String(err));
+  }
   output.log('Run with --json for full trace data.');
   return 0;
 }

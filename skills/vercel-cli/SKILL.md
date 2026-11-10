@@ -1,79 +1,52 @@
 ---
 name: vercel-cli
-description: Deploy, manage, inspect, and troubleshoot Vercel projects from the command line. Use for Vercel deployments, projects and teams, environment variables, domains and DNS, logs, metrics, Speed Insights, Core Web Vitals, request traces, usage, activity, alerts, firewall rules, cache, cron jobs, deploy hooks, Edge Config, feature flags, integrations, connectors, Blob storage, microfrontends, rolling releases, custom environments, Sandbox, agent/MCP setup, OAuth apps, preview access, local development, or `vercel api` fallback.
+description: Guides deployment, configuration, and troubleshooting with the Vercel CLI. Use when operating Vercel projects or resources through the CLI, especially for workflows spanning multiple commands, including deployments, CI, build failures, logs, metrics, Speed Insights, traces, environment variables, domains and DNS, firewall and WAF rules, Global Config (Edge Config), feature flags, storage and Blob, Container Registry (VCR), microfrontends, Sandbox, and `vercel api` fallback.
 ---
 
 # Vercel CLI Skill
 
-The Vercel CLI (`vercel` or `vc`) deploys, manages, and develops projects on the Vercel platform from the command line. Use `vercel <command> --help` for full flag details on any command.
+Use the installed CLI's help for command discovery, arguments, flags, defaults, and examples: start with `vercel --help`, then narrow to the command or subcommand. Reuse help already read for that version. These references cover decisions, dependencies, and recovery across operations.
 
-The installed CLI help is the source of truth for obscure or newly added flags. If a command example here is not enough, check `vercel <command> --help` before acting instead of guessing.
+If an older installation lacks a command or needed guidance, retain the workflow caveats and consult the matching documentation. Preserve the project's chosen CLI version; do not upgrade it merely to make a remembered command work.
 
-## Critical: Project Linking
+## Setup
 
-Commands must be run from the directory containing the `.vercel` folder (or a subdirectory of it). How `.vercel` gets set up depends on your project structure:
+Reuse the project's installed CLI and authenticated context. If the CLI is missing, follow the project's package-manager and version conventions; for a standalone installation, use `npm install --global vercel`. If authentication is missing, run `vercel login` and wait for the user to complete the login or SAML flow. In automation, use an existing `VERCEL_TOKEN` through the environment rather than command-line arguments.
 
-- **`.vercel/project.json`**: Created by `vercel link`. Links a single project. Fine for single-project repos, and can work in monorepos if there's only one project.
-- **`.vercel/repo.json`**: Created by `vercel link --repo`. Links a repo that may contain multiple projects. Always a good idea when any project has a non-root directory (e.g., `apps/web`).
+## Execution Context
 
-Running from a project subdirectory (e.g., `apps/web/`) skips the "which project?" prompt since it's unambiguous.
+- Parse stdout for URLs, structured results, and help. Recognized help exits 0; warnings and progress use stderr. JSON and streaming support vary by command.
+- Non-interactive mode suppresses prompts but does not imply consent. Detected agents without a TTY can receive it automatically; plain CI may need it explicitly. Confirmation flags are command-specific. Preserve interactive-only handoffs.
+- Structured errors can contain `status`, `reason`, `hint`, and suggested `next` commands. Follow a suggestion only when its target and action fit the task; it does not independently authorize linking, authentication, purchases, or mutations.
+- Prefer first-class CLI operations when they expose the required data or mutation. For gaps, use [API fallback](references/advanced.md) to discover the endpoint and preserve request/response types.
 
-**When something goes wrong, check how things are linked first** — look at what's in `.vercel/` and whether it's `project.json` or `repo.json`. Also verify you're on the right team with `vercel whoami` — linking while on the wrong team is a common mistake.
+## Project Targeting
 
-## Quick Start
+`vercel ci` is repository/team-scoped and does not require a project link; follow [Vercel CI](references/ci.md) for its target resolution instead of the project-link checks below.
 
-```bash
-npm i -g vercel
-vercel login
-vercel link              # single project
-# OR
-vercel link --repo       # monorepo
-vercel pull
-vercel dev        # local development
-vercel deploy     # preview deployment
-vercel --prod     # production deployment
-```
+When relying on a local link, inspect the resolved owner/project from the directory where subsequent commands will run, for example with `vercel project inspect --non-interactive`. Stop on `link_required` or a mismatch. A supported explicit project/team selector can target one operation without changing local links.
 
-## Decision Tree
+- `<cwd>/.vercel/project.json` takes precedence over repository mappings; a root single-project link is not generally inherited by arbitrary subdirectories.
+- `<repo-root>/.vercel/repo.json` selects the deepest mapped directory containing the working directory. Use repository mappings for multiple apps when that matches the repository's setup; a single-app working-directory link remains valid.
+- An unmatched repository path may select the sole mapped project non-interactively. Multiple candidates may remain unresolved, and commands that perform setup can enter a linking flow.
 
-Use this to route to the correct reference file:
+An app directory or successful authentication check is not proof of the project target. Use the resolved identity before consequential operations, without imposing relinking or unrelated account discovery on a task that already has an explicit target.
 
-- **Deploy** → `references/deployment.md`
-- **Rolling releases, deploy hooks, cron jobs, cache, git connection, Edge Config, redirects, custom environments** → `references/project-infra.md`
-- **Local development** → `references/local-development.md`
-- **Environment variables** → `references/environment-variables.md`
-- **CI/CD automation** → `references/ci-automation.md`
-- **Domains or DNS** → `references/domains-and-dns.md`
-- **Projects or teams** → `references/projects-and-teams.md`
-- **Logs, metrics, Speed Insights, Core Web Vitals, activity, performance, preview access, or production debugging** → `references/monitoring-and-debugging.md`
-- **Alerts, usage, contracts, billing purchases, tokens, telemetry, or CLI upgrades** → `references/platform-ops.md`
-- **Blob storage** → `references/storage.md`
-- **Integrations (databases, storage, etc.)** → `references/integrations.md`
-- **Connectors (`vercel connect`)** → `references/connectors.md`
-- **Routing rules** → `references/routing.md`
-- **Firewall (WAF rules, IP blocks, rate limiting)** → `references/firewall.md`
-- **Access a preview deployment** → use `vercel curl` (see `references/monitoring-and-debugging.md`)
-- **CLI command is unavailable or output is missing required fields** → use `vercel api` after first-class CLI paths are unavailable or insufficient (see `references/advanced.md`)
-- **Node.js backends (Express, Hono, etc.)** → `references/node-backends.md`
-- **Monorepos (Turborepo, Nx, workspaces)** → `references/monorepos.md`
-- **Bun runtime** → `references/bun.md`
-- **Feature flags** → `references/flags.md`
-- **Microfrontends** → `references/microfrontends.md`
-- **Sandbox** → `references/sandbox.md`
-- **Agent, MCP, skills discovery, or AI Gateway** → `references/agent-and-ai.md`
-- **Captured request traces (`vercel traces`, including `--open` / `--view`)** → `references/advanced.md`
-- **Vercel Apps / OAuth apps (`vercel oauth-apps`)** → `references/advanced.md`
-- **Advanced (`vercel api` fallback, webhooks)** → `references/advanced.md`
-- **Global flags** → `references/global-options.md`
-- **First-time setup** → `references/getting-started.md`
+## Workflow References
 
-## Anti-Patterns
+Read only the references needed for the user's task. A syntax-only question can be answered from help without loading a workflow reference.
 
-- **Wrong link type in monorepos with multiple projects**: `vercel link` creates `project.json`, which only tracks one project. Use `vercel link --repo` instead. When things break, check `.vercel/` first.
-- **Letting commands auto-link in monorepos**: Many commands implicitly run `vercel link` if `.vercel/` doesn't exist. This creates `project.json`, which may be wrong. Run `vercel link` (or `--repo`) explicitly first.
-- **Linking while on the wrong team**: Use `vercel whoami` to check, `vercel teams switch` to change.
-- **Forgetting non-interactive flags in CI/agent runs**: Use `--non-interactive` when you need prompt-free behavior, and add `--yes` only for commands that require confirmation.
-- **Using `vercel deploy` after `vercel build` without `--prebuilt`**: The build output is ignored.
-- **Hardcoding tokens in flags**: Use `VERCEL_TOKEN` env var instead of `--token`.
-- **Disabling deployment protection**: Use `vercel curl` instead to access preview deploys.
-- **Using `vercel api` too early**: Prefer first-class CLI commands when they expose the needed data or mutation.
+| Task                                                             | References                                                                                                                                          |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ship or validate a deployment; transfer CI artifacts             | [Deployment](references/deployment.md), [project infrastructure](references/project-infra.md) for rolling releases and related effects              |
+| Inspect, diagnose, search, or rerun Vercel CI runs               | [Vercel CI](references/ci.md)                                                                                                                       |
+| Diagnose a failed build, regression, or live request             | [Monitoring and debugging](references/monitoring-and-debugging.md), [API fallback and traces](references/advanced.md)                               |
+| Prepare local development or application credentials             | [Environment variables](references/environment-variables.md), [project/team discovery](references/projects-and-teams.md) when the target is unclear |
+| Assign domains; configure or troubleshoot DNS in any environment | [Domains and DNS](references/domains-and-dns.md)                                                                                                    |
+| Change production routing or protections                         | [Routing](references/routing.md), [Firewall](references/firewall.md)                                                                                |
+| Provision or connect application resources                       | [Integrations](references/integrations.md), [storage](references/storage.md), [connectors](references/connectors.md)                                |
+| Ship container images or coordinate multiple apps                | [Container registry](references/container-registry.md), [monorepos](references/monorepos.md), [microfrontends](references/microfrontends.md)        |
+| Change feature behavior or review application feedback           | [Feature flags](references/flags.md), [Toolbar comments](references/comments.md)                                                                    |
+| Configure framework/runtime behavior                             | [Node backends](references/node-backends.md), [Bun](references/bun.md)                                                                              |
+| Set up development tooling or external compute                   | [Agent/MCP/Gateway setup](references/agent-and-ai.md), [Sandbox](references/sandbox.md)                                                             |
+| Inspect alerts, usage, billing, or CLI maintenance               | [Platform operations](references/platform-ops.md)                                                                                                   |

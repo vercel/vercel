@@ -58,4 +58,47 @@ describe('nft', () => {
     expect(files).toHaveProperty('node_modules/dual-pkg/dist/cjs/index.js');
     expect(files).not.toHaveProperty('node_modules/dual-pkg/dist/index.js');
   });
+
+  it('preserves binary files byte-for-byte when ignoreNodeModules is set', async () => {
+    const repoRootPath = await mkdtemp(join(tmpdir(), 'backends-nft-bin-'));
+    tmpDirs.push(repoRootPath);
+
+    // A native addon-like binary that is not valid UTF-8. Reading this as a
+    // UTF-8 string and writing it back corrupts the bytes, which surfaces at
+    // runtime as e.g. "ELF file's phentsize not the expected size".
+    const elfHeader = Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01]);
+    const binaryBody = Buffer.alloc(256);
+    for (let i = 0; i < binaryBody.length; i++) binaryBody[i] = i;
+    const nativeAddon = Buffer.concat([elfHeader, binaryBody]);
+    const addonRelPath = 'native.node';
+    await writeFile(join(repoRootPath, addonRelPath), nativeAddon);
+
+    const entryRelPath = 'entry.js';
+    await writeFile(
+      join(repoRootPath, entryRelPath),
+      `require('./${addonRelPath}');`
+    );
+
+    const files = {
+      [entryRelPath]: new FileBlob({
+        data: `require('./${addonRelPath}');`,
+      }),
+    };
+
+    await nft({
+      workPath: repoRootPath,
+      repoRootPath,
+      localBuildFiles: new Set([join(repoRootPath, entryRelPath)]),
+      files,
+      span: new Span({ name: 'test' }),
+      ignoreNodeModules: true,
+    });
+
+    const traced = files[addonRelPath];
+    expect(traced).toBeInstanceOf(FileBlob);
+    expect(Buffer.isBuffer((traced as FileBlob).data)).toBe(true);
+    expect(
+      Buffer.compare((traced as FileBlob).data as Buffer, nativeAddon)
+    ).toBe(0);
+  });
 });

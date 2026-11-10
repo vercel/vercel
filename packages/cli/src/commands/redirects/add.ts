@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { outputActionRequired } from '../../util/agent-output';
 import {
@@ -10,7 +11,6 @@ import {
 import { addSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   isValidUrl,
   buildRedirectsSuggestionFlags,
   getArgsAfterRedirectsSubcommand,
@@ -30,7 +30,11 @@ export default async function add(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, addSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -62,9 +66,9 @@ export default async function add(client: Client, argv: string[]) {
         message: `In non-interactive mode source and destination are required. Run: ${cmd}`,
         next: [{ command: cmd, when: 'to add a redirect' }],
       },
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
   let source: string;
@@ -74,14 +78,14 @@ export default async function add(client: Client, argv: string[]) {
       output.error(
         'Source must be a relative path (starting with /) or an absolute URL'
       );
-      return 1;
+      return 2;
     }
   } else {
     if (skipPrompts) {
       output.error(
         'Source and destination are required when using --yes. Use: vercel redirects add <source> <destination> --yes'
       );
-      return 1;
+      return 2;
     }
     output.log('Add a new redirect\n');
     source = await client.input.text({
@@ -105,14 +109,14 @@ export default async function add(client: Client, argv: string[]) {
       output.error(
         'Destination must be a relative path (starting with /) or an absolute URL'
       );
-      return 1;
+      return 2;
     }
   } else {
     if (skipPrompts) {
       output.error(
         'Source and destination are required when using --yes. Use: vercel redirects add <source> <destination> --yes'
       );
-      return 1;
+      return 2;
     }
     if (!args[0]) {
       output.log('Add a new redirect\n');

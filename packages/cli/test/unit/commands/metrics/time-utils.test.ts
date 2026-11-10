@@ -5,7 +5,6 @@ import {
   toGranularityDuration,
   toGranularityMs,
   computeGranularity,
-  roundTimeBoundaries,
 } from '../../../../src/commands/metrics/time-utils';
 
 describe('time-utils', () => {
@@ -188,22 +187,6 @@ describe('time-utils', () => {
       const result = computeGranularity(rangeMs, '1m');
       expect(result.duration).toEqual({ minutes: 1 });
       expect(result.adjusted).toBe(false);
-    });
-  });
-
-  describe('roundTimeBoundaries', () => {
-    it('should floor start and ceil end to granularity', () => {
-      const start = new Date('2025-01-15T10:03:00Z');
-      const end = new Date('2025-01-15T10:58:00Z');
-      const granMs = 15 * 60 * 1000; // 15m
-
-      const { start: rounded_start, end: rounded_end } = roundTimeBoundaries(
-        start,
-        end,
-        granMs
-      );
-      expect(rounded_start.toISOString()).toBe('2025-01-15T10:00:00.000Z');
-      expect(rounded_end.toISOString()).toBe('2025-01-15T11:00:00.000Z');
     });
   });
 });

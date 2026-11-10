@@ -12,10 +12,25 @@ export class ProjectListTelemetryClient
     }
   }
 
-  trackCliOptionNext(next: number | undefined) {
+  trackCliFlagPaused(paused: boolean | undefined) {
+    if (paused) {
+      this.trackCliFlag('paused');
+    }
+  }
+
+  trackCliOptionNext(next: string | undefined) {
     if (next) {
       this.trackCliOption({
         option: 'next',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionLimit(limit: number | undefined) {
+    if (limit) {
+      this.trackCliOption({
+        option: 'limit',
         value: this.redactedValue,
       });
     }
@@ -27,6 +42,16 @@ export class ProjectListTelemetryClient
     }
   }
 
+  trackCliOptionQuery(query: string | undefined) {
+    if (query) {
+      this.trackCliOption({
+        option: 'query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionFilter(filter: string | undefined) {
     if (filter) {
       this.trackCliOption({

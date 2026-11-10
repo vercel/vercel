@@ -6,10 +6,11 @@ import {
   runPackageJsonScript,
   execCommand,
   getEnvForPackageManager,
+  getNodeVersion,
   scanParentDirs,
   getNodeBinPaths,
 } from '@vercel/build-utils';
-import type { BuildV2 } from '@vercel/build-utils';
+import type { BuildV2, WorkspaceInstallTarget } from '@vercel/build-utils';
 
 export async function downloadInstallAndBundle(
   args: Parameters<BuildV2>[0]
@@ -21,17 +22,20 @@ export async function downloadInstallAndBundle(
   cliType: Awaited<ReturnType<typeof scanParentDirs>>['cliType'];
   lockfilePath: string | undefined;
   lockfileVersion: number | undefined;
+  nodeVersion: Awaited<ReturnType<typeof getNodeVersion>>;
 }> {
   const { entrypoint, files, workPath, meta, config, repoRootPath } = args;
   await download(files, workPath, meta);
 
   const entrypointFsDirname = join(workPath, dirname(entrypoint));
+  const nodeVersion = await getNodeVersion(workPath, undefined, config, meta);
 
   const {
     cliType,
     lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true, repoRootPath);
 
@@ -39,6 +43,8 @@ export async function downloadInstallAndBundle(
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -56,6 +62,12 @@ export async function downloadInstallAndBundle(
       console.log(`Skipping "install" command...`);
     }
   } else {
+    const workspaceInstallTargets = Array.isArray(meta?.workspaceInstallTargets)
+      ? meta.workspaceInstallTargets.filter(
+          (target): target is WorkspaceInstallTarget =>
+            Boolean(target && typeof target === 'object')
+        )
+      : [];
     await runNpmInstall(
       entrypointFsDirname,
       [],
@@ -63,7 +75,9 @@ export async function downloadInstallAndBundle(
         env: spawnEnv,
       },
       meta,
-      config.projectSettings?.createdAt
+      config.projectSettings?.createdAt,
+      undefined,
+      { targets: workspaceInstallTargets }
     );
   }
   return {
@@ -72,6 +86,7 @@ export async function downloadInstallAndBundle(
     cliType,
     lockfilePath,
     lockfileVersion,
+    nodeVersion,
   };
 }
 

@@ -1,13 +1,19 @@
 import chalk from 'chalk';
-import stripAnsi from 'strip-ansi';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
 import { printError } from '../../util/error';
+import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import { getLinkedProject } from '../../util/projects/link';
 import table from '../../util/output/table';
 import { packageName } from '../../util/pkg-name';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
+import { printNextPageCommand } from '../../util/pagination';
 
 interface LinkedProject {
   id: string;
@@ -49,6 +55,7 @@ export async function list(
     '--all-projects'?: boolean;
     '--limit'?: number;
     '--next'?: string;
+    '--query'?: string;
     '--search'?: string;
     '--service'?: string[];
     '--type'?: string[];
@@ -59,7 +66,7 @@ export async function list(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
   const allProjects = flags['--all-projects'] === true;
@@ -69,7 +76,13 @@ export async function list(
   const services = (flags['--service'] ?? [])
     .flatMap(v => v.split(',').map(s => s.trim().toLowerCase()))
     .filter(Boolean);
-  const searchQuery = flags['--search'];
+  const search = getRenamedOption(flags, '--query', '--search', {
+    json: asJson,
+  });
+  if ('error' in search) {
+    return reportRenamedOptionError(client, search.error, { json: asJson });
+  }
+  const searchQuery = search.value;
 
   let projectId: string | undefined;
   let projectName: string | undefined;
@@ -138,7 +151,7 @@ export async function list(
       );
       return 1;
     }
-    printError(err);
+    printError(err, client);
     return 1;
   }
   output.stopSpinner();
@@ -180,7 +193,18 @@ export async function list(
       return item;
     });
     client.stdout.write(
-      `${JSON.stringify({ connectors: jsonClients, cursor: response.cursor }, null, 2)}\n`
+      `${JSON.stringify(
+        withWarnings(
+          {
+            connectors: jsonClients,
+            cursor: response.cursor,
+            pagination: { next: response.cursor ?? null },
+          },
+          [search.warning]
+        ),
+        null,
+        2
+      )}\n`
     );
     return 0;
   }
@@ -208,16 +232,17 @@ export async function list(
   }
   const rows = clients.map(c => {
     const row = [
-      stripAnsi(c.uid || '') || chalk.gray('–'),
+      sanitizeForTerminal(c.uid || '') || chalk.gray('–'),
       c.id,
-      stripAnsi(c.name || '') || chalk.gray('–'),
-      c.typeName || c.type,
+      sanitizeForTerminal(c.name || '') || chalk.gray('–'),
+      sanitizeForTerminal(c.typeName || c.type),
     ];
     if (unscoped) {
       const projectsInclude = c.includes?.projects;
       const names = (projectsInclude?.items ?? [])
         .map(p => p.project?.name)
-        .filter((n): n is string => Boolean(n));
+        .filter((n): n is string => Boolean(n))
+        .map(sanitizeForTerminal);
       const more = projectsInclude?.hasMore === true;
       let cell: string;
       if (names.length === 0 && !more) {
@@ -244,9 +269,10 @@ export async function list(
     if (allProjects) parts.push('--all-projects');
     for (const t of types) parts.push(`--type ${t}`);
     for (const s of services) parts.push(`--service ${s}`);
-    if (searchQuery) parts.push(`--search "${searchQuery}"`);
+    if (searchQuery) parts.push(`--query "${searchQuery}"`);
     parts.push(`--next ${response.cursor}`);
-    output.log(`To see more, run \`${parts.join(' ')}\``);
+    output.print('\n');
+    printNextPageCommand(parts.join(' '));
   }
 
   return 0;

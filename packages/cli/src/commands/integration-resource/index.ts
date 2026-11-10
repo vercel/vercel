@@ -12,6 +12,7 @@ import {
   connectSubcommand,
   createThresholdSubcommand,
   disconnectSubcommand,
+  inspectSubcommand,
   integrationResourceCommand,
   removeSubcommand,
 } from './command';
@@ -19,14 +20,17 @@ import { claim } from './claim';
 import { connect } from './connect';
 import { createThreshold } from './create-threshold';
 import { disconnect } from './disconnect';
+import { inspect } from './inspect';
 import { remove } from './remove-resource';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
-  remove: getCommandAliases(removeSubcommand),
+  delete: getCommandAliases(removeSubcommand),
   disconnect: getCommandAliases(disconnectSubcommand),
   connect: getCommandAliases(connectSubcommand),
   'create-threshold': getCommandAliases(createThresholdSubcommand),
   claim: getCommandAliases(claimSubcommand),
+  inspect: getCommandAliases(inspectSubcommand),
 };
 
 interface DispatchOptions {
@@ -55,7 +59,10 @@ export async function dispatchResourceSubcommand(
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp(options.helpBreadcrumb);
     output.print(
-      help(integrationResourceCommand, { columns: client.stderr.columns })
+      help(integrationResourceCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
     );
     return 0;
   }
@@ -63,6 +70,7 @@ export async function dispatchResourceSubcommand(
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         columns: client.stderr.columns,
         parent: options.parentForChildHelp,
       })
@@ -79,13 +87,20 @@ export async function dispatchResourceSubcommand(
       telemetry.trackCliSubcommandCreateThreshold(subcommandOriginal);
       return createThreshold(client, innerArgs);
     }
-    case 'remove': {
+    case 'delete': {
       if (needHelp) {
         telemetry.trackCliFlagHelp(options.helpBreadcrumb, subcommandOriginal);
         printHelp(removeSubcommand);
         return 0;
       }
-      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      telemetry.trackCliSubcommandDelete(subcommandOriginal);
+      if (subcommandOriginal === 'remove') {
+        warnDeprecatedSubcommand(
+          client,
+          `${options.helpBreadcrumb} remove`,
+          'integration resource delete'
+        );
+      }
       return remove(client, innerArgs);
     }
     case 'disconnect': {
@@ -115,6 +130,22 @@ export async function dispatchResourceSubcommand(
       telemetry.trackCliSubcommandClaim(subcommandOriginal);
       return claim(client, innerArgs);
     }
+    case 'inspect': {
+      if (needHelp) {
+        telemetry.trackCliFlagHelp(options.helpBreadcrumb, subcommandOriginal);
+        printHelp(inspectSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      if (subcommandOriginal === 'status') {
+        warnDeprecatedSubcommand(
+          client,
+          `${options.helpBreadcrumb} status`,
+          'integration resource inspect'
+        );
+      }
+      return inspect(client, innerArgs);
+    }
     default: {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       return 2;
@@ -128,6 +159,9 @@ export default async function main(client: Client) {
     getFlagsSpecification(integrationResourceCommand.options),
     { permissive: true }
   );
+  if (args[0] === 'integration-resource' || args[0] === 'ir') {
+    warnDeprecatedSubcommand(client, args[0], 'integration resource');
+  }
   return dispatchResourceSubcommand(client, args.slice(1), !!flags['--help'], {
     helpBreadcrumb: 'integration-resource',
     parentForChildHelp: integrationResourceCommand,

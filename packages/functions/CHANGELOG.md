@@ -1,5 +1,186 @@
 # @vercel/functions
 
+## 3.10.4
+
+### Patch Changes
+
+- 4db77ba: Fix `ipAddress` throwing for header readers with an internal `headers` property, such as the Next.js headers adapter.
+  - @vercel/oidc@4.0.4
+
+## 3.10.3
+
+### Patch Changes
+
+- @vercel/oidc@4.0.3
+
+## 3.10.2
+
+### Patch Changes
+
+- @vercel/oidc@4.0.2
+
+## 3.10.1
+
+### Patch Changes
+
+- Updated dependencies [d032cfb]
+  - @vercel/oidc@4.0.1
+
+## 3.10.0
+
+### Minor Changes
+
+- 3394701: Promote the WebSocket upgrade API to `upgradeWebSocket()` and remove its experimental label.
+
+## 3.9.12
+
+### Patch Changes
+
+- Updated dependencies [baad6f5]
+  - @vercel/oidc@5.0.0
+
+## 3.9.11
+
+### Patch Changes
+
+- Updated dependencies [ec76b68]
+  - @vercel/oidc@4.0.0
+
+## 3.9.10
+
+### Patch Changes
+
+- @vercel/oidc@3.8.10
+
+## 3.9.9
+
+### Patch Changes
+
+- @vercel/oidc@3.8.9
+
+## 3.9.8
+
+### Patch Changes
+
+- @vercel/oidc@3.8.8
+
+## 3.9.7
+
+### Patch Changes
+
+- @vercel/oidc@3.8.7
+
+## 3.9.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.6
+
+## 3.9.5
+
+### Patch Changes
+
+- 282f1c0: Use the current invocation deadline when waiting for database pool idle timers.
+
+## 3.9.4
+
+### Patch Changes
+
+- @vercel/oidc@3.8.5
+
+## 3.9.3
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/oidc@3.8.4
+
+## 3.9.2
+
+### Patch Changes
+
+- @vercel/oidc@3.8.3
+
+## 3.9.1
+
+### Patch Changes
+
+- d72826e: Prevented unit tests and generated outputs from changing Turborepo task inputs during CI, and removed the redundant affected Unit test retry.
+
+## 3.9.0
+
+### Minor Changes
+
+- 0b0a4a8: Add a `metric()` helper for reporting custom metrics from Vercel Functions.
+
+## 3.8.0
+
+### Minor Changes
+
+- 8fb6c4f: Adds getDeadline
+
+## 3.7.7
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc@3.8.2
+
+## 3.7.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.1
+
+## 3.7.5
+
+### Patch Changes
+
+- Updated dependencies [d29a8f9]
+  - @vercel/oidc@3.8.0
+
+## 3.7.4
+
+### Patch Changes
+
+- Updated dependencies [fb93ff6]
+  - @vercel/oidc@3.7.1
+
+## 3.7.3
+
+### Patch Changes
+
+- Updated dependencies [415fde0]
+  - @vercel/oidc@3.7.0
+
+## 3.7.2
+
+### Patch Changes
+
+- 071569d: Add a `maxPayload` option to `experimental_upgradeWebSocket()`, defaulting to 256 KiB.
+  - @vercel/oidc@3.6.2
+
+## 3.7.1
+
+### Patch Changes
+
+- a7f1f7c: Make `ws` an optional peer dependency
+
+## 3.7.0
+
+### Minor Changes
+
+- 3f3ef14: Add `experimental_upgradeWebSocket()` API
+
+## 3.6.3
+
+### Patch Changes
+
+- Updated dependencies [01cf6c2]
+  - @vercel/oidc@3.6.1
+
 ## 3.6.2
 
 ### Patch Changes

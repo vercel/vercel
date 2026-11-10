@@ -3,7 +3,24 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import apiKeys from './api-keys';
-import { aiGatewayCommand, apiKeysSubcommand } from './command';
+import budgets from './budgets';
+import rules from './rules';
+import virtualModels from './virtual-models';
+import codingAgents from './coding-agents';
+import setup from './coding-agents-setup';
+import models from './models';
+import leaderboard from './leaderboard';
+import {
+  aiGatewayCommand,
+  apiKeysSubcommand,
+  budgetsSubcommand,
+  rulesSubcommand,
+  virtualModelsSubcommand,
+  codingAgentsSubcommand,
+  setupSubcommand,
+  modelsSubcommand,
+  leaderboardSubcommand,
+} from './command';
 import { help } from '../help';
 import { getCommandAliases } from '..';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -12,6 +29,13 @@ import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
   'api-keys': getCommandAliases(apiKeysSubcommand),
+  budgets: getCommandAliases(budgetsSubcommand),
+  rules: getCommandAliases(rulesSubcommand),
+  'virtual-models': getCommandAliases(virtualModelsSubcommand),
+  'coding-agents': getCommandAliases(codingAgentsSubcommand),
+  setup: getCommandAliases(setupSubcommand),
+  models: getCommandAliases(modelsSubcommand),
+  leaderboard: getCommandAliases(leaderboardSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -23,7 +47,7 @@ export default async function main(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new AiGatewayTelemetryClient({
@@ -32,7 +56,7 @@ export default async function main(client: Client) {
     },
   });
 
-  const { subcommand, subcommandOriginal } = getSubcommand(
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
     parsedArgs.args.slice(1),
     COMMAND_CONFIG
   );
@@ -41,25 +65,65 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('ai-gateway');
-    output.print(help(aiGatewayCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(aiGatewayCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   switch (subcommand) {
     case 'api-keys':
       telemetry.trackCliSubcommandApiKeys(subcommandOriginal);
       return apiKeys(client);
+    case 'budgets':
+      telemetry.trackCliSubcommandBudgets(subcommandOriginal);
+      return budgets(client);
+    case 'rules':
+      telemetry.trackCliSubcommandRules(subcommandOriginal);
+      return rules(client);
+    case 'virtual-models':
+      telemetry.trackCliSubcommandVirtualModels(subcommandOriginal);
+      return virtualModels(client);
+    case 'coding-agents':
+      telemetry.trackCliSubcommandCodingAgents(subcommandOriginal);
+      return codingAgents(client);
+    case 'setup':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('ai-gateway', subcommandOriginal);
+        output.print(
+          help(setupSubcommand, {
+            stream: client.stderr,
+            parent: aiGatewayCommand,
+            columns: client.stderr.columns,
+          })
+        );
+        return 0;
+      }
+      telemetry.trackCliSubcommandSetup(subcommandOriginal);
+      return setup(client, args);
+    case 'models':
+      telemetry.trackCliSubcommandModels(subcommandOriginal);
+      return models(client);
+    case 'leaderboard':
+      telemetry.trackCliSubcommandLeaderboard(subcommandOriginal);
+      return leaderboard(client);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway', subcommandOriginal);
         output.print(
-          help(aiGatewayCommand, { columns: client.stderr.columns })
+          help(aiGatewayCommand, {
+            stream: client.stderr,
+            columns: client.stderr.columns,
+          })
         );
-        return 2;
+        return 0;
       }
       output.error(
         'Please specify a subcommand. Run `vercel ai-gateway --help` for usage information.'
       );
-      return 1;
+      return 2;
   }
 }

@@ -1,6 +1,8 @@
 import { TelemetryClient } from '../..';
 import type { blobCommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
+export { BlobPresignTelemetryClient } from './presign';
+export { BlobSignedTokenTelemetryClient } from './signed-token';
 
 export class BlobTelemetryClient
   extends TelemetryClient
@@ -27,9 +29,9 @@ export class BlobTelemetryClient
     });
   }
 
-  trackCliSubcommandDel(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'del',
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -37,6 +39,27 @@ export class BlobTelemetryClient
   trackCliSubcommandCopy(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'copy',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPutImage(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'put-image',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSignedToken(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'signed-token',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPresign(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'presign',
       value: actual,
     });
   }
@@ -94,6 +117,16 @@ export class BlobTelemetryClient
     }
   }
 
+  trackCliOptionStore(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: '--store',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionStoreId(value: string | undefined) {
     if (value) {
       this.trackCliOption({

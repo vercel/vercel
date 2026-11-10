@@ -1,10 +1,10 @@
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import chalk from 'chalk';
 import deepEqual from 'fast-deep-equal';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
 import { updateFlag } from '../../util/flags/update-flag';
@@ -18,8 +18,9 @@ import {
   resolveFlagSplit,
   type ResolvedFlagSplit,
 } from '../../util/flags/split';
+import { canPrompt } from '../../util/can-prompt';
 import { formatFlagBucketingBaseSelector } from '../../util/flags/bucketing-base';
-import { canPrompt } from '../../util/flags/can-prompt';
+import { isBucketingAttribute } from '../../util/flags/attribute-types';
 import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import type {
   Flag,
@@ -29,6 +30,7 @@ import type {
 import output from '../../output-manager';
 import { FlagsSplitTelemetryClient } from '../../util/telemetry/commands/flags/split';
 import { splitSubcommand } from './command';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function split(
   client: Client,
@@ -46,7 +48,7 @@ export default async function split(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -62,16 +64,18 @@ export default async function split(
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
   );
+  const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to split');
     output.log(
-      `Example: ${getCommandName('flags split my-feature --environment production --by user.userId --weight off=95 --weight on=5')}`
+      `Example: ${getCommandName('flags split my-feature --environment production --by user.userId --weight false=95 --weight true=5')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionBy(baseSelector);
   telemetryClient.trackCliOptionWeight(
@@ -80,12 +84,12 @@ export default async function split(
   telemetryClient.trackCliOptionDefaultVariant(defaultVariantSelector);
   telemetryClient.trackCliOptionMessage(message);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -103,12 +107,7 @@ export default async function split(
     ]);
     output.stopSpinner();
 
-    if (flag.state === 'archived') {
-      output.error(
-        `Flag ${chalk.bold(flag.slug)} is archived and cannot be split`
-      );
-      return 1;
-    }
+    logArchivedFlagNotice(flag);
 
     const selectedEnvironment = await resolveFlagEnvironment(
       client,
@@ -159,7 +158,10 @@ export default async function split(
       baseSelector: resolvedBaseSelector,
       weightInputs: resolvedWeightInputs,
       defaultVariantSelector: resolvedDefaultVariantSelector,
-      currentOutcome: envConfig.fallthrough,
+      currentOutcome:
+        envConfig.fallthrough.type === 'experiment'
+          ? undefined
+          : envConfig.fallthrough,
     });
     const nextEnvironmentConfig = buildOutcomeEnvConfig(envConfig, {
       outcome: splitConfig.outcome,
@@ -233,7 +235,7 @@ async function resolveBaseSelector(
   }
 
   const choices = settings.entities.flatMap(entity =>
-    entity.attributes.map(attribute => ({
+    entity.attributes.filter(isBucketingAttribute).map(attribute => ({
       name: `${entity.label} › ${attribute.key}`,
       value: `${entity.kind}.${attribute.key}`,
     }))

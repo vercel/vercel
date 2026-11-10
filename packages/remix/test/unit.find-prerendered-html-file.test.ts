@@ -150,13 +150,32 @@ describe('react-router runtime route resolution with prerendered index', () => {
       })
     ).toBe('ssr-function');
   });
+});
 
-  it('regression: prerendered index without SSR catch-all served HTML for `/__manifest`', () => {
-    // Mirrors the broken CLI >=54.2.0 behavior from CICD-2715.
+function getSimulatedCatchAllDest(hasReactRouterIndexFunction: boolean) {
+  return hasReactRouterIndexFunction ? getReactRouterCatchAllDest() : '/';
+}
+
+describe('react-router SPA build output', () => {
+  const staticFiles = new Set(['index.html', 'assets/app.js']);
+
+  function simulateSpaBuildOutput() {
+    return {
+      catchAllDest: getSimulatedCatchAllDest(false),
+    };
+  }
+
+  it('routes the catch-all through `/` when no index SSR function exists', () => {
+    const { catchAllDest } = simulateSpaBuildOutput();
+    expect(catchAllDest).toBe('/');
+  });
+
+  it('serves `index.html` for SPA subroute refreshes', () => {
+    const { catchAllDest } = simulateSpaBuildOutput();
     expect(
-      resolveReactRouterRequest('/__manifest', {
-        prerenderRewrites: [getPrerenderDocumentRewrite('about', 'about.html')],
-        catchAllDest: '/',
+      resolveReactRouterRequest('/dashboard/settings', {
+        prerenderRewrites: [],
+        catchAllDest,
         hasIndexSsrFunction: false,
         staticFiles,
       })
@@ -220,6 +239,7 @@ describe('react-router prerender build output', () => {
     const dataAssignments: { dataPath: string; kind: 'function' }[] = [];
     const prerenderRewrites: { src: string; dest: string }[] = [];
     const dynamicRules: { src: string; dest: string }[] = [];
+    let hasReactRouterIndexFunction = false;
 
     for (const route of Object.values(routes)) {
       const { path, rePath } = getPathFromRoute(route, routes);
@@ -235,6 +255,9 @@ describe('react-router prerender build output', () => {
       }
 
       assignments.push({ kind: 'function', path });
+      if (path === 'index') {
+        hasReactRouterIndexFunction = true;
+      }
       for (const dataPath of getReactRouterDataPaths(path)) {
         if (!staticFileKeys.has(dataPath)) {
           dataAssignments.push({ dataPath, kind: 'function' });
@@ -255,7 +278,7 @@ describe('react-router prerender build output', () => {
       dataAssignments,
       prerenderRewrites,
       dynamicRules,
-      catchAllDest: getReactRouterCatchAllDest(),
+      catchAllDest: getSimulatedCatchAllDest(hasReactRouterIndexFunction),
     };
   }
 

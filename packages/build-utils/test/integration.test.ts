@@ -9,6 +9,9 @@ import { expect, it, vi } from 'vitest';
 vi.setConfig({ testTimeout: 4 * 60 * 1000 });
 
 const fixturesPath = path.resolve(__dirname, 'fixtures');
+const groupCount = 4;
+const group = process.env.BUILD_UTILS_E2E_GROUP;
+const groupIndex = group ? Number(group) - 1 : undefined;
 
 // Fixtures that have separate tests and should be skipped in the loop
 const skipFixtures: string[] = [
@@ -30,36 +33,34 @@ const skipFixtures: string[] = [
   '46-yarn-dynamic-require',
 ];
 
-for (const fixture of fs.readdirSync(fixturesPath)) {
-  if (skipFixtures.includes(fixture)) {
-    continue;
-  }
+const deploymentTests = fs
+  .readdirSync(fixturesPath)
+  .filter(fixture => !skipFixtures.includes(fixture))
+  .map(fixture => ({ fixture, fixturePath: path.join(fixturesPath, fixture) }));
 
-  it(`Should build "${fixture}"`, async () => {
-    await expect(
-      testDeployment(path.join(fixturesPath, fixture))
-    ).resolves.toBeDefined();
-  });
-}
-
-// few foreign tests
-
-const buildersToTestWith = ['node'];
-
-for (const builder of buildersToTestWith) {
-  const fixturesPath2 = path.resolve(
+// Test a few fixtures owned by other builders as well.
+for (const builder of ['node']) {
+  const builderFixturesPath = path.resolve(
     __dirname,
     `../../${builder}/test/fixtures`
   );
 
-  for (const fixture of fs.readdirSync(fixturesPath2)) {
-    // don't run all foreign fixtures, just some
+  for (const fixture of fs.readdirSync(builderFixturesPath)) {
     if (['01-cowsay', '01-cache-headers', '03-env-vars'].includes(fixture)) {
-      it(`Should build "${builder}/${fixture}"`, async () => {
-        await expect(
-          testDeployment(path.join(fixturesPath2, fixture))
-        ).resolves.toBeDefined();
+      deploymentTests.push({
+        fixture: `${builder}/${fixture}`,
+        fixturePath: path.join(builderFixturesPath, fixture),
       });
     }
   }
+}
+
+for (const [index, { fixture, fixturePath }] of deploymentTests.entries()) {
+  if (groupIndex !== undefined && index % groupCount !== groupIndex) {
+    continue;
+  }
+
+  it(`Should build "${fixture}"`, async () => {
+    await expect(testDeployment(fixturePath)).resolves.toBeDefined();
+  });
 }

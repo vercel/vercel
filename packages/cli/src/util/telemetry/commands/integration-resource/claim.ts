@@ -26,4 +26,10 @@ export class IntegrationResourceClaimTelemetryClient
       this.trackCliFlag('no-wait');
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

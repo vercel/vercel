@@ -1,12 +1,13 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { addSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   parsePosition,
   offerAutoPromote,
+  withGlobalFlags,
 } from './shared';
 import addRoute from '../../util/routes/add-route';
 import getRouteVersions from '../../util/routes/get-route-versions';
@@ -23,10 +24,8 @@ import {
 } from '../../util/routes/ai-transform';
 import { runInteractiveEditLoop } from './edit-interactive';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import { RoutesAddTelemetryClient } from '../../util/telemetry/commands/routes';
 import {
   MAX_NAME_LENGTH,
@@ -50,11 +49,7 @@ import type {
   SrcSyntax,
   RoutePosition,
 } from '../../util/routes/types';
-
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
+import { warnDeprecatedInput } from '../../util/warn-deprecated-subcommand';
 
 /**
  * Shell-quote a token if it contains spaces or special chars.
@@ -127,7 +122,11 @@ export default async function add(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, addSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -141,6 +140,7 @@ export default async function add(client: Client, argv: string[]) {
   });
 
   telemetry.trackCliFlagYes(skipPrompts);
+  telemetry.trackCliFlagNoEnable(flags['--no-enable'] as boolean | undefined);
   telemetry.trackCliFlagDisabled(flags['--disabled'] as boolean | undefined);
   telemetry.trackCliArgumentName(args[0]);
   telemetry.trackCliOptionSrc(flags['--src'] as string | undefined);
@@ -185,6 +185,10 @@ export default async function add(client: Client, argv: string[]) {
   telemetry.trackCliOptionMissing(flags['--missing'] as [string] | undefined);
   telemetry.trackCliOptionAi(flags['--ai'] as string | undefined);
 
+  if (flags['--disabled']) {
+    warnDeprecatedInput(client, '--disabled', '--no-enable');
+  }
+
   // --- AI generation mode ---
   const aiPrompt = flags['--ai'] as string | undefined;
 
@@ -199,7 +203,7 @@ export default async function add(client: Client, argv: string[]) {
         status: AGENT_STATUS.ERROR,
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message:
-          'In non-interactive mode pass either full route flags (name, --src, --action, --dest, --yes) or --ai <description> with --yes. For --src use a URL path pattern that starts with a forward slash / (e.g. /about, /api/:path*). With --src-syntax regex you may use a regex such as ^/api/.*. Run vercel routes add --help for options.',
+          'In non-interactive mode pass either full route options (name, --src, --action, --dest, --yes) or --ai <description> with --yes. For --src use a URL path pattern that starts with a forward slash / (e.g. /about, /api/:path*). With --src-syntax regex you may use a regex such as ^/api/.*. Run vercel routes add --help for options.',
         next: [
           {
             command: withGlobalFlags(
@@ -213,9 +217,9 @@ export default async function add(client: Client, argv: string[]) {
             when: 'add missing --src/--dest (or other placeholders) to this command',
           },
         ],
-        hint: 'Requires a CLI with the routes command. --src is a URL path: leading character must be / (forward slash). --ai --yes is non-interactive when the API returns a route; if it fails twice, use full flags or rephrase.',
+        hint: 'Requires a CLI with the routes command. --src is a URL path: leading character must be / (forward slash). --ai --yes is non-interactive when the API returns a route; if it fails twice, use full options or rephrase.',
       },
-      1
+      2
     );
   }
 
@@ -239,6 +243,7 @@ export default async function add(client: Client, argv: string[]) {
       '--append-request-query',
       '--delete-request-query',
       '--description',
+      '--no-enable',
       '--disabled',
       '--position',
     ];
@@ -291,13 +296,13 @@ export default async function add(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
-      `Route name is required when using --yes. Usage: ${getCommandName('routes add "Route Name" --src "/path" --action rewrite --dest "/destination" --yes')}`
+      `Route name is required when using --yes. Usage: ${withGlobalFlags(client, 'routes add "Route Name" --src "/path" --action rewrite --dest "/destination" --yes')}`
     );
-    return 1;
+    return 2;
   } else {
     // Offer AI or manual mode when fully interactive (no args, no flags)
     const hasAnyFlags =
@@ -375,13 +380,13 @@ export default async function add(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
-      `Source path is required when using --yes. Usage: ${getCommandName('routes add "Name" --src "/path" --action rewrite --dest "/dest" --yes')}`
+      `Source path is required when using --yes. Usage: ${withGlobalFlags(client, 'routes add "Name" --src "/path" --action rewrite --dest "/dest" --yes')}`
     );
-    return 1;
+    return 2;
   } else {
     const syntaxChoice = await client.input.select({
       message: 'How do you want to specify the path?',
@@ -434,13 +439,13 @@ export default async function add(client: Client, argv: string[]) {
           ],
           hint: 'Route source is matched against request URL paths; they always begin with /.',
         },
-        1
+        2
       );
     }
     output.error(
       'Path must start with / (forward slash). Use --src-syntax regex for regex patterns.'
     );
-    return 1;
+    return 2;
   }
 
   // --- Validate --action flag (flag-based mode) ---
@@ -463,15 +468,15 @@ export default async function add(client: Client, argv: string[]) {
           next: [
             {
               command: buildRoutesAddFullFlagsSuggestion(client, parsed),
-              when: 'fix flags per message (e.g. add --dest for rewrite, --status for redirect)',
+              when: 'fix options per message (e.g. add --dest for rewrite, --status for redirect)',
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(actionError);
-    return 1;
+    return 2;
   }
 
   // Collect transforms from flags
@@ -502,7 +507,7 @@ export default async function add(client: Client, argv: string[]) {
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.MISSING_ARGUMENTS,
           message:
-            'In non-interactive mode at least one action is required. Use --action with --dest or --status, or header/transform flags.',
+            'In non-interactive mode at least one action is required. Use --action with --dest or --status, or header/transform options.',
           next: [
             {
               command: buildRoutesAddFullFlagsSuggestion(client, parsed),
@@ -510,13 +515,13 @@ export default async function add(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
-      'At least one action is required when using --yes. Use --action with --dest/--status, or header/transform flags.'
+      'At least one action is required when using --yes. Use --action with --dest/--status, or header/transform options.'
     );
-    return 1;
+    return 2;
   }
 
   // --- Interactive mode: conditions first, then action selection loop ---
@@ -713,7 +718,7 @@ export default async function add(client: Client, argv: string[]) {
   const routeInput: AddRouteInput = {
     name,
     description,
-    enabled: !flags['--disabled'],
+    enabled: !(flags['--no-enable'] || flags['--disabled']),
     srcSyntax: syntax,
     route: {
       src,
@@ -727,7 +732,7 @@ export default async function add(client: Client, argv: string[]) {
   };
 
   // Populate env fields for $VAR references
-  populateRouteEnv(routeInput.route);
+  populateRouteEnv(routeInput.route, routeInput.srcSyntax);
 
   // --- Create the route ---
   const addStamp = stamp();
@@ -845,7 +850,7 @@ export default async function add(client: Client, argv: string[]) {
             'Route creation failed for this project. See hint for next steps.',
           hint:
             error.message ||
-            'Use `vercel routes list --diff` to inspect staged routes, then adjust flags and retry.',
+            'Use `vercel routes list --diff` to inspect staged routes, then adjust options and retry.',
           next: [
             {
               command: withGlobalFlags(client, 'routes list --diff'),
@@ -939,7 +944,7 @@ async function handleAIAdd(
           reason: AGENT_REASON.ROUTE_GENERATION_FAILED,
           message:
             errorMessage ||
-            'Could not generate a route after retry. Rephrase --ai description or use full route flags.',
+            'Could not generate a route after retry. Rephrase --ai description or use full route options.',
           next: [
             {
               command: withGlobalFlags(
@@ -955,7 +960,7 @@ async function handleAIAdd(
                     client,
                     'routes add <name> --src <path> --action rewrite --dest <dest> --yes'
                   ),
-              when: 'add with explicit flags if AI keeps failing',
+              when: 'add with explicit options if AI keeps failing',
             },
           ],
           hint: 'Non-interactive --ai runs up to two generation attempts then exits with JSON.',
@@ -1008,7 +1013,7 @@ async function handleAIAdd(
           status: AGENT_STATUS.ERROR,
           reason: AGENT_REASON.CONFIRMATION_REQUIRED,
           message:
-            'Route creation from AI preview requires a TTY to confirm, or use full flags with --yes non-interactively.',
+            'Route creation from AI preview requires a TTY to confirm, or use full options with --yes non-interactively.',
           next: [
             {
               command: parsedForSuggestion
@@ -1025,7 +1030,7 @@ async function handleAIAdd(
       );
     }
     output.error(
-      `Cannot interactively confirm route creation in a non-TTY environment. Use full route flags with ${getCommandName('routes add <name> --src ... --yes')}, or run in a TTY.`
+      `Cannot interactively confirm route creation in a non-TTY environment. Use full route options with ${withGlobalFlags(client, 'routes add <name> --src ... --yes')}, or run in a TTY.`
     );
     return 1;
   }
@@ -1113,7 +1118,7 @@ async function handleAIAdd(
       };
 
       await runInteractiveEditLoop(client, tempRule);
-      populateRouteEnv(tempRule.route);
+      populateRouteEnv(tempRule.route, tempRule.srcSyntax);
 
       const addStamp = stamp();
       output.spinner(`Adding route "${tempRule.name}"`);
@@ -1173,7 +1178,7 @@ async function createFromGenerated(
   skipPrompts: boolean | undefined
 ): Promise<number> {
   const routeInput = generatedRouteToAddInput(generated);
-  populateRouteEnv(routeInput.route);
+  populateRouteEnv(routeInput.route, routeInput.srcSyntax);
 
   const addStamp = stamp();
   output.spinner(`Adding route "${routeInput.name}"`);
@@ -1242,7 +1247,7 @@ async function createFromGenerated(
             'Route creation failed for this project. See hint for next steps.',
           hint:
             error.message ||
-            'Use `vercel routes list --diff` to inspect staged routes, then adjust flags and retry.',
+            'Use `vercel routes list --diff` to inspect staged routes, then adjust options and retry.',
           next: [
             {
               command: withGlobalFlags(client, 'routes list --diff'),

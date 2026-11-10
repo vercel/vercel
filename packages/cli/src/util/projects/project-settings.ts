@@ -17,6 +17,7 @@ export type ProjectLinkAndSettings = Partial<ProjectLink> & {
     rootDirectory: Project['rootDirectory'];
     framework: Project['framework'];
     nodeVersion: Project['nodeVersion'];
+    vercelFlags?: Project['vercelFlags'];
     analyticsId?: string;
   };
 };
@@ -54,6 +55,7 @@ export async function writeProjectSettings(
       rootDirectory: project.rootDirectory,
       directoryListing: project.directoryListing,
       nodeVersion: project.nodeVersion,
+      vercelFlags: project.vercelFlags,
       analyticsId,
     },
   };

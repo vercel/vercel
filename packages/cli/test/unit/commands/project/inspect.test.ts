@@ -1,5 +1,8 @@
 import assert from 'node:assert';
-import { describe, it, expect } from 'vitest';
+import { access, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, it, expect, vi } from 'vitest';
 import { frameworkList } from '@vercel/frameworks';
 import createLineIterator from 'line-async-iterator';
 import projects from '../../../../src/commands/project';
@@ -7,6 +10,33 @@ import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { client } from '../../../mocks/client';
+
+function expectedProjectInspectJson(
+  project: Partial<typeof defaultProject>,
+  team: { name: string; slug: string }
+) {
+  return {
+    id: project.id,
+    name: project.name,
+    owner: {
+      name: team.name,
+      slug: team.slug,
+    },
+    createdAt: project.createdAt,
+    rootDirectory: project.rootDirectory ?? null,
+    nodeVersion: project.nodeVersion ?? null,
+    framework: project.framework ?? null,
+    buildCommand: project.buildCommand ?? null,
+    outputDirectory: project.outputDirectory ?? null,
+    installCommand: project.installCommand ?? null,
+    sandbox: project.sandbox
+      ? {
+          region: project.sandbox.region ?? null,
+          failoverRegions: project.sandbox.failoverRegions ?? [],
+        }
+      : null,
+  };
+}
 
 describe('inspect', () => {
   describe('invalid argument', () => {
@@ -134,5 +164,216 @@ describe('inspect', () => {
     // empty line
     line = await lines.next();
     expect(line.value).toEqual('');
+
+    expect(client.stderr.getFullOutput()).not.toContain('Sandbox');
+    expect(client.stdout.getFullOutput()).toBe('');
+  });
+
+  it('outputs a curated JSON view with --format json', async () => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    const { project } = useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+      framework: 'nextjs',
+      sandbox: { region: 'sfo1', failoverRegions: ['cle1'] },
+      link: {
+        type: 'github',
+        repo: 'owner/private-repo',
+        repoId: 1010,
+        org: 'owner',
+        gitCredentialId: 'credential-secret',
+        sourceless: true,
+        createdAt: 1,
+        updatedAt: 1,
+        deployHooks: [
+          {
+            id: 'hook_secret',
+            name: 'private-hook',
+            ref: 'main',
+            url: 'https://example.com/hook-secret',
+            createdAt: 1,
+          },
+        ],
+      },
+    });
+
+    client.setArgv('project', 'inspect', project.name!, '--format', 'json');
+    const exitCode = await projects(client);
+
+    expect(exitCode).toEqual(0);
+    expect(client.stderr.getFullOutput()).toBe('');
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual(
+      expectedProjectInspectJson(project, team)
+    );
+    expect(client.stdout.getFullOutput()).not.toContain('deployHooks');
+    expect(client.stdout.getFullOutput()).not.toContain('credential-secret');
+    expect(client.stdout.getFullOutput()).not.toContain('private-hook');
+    expect(client.stdout.getFullOutput()).not.toContain('hook-secret');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:inspect',
+        value: 'inspect',
+      },
+      {
+        key: 'argument:name',
+        value: '[REDACTED]',
+      },
+      {
+        key: 'option:format',
+        value: 'json',
+      },
+    ]);
+  });
+
+  it.each([
+    [
+      '--format=json',
+      {
+        key: 'option:format',
+        value: 'json',
+      },
+    ],
+    [
+      '--json',
+      {
+        key: 'flag:json',
+        value: 'TRUE',
+      },
+    ],
+  ])('outputs the same JSON view with %s', async (outputFlag, telemetry) => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    const { project } = useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+    });
+
+    client.setArgv('project', 'inspect', project.name!, outputFlag);
+    const exitCode = await projects(client);
+
+    expect(exitCode).toEqual(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual(
+      expectedProjectInspectJson(project, team)
+    );
+    expect(client.stderr.getFullOutput()).toBe('');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:inspect',
+        value: 'inspect',
+      },
+      {
+        key: 'argument:name',
+        value: '[REDACTED]',
+      },
+      telemetry,
+    ]);
+  });
+
+  it('rejects an invalid format before resolving the project', async () => {
+    useUser();
+    const fetchSpy = vi.spyOn(client, 'fetch');
+
+    client.setArgv('project', 'inspect', 'test_project', '--format', 'yaml');
+    const exitCode = await projects(client);
+
+    expect(exitCode).toEqual(2);
+    await expect(client.stderr).toOutput('Invalid output format: "yaml"');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('should show the configured sandbox regions', async () => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    const { project } = useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+      sandbox: { region: 'sfo1', failoverRegions: ['cle1', 'iad1'] },
+    });
+
+    client.setArgv('project', 'inspect', project.name!);
+    await projects(client);
+
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Sandbox');
+    expect(output).toMatch(/Region\s+sfo1/);
+    expect(output).toMatch(/Failover Regions\s+cle1, iad1/);
+  });
+
+  it('should show the sandbox section with failover regions only', async () => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    const { project } = useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+      sandbox: { failoverRegions: ['cle1'] },
+    });
+
+    client.setArgv('project', 'inspect', project.name!);
+    await projects(client);
+
+    const output = client.stderr.getFullOutput();
+    expect(output).toContain('Sandbox');
+    expect(output).toMatch(/Region\s+Auto/);
+    expect(output).toMatch(/Failover Regions\s+cle1/);
+  });
+
+  it('does not auto-link a matching project in non-interactive mode', async () => {
+    useUser();
+    const teams = useTeams('team_dummy');
+    assert(Array.isArray(teams));
+    const [team] = teams;
+    useProject({
+      ...defaultProject,
+      name: 'test_project',
+      accountId: team.id,
+    });
+
+    const temporaryDirectory = await mkdtemp(
+      join(tmpdir(), 'vc-cli-project-inspect-')
+    );
+    const projectDirectory = join(temporaryDirectory, 'test_project');
+    await mkdir(projectDirectory);
+    const previousCwd = client.cwd;
+    client.cwd = projectDirectory;
+    client.nonInteractive = true;
+    client.setArgv('project', 'inspect', '--non-interactive');
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    try {
+      await expect(projects(client)).rejects.toThrow('exit:1');
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'link_required',
+        message: expect.stringMatching(/linked|project name/i),
+      });
+      expect(
+        payload.next?.some((next: { command: string }) =>
+          /project inspect <name>/.test(next.command)
+        )
+      ).toBe(true);
+      await expect(
+        access(join(projectDirectory, '.vercel'))
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      client.cwd = previousCwd;
+      await rm(temporaryDirectory, { recursive: true, force: true });
+    }
   });
 });

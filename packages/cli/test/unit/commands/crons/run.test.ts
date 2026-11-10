@@ -66,7 +66,7 @@ describe('crons run', () => {
     it('prints help and tracks telemetry', async () => {
       client.setArgv('crons', 'run', '--help');
       const exitCode = await crons(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'crons:run' },
       ]);
@@ -234,7 +234,7 @@ describe('crons run', () => {
       client.nonInteractive = true;
 
       const exitCode = await crons(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('required in non-interactive');
     });
   });
@@ -256,6 +256,34 @@ describe('crons run', () => {
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:run', value: 'run' },
+        { key: 'argument:path', value: '[REDACTED]' },
+      ]);
+    });
+
+    it('tracks project option and passes it to project resolution', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons([
+        {
+          host: 'example.vercel.app',
+          path: '/api/cron',
+          schedule: '0 * * * *',
+        },
+      ]);
+      mockRunEndpoint();
+
+      client.setArgv('crons', 'run', '/api/cron', '--project', 'crons-project');
+      const exitCode = await crons(client);
+
+      expect(exitCode).toEqual(0);
+      expect(mockedGetLinkedProject).toHaveBeenCalledWith(client, {
+        cwd: client.cwd,
+        projectName: 'crons-project',
+        projectNameIsExplicit: true,
+        scopeIsExplicit: false,
+      });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:run', value: 'run' },
+        { key: 'option:project', value: '[REDACTED]' },
         { key: 'argument:path', value: '[REDACTED]' },
       ]);
     });

@@ -1,13 +1,17 @@
 import { frameworkList } from '@vercel/frameworks';
 import type {
-  ExperimentalService,
+  DetectedDaemon,
   ServiceDetectionError,
-} from '@vercel/fs-detectors';
+} from '@vercel-internals/service-topology';
 import {
   getServiceQueueTopics,
+  isExperimentalServiceV2,
   isQueueTriggeredService,
   isScheduleTriggeredService,
   isWorkflowTriggeredService,
+  type ExperimentalService,
+  type ExperimentalServiceV2,
+  type Service,
 } from '@vercel/build-utils';
 import output from '../../output-manager';
 import table from '../output/table';
@@ -102,9 +106,16 @@ function getServiceDescriptionInfo(
     return { label: typeLabel, colorFn: typeColorFn };
   }
 
+  return getFrameworkRuntimeBuilderInfo(service);
+}
+
+function getFrameworkRuntimeBuilderInfo(service: {
+  framework?: string;
+  runtime?: string;
+  builder?: { use?: string };
+}): ServiceDescriptionInfo {
   const frameworkName = getFrameworkName(service.framework);
 
-  // Show the most detailed info: framework > runtime > builder
   if (frameworkName && service.framework) {
     const colorFn = frameworkColors[service.framework] || chalk.cyan;
     return { label: frameworkName, colorFn };
@@ -138,16 +149,78 @@ function getServiceTarget(service: ExperimentalService): string {
 }
 
 /**
- * Output format:
+ * Output format (`experimentalServices`):
  * Detected services:
  *   frontend          [Next.js]   →  /
  *   api               [python]    →  /api/*
  *   cleanup           [node]      →  schedule: 0 0 * * *
  *   processor         [node]      →  topics: jobs
+ *
+ * Output format (`experimentalServicesV2`): services are internal route/output
+ * targets reachable via top-level service rewrites (not a public route prefix),
+ * so only the name and framework/runtime are shown.
+ * Detected services:
+ *   my_frontend       [Next.js]
+ *   my_backend        [python]
+ *
+ * `nameWidth` pads the name column, so this table lines up with the daemons
+ * table printed after it (see `getNameColumnWidth`).
  */
-export function displayDetectedServices(services: ExperimentalService[]): void {
+export function displayDetectedServices(
+  services: Service[],
+  nameWidth = 0
+): void {
   output.print(`Detected services:\n`);
 
+  // `experimentalServices` and `experimentalServicesV2` are mutually exclusive
+  const rows: string[][] = services.some(isExperimentalServiceV2)
+    ? buildServiceRowsV2(services.filter(isExperimentalServiceV2), nameWidth)
+    : buildServiceRowsV1(services as ExperimentalService[], nameWidth);
+
+  const tableOutput = table(rows, { align: ['l', 'l', 'l', 'l'], hsep: 2 });
+  output.print(`${tableOutput}\n`);
+}
+
+/**
+ * Output format (`vercel.json#daemons`), the entrypoint in the slot where
+ * services show their framework or runtime:
+ * Detected daemons:
+ *   worker            [Dockerfile]
+ */
+export function displayDetectedDaemons(
+  daemons: DetectedDaemon[],
+  nameWidth = 0
+): void {
+  output.print(`Detected daemons:\n`);
+
+  const rows = daemons.map(daemon => [
+    formatName(daemon.name, nameWidth),
+    daemon.entrypoint
+      ? chalk.blue(`[${daemon.entrypoint}]`)
+      : chalk.dim('[unknown]'),
+  ]);
+
+  const tableOutput = table(rows, { align: ['l', 'l'], hsep: 2 });
+  output.print(`${tableOutput}\n`);
+}
+
+function formatName(name: string, nameWidth = 0): string {
+  return `• ${name}`.padEnd(nameWidth);
+}
+
+/**
+ * The name-column width that fits all of `names`. Pass it to
+ * `displayDetectedServices` and `displayDetectedDaemons` so their separate
+ * tables line up.
+ */
+export function getNameColumnWidth(names: string[]): number {
+  return Math.max(0, ...names.map(name => formatName(name).length));
+}
+
+function buildServiceRowsV1(
+  services: ExperimentalService[],
+  nameWidth: number
+): string[][] {
   const outputOrder: Record<string, number> = {
     web: 0,
     cron: 1,
@@ -158,27 +231,40 @@ export function displayDetectedServices(services: ExperimentalService[]): void {
     (a, b) => (outputOrder[a.type] ?? 3) - (outputOrder[b.type] ?? 3)
   );
 
-  const rows: string[][] = sorted.map(service => {
+  return sorted.map(service => {
     const descInfo = getServiceDescriptionInfo(service);
     const target = getServiceTarget(service);
 
     return [
-      `• ${service.name}`,
+      formatName(service.name, nameWidth),
       descInfo.colorFn(`[${descInfo.label}]`),
       chalk.dim('→'),
       target,
     ];
   });
+}
 
-  const tableOutput = table(rows, { align: ['l', 'l', 'l', 'l'], hsep: 2 });
-  output.print(`${tableOutput}\n`);
+function buildServiceRowsV2(
+  services: ExperimentalServiceV2[],
+  nameWidth: number
+): string[][] {
+  return services.map(service => {
+    const descInfo = getFrameworkRuntimeBuilderInfo(service);
+
+    return [
+      formatName(service.name, nameWidth),
+      descInfo.colorFn(`[${descInfo.label}]`),
+    ];
+  });
 }
 
 export function displayServicesConfigNote(
-  configFileName = 'vercel.json'
+  configFileName = 'vercel.json',
+  hasDaemons = false
 ): void {
+  const subject = hasDaemons ? 'Services and daemons' : 'Services';
   output.print(
-    `\n${chalk.dim(`Services are configured via ${configFileName}.`)}\n`
+    `\n${chalk.dim(`${subject} are configured via ${configFileName}.`)}\n`
   );
 }
 

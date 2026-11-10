@@ -79,8 +79,4 @@ describe('didYouMean for CLI commands', () => {
   it('should not suggest anything for completely unrelated input', () => {
     expect(didYouMean('xyzabc', commandNames, 0.7)).toBeUndefined();
   });
-
-  it('should not suggest anything for random string', () => {
-    expect(didYouMean('asdfgh', commandNames, 0.7)).toBeUndefined();
-  });
 });

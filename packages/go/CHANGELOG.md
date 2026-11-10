@@ -1,5 +1,382 @@
 # @vercel/go
 
+## 26.0.0
+
+### Minor Changes
+
+- 2a5ebec: Run container schedule commands through a schedules dispatcher added to the built image.
+
+### Patch Changes
+
+- b2a9eb5: Expand HTTP regression coverage for the standalone IPC proxy.
+- Updated dependencies [5f55ccc]
+- Updated dependencies [d0629bd]
+  - @vercel/build-utils@15.1.0
+
+## 25.0.2
+
+### Patch Changes
+
+- 2f0edaf: Report the runtime preset for services without a framework.
+- Updated dependencies [2f0edaf]
+  - @vercel/build-utils@15.0.2
+
+## 25.0.1
+
+### Patch Changes
+
+- Updated dependencies [1a379a3]
+  - @vercel/build-utils@15.0.1
+
+## 25.0.0
+
+### Patch Changes
+
+- 885a478: Extract shared Go IPC transport, request context handling and Go toolchain resolution without changing the server proxy lifecycle.
+- Updated dependencies [9b1b587]
+- Updated dependencies [fec2df1]
+- Updated dependencies [d123652]
+  - @vercel/build-utils@15.0.0
+
+## 24.0.0
+
+### Patch Changes
+
+- Updated dependencies [9abaa6d]
+- Updated dependencies [179d4ab]
+- Updated dependencies [d39dd61]
+- Updated dependencies [5aa1b58]
+  - @vercel/build-utils@14.23.0
+
+## 23.0.0
+
+### Patch Changes
+
+- Updated dependencies [a19979c]
+- Updated dependencies [a2e9f5d]
+  - @vercel/build-utils@14.22.0
+
+## 22.0.3
+
+### Patch Changes
+
+- Updated dependencies [bb42e81]
+  - @vercel/build-utils@14.21.3
+
+## 22.0.2
+
+### Patch Changes
+
+- Updated dependencies [cd68435]
+  - @vercel/build-utils@14.21.2
+
+## 22.0.1
+
+### Patch Changes
+
+- Updated dependencies [1336097]
+  - @vercel/build-utils@14.21.1
+
+## 22.0.0
+
+### Patch Changes
+
+- Updated dependencies [24a7e04]
+- Updated dependencies [7e396f7]
+  - @vercel/build-utils@14.21.0
+
+## 21.0.1
+
+### Patch Changes
+
+- Updated dependencies [42cc083]
+  - @vercel/build-utils@14.20.1
+
+## 21.0.0
+
+### Patch Changes
+
+- Updated dependencies [e041037]
+  - @vercel/build-utils@14.20.0
+
+## 20.0.0
+
+### Patch Changes
+
+- Updated dependencies [e58b37a]
+  - @vercel/build-utils@14.19.0
+
+## 19.0.0
+
+### Patch Changes
+
+- Updated dependencies [94f6cea]
+- Updated dependencies [3eeaad5]
+- Updated dependencies [8ac5320]
+  - @vercel/build-utils@14.18.0
+
+## 18.0.0
+
+### Patch Changes
+
+- Updated dependencies [28a7ab7]
+- Updated dependencies [28a7ab7]
+  - @vercel/build-utils@14.17.0
+
+## 17.0.0
+
+### Patch Changes
+
+- Updated dependencies [20c5940]
+  - @vercel/build-utils@14.16.0
+
+## 16.0.0
+
+### Patch Changes
+
+- Updated dependencies [a7ef28c]
+  - @vercel/build-utils@14.15.0
+
+## 15.0.0
+
+### Patch Changes
+
+- Updated dependencies [deb48cd]
+  - @vercel/build-utils@14.14.0
+
+## 14.0.2
+
+### Patch Changes
+
+- Updated dependencies [ff3d2f7]
+  - @vercel/build-utils@14.13.2
+
+## 14.0.1
+
+### Patch Changes
+
+- Updated dependencies [5082546]
+  - @vercel/build-utils@14.13.1
+
+## 14.0.0
+
+### Patch Changes
+
+- Updated dependencies [34b2c8e]
+  - @vercel/build-utils@14.13.0
+
+## 13.0.0
+
+### Patch Changes
+
+- Updated dependencies [6e68e60]
+  - @vercel/build-utils@14.12.0
+
+## 12.0.0
+
+### Patch Changes
+
+- Updated dependencies [888f59e]
+- Updated dependencies [7eb63c0]
+  - @vercel/build-utils@14.11.0
+
+## 11.0.2
+
+### Patch Changes
+
+- Updated dependencies [53a6086]
+  - @vercel/build-utils@14.10.2
+
+## 11.0.1
+
+### Patch Changes
+
+- Updated dependencies [f9d0e90]
+- Updated dependencies [8a277e4]
+- Updated dependencies [66e443e]
+- Updated dependencies [08b0be2]
+  - @vercel/build-utils@14.10.1
+
+## 11.0.0
+
+### Patch Changes
+
+- Updated dependencies [2a57243]
+- Updated dependencies [54a6d73]
+- Updated dependencies [3d16792]
+  - @vercel/build-utils@14.10.0
+
+## 10.1.1
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/build-utils@14.9.3
+
+## 10.1.0
+
+### Minor Changes
+
+- 1df8ab8: Fix Go toolchain selection and caching for services that share a `go.mod` above their root.
+
+### Patch Changes
+
+- Updated dependencies [b174f14]
+  - @vercel/build-utils@14.9.2
+
+## 10.0.1
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 10.0.0
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+
+## 9.0.0
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 7.0.1
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 7.0.0
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 6.0.1
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 6.0.0
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 5.0.1
+
+### Patch Changes
+
+- f880ce2: Install the Go toolchain atomically which will prevent torn installs from being mistaken for complete ones.
+- Updated dependencies [e5b0363]
+  - @vercel/build-utils@14.4.1
+
+## 5.0.0
+
+### Patch Changes
+
+- 90543c2: Serve standalone Go dev servers through the shared dev proxy instead of a
+  Go-compiled wrapper, so `vercel dev` no longer pays a second compile at startup.
+  Dev builds keep their symbols, use the newer of the newest supported Go
+  toolchain and the `go.mod` minimum, and remove cached executables after failed
+  startup attempts. Deployed builds are unchanged.
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 4.0.0
+
+### Patch Changes
+
+- 0d71a61: Declare `@vercel/build-utils` as a peer dependency provided by Vercel CLI so builders load correctly with strict dependency isolation, including pnpm global installs.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 3.11.0
+
+### Minor Changes
+
+- a7fc7e8: Expose the resolved rewrite destination as the request path observed by standalone Go servers, and warn affected Go projects about the behavior change.
+
+## 3.10.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 3.10.4
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
+## 3.10.3
+
+### Patch Changes
+
+- 5c33351: Go functions now always target the `provided.al2023` Lambda runtime. Previously the runtime was detected from the build host's `/etc/os-release`, so running `vercel build` on an Amazon Linux 2 machine emitted `provided.al2` and the resulting prebuilt deployment failed at deploy time.
+
+## 3.10.2
+
+### Patch Changes
+
+- 62a884e: Simplify isolated `services` and `experimentalServicesV2` runtime outputs by emitting their function at `index` instead of `_svc/<service-name>/index`.
+
+## 3.10.1
+
+### Patch Changes
+
+- 4b90a10: Route requests for named V2 standalone Go services to their internal function.
+
+## 3.10.0
+
+### Minor Changes
+
+- e6759d0: Add WebSocket upgrade support for standalone Go servers.
+
+## 3.9.2
+
+### Patch Changes
+
+- 2158ab6: [vc dev] Add support to `experimentalServicesV2` for bindings in `vc dev`
+
+## 3.9.1
+
+### Patch Changes
+
+- 94671a4: [go] Supervise the user server after startup in standalone server mode. If the user's server process exits after the `server-started` handshake, the bootstrap now reports an `unrecoverable-error` over IPC with the child's exit code, so the platform can recycle the instance instead of leaving it serving 502s while the health check still reports OK.
+- d4547af: Fix `vc dev` for standalone Go server mode:
+  - matching the real Go entrypoint when the framework preset's placeholder src does not exist
+  - serve all request paths
+  - keep a persistent dev server across requests instead of respawning `go run` per request, and wait for the server port to be ready instead of a fixed 2s window
+
+## 3.9.0
+
+### Minor Changes
+
+- 0c4ea01: Refactor: extract the standalone-server IPC proxy into a shared `@vercel-internals/ipc-proxy` package.
+
+  The proxy is now compiled once into prebuilt static binaries (shipped per-architecture) and reused by compiled runtimes, instead of being compiled at deploy time. No change to deployed behavior.
+
 ## 3.8.0
 
 ### Minor Changes

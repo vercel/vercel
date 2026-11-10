@@ -18,6 +18,7 @@ import {
   File,
   FlagDefinitions,
   Chain,
+  PrerenderInitialMetadata,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -51,6 +52,7 @@ import {
   LAMBDA_RESERVED_UNCOMPRESSED_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE,
   DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN,
+  DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE,
   INTERNAL_PAGES,
 } from './constants';
 import {
@@ -78,6 +80,37 @@ export function getMaxUncompressedLambdaSize(runtime: string): number {
   return runtime.startsWith('bun')
     ? DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE_BUN
     : DEFAULT_MAX_UNCOMPRESSED_LAMBDA_SIZE;
+}
+
+/**
+ * The uncompressed size ceiling for a lambda group: the higher large-function
+ * limit for large groups, otherwise the default per-runtime limit.
+ */
+export function getGroupMaxUncompressedLambdaSize(
+  runtime: string,
+  isLargeFunctions: boolean | undefined
+): number {
+  return isLargeFunctions
+    ? DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE
+    : getMaxUncompressedLambdaSize(runtime);
+}
+
+/**
+ * Default `NEXT_DEPLOYMENT_ID` for the build from `VERCEL_DEPLOYMENT_ID` when
+ * Skew Protection is enabled and the variable is not already set. The platform
+ * only injects it for `nextjs`-framework projects, missing e.g. services.
+ */
+export function getDefaultNextDeploymentId(
+  env: NodeJS.ProcessEnv
+): string | undefined {
+  if (
+    env.VERCEL_SKEW_PROTECTION_ENABLED === '1' &&
+    env.VERCEL_DEPLOYMENT_ID &&
+    !env.NEXT_DEPLOYMENT_ID
+  ) {
+    return env.VERCEL_DEPLOYMENT_ID;
+  }
+  return undefined;
 }
 
 const skipDefaultLocaleRewrite = Boolean(
@@ -217,7 +250,10 @@ function normalizePage(page: string): string {
   return page;
 }
 
-export type Redirect = Rewrite & {
+export type Redirect = Omit<Rewrite, 'destination'> & {
+  // Redirects can't target a service, so `destination` stays a plain string
+  // (unlike `Rewrite['destination']`, which is `string | ServiceDestination`).
+  destination: string;
   statusCode?: number;
   permanent?: boolean;
 };
@@ -1157,11 +1193,46 @@ export enum RenderingMode {
   PARTIALLY_STATIC = 'PARTIALLY_STATIC',
 }
 
+/**
+ * The prerender taxonomy fields as they appear on a v4 prerender-manifest
+ * entry. Next.js also emits `routeType` and `response`, but the platform
+ * consumes only `compute` and `htmlSize`, so the rest are deliberately left
+ * untyped and unread. Optional because older Next.js versions omit the
+ * taxonomy entirely.
+ */
+type RawPrerenderTaxonomy = {
+  compute?: PrerenderInitialMetadata['compute'];
+  htmlSize?: number;
+};
+
+/**
+ * Read the build-time serving metadata off a manifest entry. Absence is
+ * legitimate (`notFoundRoutes`, Pages Router `fallback: false`, older
+ * Next.js). The values are carried through verbatim — Next.js owns this
+ * vocabulary, and a compute mode it adds later must reach the platform
+ * rather than fail the build.
+ */
+function toInitialMetadata(
+  entry: RawPrerenderTaxonomy
+): PrerenderInitialMetadata | undefined {
+  const { compute, htmlSize } = entry;
+  if (!compute) {
+    return undefined;
+  }
+  return {
+    compute,
+    // Zero is a real shell size — a shell that postponed everything — so
+    // this tests for presence, not truthiness.
+    ...(htmlSize !== undefined ? { htmlSize } : {}),
+  };
+}
+
 export type NextPrerenderedRoutes = {
   bypassToken: string | null;
 
   staticRoutes: {
     [route: string]: {
+      initialMetadata?: PrerenderInitialMetadata;
       initialRevalidate: number | false;
       initialExpire?: number;
       dataRoute: string | null;
@@ -1177,6 +1248,7 @@ export type NextPrerenderedRoutes = {
 
   blockingFallbackRoutes: {
     [route: string]: {
+      initialMetadata?: PrerenderInitialMetadata;
       routeRegex: string;
       dataRoute: string | null;
       fallback: string | boolean | null;
@@ -1192,6 +1264,7 @@ export type NextPrerenderedRoutes = {
 
   fallbackRoutes: {
     [route: string]: {
+      initialMetadata?: PrerenderInitialMetadata;
       fallback: string;
       fallbackStatus?: number;
       fallbackHeaders?: Record<string, string>;
@@ -1216,6 +1289,7 @@ export type NextPrerenderedRoutes = {
    */
   omittedRoutes: {
     [route: string]: {
+      initialMetadata?: PrerenderInitialMetadata;
       routeRegex: string;
       dataRoute: string | null;
       dataRouteRegex: string | null;
@@ -1415,7 +1489,7 @@ export async function getPrerenderManifest(
     | {
         version: 4;
         routes: {
-          [route: string]: {
+          [route: string]: RawPrerenderTaxonomy & {
             initialRevalidateSeconds: number | false;
             initialExpireSeconds?: number;
             srcRoute: string | null;
@@ -1430,7 +1504,7 @@ export async function getPrerenderManifest(
           };
         };
         dynamicRoutes: {
-          [route: string]: {
+          [route: string]: RawPrerenderTaxonomy & {
             routeRegex: string;
             fallback: string | false;
             fallbackStatus?: number;
@@ -1550,8 +1624,10 @@ export async function getPrerenderManifest(
         let prefetchDataRoute: undefined | string | null;
         let allowHeader: undefined | string[];
         let renderingMode: RenderingMode;
+        let initialMetadata: PrerenderInitialMetadata | undefined;
 
         if (manifest.version === 4) {
+          initialMetadata = toInitialMetadata(manifest.routes[route]);
           initialExpireSeconds = manifest.routes[route].initialExpireSeconds;
           initialStatus = manifest.routes[route].initialStatus;
           initialHeaders = manifest.routes[route].initialHeaders;
@@ -1569,6 +1645,7 @@ export async function getPrerenderManifest(
         }
 
         ret.staticRoutes[route] = {
+          initialMetadata,
           initialRevalidate:
             initialRevalidateSeconds === false
               ? false
@@ -1599,7 +1676,11 @@ export async function getPrerenderManifest(
         let fallbackRootParams: undefined | string[];
         let allowHeader: undefined | string[];
         let fallbackSourceRoute: undefined | string;
+        let initialMetadata: PrerenderInitialMetadata | undefined;
         if (manifest.version === 4) {
+          initialMetadata = toInitialMetadata(
+            manifest.dynamicRoutes[lazyRoute]
+          );
           experimentalBypassFor =
             manifest.dynamicRoutes[lazyRoute].experimentalBypassFor;
           prefetchDataRoute =
@@ -1627,6 +1708,7 @@ export async function getPrerenderManifest(
 
         if (typeof fallback === 'string') {
           ret.fallbackRoutes[lazyRoute] = {
+            initialMetadata,
             experimentalBypassFor,
             routeRegex,
             fallback,
@@ -1645,6 +1727,7 @@ export async function getPrerenderManifest(
           };
         } else if (fallback === null) {
           ret.blockingFallbackRoutes[lazyRoute] = {
+            initialMetadata,
             experimentalBypassFor,
             routeRegex,
             dataRoute,
@@ -1658,6 +1741,7 @@ export async function getPrerenderManifest(
           };
         } else {
           ret.omittedRoutes[lazyRoute] = {
+            initialMetadata,
             experimentalBypassFor,
             routeRegex,
             dataRoute,
@@ -1874,8 +1958,10 @@ export function addLocaleOrDefault(
 
 export type LambdaGroup = {
   pages: string[];
+  affinity?: NodejsLambda['affinity'];
   memory?: number;
   maxDuration?: number | 'max';
+  maxConcurrency?: number;
   regions?: string[];
   functionFailoverRegions?: string[];
   supportsCancellation?: boolean;
@@ -1887,6 +1973,11 @@ export type LambdaGroup = {
   isActionLambda?: boolean;
   isPages?: boolean;
   isApiLambda: boolean;
+  /**
+   * Whether this group is a single over-budget route emitted on its own and
+   * measured against {@link DEFAULT_MAX_UNCOMPRESSED_LARGE_LAMBDA_SIZE}.
+   */
+  isLargeFunctions?: boolean;
   pseudoLayer: PseudoLayer;
   pseudoLayerBytes: number;
   pseudoLayerUncompressedBytes: number;
@@ -1959,8 +2050,10 @@ export async function getPageLambdaGroups({
 
     let opts: {
       architecture?: NodejsLambda['architecture'];
+      affinity?: NodejsLambda['affinity'];
       memory?: number;
       maxDuration?: number | 'max';
+      maxConcurrency?: number;
       regions?: string[];
       functionFailoverRegions?: string[];
       experimentalTriggers?: NodejsLambda['experimentalTriggers'];
@@ -2041,11 +2134,49 @@ export async function getPageLambdaGroups({
       }
     }
 
-    let matchingGroup = experimentalAllowBundling
+    // A route is "large" when its own uncompressed size (shared base layer plus
+    // its traced files and the page) doesn't fit the per-runtime packing budget
+    // — the limit minus the headroom reserved for post-grouping files (launcher,
+    // manifests, etc.), so it can't be guaranteed to fit a normal function.
+    // `experimentalAllowBundling` defers bundling upstream, so the split is moot.
+    let isLargeFunction = false;
+    if (!experimentalAllowBundling) {
+      let standaloneUncompressedSize = initialPseudoLayerUncompressed;
+      const countedFiles = new Set<string>(
+        Object.keys(initialPseudoLayer.pseudoLayer)
+      );
+
+      for (const newPage of newPages) {
+        for (const file of Object.keys(pageTraces[newPage] || {})) {
+          if (!countedFiles.has(file)) {
+            countedFiles.add(file);
+            const item = tracedPseudoLayer[file] as PseudoFile;
+            standaloneUncompressedSize += item?.uncompressedSize || 0;
+          }
+        }
+        standaloneUncompressedSize += compressedPages[newPage].uncompressedSize;
+      }
+
+      // Mirrors the normal-pool merge check below (`< limit - reserved`): a
+      // route that would not fit that budget even on its own is large.
+      const normalBudget =
+        getMaxUncompressedLambdaSize(nodeVersion.runtime) -
+        LAMBDA_RESERVED_UNCOMPRESSED_SIZE;
+      isLargeFunction = standaloneUncompressedSize >= normalBudget;
+    }
+
+    // Both deferred bundling and large routes skip merging — fresh group below.
+    const skipGroupBundling = experimentalAllowBundling || isLargeFunction;
+
+    let matchingGroup = skipGroupBundling
       ? undefined
       : groups.find(group => {
           const matches =
+            // Never merge a normal route into a large (single-route) group.
+            (group.isLargeFunctions ?? false) === isLargeFunction &&
+            group.affinity?.mode === opts.affinity?.mode &&
             group.maxDuration === opts.maxDuration &&
+            group.maxConcurrency === opts.maxConcurrency &&
             group.memory === opts.memory &&
             compareRegions(group.regions, opts.regions) &&
             compareRegions(
@@ -2074,8 +2205,9 @@ export async function getPageLambdaGroups({
                 compressedPages[newPage].uncompressedSize;
             }
 
-            const maxLambdaSize = getMaxUncompressedLambdaSize(
-              nodeVersion.runtime
+            const maxLambdaSize = getGroupMaxUncompressedLambdaSize(
+              nodeVersion.runtime,
+              isLargeFunction
             );
             const underUncompressedLimit =
               newTracedFilesUncompressedSize <
@@ -2094,6 +2226,7 @@ export async function getPageLambdaGroups({
         ...opts,
         isPrerenders: isPrerenderRoute,
         isExperimentalPPR,
+        isLargeFunctions: isLargeFunction,
         isApiLambda: !!isApiPage(page) || !!isRouteHandlers,
         pseudoLayerBytes: initialPseudoLayer.pseudoLayerBytes,
         pseudoLayerUncompressedBytes: initialPseudoLayerUncompressed,
@@ -2259,9 +2392,9 @@ export const detectLambdaLimitExceeding = async (
   },
   runtime: string
 ) => {
+  // Default limit for the headline message; each group is checked against its
+  // own ceiling below (large groups use the higher large-function limit).
   const maxLambdaSize = getMaxUncompressedLambdaSize(runtime);
-  // show debug info if within 5 MB of exceeding the limit
-  const UNCOMPRESSED_SIZE_LIMIT_CLOSE = maxLambdaSize - 5 * MIB;
 
   let numExceededLimit = 0;
   let numCloseToLimit = 0;
@@ -2270,10 +2403,17 @@ export const detectLambdaLimitExceeding = async (
   // pre-iterate to see if we are going to exceed the limit
   // or only get close so our first log line can be correct
   const filteredGroups = lambdaGroups.filter(group => {
-    const exceededLimit = group.pseudoLayerUncompressedBytes > maxLambdaSize;
+    const groupMaxLambdaSize = getGroupMaxUncompressedLambdaSize(
+      runtime,
+      group.isLargeFunctions
+    );
+    // show debug info if within 5 MB of exceeding the limit
+    const groupCloseLimit = groupMaxLambdaSize - 5 * MIB;
 
-    const closeToLimit =
-      group.pseudoLayerUncompressedBytes > UNCOMPRESSED_SIZE_LIMIT_CLOSE;
+    const exceededLimit =
+      group.pseudoLayerUncompressedBytes > groupMaxLambdaSize;
+
+    const closeToLimit = group.pseudoLayerUncompressedBytes > groupCloseLimit;
 
     if (
       closeToLimit ||
@@ -2549,11 +2689,15 @@ export const onPrerenderRoute =
     let experimentalBypassFor: HasField | undefined;
     let renderingMode: RenderingMode;
     let allowHeader: string[] | undefined;
+    // Next.js' own description of what it prerendered, read off the manifest
+    // rather than inferred from the emitted build artifacts.
+    let initialMetadata: PrerenderInitialMetadata | undefined;
 
     if (isFallback || isBlocking) {
       const pr = isFallback
         ? prerenderManifest.fallbackRoutes[routeKey]
         : prerenderManifest.blockingFallbackRoutes[routeKey];
+      initialMetadata = pr.initialMetadata;
       initialRevalidate = 1; // TODO: should Next.js provide this default?
       // @ts-ignore
       if (initialRevalidate === false) {
@@ -2570,6 +2714,8 @@ export const onPrerenderRoute =
       renderingMode = pr.renderingMode;
       prefetchDataRoute = pr.prefetchDataRoute;
     } else if (isOmitted) {
+      initialMetadata =
+        prerenderManifest.omittedRoutes[routeKey].initialMetadata;
       initialRevalidate = false;
       srcRoute = routeKey;
       dataRoute = prerenderManifest.omittedRoutes[routeKey].dataRoute;
@@ -2581,6 +2727,7 @@ export const onPrerenderRoute =
         prerenderManifest.omittedRoutes[routeKey].prefetchDataRoute;
     } else {
       const pr = prerenderManifest.staticRoutes[routeKey];
+      initialMetadata = pr.initialMetadata;
       ({
         initialRevalidate,
         initialExpire,
@@ -2664,8 +2811,10 @@ export const onPrerenderRoute =
         initialHeaders ??= {};
 
         if (postponedState) {
-          initialHeaders['content-type'] =
-            `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin="text/html; charset=utf-8"`;
+          initialHeaders['content-type'] = getPostponedStateContentType(
+            postponedState,
+            'text/html; charset=utf-8'
+          );
 
           postponedPrerender = postponedState + html;
           didPostpone = true;
@@ -3108,6 +3257,11 @@ export const onPrerenderRoute =
           chain,
           allowHeader,
           partialFallback: partialFallback || undefined,
+          // The metadata goes on the primary output only, so each route
+          // group has exactly one carrying entry; the sibling data and
+          // segment prerenders below are grouped back to it by `sourcePath`
+          // downstream.
+          initialMetadata,
 
           ...(isNotFound
             ? {
@@ -3219,9 +3373,10 @@ export const onPrerenderRoute =
           } else {
             let contentType = rscContentTypeHeader;
             if (postponedState) {
-              contentType = `application/x-nextjs-pre-render; state-length=${postponedState.length}; origin=${JSON.stringify(
+              contentType = getPostponedStateContentType(
+                postponedState,
                 rscContentTypeHeader
-              )}`;
+              );
             }
 
             // If client param parsing is enabled, we follow the same logic as the
@@ -3494,6 +3649,21 @@ export const onPrerenderRoute =
 
 export type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
+export function validateStaticFiles(files: Files, staticPrefix: string) {
+  if (
+    Object.keys(files).some(file =>
+      file.startsWith(`${staticPrefix}immutable/`)
+    )
+  ) {
+    // These files can only be deployed using the adapter output.
+    throw new NowBuildError({
+      message:
+        'The Next.js build produced files in "_next/static/immutable" while the Next.js adapter was disabled. Use the Next.js Vercel Adapter instead of manually setting supportsImmutableAssets:true.',
+      code: 'NEXT_BUILDER_IMMUTABLE_STATIC_FILES',
+    });
+  }
+}
+
 export async function getStaticFiles(
   entryPath: string,
   entryDirectory: string,
@@ -3507,6 +3677,7 @@ export async function getStaticFiles(
     '**',
     path.join(entryPath, outputDirectory, 'static')
   );
+  validateStaticFiles(nextStaticFiles, '');
   const staticFolderFiles = await glob('**', path.join(entryPath, 'static'));
 
   let publicFolderFiles: UnwrapPromise<ReturnType<typeof glob>> = {};
@@ -3827,6 +3998,7 @@ export async function getNodeMiddleware({
   isCorrectMiddlewareOrder,
   functionsConfigManifest,
   requiredServerFilesManifest,
+  instrumentationHookBuildTrace,
 }: {
   config: Config;
   baseDir: string;
@@ -3843,6 +4015,7 @@ export async function getNodeMiddleware({
   routesManifest: RoutesManifest;
   functionsConfigManifest?: FunctionsConfigManifestV1;
   requiredServerFilesManifest: NextRequiredServerFilesManifest;
+  instrumentationHookBuildTrace: any | undefined;
 }): Promise<null | {
   lambdas: Record<string, NodejsLambda>;
   routes: RouteWithSrc[];
@@ -3927,6 +4100,26 @@ export async function getNodeMiddleware({
       console.log('outside base dir', absolutePath);
     }
   });
+  if (instrumentationHookBuildTrace) {
+    // Node.js instrumentation exists
+    // For regular functions, this is added via required-server-files.json#files. But that isn't
+    // read for middleware (because the various files in there aren't actually needed).
+    instrumentationHookBuildTrace.files.map((file: string) => {
+      fileList.push(
+        path.relative(
+          baseDir,
+          path.join(entryPath, outputDirectory, 'server', file)
+        )
+      );
+    });
+    fileList.push(
+      path.relative(
+        baseDir,
+        path.join(entryPath, outputDirectory, 'server', 'instrumentation.js')
+      )
+    );
+  }
+
   const reasons = new Map();
 
   const tracedFiles: {
@@ -4544,7 +4737,10 @@ export async function getServerlessPages(params: {
     for (const [entry, normalizedEntry] of Object.entries(
       params.appPathRoutesManifest
     )) {
-      const normalizedPath = `${path.join(
+      // Must use posix separators: lambda lookup keys are posix, and on
+      // Windows path.join() would produce `a\\b.js` for nested App Router
+      // routes (PIPE-7285 / NEXT_MISSING_LAMBDA).
+      const normalizedPath = `${path.posix.join(
         '.',
         normalizedEntry === '/' ? '/index' : normalizedEntry
       )}.js`;
@@ -4591,6 +4787,26 @@ export function normalizePrefetches(prefetches: Record<string, FileFsRef>) {
   }
 
   return updatedPrefetches;
+}
+
+/**
+ * Build the content type for a partially prerendered output, whose body is the
+ * postponed state followed by the prerendered content.
+ *
+ * `state-length` is where the CDN cuts the body back into those two halves. The
+ * body is written as UTF-8, so the offset counts encoded bytes.
+ *
+ * @param postponedState - The serialized postponed state.
+ * @param originContentType - The content type of the prerendered content.
+ * @returns The content type for the partially prerendered output.
+ */
+function getPostponedStateContentType(
+  postponedState: string,
+  originContentType: string
+): string {
+  return `application/x-nextjs-pre-render; state-length=${Buffer.byteLength(
+    postponedState
+  )}; origin=${JSON.stringify(originContentType)}`;
 }
 
 /**
@@ -4648,8 +4864,13 @@ export async function getServerActionMetaRoutes(
     };
 
     const routes: Route[] = [];
+    const seenActionIds = new Set<string>();
 
-    // Process both node and edge entries
+    // Process both node and edge entries. An action id is a hash of the source
+    // file and export name with no runtime component, so an action reachable
+    // from both a Node and an Edge entry is listed under the same id in both
+    // maps. Emitting a route per occurrence would match a single request twice
+    // and add `x-server-action-name` twice, so the id is only routed once.
     for (const runtimeType of ['node', 'edge'] as const) {
       const runtime = manifest[runtimeType];
       if (!runtime) continue;
@@ -4657,6 +4878,8 @@ export async function getServerActionMetaRoutes(
       for (const [id, entry] of Object.entries(runtime)) {
         // Skip entries without filename or exportedName
         if (!entry.filename || !entry.exportedName) continue;
+        if (seenActionIds.has(id)) continue;
+        seenActionIds.add(id);
 
         let exportedName = entry.exportedName;
 
@@ -4675,8 +4898,11 @@ export async function getServerActionMetaRoutes(
           ],
           transforms: [
             {
+              // `set` rather than `append` so a client-supplied
+              // `x-server-action-name` is replaced instead of preserved
+              // alongside the resolved name.
               type: 'request.headers',
-              op: 'append',
+              op: 'set',
               target: {
                 key: 'x-server-action-name',
               },

@@ -4,14 +4,14 @@ import type Client from '../client';
 import sleep from '../sleep';
 
 export interface ConnexResult {
-  status: 'pending' | 'partial' | 'success' | 'error';
+  status: 'pending' | 'partial' | 'success' | 'error' | 'canceled';
   progress?: string;
   data?: Record<string, unknown>;
   error?: { code: string; message: string };
 }
 
 const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_DURATION_MS = 30 * 60 * 1000;
+const MAX_POLL_DURATION_MS = 115 * 60 * 1000;
 const MAX_EARLY_404_COUNT = 3;
 
 /**
@@ -71,6 +71,11 @@ export async function awaitConnexResult(
         output.error(
           `Setup failed: ${result.error.message} (${result.error.code})`
         );
+        return null;
+      }
+
+      if (result.status === 'canceled') {
+        output.error('Setup was canceled in the browser.');
         return null;
       }
     } catch (err: unknown) {

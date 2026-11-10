@@ -31,7 +31,7 @@ describe('checks', () => {
 
     client.setArgv('project', 'checks', 'p', '--blocks', 'invalid');
     const exitCode = await projects(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('--blocks');
   });
 
@@ -260,7 +260,7 @@ describe('checks', () => {
       client.nonInteractive = true;
       client.setArgv('project', 'checks', 'rm', '--non-interactive');
 
-      await expect(projects(client)).rejects.toThrow('exit:1');
+      await expect(projects(client)).rejects.toThrow('exit:2');
 
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload).toMatchObject({

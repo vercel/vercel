@@ -12,6 +12,15 @@ export class MicrofrontendsPullTelemetryClient
     }
   }
 
+  trackCliOptionDeployment(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'deployment',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionDpl(value: string | undefined) {
     if (value) {
       this.trackCliOption({

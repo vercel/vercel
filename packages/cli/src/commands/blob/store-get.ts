@@ -12,6 +12,10 @@ import {
   formatStoreDetails,
   type StoreDetails,
 } from '../../util/blob/format-store';
+import {
+  outputAgentError,
+  buildCommandWithGlobalFlags,
+} from '../../util/agent-output';
 
 export default async function getStore(
   client: Client,
@@ -33,12 +37,14 @@ export default async function getStore(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
     args: [storeIdArg],
   } = parsedArgs;
+
+  const interactive = client.stdin.isTTY && !client.nonInteractive;
 
   let storeId: string | undefined = storeIdArg;
   if (!storeId) {
@@ -46,19 +52,34 @@ export default async function getStore(
   }
 
   if (!storeId) {
-    if (!client.stdin.isTTY) {
+    if (interactive) {
+      storeId = await client.input.text({
+        message: 'Enter the ID of the blob store you want to get info about',
+        validate: value => {
+          if (value.length !== 22) {
+            return 'ID must be 22 characters long';
+          }
+          return true;
+        },
+      });
+    } else {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'missing_arguments',
+        message: 'Missing required argument: storeId.',
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'blob get-store <storeId>'
+            ),
+            when: 'get the blob store details',
+          },
+        ],
+      });
       output.error('Missing required argument: storeId');
-      return 1;
+      return 2;
     }
-    storeId = await client.input.text({
-      message: 'Enter the ID of the blob store you want to get info about',
-      validate: value => {
-        if (value.length !== 22) {
-          return 'ID must be 22 characters long';
-        }
-        return true;
-      },
-    });
   }
 
   telemetryClient.trackCliArgumentStoreId(storeId);

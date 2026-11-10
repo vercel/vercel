@@ -11,6 +11,10 @@ import {
   formatStoreLabel,
   formatConnectedProjects,
 } from '../../util/blob/confirm';
+import {
+  outputAgentError,
+  buildCommandWithGlobalFlags,
+} from '../../util/agent-output';
 
 export default async function removeStore(
   client: Client,
@@ -26,13 +30,40 @@ export default async function removeStore(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
     args: [storeIdArg],
-    flags: { '--yes': yes },
   } = parsedArgs;
+
+  const interactive = client.stdin.isTTY && !client.nonInteractive;
+
+  // Deleting a store cannot be undone, so it always requires
+  // interactive confirmation and cannot be scripted or run by agents
+  if (!interactive) {
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'dangerous_operation_requires_user',
+      message:
+        'Deleting a blob store cannot be undone and cannot be performed non-interactively. ' +
+        'Agents must not make this change on behalf of a user. ' +
+        'The user must run this command interactively in a terminal to review the impact and confirm.',
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'blob delete-store <storeId>'
+          ),
+          when: 'user runs this command interactively',
+        },
+      ],
+    });
+    output.error(
+      'Deleting a blob store requires interactive confirmation. Run this command in an interactive terminal.'
+    );
+    return 1;
+  }
 
   let storeId: string | undefined = storeIdArg;
 
@@ -41,10 +72,6 @@ export default async function removeStore(
   }
 
   if (!storeId) {
-    if (!client.stdin.isTTY) {
-      output.error('Missing required argument: storeId');
-      return 1;
-    }
     storeId = await client.input.text({
       message: 'Enter the ID of the blob store you want to remove',
       validate: value => {
@@ -81,23 +108,14 @@ export default async function removeStore(
       connectionsResponse.connections
     );
 
-    if (!yes) {
-      if (!client.stdin.isTTY) {
-        output.error(
-          'Confirmation required. Use --yes to skip confirmation in non-interactive environments.'
-        );
-        return 1;
-      }
+    const res = await client.input.confirm(
+      `Are you sure you want to remove ${label}?${projectsInfo} This action cannot be undone.`,
+      false
+    );
 
-      const res = await client.input.confirm(
-        `Are you sure you want to remove ${label}?${projectsInfo} This action cannot be undone.`,
-        false
-      );
-
-      if (!res) {
-        output.success('Blob store not removed');
-        return 0;
-      }
+    if (!res) {
+      output.success('Blob store not removed');
+      return 0;
     }
 
     output.debug('Deleting blob store');

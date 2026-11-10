@@ -13,7 +13,12 @@ import {
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
+import { quoteArg } from '../../../../src/util/flags/quote-arg';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('firewall rules enable', () => {
   beforeEach(() => {
@@ -47,6 +52,38 @@ describe('firewall rules enable', () => {
     expect(lastPatchBody.value.active).toBe(true);
   });
 
+  it('enables a rule for the project selected by --project', async () => {
+    const active = createConfig({ rules: [createRule(3)] });
+    useListFirewallConfigs(active, null);
+    usePatchDraft();
+    useActivateConfig();
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-firewall',
+      name: 'explicit-firewall',
+      accountId: 'team_dummy',
+    });
+    client.setArgv(
+      'firewall',
+      'rules',
+      'enable',
+      'Test Rule 3',
+      '--project',
+      'explicit-firewall',
+      '--yes'
+    );
+
+    await expect(firewall(client)).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('Enabled');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'option:project', value: '[REDACTED]' },
+      { key: 'subcommand:rules', value: 'rules' },
+      { key: 'subcommand:rules:enable', value: 'enable' },
+    ]);
+  });
+
   it('should report already enabled', async () => {
     const active = createConfig({ rules: [createRule(1)] });
     useListFirewallConfigs(active, null);
@@ -75,7 +112,7 @@ describe('firewall rules enable', () => {
     (client.stdin as any).isTTY = false;
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Rule name or ID is required');
-    expect(await exitCodePromise).toEqual(1);
+    expect(await exitCodePromise).toEqual(2);
   });
 
   it('should show interactive picker when no identifier', async () => {
@@ -129,5 +166,34 @@ describe('firewall rules enable', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Enabled');
     expect(await exitCodePromise).toEqual(0);
+  });
+
+  it('turns a Priority project 401 into an upsell', async () => {
+    const rule = createRule(3);
+    useListFirewallConfigs(createConfig({ rules: [rule] }), null);
+    client.scenario.patch(
+      '/v1/security/firewall/config/draft',
+      (_req: any, res: any) => {
+        res.status(401).json({
+          error: {
+            code: 'unauthorized',
+            message: 'This feature requires a Priority project',
+          },
+        });
+      }
+    );
+
+    client.setArgv('firewall', 'rules', 'enable', rule.id, '--yes');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+    const output = client.stderr.getFullOutput();
+    const team = teamCache.get('team_dummy');
+    expect(output).toContain(
+      `This rule requires a Priority project for firewall-test on team ${team?.slug}`
+    );
+    expect(output).toContain(
+      `project priority enable firewall-test --scope ${quoteArg(team?.slug ?? '')}`
+    );
+    expect(output).not.toContain('(401)');
   });
 });

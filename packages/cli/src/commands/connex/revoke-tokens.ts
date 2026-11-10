@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
+import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import type { ConnexClientIdentity } from './types';
 
@@ -27,13 +28,13 @@ export async function revokeTokens(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
   if (asJson && !flags['--yes']) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
-    return 1;
+    output.error('--json requires --yes to skip confirmation prompts');
+    return 2;
   }
 
   const clientIdOrUid = args[0];
@@ -41,7 +42,7 @@ export async function revokeTokens(
     output.error(
       'Missing connector ID or UID. Usage: vercel connect revoke-tokens <connector>'
     );
-    return 1;
+    return 2;
   }
 
   const myTokens = !!flags['--my-tokens'];
@@ -49,12 +50,12 @@ export async function revokeTokens(
 
   if (myTokens && allTokens) {
     output.error('--my-tokens and --all-tokens are mutually exclusive.');
-    return 1;
+    return 2;
   }
 
   if (flags['--yes'] && !myTokens && !allTokens) {
     output.error(
-      '--yes requires a scope flag. Use --yes --my-tokens or --yes --all-tokens.'
+      '--yes requires a scope option. Use --yes --my-tokens or --yes --all-tokens.'
     );
     return 1;
   }
@@ -81,7 +82,9 @@ export async function revokeTokens(
   }
   output.stopSpinner();
 
-  const displayName = target.name || target.uid || target.id;
+  const displayName = sanitizeForTerminal(
+    target.name || target.uid || target.id
+  );
   const supportsRevocation = target.supportsRevocation !== false;
 
   // Resolve subjectScope: flag → interactive TTY → error

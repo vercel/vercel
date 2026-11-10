@@ -40,13 +40,19 @@ The headers for the current request. Optional.
 
 `string`
 
-The key to use for rate-limiting. If not defined, defaults to the user's IP address.
+The entity being rate limited. Defaults to the client IP.
 
 #### request?
 
 `Request`
 
 The current request object. Optional.
+
+#### timeout?
+
+`number`
+
+The fetch timeout in milliseconds. Defaults to no timeout. Rejects with a `TimeoutError` when exceeded.
 
 ## Returns
 

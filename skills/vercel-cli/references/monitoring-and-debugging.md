@@ -2,85 +2,39 @@
 
 ## Diagnostic Ladder
 
-For production issues, start broad and narrow with bounded commands:
+1. Identify the project, scope, and time window from supplied context and deployment evidence.
+2. Inspect the relevant deployment's status, source, target, timestamps, and aliases.
+3. Query logs and metrics for the affected window; narrow by the observed error, route, or deployment.
+4. If evidence is unavailable, distinguish permission, subscription, retention, and no-data cases. Use other available evidence without treating missing telemetry as healthy behavior.
 
-1. Identify project and scope.
-2. List recent deployments: `vercel list <project> --scope <team> --status READY --format json`.
-3. Inspect the relevant deployment: `vercel inspect <deployment-url>`.
-4. Check logs for a bounded window: `vercel logs <deployment-url> --no-follow --since 1h --limit 100 --json`.
-5. If metrics are available, inspect schema first, then query a relevant metric with a bounded time window and group-by.
-6. If logs or metrics are unavailable, report the permission, subscription, retention, or no-data limitation and use deployments, activity, or inspect output as fallback evidence.
+For an incident with a supplied deployment URL, inspect that exact identity before deriving a project name. For broader regressions, compare nearby deployments with a meaningful good/bad boundary.
 
-Useful discovery commands:
+## Build Failures
 
-```bash
-vercel logs --help
-vercel metrics --help
-vercel metrics schema --format=json
-vercel metrics schema <metric-or-prefix> --format=json
-vercel activity --help
-vercel activity types --format json --scope <team>
-vercel usage --help
-vercel httpstat /api/health --deployment <deployment-url>
-```
+Start with deployment metadata and build logs before exploring source control. Capture the install command, package manager, build command, monorepo scope, restored cache, and first fatal error. Fix the causal error before chasing incidental warnings.
 
-## Logs
+If source is implicated, inspect the files named by the trace and relevant package, lockfile, or build configuration. Compare a nearby successful deployment's source and build inputs. Other branches passing does not by itself disprove a dependency, cache, or configuration explanation.
 
-```bash
-vercel logs <deployment-url>                   # view logs
-vercel logs --follow                           # stream live
-vercel logs --level error --level warning      # filter by severity (error, warning, info, fatal)
-vercel logs --source serverless                # filter by source (serverless, edge-function, edge-middleware, static)
-vercel logs --since 2024-01-01                 # filter by time
-vercel logs --query "timeout"                  # search
-```
+Separate the proven root cause, likely trigger, and remaining uncertainty. Validate a build hypothesis with the resulting deployment's final state rather than reporting success while it is still building.
 
-## Metrics
+## Build Performance and Machine Sizing
 
-Inspect schema before querying unfamiliar metrics. Use bounded time windows and group limits when grouping results.
+Inspect a successful deployment's build logs for current cores/memory, total duration, and slowest phases. An implausible `0ms` is missing telemetry, not an instant build. Recommend a larger machine only with evidence of CPU or memory pressure; otherwise address the dominant phase.
 
-```bash
-vercel metrics schema                                                    # list available metrics
-vercel metrics schema vercel.function_invocation                         # inspect a metric prefix
-vercel metrics vercel.function_invocation.count --since 1h               # query linked project
-vercel metrics vercel.function_invocation.count -f "http_status ge 500" --group-by error_code --since 1h --format=json
-vercel metrics vercel.function_invocation.request_duration_ms -a avg --group-by route --since 1h
-vercel metrics --all vercel.function_invocation.count --group-by project_id --since 24h
-```
+## Logs and Metrics
 
-## Inspecting Deployments
+Choose the log source by the question. Runtime logs, the default, are application output: messages, errors, and stack traces from functions, middleware, and other producers. CDN requests (`logs requests`) are one record per request with status, method, cache result, and path; use them for traffic, status-code, and caching questions. They exclude background function executions. For one request, filter runtime logs by its request ID to see what it logged, and use its trace for timing.
 
-```bash
-vercel inspect <url>               # deployment details
-vercel inspect <url> --wait        # wait for completion
-vercel inspect <url> --logs        # show build logs
-```
+Logs return a bounded result and exit. Set `--since` and `--until` to the affected window rather than relying on the short default. Filter with `--query` in the source's KQL-inspired syntax, and read that source's help for its fields and operators. Search runtime messages with unquoted words, grouping several words with `AND`, for example `json AND (parse OR (unexpected AND token))`; quotes work only in field values such as `requestId:"…"`, and quoted bare text is rejected. Older level, source, status-code, request-ID, and search options were removed; express them as query fields. Select a deployment with `--deployment`. Without a deployment or environment selector, logs cover every environment of the project, so scope explicitly when the question concerns production or one deployment. Only team-owned projects are supported.
 
-## `vercel curl` — Access Preview Deployments
+In JSON Lines output, each record is under `data`, and a final `summary` reports the window searched, whether more records matched, and excluded intervals. Check `pagination.hasMore` and `excludedIntervals` before concluding that something did not happen: a full page or a coverage gap is not absence. To read further, pass the summary's `pagination.next` to `--next` instead of raising the limit or widening the window. The cursor keeps the original target, filter, and window; only the limit may change. Paging is best-effort at page boundaries, so do not present counts summed across pages as exact.
 
-**Use `vercel curl` to access preview deploys.** It handles deployment protection automatically — no need to disable protection or manage bypass secrets.
+CDN request history beyond the plan's free window, and filters on fields that need Observability Plus or a Priority project, fail with an access error that names the requirement. Report that as an entitlement limit, not as missing traffic or an outage.
 
-```bash
-vercel curl /api/health --deployment $PREVIEW_URL
-vercel curl /api/data --deployment $PREVIEW_URL -- -X POST -d '{"key":"value"}'
-```
+Discover metric IDs, dimensions, aggregations, and filter syntax from the installed schema/help. Copy their exact names instead of maintaining a parallel list or translating dimensions to a guessed naming convention. Schema discovery is team-scoped; project filtering belongs to the metric query.
 
-**Do not disable deployment protection.** Use `vercel curl` instead.
+Use bounded windows and group counts for metrics. Aggregate trends, sampled details, and individual request traces support different conclusions; state the evidence behind a diagnosis.
 
-## Finding Regressions
+## Preview Access
 
-`vercel bisect` performs a binary search across deployments to find which one introduced a problem:
-
-```bash
-vercel bisect --good <url> --bad <url> --path /api/users
-vercel bisect --run ./test-script.sh    # automated testing
-```
-
-## Cache
-
-```bash
-vercel cache purge --type cdn --yes      # purge CDN cache
-vercel cache invalidate --tag mytag --yes # invalidate by cache tag
-```
-
-See `references/project-infra.md` for destructive cache deletion and other project infrastructure commands.
+The CLI's authenticated preview request path handles Deployment Protection. Use it when the execution environment can reach deployment hosts instead of disabling protection or managing bypass secrets unnecessarily. A network or permission limitation is not evidence that the deployment is broken.
