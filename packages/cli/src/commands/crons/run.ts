@@ -34,6 +34,15 @@ export default async function run(client: Client, argv: string[]) {
   const projectName = opts['--project'];
   telemetry.trackCliOptionProject(projectName);
   telemetry.trackCliArgumentPath(cronPath);
+  const cronSchedule = opts['--schedule'];
+  telemetry.trackCliOptionSchedule(cronSchedule);
+
+  if (cronSchedule && !cronPath) {
+    output.error(
+      `The ${chalk.bold('--schedule')} option requires a cron path argument. Usage: ${getCommandName('crons run <path> --schedule <expression>')}`
+    );
+    return 2;
+  }
 
   const link = await resolveProjectContext({
     client,
@@ -88,7 +97,7 @@ export default async function run(client: Client, argv: string[]) {
   if (!cronPath) {
     if (client.nonInteractive) {
       output.error(
-        `A cron path argument is required in non-interactive mode. Usage: ${getCommandName('crons run <path>')}`
+        `A cron path argument is required in non-interactive mode. Usage: ${getCommandName('crons run <path> [--schedule <expression>]')}`
       );
       return 2;
     }
@@ -113,16 +122,25 @@ export default async function run(client: Client, argv: string[]) {
     }
   } else {
     // Find the matching cron definition to get the schedule
-    const matches = definitions.filter(d => d.path === cronPath);
-    if (matches.length === 0) {
+    const pathMatches = definitions.filter(d => d.path === cronPath);
+    if (pathMatches.length === 0) {
       output.error(
         `Cron job with path ${chalk.bold(cronPath)} not found. Run ${getCommandName('crons ls')} to see available cron jobs.`
       );
       return 1;
     }
+    const matches = cronSchedule
+      ? pathMatches.filter(d => d.schedule === cronSchedule)
+      : pathMatches;
+    if (matches.length === 0) {
+      output.error(
+        `No cron job with path ${chalk.bold(cronPath)} has the schedule ${chalk.bold(cronSchedule)} (schedules: ${pathMatches.map(d => d.schedule).join(', ')}). Run ${getCommandName('crons ls')} to see available cron jobs.`
+      );
+      return 1;
+    }
     if (matches.length > 1) {
       output.error(
-        `Multiple cron jobs share the path ${chalk.bold(cronPath)} (schedules: ${matches.map(d => d.schedule).join(', ')}). Run ${getCommandName('crons run')} without a path to select one interactively.`
+        `Multiple cron jobs share the path ${chalk.bold(cronPath)} (schedules: ${matches.map(d => d.schedule).join(', ')}). Pass ${chalk.bold('--schedule <expression>')} to choose one${client.nonInteractive ? '.' : `, or run ${getCommandName('crons run')} without a path to select one interactively.`}`
       );
       return 1;
     }

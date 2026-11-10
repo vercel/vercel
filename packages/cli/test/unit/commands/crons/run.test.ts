@@ -145,6 +145,67 @@ describe('crons run', () => {
       expect(getRequestBody()).toBeUndefined();
     });
 
+    it('runs the schedule given with --schedule when multiple crons share a path', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons([
+        {
+          host: 'example.vercel.app',
+          path: '/api/cron',
+          schedule: '0 12 * * *',
+        },
+        {
+          host: 'example.vercel.app',
+          path: '/api/cron',
+          schedule: '30 12 * * *',
+        },
+      ]);
+      const { getRequestBody } = mockRunEndpoint();
+
+      client.setArgv('crons', 'run', '/api/cron', '--schedule', '30 12 * * *');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(0);
+      expect(getRequestBody()).toEqual({
+        path: '/api/cron',
+        schedule: '30 12 * * *',
+      });
+    });
+
+    it('errors when --schedule matches no cron job for the path', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons([
+        {
+          host: 'example.vercel.app',
+          path: '/api/cron',
+          schedule: '0 12 * * *',
+        },
+      ]);
+      const { getRequestBody } = mockRunEndpoint();
+
+      client.setArgv('crons', 'run', '/api/cron', '--schedule', '5 5 * * *');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput('has the schedule');
+      expect(getRequestBody()).toBeUndefined();
+    });
+
+    it('errors when --schedule is passed without a path', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons([
+        {
+          host: 'example.vercel.app',
+          path: '/api/cron',
+          schedule: '0 12 * * *',
+        },
+      ]);
+      const { getRequestBody } = mockRunEndpoint();
+
+      client.setArgv('crons', 'run', '--schedule', '0 12 * * *');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(2);
+      await expect(client.stderr).toOutput('requires a cron path argument');
+      expect(getRequestBody()).toBeUndefined();
+    });
+
     it('errors when no cron jobs exist', async () => {
       mockLinkedProject();
       mockProjectWithCrons([]);

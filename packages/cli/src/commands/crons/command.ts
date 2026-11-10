@@ -65,11 +65,26 @@ export const runSubcommand = {
       required: false,
     },
   ],
-  options: [projectOption],
+  options: [
+    projectOption,
+    {
+      name: 'schedule',
+      shorthand: null,
+      type: String,
+      argument: 'EXPRESSION',
+      deprecated: false,
+      description:
+        'The cron schedule expression to run when several cron jobs share the same path (e.g. "0 10 * * *")',
+    },
+  ],
   examples: [
     {
       name: 'Trigger a specific cron job',
       value: `${packageName} crons run /api/cron`,
+    },
+    {
+      name: 'Trigger the cron job with a given schedule when a path is shared',
+      value: `${packageName} crons run /api/cron --schedule "30 12 * * *"`,
     },
   ],
 } as const;

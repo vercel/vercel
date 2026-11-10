@@ -6,6 +6,15 @@ export class CronsRunTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof runSubcommand>
 {
+  trackCliOptionSchedule(schedule: string | undefined) {
+    if (schedule) {
+      this.trackCliOption({
+        option: 'schedule',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliArgumentPath(path: string | undefined) {
     if (path) {
       this.trackCliArgument({
