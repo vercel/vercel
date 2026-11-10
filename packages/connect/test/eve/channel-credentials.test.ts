@@ -364,6 +364,26 @@ describe('Eve channel credential helpers', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('resolves Slack botToken without an installationId when the resolver finds no context', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('slack_default_token'));
+
+    const credentials = connectSlackCredentials(
+      'oauth/slack',
+      () => {
+        const teamId: string | undefined = undefined;
+        return teamId ? { installationId: teamId } : {};
+      },
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(resolveToken(credentials.botToken)).resolves.toBe(
+      'slack_default_token'
+    );
+    expectTokenRequest('oauth/slack', {
+      subject: { type: 'app' },
+    });
+  });
+
   it('resolves Slack botToken using an async params resolver (Promise)', async () => {
     fetchMock.mockResolvedValue(jsonTokenResponse('slack_async_token'));
 

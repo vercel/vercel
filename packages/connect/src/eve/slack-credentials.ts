@@ -33,8 +33,9 @@ export type ConnectSlackCredentialsParams = Omit<ConnectTokenParams, 'subject'>;
  * const store = new AsyncLocalStorage<{ teamId: string }>();
  *
  * const resolver: ConnectSlackCredentialsParamsResolver = () => {
- *   const { teamId } = store.getStore()!;
- *   return { installationId: teamId };
+ *   // `getStore()` is `undefined` outside of `store.run(...)`.
+ *   const teamId = store.getStore()?.teamId;
+ *   return teamId ? { installationId: teamId } : {};
  * };
  *
  * export default slackRoute({
@@ -90,7 +91,14 @@ export type ConnectSlackCredentialsParamsResolver = () =>
  * `installationId` dynamically at `botToken()` invocation time.  This
  * lets one Eve route serve multiple Slack workspace installations through
  * the same connector by reading request-scoped context (e.g.
- * `AsyncLocalStorage` populated from the inbound event's `team_id`):
+ * `AsyncLocalStorage` populated from the inbound event's `team_id`).
+ *
+ * The resolver runs whenever Eve needs a token, which includes work that
+ * happens after your `handler` has returned (for example delivering the
+ * message to the session and later channel events). Those calls run outside
+ * `store.run(...)`, so the resolver must handle a missing store instead of
+ * assuming one, and Slack calls that need a specific workspace should be made
+ * from inside the handler's scope:
  *
  * ```ts
  * import { AsyncLocalStorage } from "node:async_hooks";
@@ -100,9 +108,11 @@ export type ConnectSlackCredentialsParamsResolver = () =>
  * const store = new AsyncLocalStorage<{ teamId: string }>();
  *
  * export default slackRoute({
- *   credentials: connectSlackCredentials("scl_...", () => ({
- *     installationId: store.getStore()!.teamId,
- *   })),
+ *   credentials: connectSlackCredentials("scl_...", () => {
+ *     // `undefined` outside of `store.run(...)`, e.g. after the handler returns.
+ *     const teamId = store.getStore()?.teamId;
+ *     return teamId ? { installationId: teamId } : {};
+ *   }),
  *   async handler(event, context) {
  *     return store.run({ teamId: event.team_id }, () =>
  *       yourHandler(event, context)
@@ -112,7 +122,10 @@ export type ConnectSlackCredentialsParamsResolver = () =>
  * ```
  *
  * The resolver is re-invoked on every `botToken()` call, so the
- * `installationId` is always resolved from the current async context.
+ * `installationId` is always resolved from the current async context. When it
+ * returns no `installationId` (as it does outside `store.run(...)` above), the
+ * request is made without one and Vercel Connect picks the connector's default
+ * installation.
  */
 export function connectSlackCredentials(
   connector: string,
