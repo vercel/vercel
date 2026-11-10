@@ -1,10 +1,14 @@
-import { Headers } from 'node-fetch';
-import type { IncomingHttpHeaders, OutgoingHttpHeaders } from 'http';
+import type { Headers } from '../fetch';
+import type {
+  IncomingHttpHeaders,
+  OutgoingHttpHeaders,
+  ServerResponse,
+} from 'http';
 
 export function nodeHeadersToFetchHeaders(
   nodeHeaders: IncomingHttpHeaders | OutgoingHttpHeaders
 ): Headers {
-  const headers = new Headers();
+  const headers = new globalThis.Headers();
   for (const [name, value] of Object.entries(nodeHeaders)) {
     if (Array.isArray(value)) {
       for (const val of value) {
@@ -15,6 +19,59 @@ export function nodeHeadersToFetchHeaders(
     }
   }
   return headers;
+}
+
+/**
+ * Response headers that must stay as separate lines. Their values can
+ * contain commas of their own, such as a cookie's `Expires` or an auth
+ * challenge's params, so combining them is unsafe.
+ */
+const NEVER_COMBINE_RESPONSE_HEADERS: ReadonlySet<string> = new Set([
+  'set-cookie',
+  'www-authenticate',
+  'proxy-authenticate',
+]);
+
+/**
+ * Response headers that accumulate instead of overwriting. `vary` is the
+ * practical case. Each middleware may add its own cache-varying header
+ * name.
+ */
+const COMMA_JOIN_RESPONSE_HEADERS: ReadonlySet<string> = new Set(['vary']);
+
+/**
+ * Applies one response header from a middleware onto `res`. Join-style
+ * headers above accumulate across the chain instead of being overwritten
+ * by a later middleware. Everything else is last-write-wins.
+ * `name` is expected lowercased.
+ */
+export function applyChainResponseHeader(
+  res: Pick<ServerResponse, 'getHeader' | 'setHeader'>,
+  name: string,
+  value: string
+): void {
+  if (NEVER_COMBINE_RESPONSE_HEADERS.has(name)) {
+    const existing = res.getHeader(name);
+    const values: string[] = Array.isArray(existing)
+      ? existing.map(String)
+      : existing !== undefined
+        ? [String(existing)]
+        : [];
+    values.push(value);
+    res.setHeader(name, values);
+    return;
+  }
+
+  if (COMMA_JOIN_RESPONSE_HEADERS.has(name)) {
+    const existing = res.getHeader(name);
+    res.setHeader(
+      name,
+      existing !== undefined ? `${existing}, ${value}` : value
+    );
+    return;
+  }
+
+  res.setHeader(name, value);
 }
 
 /**
@@ -43,14 +100,21 @@ const NONOVERRIDABLE_HEADERS: Set<string> = new Set([
  * `x-middleware-request-*` is the new value for each header. This can't be
  * omitted, even if the header is not being modified.
  *
+ * Returns a mutable copy of `respHeaders` with the middleware control headers
+ * removed so it can be safely forwarded.
+ *
  */
 export function applyOverriddenHeaders(
   reqHeaders: { [k: string]: string | string[] | undefined },
   respHeaders: Headers
 ) {
-  const overriddenHeaders = respHeaders.get('x-middleware-override-headers');
+  // Headers from a native fetch network response are immutable. Work with a
+  // mutable copy because the middleware control headers must be removed before
+  // the remaining response headers are forwarded to the request and client.
+  const headers = new globalThis.Headers(respHeaders);
+  const overriddenHeaders = headers.get('x-middleware-override-headers');
   if (!overriddenHeaders) {
-    return;
+    return headers;
   }
 
   const overriddenKeys: Set<string> = new Set();
@@ -58,7 +122,7 @@ export function applyOverriddenHeaders(
     overriddenKeys.add(key.trim());
   }
 
-  respHeaders.delete('x-middleware-override-headers');
+  headers.delete('x-middleware-override-headers');
 
   // Delete headers.
   for (const key of Object.keys(reqHeaders)) {
@@ -74,7 +138,7 @@ export function applyOverriddenHeaders(
     }
 
     const valueKey = 'x-middleware-request-' + key;
-    const newValue = respHeaders.get(valueKey);
+    const newValue = headers.get(valueKey);
     const oldValue = reqHeaders[key];
 
     if (oldValue !== newValue) {
@@ -85,6 +149,8 @@ export function applyOverriddenHeaders(
       }
     }
 
-    respHeaders.delete(valueKey);
+    headers.delete(valueKey);
   }
+
+  return headers;
 }

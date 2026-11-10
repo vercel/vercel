@@ -8,31 +8,40 @@ import { basename, dirname, join, normalize, posix, relative } from 'path';
 import {
   readFile,
   writeFile,
+  chmod,
   lstat,
   pathExists,
   mkdirp,
+  mkdtemp,
   move,
   readlink,
+  realpath,
   remove,
+  rename,
   rmdir,
   readdir,
+  symlink,
   unlink,
   copy,
 } from 'fs-extra';
 import {
   BuildOptions,
+  type BuildResultVX,
   Files,
   PrepareCacheOptions,
+  ShouldServe,
   StartDevServerOptions,
   StartDevServerResult,
   glob,
   download,
   Lambda,
   getWriteableDirectory,
-  shouldServe,
+  shouldServe as defaultShouldServe,
   debug,
   cloneEnv,
   getProvidedRuntime,
+  execCommand,
+  getReportedServiceType,
 } from '@vercel/build-utils';
 
 const TMP = tmpdir();
@@ -54,7 +63,19 @@ import {
   startStandaloneDevServer,
 } from './standalone-server';
 
-export { shouldServe };
+import { generateProjectManifest, diagnostics } from './diagnostics';
+
+export { diagnostics };
+
+// In standalone server mode the user's Go server handles its own routing,
+// so every request path is served by this function.
+export const shouldServe: ShouldServe = opts => {
+  const framework = opts.config.framework;
+  if (framework === 'go' || framework === 'services') {
+    return true;
+  }
+  return defaultShouldServe(opts);
+};
 
 // in order to allow the user to have `main.go`,
 // we need our `main.go` to be called something else
@@ -116,10 +137,21 @@ type UndoActions = {
   functionRenames: UndoFunctionRename[];
 };
 
-export const version = 3;
+// `-1` lets each build pick its result version: standalone server builds
+// return a V2 result so they can name their own output, while the classic
+// `api/*.go` path keeps the scalar V3 result the CLI names from `build.src`.
+export const version = -1;
 
-export async function build(options: BuildOptions) {
-  const { files, config, workPath, meta = {} } = options;
+export async function build(options: BuildOptions): Promise<BuildResultVX> {
+  const {
+    files,
+    config,
+    workPath,
+    meta = {},
+    service,
+    diagnosticsValues,
+    registerPreDeploy,
+  } = options;
   let { entrypoint } = options;
 
   const goPath = await getWriteableDirectory();
@@ -250,6 +282,17 @@ export async function build(options: BuildOptions) {
       workPath,
     });
 
+    // Emit the manifest after resolving the Go version but before building the handler
+    // injects the @vercel/go-bridge.
+    const goModJson = goModPath ? await go.modEditJson(goModPath) : null;
+    await generateProjectManifest({
+      workPath,
+      goModJson,
+      resolvedGoVersion: go.resolvedVersion,
+      framework: diagnosticsValues?.framework,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+
     const outDir = await getWriteableDirectory();
     const buildOptions: BuildHandlerOptions = {
       downloadPath,
@@ -281,8 +324,22 @@ export async function build(options: BuildOptions) {
       environment: {},
     });
 
+    const preDeployCommand = config?.preDeployCommand;
+    if (registerPreDeploy && typeof preDeployCommand === 'string') {
+      const capturedEnv = { ...env };
+      const capturedCwd = workPath;
+      registerPreDeploy(async () => {
+        debug(`Running pre-deploy command: \`${preDeployCommand}\``);
+        await execCommand(preDeployCommand, {
+          env: capturedEnv,
+          cwd: capturedCwd,
+        });
+      });
+    }
+
     return {
-      output: lambda,
+      resultVersion: 3,
+      result: { output: lambda },
     };
   } catch (error) {
     debug(`Go Builder Error: ${error}`);
@@ -956,8 +1013,10 @@ export async function startDevServer(
       env,
     },
     workPath,
+    // The binary has to run on this machine, so don't downgrade.
+    preferNewestToolchain: true,
   });
-  await go.build('./...', executable);
+  await go.build('./...', executable, { release: false });
 
   // run the dev server
   debug(`SPAWNING ${executable} CWD=${tmp}`);
@@ -1057,28 +1116,77 @@ async function waitForPortFile_(opts: {
   }
 }
 
-export async function prepareCache({
-  workPath,
-}: PrepareCacheOptions): Promise<Files> {
-  // When building the project for the first time, there won't be a cache and
-  // `createGo()` will have downloaded Go to the global cache directory, then
-  // symlinked it to the local `cacheDir`.
-  //
-  // If we detect the `cacheDir` is a symlink, unlink it, then move the global
-  // cache directory into the local cache directory so that it can be
-  // persisted.
-  //
-  // On the next build, the local cache will be restored and `createGo()` will
-  // use it unless the preferred Go version changed in the `go.mod`.
-  const goCacheDir = join(workPath, localCacheDir);
-  const stat = await lstat(goCacheDir);
-  if (stat.isSymbolicLink()) {
-    const goGlobalCacheDir = await readlink(goCacheDir);
-    debug(`Preparing cache by moving ${goGlobalCacheDir} -> ${goCacheDir}`);
-    await unlink(goCacheDir);
-    await move(goGlobalCacheDir, goCacheDir);
+const pendingGoCacheCopies = new Map<string, Promise<void>>();
+
+async function removeStagedGoCache(path: string): Promise<void> {
+  const stat = await lstat(path);
+  if (stat.isDirectory()) {
+    // Go's module cache contains read-only directories; don't follow symlinks.
+    await chmod(path, stat.mode | 0o700);
+    for (const entry of await readdir(path)) {
+      await removeStagedGoCache(join(path, entry));
+    }
+  }
+  await remove(path);
+}
+
+// The cache uploader requires physical files inside the repo, not symlinked trees.
+async function materializeGoCache(goCacheDir: string): Promise<void> {
+  let source: string;
+  let target: string;
+  try {
+    if (!(await lstat(goCacheDir)).isSymbolicLink()) return;
+    target = await readlink(goCacheDir);
+    source = await realpath(goCacheDir);
+  } catch (err: any) {
+    if (err?.code === 'ENOENT' || err?.code === 'ENOTDIR') return;
+    throw err;
   }
 
-  const cache = await glob(`${localCacheDir}/**`, workPath);
-  return cache;
+  const stagingDir = await mkdtemp(`${goCacheDir}.tmp-`);
+  try {
+    debug(`Preparing cache by copying ${source} -> ${goCacheDir}`);
+    await copy(source, stagingDir);
+    // Keep the link usable until the full copy is ready; never move the source.
+    await unlink(goCacheDir);
+    try {
+      await rename(stagingDir, goCacheDir);
+    } catch (err) {
+      await symlink(target, goCacheDir).catch(
+        (linkErr: NodeJS.ErrnoException) => {
+          if (linkErr.code !== 'EEXIST') throw linkErr;
+        }
+      );
+      throw err;
+    }
+  } catch (err) {
+    await removeStagedGoCache(stagingDir).catch(cleanupErr => {
+      debug(`Failed to remove Go cache staging directory: ${cleanupErr}`);
+    });
+    throw err;
+  }
+}
+
+/** Returns the service-local cache with repo-relative paths for restoration. */
+export async function prepareCache({
+  workPath,
+  repoRootPath,
+}: PrepareCacheOptions): Promise<Files> {
+  const root = repoRootPath || workPath;
+  const goCacheDir = join(workPath, localCacheDir);
+  let copying = pendingGoCacheCopies.get(goCacheDir);
+  if (!copying) {
+    copying = materializeGoCache(goCacheDir);
+    pendingGoCacheCopies.set(goCacheDir, copying);
+  }
+  try {
+    // The uploader may call prepareCache concurrently for the same workPath.
+    await copying;
+  } finally {
+    if (pendingGoCacheCopies.get(goCacheDir) === copying) {
+      pendingGoCacheCopies.delete(goCacheDir);
+    }
+  }
+  const mountpoint = relative(root, workPath) || undefined;
+  return glob(`${localCacheDir}/**`, workPath, mountpoint);
 }

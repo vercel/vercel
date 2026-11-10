@@ -1,20 +1,7 @@
 # Connectors
 
-`vercel connect` manages connectors such as Slack apps. This command may be feature-gated; if unavailable, check `vercel connect --help` before falling back to dashboard or API paths.
+Connector credentials belong to a subject and, for app credentials, an installation. Resolve the intended installation before requesting an app token; do not assume a default installation is the one that owns the user's data.
 
-## Common Commands
+Omitting scopes requests the connector's defaults, not an empty permission set. Use the requested operation to choose the needed permissions. Tokens and trigger URLs can grant third-party access; avoid exposing them in output.
 
-```bash
-vercel connect create slack --name my-bot
-vercel connect create slack --name my-bot --triggers
-vercel connect list --format=json
-vercel connect list --all-projects
-vercel connect attach <connector-id-or-uid> -e production -e preview --yes
-vercel connect token <connector-id-or-uid> --format=json
-vercel connect open <connector-id-or-uid>
-vercel connect remove <connector-id-or-uid> --disconnect-all --yes
-```
-
-Connector tokens and trigger URLs can grant access to third-party systems. Do not print or store them unless the user explicitly needs that output.
-
-Use `--project <name-or-id>` with `attach` when targeting a project other than the currently linked one. Use connector IDs like `scl_...` or UIDs like `slack/my-bot` where accepted.
+Attaching credentials to a project and registering it as a webhook destination are distinct. Verify the intended project, environment, branch, and handler path before enabling delivery. Connector removal can affect every attached project; inspect connections first.

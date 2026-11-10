@@ -172,7 +172,7 @@ describe('integration', () => {
       it('should error when no argument passed', async () => {
         client.setArgv('integration', 'guide');
         const exitCode = await integrationCommand(client);
-        expect(exitCode).toEqual(1);
+        expect(exitCode).toEqual(2);
         await expect(client.stderr).toOutput(
           'Error: You must specify an integration.'
         );

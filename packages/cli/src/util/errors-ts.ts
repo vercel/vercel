@@ -1,5 +1,5 @@
 import bytes from 'bytes';
-import type { Response } from 'node-fetch';
+import type { Response } from './fetch';
 import { NowBuildError } from '@vercel/build-utils';
 import { NowError } from './now-error';
 import code from './output/code';
@@ -19,6 +19,7 @@ export class APIError extends Error {
   slug?: string;
   action?: string;
   retryAfterMs?: number | 'never';
+  wwwAuthenticate?: string;
   [key: string]: any;
 
   constructor(message: string, response: Response, body?: object) {
@@ -26,6 +27,8 @@ export class APIError extends Error {
     this.message = `${message} (${response.status})`;
     this.status = response.status;
     this.serverMessage = message;
+    this.wwwAuthenticate =
+      response.headers.get('WWW-Authenticate') ?? undefined;
 
     if (body) {
       for (const field of Object.keys(body)) {
@@ -96,7 +99,7 @@ export class InvalidToken extends NowError<'NOT_AUTHORIZED', {}> {
     let message: string;
     if (tokenSource === 'flag') {
       message =
-        'The token provided via `--token` argument is not valid. Please provide a valid token.';
+        'The token provided via the `--token` option is not valid. Please provide a valid token.';
     } else if (tokenSource === 'env') {
       message =
         'The token provided via VERCEL_TOKEN environment variable is not valid. Please provide a valid token.';
@@ -361,7 +364,7 @@ export class TLDNotSupportedViaCLI extends NowError<
     super({
       code: 'UNSUPPORTED_TLD_VIA_CLI',
       meta: { domain },
-      message: `Purchased for the TLD for domain name ${domain} are not supported via the CLI. Use the REST API or the dashboard to purchase.`,
+      message: `Purchases for the TLD of ${domain} are not supported via the CLI. Use the REST API or the dashboard to buy it.`,
     });
   }
 }
@@ -411,7 +414,7 @@ export class UnexpectedDomainPurchaseError extends NowError<
     super({
       code: 'UNEXPECTED_DOMAIN_PURCHASE_ERROR',
       meta: { domain },
-      message: `An unexpected error happened while purchasing.`,
+      message: `The order for ${domain} failed.`,
     });
   }
 }
@@ -440,7 +443,63 @@ export class DomainPaymentError extends NowError<'DOMAIN_PAYMENT_ERROR', {}> {
     super({
       code: 'DOMAIN_PAYMENT_ERROR',
       meta: {},
-      message: `Your card was declined.`,
+      message: `Your card was declined. Nothing was charged.`,
+    });
+  }
+}
+
+/** A domain charge may have gone through; charging again could charge twice. */
+export class DomainChargeOutcomeUnknown extends NowError<
+  'DOMAIN_CHARGE_OUTCOME_UNKNOWN',
+  { domain: string; verb: 'buy' | 'renew' }
+> {
+  constructor(domain: string, verb: 'buy' | 'renew') {
+    super({
+      code: 'DOMAIN_CHARGE_OUTCOME_UNKNOWN',
+      meta: { domain, verb },
+      message: `Can't confirm whether ${domain} was ${verb === 'buy' ? 'bought' : 'renewed'}. Run ${getCommandName(`domains inspect ${domain}`)} before trying again, or you may be charged twice.`,
+    });
+  }
+}
+
+/** A domain order failed and its charge was refunded. */
+export class DomainPurchaseRefunded extends NowError<
+  'DOMAIN_PURCHASE_REFUNDED',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_PURCHASE_REFUNDED',
+      meta: { domain },
+      message: `The purchase of ${domain} failed, and the charge was refunded.`,
+    });
+  }
+}
+
+/** A domain order failed and refunding its charge also failed. */
+export class DomainPurchaseRefundFailed extends NowError<
+  'DOMAIN_PURCHASE_REFUND_FAILED',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_PURCHASE_REFUND_FAILED',
+      meta: { domain },
+      message: `The purchase of ${domain} failed, and refunding the charge also failed. Contact Vercel support about the charge.`,
+    });
+  }
+}
+
+/** The API rejected a domain charge because its price changed. */
+export class DomainPriceChanged extends NowError<
+  'DOMAIN_PRICE_CHANGED',
+  { domain: string }
+> {
+  constructor(domain: string) {
+    super({
+      code: 'DOMAIN_PRICE_CHANGED',
+      meta: { domain },
+      message: `The price of ${domain} changed. Nothing was charged.`,
     });
   }
 }
@@ -1059,11 +1118,25 @@ export class DeploymentsRateLimited extends NowError<
   }
 }
 
-export class BuildsRateLimited extends NowError<'BUILDS_RATE_LIMITED', {}> {
-  constructor(message: string) {
+export interface BuildsRateLimitedMeta {
+  /** Backend-provided call-to-action label (newer field). */
+  ctaLabel?: string;
+  /** Backend-provided call-to-action URL (newer field). */
+  ctaUrl?: string;
+  /** Legacy call-to-action label. */
+  action?: string;
+  /** Legacy call-to-action URL. */
+  link?: string;
+}
+
+export class BuildsRateLimited extends NowError<
+  'BUILDS_RATE_LIMITED',
+  BuildsRateLimitedMeta
+> {
+  constructor(message: string, meta: BuildsRateLimitedMeta = {}) {
     super({
       code: 'BUILDS_RATE_LIMITED',
-      meta: {},
+      meta,
       message,
     });
   }

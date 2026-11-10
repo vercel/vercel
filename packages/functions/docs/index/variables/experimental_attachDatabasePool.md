@@ -6,7 +6,7 @@
 
 > `const` **experimental\_attachDatabasePool**: (`dbPool`) => `void` = `attachDatabasePool`
 
-Defined in: [packages/functions/src/db-connections/index.ts:323](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L323)
+Defined in: [packages/functions/src/db-connections/index.ts:328](https://github.com/vercel/vercel/blob/main/packages/functions/src/db-connections/index.ts#L328)
 
 **`Experimental`**
 

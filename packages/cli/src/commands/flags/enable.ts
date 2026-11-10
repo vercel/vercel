@@ -1,9 +1,9 @@
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   buildCommandWithGlobalFlags,
@@ -25,6 +25,7 @@ import {
 import output from '../../output-manager';
 import { FlagsEnableTelemetryClient } from '../../util/telemetry/commands/flags/enable';
 import { enableSubcommand } from './command';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function enable(
   client: Client,
@@ -42,7 +43,7 @@ export default async function enable(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -51,25 +52,27 @@ export default async function enable(
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
   );
+  const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to enable');
     output.log(
       `Example: ${getCommandName('flags enable my-feature --environment production')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionMessage(message);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -85,12 +88,7 @@ export default async function enable(
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
-    if (flag.state === 'archived') {
-      output.error(
-        `Flag ${chalk.bold(flag.slug)} is archived and cannot be enabled`
-      );
-      return 1;
-    }
+    logArchivedFlagNotice(flag);
 
     // Only boolean flags can be enabled/disabled via CLI
     if (flag.kind !== 'boolean') {
@@ -122,9 +120,9 @@ export default async function enable(
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
 
     environment = await resolveFlagEnvironment(
@@ -160,10 +158,10 @@ export default async function enable(
     output.stopSpinner();
 
     output.success(
-      `Feature flag ${chalk.bold(flag.slug)} has been enabled in ${chalk.bold(environment)}`
+      `Feature flag ${chalk.bold(flag.slug)} ${flag.state === 'archived' ? 'configuration has been updated' : 'has been enabled'} in ${chalk.bold(environment)}`
     );
     output.log(
-      `  ${chalk.dim('Serving variant:')} ${formatVariantForDisplay(onVariant)}`
+      `  ${chalk.dim(flag.state === 'archived' ? 'Configured variant:' : 'Serving variant:')} ${formatVariantForDisplay(onVariant)}`
     );
   } catch (err) {
     output.stopSpinner();
@@ -185,12 +183,12 @@ export default async function enable(
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     printError(err);
-    return 1;
+    return 2;
   }
 
   return 0;

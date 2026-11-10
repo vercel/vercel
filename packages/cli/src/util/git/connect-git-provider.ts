@@ -58,6 +58,28 @@ export async function connectGitProvider(
           repo
         )} to project. Make sure there aren't any typos and that you have access to the repository if it's private.`
       );
+    } else if (apiError && err.code === 'repo_links_exceeded_limit') {
+      // The error meta carries a plan-appropriate call to action (newer
+      // `ctaLabel`/`ctaUrl`, older `action`/`link`) — surface it instead of
+      // dropping it. Take the label and URL as a pair so we never mix a new
+      // label with a legacy URL (or vice versa).
+      let ctaLabel: string | undefined;
+      let ctaUrl: string | undefined;
+      if (typeof err.ctaLabel === 'string' && typeof err.ctaUrl === 'string') {
+        ctaLabel = err.ctaLabel;
+        ctaUrl = err.ctaUrl;
+      } else if (
+        typeof err.action === 'string' &&
+        typeof err.link === 'string'
+      ) {
+        ctaLabel = err.action;
+        ctaUrl = err.link;
+      }
+      let message = err.message;
+      if (ctaLabel && ctaUrl) {
+        message += `\n${ctaLabel}: ${link(ctaUrl)}`;
+      }
+      output.error(message);
     } else if (apiError && err.action === 'Add a Login Connection') {
       output.error(
         err.message.replace(repo, chalk.cyan(repo)) +

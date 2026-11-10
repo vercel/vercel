@@ -17,7 +17,7 @@ export function parseAccessFlag(
 ): BlobAccess | null {
   if (accessFlag === undefined) {
     output.error(
-      "Missing required --access flag. Must be 'public' or 'private'."
+      "Missing required --access option. Must be 'public' or 'private'."
     );
     return null;
   }

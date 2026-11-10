@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import type { DeployHook } from '@vercel-internals/types';
 import type Client from '../../util/client';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { validateJsonOutput } from '../../util/output-format';
@@ -29,7 +29,7 @@ export default async function ls(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -49,11 +49,11 @@ export default async function ls(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   const lsStamp = stamp();
 
   if (!client.nonInteractive) {
@@ -94,7 +94,7 @@ export default async function ls(client: Client, argv: string[]) {
               next: [
                 {
                   command: getCommandNamePlain(
-                    'deploy-hooks create <name> --ref <branch>'
+                    'deploy-hooks create <name> --git-branch <BRANCH>'
                   ),
                   when: 'Create a deploy hook',
                 },

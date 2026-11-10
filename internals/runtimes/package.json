@@ -1,0 +1,50 @@
+{
+  "private": true,
+  "name": "@vercel-internals/runtimes",
+  "version": "1.2.4",
+  "description": "Runtime, framework, and entrypoint classification utilities",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "default": "./dist/constants.js"
+    },
+    "./framework": {
+      "types": "./dist/framework.d.ts",
+      "default": "./dist/framework.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "default": "./dist/runtime.js"
+    },
+    "./entrypoint": {
+      "types": "./dist/entrypoint.d.ts",
+      "default": "./dist/entrypoint.js"
+    },
+    "./schedule-entrypoint": {
+      "types": "./dist/schedule-entrypoint.d.ts",
+      "default": "./dist/schedule-entrypoint.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/*"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vercel/build-utils": "workspace:*",
+    "@vercel/frameworks": "workspace:*"
+  },
+  "devDependencies": {
+    "@vercel-internals/tsconfig": "workspace:*"
+  }
+}

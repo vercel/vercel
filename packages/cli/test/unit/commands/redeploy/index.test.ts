@@ -15,7 +15,7 @@ describe('redeploy', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = redeploy(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -76,6 +76,9 @@ describe('redeploy', () => {
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "redeploy"').toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`vercel redeploy <deployment>`'
+    );
   });
 
   it('should error if deployment not found', async () => {
@@ -120,7 +123,7 @@ describe('redeploy', () => {
     await expect(client.stderr).toOutput(
       `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
     );
-    await expect(client.stderr).toOutput('Production  https');
+    await expect(client.stderr).toOutput('Production      https');
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -141,6 +144,193 @@ describe('redeploy', () => {
 
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+
+    // The Aliased row never prints with --no-wait, so the ▲ gutter falls
+    // back to the Production row.
+    const stderrOutput = client.stderr.getFullOutput();
+    expect(stderrOutput).toContain('▲ Production');
+  });
+
+  it('should display the ▲ Aliased row when the deployment is already ready and aliased', async () => {
+    const { fromDeployment, toDeployment } = initRedeployTest();
+    // already READY + aliasAssigned: the status polling loop is skipped
+    toDeployment.alias = ['my-app.vercel.app'];
+    client.setArgv('redeploy', fromDeployment.id);
+
+    const exitCodePromise = redeploy(client);
+    await expect(client.stderr).toOutput(
+      'Aliased         https://my-app.vercel.app'
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+
+    const stderrOutput = client.stderr.getFullOutput();
+    expect(stderrOutput).not.toContain('▲ Production');
+    expect(stderrOutput).toContain('▲ Aliased');
+  });
+
+  it('should display the ▲ gutter only on the Aliased row when waiting for aliases', async () => {
+    const { fromDeployment, toDeployment } = initRedeployTest();
+    toDeployment.readyState = 'BUILDING';
+    toDeployment.aliasAssigned = false;
+    client.setArgv('redeploy', fromDeployment.id);
+
+    const exitCodePromise = redeploy(client);
+    await expect(client.stderr).toOutput('Production      https');
+
+    // let the status poller observe the alias assignment
+    toDeployment.readyState = 'READY';
+    toDeployment.aliasAssigned = true;
+    toDeployment.alias = ['my-app.vercel.app'];
+
+    await expect(client.stderr).toOutput(
+      'Aliased         https://my-app.vercel.app'
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+
+    const stderrOutput = client.stderr.getFullOutput();
+    expect(stderrOutput).not.toContain('▲ Production');
+    expect(stderrOutput).toContain('▲ Aliased');
+  });
+
+  describe('prebuilt deployments', () => {
+    const prebuiltWarning = 'is a prebuilt deployment. Redeploying reuses';
+
+    async function runRedeploy(
+      configure: (deployment: Deployment) => void = () => {}
+    ) {
+      const { fromDeployment, toDeployment, postRequests } = initRedeployTest();
+      configure(fromDeployment);
+      client.stdout.isTTY = false;
+      client.setArgv('redeploy', fromDeployment.id);
+
+      const exitCode = await redeploy(client);
+
+      return {
+        exitCode,
+        fromDeployment,
+        toDeployment,
+        postRequests,
+        stderr: client.stderr.getFullOutput(),
+        stdout: client.stdout.getFullOutput(),
+      };
+    }
+
+    it('warns once and still redeploys a prebuilt deployment', async () => {
+      const result = await runRedeploy(deployment => {
+        deployment.prebuilt = true;
+      });
+
+      expect(result.exitCode, 'exit code for "redeploy"').toEqual(0);
+      expect(result.stderr.split(prebuiltWarning)).toHaveLength(2);
+      expect(result.stderr).toContain(
+        `Deployment ${result.fromDeployment.id} is a prebuilt deployment.`
+      );
+      expect(result.stderr).toContain('create a new deployment instead');
+      expect(result.stderr).toContain('vercel deploy --prebuilt');
+      expect(result.stderr).toContain('(for example --environment production)');
+      expect(result.stderr).toContain(
+        'Learn More: https://vercel.com/docs/cli/deploy#prebuilt'
+      );
+      expect(result.stderr.indexOf(prebuiltWarning)).toBeLessThan(
+        result.stderr.indexOf('Production      https')
+      );
+      expect(result.postRequests).toEqual([
+        {
+          query: { forceNew: '1' },
+          body: {
+            deploymentId: result.fromDeployment.id,
+            meta: { action: 'redeploy' },
+            name: result.fromDeployment.name,
+            target: 'production',
+          },
+        },
+      ]);
+      expect(result.stdout).toEqual(`https://${result.toDeployment.url}`);
+    });
+
+    it('does not warn for a non-prebuilt deployment', async () => {
+      const result = await runRedeploy();
+
+      expect(result.exitCode, 'exit code for "redeploy"').toEqual(0);
+      expect(result.stderr).not.toContain(prebuiltWarning);
+      expect(result.postRequests).toHaveLength(1);
+      expect(result.stdout).toEqual(`https://${result.toDeployment.url}`);
+    });
+
+    it('does not warn for a prebuilt deployment with manual provisioning', async () => {
+      const result = await runRedeploy(deployment => {
+        deployment.prebuilt = true;
+        deployment.manualProvisioning = { state: 'COMPLETE' };
+      });
+
+      expect(result.exitCode, 'exit code for "redeploy"').toEqual(0);
+      expect(result.stderr).not.toContain(prebuiltWarning);
+      expect(result.postRequests).toHaveLength(1);
+      expect(result.stdout).toEqual(`https://${result.toDeployment.url}`);
+    });
+  });
+
+  describe('--environment', () => {
+    it.each([
+      ['--environment', 'production'],
+      ['-e', 'production'],
+    ])('should redeploy to the environment given with %s', async flag => {
+      const { fromDeployment } = initRedeployTest({
+        fromTarget: undefined,
+        toTarget: 'production',
+      });
+      client.setArgv('redeploy', fromDeployment.id, flag, 'production');
+
+      const exitCodePromise = redeploy(client);
+      await expect(client.stderr).toOutput('Production      https');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode, 'exit code for "redeploy"').toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'argument:urlOrDeploymentId', value: '[REDACTED]' },
+        { key: 'option:environment', value: 'production' },
+      ]);
+    });
+
+    it('should keep --target working with a deprecation warning', async () => {
+      const { fromDeployment } = initRedeployTest({
+        fromTarget: undefined,
+        toTarget: 'production',
+      });
+      client.setArgv('redeploy', fromDeployment.id, '--target', 'production');
+
+      const exitCodePromise = redeploy(client);
+      await expect(client.stderr).toOutput(
+        '--target is deprecated. Use --environment.'
+      );
+      await expect(client.stderr).toOutput('Production      https');
+      expect(await exitCodePromise).toEqual(0);
+    });
+
+    it('should reject --target together with --environment', async () => {
+      const { fromDeployment } = initRedeployTest({
+        fromTarget: undefined,
+        toTarget: 'production',
+      });
+      client.setArgv(
+        'redeploy',
+        fromDeployment.id,
+        '--target',
+        'production',
+        '--environment',
+        'preview'
+      );
+
+      expect(await redeploy(client)).toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use --target with --environment. Use --environment."
+      );
+    });
   });
 
   describe('--target', () => {
@@ -155,7 +345,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Production  https');
+      await expect(client.stderr).toOutput('Production      https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -172,7 +362,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Preview     https');
+      await expect(client.stderr).toOutput('Preview         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -189,7 +379,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Preview     https');
+      await expect(client.stderr).toOutput('Preview         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -206,7 +396,7 @@ describe('redeploy', () => {
       await expect(client.stderr).toOutput(
         `Fetching deployment "${fromDeployment.id}" in ${fromDeployment.creator?.username}`
       );
-      await expect(client.stderr).toOutput('Preview     https');
+      await expect(client.stderr).toOutput('Preview         https');
 
       const exitCode = await exitCodePromise;
       expect(exitCode, 'exit code for "redeploy"').toEqual(0);
@@ -230,7 +420,7 @@ describe('redeploy', () => {
         `The provided argument "${invalidCustomEnvironment}" is not a valid target environment.`
       );
       const exitCode = await exitCodePromise;
-      expect(exitCode, 'exit code for "redeploy"').toEqual(1);
+      expect(exitCode, 'exit code for "redeploy"').toEqual(2);
     });
   });
 });
@@ -263,7 +453,9 @@ function initRedeployTest({
   const fromDeployment = useDeployment({ creator: user, target: fromTarget });
   const toDeployment = useDeployment({ creator: user, target: toTarget });
 
+  const postRequests: { query: unknown; body: unknown }[] = [];
   client.scenario.post(`/v13/deployments`, (req, res) => {
+    postRequests.push({ query: req.query, body: req.body });
     const { target, customEnvironmentSlugOrId } = req.body;
     if (target !== undefined && typeof target !== 'string') {
       res.status(400).json({
@@ -315,5 +507,6 @@ function initRedeployTest({
     project,
     fromDeployment,
     toDeployment,
+    postRequests,
   };
 }

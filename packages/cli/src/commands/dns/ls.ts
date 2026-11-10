@@ -8,11 +8,14 @@ import getDNSRecords, {
   type DomainRecordsItem,
 } from '../../util/dns/get-dns-records';
 import getDomainDNSRecords from '../../util/dns/get-domain-dns-records';
-import getScope from '../../util/get-scope';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
+import { getContextName } from '../../util/get-scope';
+import {
+  getPaginationOpts,
+  InvalidNextError,
+} from '../../util/get-pagination-opts';
+import { printNextPageCommand } from '../../util/pagination';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsLsTelemetryClient } from '../../util/telemetry/commands/dns/ls';
 import { listSubcommand } from './command';
@@ -20,6 +23,7 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { validateJsonOutput } from '../../util/output-format';
 import {
   outputActionRequired,
   outputAgentError,
@@ -29,7 +33,7 @@ import {
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { getCommandNamePlain } from '../../util/pkg-name';
 
 export default async function ls(client: Client, argv: string[]) {
@@ -46,16 +50,16 @@ export default async function ls(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
   if (client.nonInteractive && args.length > 1) {
-    const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+    const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
     const cmd = getCommandNamePlain(
       `dns ls <domain> ${flags.join(' ')}`.trim()
     );
@@ -73,9 +77,9 @@ export default async function ls(client: Client, argv: string[]) {
           },
         ],
       },
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
   const validationResult = validateLsArgs({
@@ -89,7 +93,6 @@ export default async function ls(client: Client, argv: string[]) {
   }
 
   const { telemetryEventStore } = client;
-  const { contextName } = await getScope(client);
   const telemetry = new DnsLsTelemetryClient({
     opts: {
       store: telemetryEventStore,
@@ -97,11 +100,22 @@ export default async function ls(client: Client, argv: string[]) {
   });
 
   const [domainName] = args;
-  const lsStamp = stamp();
 
   telemetry.trackCliArgumentDomain(domainName);
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionNext(opts['--next']);
+  telemetry.trackCliOptionFormat(opts['--format']);
+  telemetry.trackCliFlagJson(opts['--json']);
+
+  const formatResult = validateJsonOutput(opts);
+  if (!formatResult.valid) {
+    output.error(formatResult.error);
+    return 2;
+  }
+  const asJson = formatResult.jsonOutput;
+
+  const contextName = await getContextName(client);
+  const lsStamp = stamp();
 
   let paginationOptions;
 
@@ -109,19 +123,19 @@ export default async function ls(client: Client, argv: string[]) {
     paginationOptions = getPaginationOpts(opts);
   } catch (err: unknown) {
     output.prettyError(err);
-    return 1;
+    return err instanceof InvalidNextError ? 2 : 1;
   }
 
   if (domainName) {
     const data = await getDomainDNSRecords(
       client,
       domainName,
-      4,
+      5,
       ...paginationOptions
     );
     if (data instanceof DomainNotFound) {
       if (client.nonInteractive) {
-        const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+        const flags = getGlobalFlagsFromArgs(client.argv.slice(2));
         const cmd = getCommandNamePlain(`dns ls ${flags.join(' ')}`.trim());
         outputAgentError(
           client,
@@ -143,20 +157,27 @@ export default async function ls(client: Client, argv: string[]) {
     }
 
     const { records, pagination } = data;
+    const dnsRecords = [{ domainName, records }];
+
+    if (asJson) {
+      outputDnsRecordsJson(client, dnsRecords, pagination);
+      return 0;
+    }
 
     output.log(
       `${
         records.length > 0 ? 'Records' : 'No records'
       } found under ${chalk.bold(contextName)} ${chalk.gray(lsStamp())}`
     );
-    client.stdout.write(getDNSRecordsTable([{ domainName, records }]));
+    client.stdout.write(getDNSRecordsTable(dnsRecords));
 
-    if (pagination && pagination.count === 20) {
+    if (pagination?.next) {
       const flags = getCommandFlags(opts, ['_', '--next']);
-      output.log(
-        `To display the next page run ${getCommandName(
+      output.print('\n');
+      printNextPageCommand(
+        getCommandNamePlain(
           `dns ls ${domainName}${flags} --next ${pagination.next}`
-        )}`
+        )
       );
     }
 
@@ -168,6 +189,11 @@ export default async function ls(client: Client, argv: string[]) {
     contextName,
     ...paginationOptions
   );
+  if (asJson) {
+    outputDnsRecordsJson(client, dnsRecords, pagination);
+    return 0;
+  }
+
   const nRecords = dnsRecords.reduce((p, r) => r.records.length + p, 0);
   output.log(
     `${nRecords > 0 ? 'Records' : 'No records'} found under ${chalk.bold(
@@ -175,12 +201,10 @@ export default async function ls(client: Client, argv: string[]) {
     )} ${chalk.gray(lsStamp())}`
   );
   output.log(getDNSRecordsTable(dnsRecords));
-  if (pagination && pagination.count === 20) {
+  if (pagination?.next) {
     const flags = getCommandFlags(opts, ['_', '--next']);
-    output.log(
-      `To display the next page run ${getCommandName(
-        `dns ls${flags} --next ${pagination.next}`
-      )}`
+    printNextPageCommand(
+      getCommandNamePlain(`dns ls${flags} --next ${pagination.next}`)
     );
   }
   return 0;
@@ -211,4 +235,13 @@ function getDNSRecordRow(record: DNSRecord) {
     priority ? `${priority} ${record.value}` : record.value,
     chalk.gray(isSystemRecord ? 'default' : createdAt),
   ];
+}
+
+function outputDnsRecordsJson(
+  client: Client,
+  records: DomainRecordsItem[],
+  pagination: unknown
+) {
+  output.stopSpinner();
+  client.stdout.write(`${JSON.stringify({ records, pagination }, null, 2)}\n`);
 }

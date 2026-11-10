@@ -20,6 +20,16 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
   process.env.NODE_ENV = 'production';
 }
 
+// If project's framework is not set to `nextjs`, then `NEXT_DEPLOYMENT_ID` for Skew Protection
+// might be missing, which is a case with services deployments for example.
+if (
+  process.env.VERCEL_SKEW_PROTECTION_ENABLED === '1' &&
+  process.env.VERCEL_DEPLOYMENT_ID &&
+  !process.env.NEXT_DEPLOYMENT_ID
+) {
+  process.env.NEXT_DEPLOYMENT_ID = process.env.VERCEL_DEPLOYMENT_ID;
+}
+
 // @preserve pre-next-server-target
 
 const NextServer = require('__NEXT_SERVER_PATH__').default;
@@ -54,7 +64,9 @@ module.exports = serve(nextServer.getRequestHandler());
 // If available, add `getRequestHandlerWithMetadata` to the export if it's
 // required by the configuration.
 if (
-  (conf.experimental?.ppr || conf.experimental?.cacheComponents) &&
+  (conf.experimental?.ppr ||
+    conf.experimental?.cacheComponents ||
+    conf.cacheComponents) &&
   'getRequestHandlerWithMetadata' in nextServer &&
   typeof nextServer.getRequestHandlerWithMetadata === 'function'
 ) {

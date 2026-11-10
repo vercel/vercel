@@ -4,21 +4,32 @@ import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
 import add from './add';
 import buy from './buy';
+import check from './check';
 import transferIn from './transfer-in';
 import inspect from './inspect';
 import ls from './ls';
 import rm from './rm';
 import move from './move';
 import price from './price';
+import search from './search';
+import autoRenew from './auto-renew';
+import renew from './renew';
+import verify from './verify';
 import {
   addSubcommand,
+  autoRenewSubcommand,
   buySubcommand,
+  checkSubcommand,
   domainsCommand,
   inspectSubcommand,
+  listSubcommand,
   moveSubcommand,
   priceSubcommand,
   removeSubcommand,
+  renewSubcommand,
+  searchSubcommand,
   transferInSubcommand,
+  verifySubcommand,
 } from './command';
 import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -28,12 +39,17 @@ import output from '../../output-manager';
 const COMMAND_CONFIG = {
   add: ['add'],
   buy: ['buy'],
+  check: ['check'],
   inspect: ['inspect'],
   ls: ['ls', 'list'],
   move: ['move'],
   price: ['price'],
+  search: ['search'],
   rm: ['rm', 'remove'],
   transferIn: ['transfer-in'],
+  renew: ['renew'],
+  autoRenew: ['auto-renew'],
+  verify: ['verify'],
 };
 
 export default async function main(client: Client) {
@@ -44,8 +60,8 @@ export default async function main(client: Client) {
       permissive: true,
     });
   } catch (error) {
-    printError(error);
-    return 1;
+    printError(error, client);
+    return 2;
   }
 
   const telemetry = new DomainsTelemetryClient({
@@ -63,15 +79,24 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('domains');
-    output.print(help(domainsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(domainsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: domainsCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: domainsCommand,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
@@ -103,6 +128,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandBuy(subcommandOriginal);
       return buy(client, args);
+    case 'check':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(checkSubcommand);
+      }
+      telemetry.trackCliSubcommandCheck(subcommandOriginal);
+      return check(client, args);
     case 'price':
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);
@@ -110,6 +142,13 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandPrice(subcommandOriginal);
       return price(client, args);
+    case 'search':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(searchSubcommand);
+      }
+      telemetry.trackCliSubcommandSearch(subcommandOriginal);
+      return search(client, args);
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);
@@ -124,10 +163,31 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandTransferIn(subcommandOriginal);
       return transferIn(client, args);
+    case 'renew':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(renewSubcommand);
+      }
+      telemetry.trackCliSubcommandRenew(subcommandOriginal);
+      return renew(client, args);
+    case 'autoRenew':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(autoRenewSubcommand);
+      }
+      telemetry.trackCliSubcommandAutoRenew(subcommandOriginal);
+      return autoRenew(client, args);
+    case 'verify':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('domains', subcommandOriginal);
+        return printHelp(verifySubcommand);
+      }
+      telemetry.trackCliSubcommandVerify(subcommandOriginal);
+      return verify(client, args);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('domains', subcommandOriginal);
-        return printHelp(transferInSubcommand);
+        return printHelp(listSubcommand);
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return ls(client, args);

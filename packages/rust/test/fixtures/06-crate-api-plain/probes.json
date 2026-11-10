@@ -1,0 +1,23 @@
+{
+  "probes": [
+    {
+      "path": "/api/hello",
+      "status": 200,
+      "mustContain": "handler:api-plain randomness:RANDOMNESS_PLACEHOLDER method:GET",
+      "responseHeaders": {
+        "content-type": "/text\\/plain/"
+      }
+    },
+    {
+      "path": "/api/hello?alpha=1&beta=two",
+      "status": 200,
+      "mustContain": "query:alpha=1&beta=two"
+    },
+    {
+      "path": "/api/hello",
+      "method": "POST",
+      "status": 200,
+      "mustContain": "method:POST"
+    }
+  ]
+}

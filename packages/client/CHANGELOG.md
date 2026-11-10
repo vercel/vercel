@@ -1,5 +1,717 @@
 # @vercel/client
 
+## 18.10.0
+
+### Minor Changes
+
+- d0629bd: Remove the deprecated array format for `schedules`. `schedules` in `vercel.json`, in Build Output `config.json`, and from `getDevManifest` must be an object keyed by schedule name. `@vercel/config` no longer exports `Schedule` (use `ScheduleDefinition`), and `@vercel/client` no longer exports `VercelConfigSchedule`.
+
+### Patch Changes
+
+- Updated dependencies [5f55ccc]
+- Updated dependencies [d0629bd]
+  - @vercel/build-utils@15.1.0
+
+## 18.9.3
+
+### Patch Changes
+
+- Updated dependencies [2f0edaf]
+  - @vercel/build-utils@15.0.2
+
+## 18.9.2
+
+### Patch Changes
+
+- Updated dependencies [1a379a3]
+  - @vercel/build-utils@15.0.1
+
+## 18.9.1
+
+### Patch Changes
+
+- Updated dependencies [9b1b587]
+- Updated dependencies [fec2df1]
+- Updated dependencies [d123652]
+  - @vercel/build-utils@15.0.0
+
+## 18.9.0
+
+### Minor Changes
+
+- 5aa1b58: `schedules` in `vercel.json` can now be an object keyed by schedule name, like `"schedules": { "nightly": { "schedule": "0 0 * * *", "path": "/api/cron" } }`. `vercel build` writes `schedules` to Build Output `config.json` in the format it was given, and builders can return it from `getDevManifest`. The array of named schedules still works but is deprecated, and `vercel build` and `vercel dev` warn when it's used.
+
+### Patch Changes
+
+- Updated dependencies [9abaa6d]
+- Updated dependencies [179d4ab]
+- Updated dependencies [d39dd61]
+- Updated dependencies [5aa1b58]
+  - @vercel/build-utils@14.23.0
+
+## 18.8.8
+
+### Patch Changes
+
+- Updated dependencies [a19979c]
+- Updated dependencies [a2e9f5d]
+  - @vercel/build-utils@14.22.0
+
+## 18.8.7
+
+### Patch Changes
+
+- Updated dependencies [bb42e81]
+  - @vercel/build-utils@14.21.3
+
+## 18.8.6
+
+### Patch Changes
+
+- Updated dependencies [cd68435]
+  - @vercel/build-utils@14.21.2
+
+## 18.8.5
+
+### Patch Changes
+
+- 72b1b84: Prevent deployment archives from including ignored files through directory entries.
+
+## 18.8.4
+
+### Patch Changes
+
+- Updated dependencies [1336097]
+  - @vercel/build-utils@14.21.1
+
+## 18.8.3
+
+### Patch Changes
+
+- Updated dependencies [24a7e04]
+- Updated dependencies [7e396f7]
+  - @vercel/build-utils@14.21.0
+
+## 18.8.2
+
+### Patch Changes
+
+- Updated dependencies [42cc083]
+  - @vercel/build-utils@14.20.1
+
+## 18.8.1
+
+### Patch Changes
+
+- 76b6025: Retry transient upload and deployment status failures, improve network diagnostics, and clarify errors when a deployment outcome cannot be confirmed.
+- Updated dependencies [e041037]
+  - @vercel/build-utils@14.20.0
+
+## 18.8.0
+
+### Minor Changes
+
+- e58b37a: Breaking (beta): the nested `expression`/`target` `schedules` format is no longer supported in `vercel.json` or Build Output. `schedules` entries use `schedule` plus exactly one of `path`, `function`, `topic`, or `entrypoint`, with optional `name`, `timezone`, and `jitter`. When `name` is omitted, it defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+
+  `Schedule` now has the flat shape. Removed exports: `parseScheduleDefinition`, `formatBuildOutputSchedule`, `FlatBuildOutputSchedule`, `ScheduleExpression`, and `ScheduleTarget` from `@vercel/build-utils`; `FlatScheduleDefinition`, `LegacyScheduleDefinition`, and `ScheduleDefinition` from `@vercel/config`; and `VercelConfigFlatSchedule` from `@vercel/client`.
+
+### Patch Changes
+
+- Updated dependencies [e58b37a]
+  - @vercel/build-utils@14.19.0
+
+## 18.7.0
+
+### Minor Changes
+
+- 94f6cea: Flat path `schedules` accept an optional `requestMethod` of `GET` or `POST`, defaulting to `POST`. `vercel build` writes it to Build Output, and `vercel dev` invokes path schedules with it.
+
+### Patch Changes
+
+- 800d820: Reject prebuilt file references to version-control files before upload while preserving environment-file and dependency references.
+- Updated dependencies [94f6cea]
+- Updated dependencies [3eeaad5]
+- Updated dependencies [8ac5320]
+  - @vercel/build-utils@14.18.0
+
+## 18.6.2
+
+### Patch Changes
+
+- Updated dependencies [28a7ab7]
+- Updated dependencies [28a7ab7]
+  - @vercel/build-utils@14.17.0
+
+## 18.6.1
+
+### Patch Changes
+
+- 20c5940: Make `name` optional for flat `schedules` entries. When omitted, the name defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+- Updated dependencies [20c5940]
+  - @vercel/build-utils@14.16.0
+
+## 18.6.0
+
+### Minor Changes
+
+- a7ef28c: Accept a top-level `daemons` field in `vercel.json`. `vercel dev` warns that it doesn't run daemons, and `vercel build` doesn't build them yet.
+
+### Patch Changes
+
+- Updated dependencies [a7ef28c]
+  - @vercel/build-utils@14.15.0
+
+## 18.5.0
+
+### Minor Changes
+
+- deb48cd: Accept a flat `schedules` format in `vercel.json` that is aligned with `crons` (`schedule` plus one of `path`, `function`, `topic`, or `entrypoint`), and emit schedules in the flat format in Build Output API `config.json`. The nested `expression`/`target` format is still accepted.
+
+### Patch Changes
+
+- Updated dependencies [deb48cd]
+  - @vercel/build-utils@14.14.0
+
+## 18.4.8
+
+### Patch Changes
+
+- 86268cb: List up to 100 `.vercelignore` violations needed by prebuilt functions, including each path's effective matching rule and line number, before truncating the deployment warning.
+
+## 18.4.7
+
+### Patch Changes
+
+- Updated dependencies [ff3d2f7]
+  - @vercel/build-utils@14.13.2
+
+## 18.4.6
+
+### Patch Changes
+
+- Updated dependencies [5082546]
+  - @vercel/build-utils@14.13.1
+
+## 18.4.5
+
+### Patch Changes
+
+- Updated dependencies [34b2c8e]
+  - @vercel/build-utils@14.13.0
+
+## 18.4.4
+
+### Patch Changes
+
+- Updated dependencies [6e68e60]
+  - @vercel/build-utils@14.12.0
+
+## 18.4.3
+
+### Patch Changes
+
+- 7eb63c0: Accept runtime-specific schedule entrypoints and provide build plumbing for lowering dedicated entrypoints to function targets. All schedule entrypoints must use one runtime, including for static frameworks and `framework: null`. Entrypoints must also match the runtime of frameworks that own one (Next.js, FastAPI, Express). The builder contract still supports multiple entrypoints per function for future runtimes.
+- Updated dependencies [888f59e]
+- Updated dependencies [7eb63c0]
+  - @vercel/build-utils@14.11.0
+
+## 18.4.2
+
+### Patch Changes
+
+- Updated dependencies [53a6086]
+  - @vercel/build-utils@14.10.2
+
+## 18.4.1
+
+### Patch Changes
+
+- Updated dependencies [f9d0e90]
+- Updated dependencies [8a277e4]
+- Updated dependencies [f8eb285]
+- Updated dependencies [66e443e]
+- Updated dependencies [08b0be2]
+  - @vercel/build-utils@14.10.1
+  - @vercel/routing-utils@6.6.0
+
+## 18.4.0
+
+### Minor Changes
+
+- 54a6d73: Require schedule jitter to be an integer from 1 to 15 minutes in vercel.json and Build Output API config, matching the maximum SQS message delay. Duration strings are no longer accepted.
+
+### Patch Changes
+
+- 348e6f1: Bump `@vercel/microfrontends` from 1.2.2 to 2.4.0 so `@vercel/client` uses patched `path-to-regexp@6.3.0` (GHSA-9wv6-86v2-598j).
+
+  This is the request-time matcher, unlike the CLI's vendored compile-only copy. 2.x signatures: `findConfig` takes `customConfigFilename`, and `inferMicrofrontendsLocation` takes `applicationContext` instead of `applicationName`. Passing `undefined` for `customConfigFilename` keeps the old search for `microfrontends.json` / `microfrontends.jsonc`.
+
+- Updated dependencies [2a57243]
+- Updated dependencies [54a6d73]
+- Updated dependencies [3d16792]
+  - @vercel/build-utils@14.10.0
+
+## 18.3.5
+
+### Patch Changes
+
+- bf9ade1: Warn on `--prebuilt` deploys when a `filePathMap` entry is excluded by `.vercelignore`. An upcoming release will fail closed instead of uploading without those files. Default-ignored dependency directories (`node_modules`, `.next`, etc.) are still kept. The CLI records telemetry when a deploy would fail closed.
+
+## 18.3.4
+
+### Patch Changes
+
+- 55e8d1e: Reduce CLI startup and deployment preparation time through lazy shared dependencies, smaller bundles, parallel Git metadata and file collection, and native executable startup caching. Allow deployment options to resolve asynchronously while the client collects local files.
+
+  Keep startup regression tests compatible with asynchronous prompts and Windows Git paths, and allow the NestJS build fixture sufficient time for cold dependency installation.
+
+- Updated dependencies [55e8d1e]
+  - @vercel/build-utils@14.9.3
+
+## 18.3.3
+
+### Patch Changes
+
+- Updated dependencies [b174f14]
+  - @vercel/build-utils@14.9.2
+
+## 18.3.2
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 18.3.1
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+
+## 18.3.0
+
+### Minor Changes
+
+- a652a99: Propagate top-level `schedules` from vercel.json into the Build Output API `config.json` during `vercel build`, and validate the property against the schedules schema
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 18.2.22
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 18.2.21
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 18.2.20
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 18.2.19
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 18.2.18
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 18.2.17
+
+### Patch Changes
+
+- Updated dependencies [e5b0363]
+  - @vercel/build-utils@14.4.1
+
+## 18.2.16
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 18.2.15
+
+### Patch Changes
+
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 18.2.14
+
+### Patch Changes
+
+- Updated dependencies [e340c58]
+  - @vercel/build-utils@14.2.0
+
+## 18.2.13
+
+### Patch Changes
+
+- f497896: Keep `--prebuilt` `filePathMap` entries under default-ignored dependency/output directories (`node_modules`, `.next`, Yarn PnP, Python venv, Rust `target`) even when those paths are also listed in `.vercelignore`. Other ignore rules, including `.env*` secrets, are still applied.
+
+## 18.2.12
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/build-utils@14.1.1
+
+## 18.2.11
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/routing-utils@6.5.0
+  - @vercel/build-utils@14.1.0
+
+## 18.2.10
+
+### Patch Changes
+
+- 299d5cd: Root-anchor the prebuilt deploy ignore negations so files under `.vercel` other than `.vercel/output` are not accidentally re-included when a positive `.vercel` pattern was compiled earlier in the same process (e.g. an in-process `vercel build`).
+
+## 18.2.9
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
+## 18.2.8
+
+### Patch Changes
+
+- Updated dependencies [13f81ac]
+  - @vercel/build-utils@14.0.4
+
+## 18.2.7
+
+### Patch Changes
+
+- Updated dependencies [d72826e]
+  - @vercel/build-utils@14.0.3
+
+## 18.2.6
+
+### Patch Changes
+
+- Updated dependencies [b7ec19b]
+  - @vercel/build-utils@14.0.2
+
+## 18.2.5
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+  - @vercel/error-utils@2.2.1
+  - @vercel/routing-utils@6.4.1
+
+## 18.2.4
+
+### Patch Changes
+
+- 4584bbd: Send eligible small static deployments inline so the API can use the instant static deployment path.
+- 17d9eba: Include the deploy path relative to the detected git repository root in `gitMetadata.rootDirectory`.
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
+## 18.2.3
+
+### Patch Changes
+
+- 682bf8b: Fix `vercel deploy --prebuilt` re-adding `.vercelignore`d files through `filePathMap`. Source paths referenced by `.vc-config.json` `filePathMap` entries are now re-checked against the project's `.vercelignore`/`.nowignore` rules and rejected when they resolve outside the deployment root, so a tampered or lower-trust build artifact can no longer reintroduce ignored files (e.g. `.env`) into the deployment upload set.
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 18.2.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 18.2.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 18.2.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
+## 18.1.1
+
+### Patch Changes
+
+- Updated dependencies [7dd4301]
+  - @vercel/build-utils@13.35.0
+
+## 18.1.0
+
+### Minor Changes
+
+- e4866e9: Skip the Rust `target/` directory by default for Rust projects.
+
+  Rust projects produce a `target/` directory of build artifacts that can be
+  hundreds of MB. It's rebuilt on Vercel during the deployment (and cached
+  server-side), so uploading it only slows deployments down. When a root
+  `Cargo.toml` is detected, `target/` is now ignored by default during
+  `vercel deploy` and `vercel dev`. Users can opt back in with `!/target` in
+  their `.vercelignore`.
+
+  Also hardened the local file scanner used by `vercel dev` so that a directory
+  removed mid-scan (a common race with `cargo build` churning `target/`) is
+  skipped instead of crashing the process.
+
+### Patch Changes
+
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
+## 18.0.0
+
+### Major Changes
+
+- def07fc: Migrate `@vercel/client` and `@vercel/build-utils` from `node-fetch` to native `fetch`. This removes the last `url.parse()` usage from the CLI bundle, which triggered a `DEP0169` DeprecationWarning on Node 24 (visible in the standalone binary during `vercel deploy`).
+
+  BREAKING CHANGE (`@vercel/client`): the `agent?: http.Agent` option was replaced with `dispatcher?: FetchDispatcher` (an undici dispatcher, e.g. `undici.ProxyAgent`), since native `fetch` does not support Node.js HTTP agents. The CLI now threads its proxy-aware dispatcher through automatically, so `HTTP_PROXY`/`HTTPS_PROXY` behavior is unchanged for CLI users.
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+  - @vercel/build-utils@13.33.1
+
+## 17.6.5
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
+## 17.6.4
+
+### Patch Changes
+
+- 067a068: Finish CLI deployments from alias-assigned build stream events while retaining deployment polling as a fallback.
+- Updated dependencies [7b30856]
+  - @vercel/build-utils@13.32.3
+
+## 17.6.3
+
+### Patch Changes
+
+- Updated dependencies [6b49a17]
+  - @vercel/build-utils@13.32.2
+
+## 17.6.2
+
+### Patch Changes
+
+- 5d37c78: Handle deployments containing very large files without crashing. Files larger than Node's `fs.readFile` limit (~2 GiB) are now hashed and uploaded by streaming instead of being read into a single Buffer (which threw `ERR_FS_FILE_TOO_LARGE` — "File size ... is greater than 2 GiB"), and the CLI upload progress no longer assumes every file is held in memory. When a file still exceeds the server's per-request upload limit (HTTP 413), the CLI now suggests `--archive=tgz`, which uploads the deployment in smaller chunks.
+- Updated dependencies [7cecf55]
+  - @vercel/routing-utils@6.4.0
+  - @vercel/build-utils@13.32.1
+
+## 17.6.1
+
+### Patch Changes
+
+- 96e9513: Add `vercel deploy --dry` to inspect the detected framework preset and local deployment file set without uploading or creating a deployment, with complete JSON output for non-TTY consumers.
+- Updated dependencies [8dc4702]
+  - @vercel/build-utils@13.32.1
+
+## 17.6.0
+
+### Minor Changes
+
+- 9fb2976: Add `services` as the canonical multi-service project configuration and keep `experimentalServicesV2` as a deprecated backwards-compatible alias.
+
+### Patch Changes
+
+- Updated dependencies [9fb2976]
+- Updated dependencies [186014d]
+- Updated dependencies [cb0988f]
+  - @vercel/build-utils@13.32.0
+
+## 17.5.18
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+
+## 17.5.17
+
+### Patch Changes
+
+- Updated dependencies [8dec9ea]
+- Updated dependencies [c4afec8]
+- Updated dependencies [3afdb18]
+- Updated dependencies [04f830c]
+  - @vercel/build-utils@13.31.0
+  - @vercel/routing-utils@6.3.1
+
+## 17.5.16
+
+### Patch Changes
+
+- fd26487: Remove deprecated `public` from deployment test fixtures and helpers, and stop the CLI from sending the removed `public` field on deploy (including the `--public` flag).
+
+## 17.5.15
+
+### Patch Changes
+
+- Updated dependencies [01e18e8]
+  - @vercel/build-utils@13.30.0
+
+## 17.5.14
+
+### Patch Changes
+
+- Updated dependencies [32a730e]
+  - @vercel/build-utils@13.29.1
+
+## 17.5.13
+
+### Patch Changes
+
+- Updated dependencies [8d8e871]
+- Updated dependencies [90a7cc1]
+  - @vercel/build-utils@13.29.0
+  - @vercel/routing-utils@6.3.0
+
+## 17.5.12
+
+### Patch Changes
+
+- Updated dependencies [4e849dd]
+  - @vercel/build-utils@13.28.0
+
+## 17.5.11
+
+### Patch Changes
+
+- Updated dependencies [c5eeb30]
+- Updated dependencies [09c39af]
+  - @vercel/build-utils@13.27.2
+
+## 17.5.10
+
+### Patch Changes
+
+- Updated dependencies [0a170fd]
+  - @vercel/build-utils@13.27.1
+
+## 17.5.9
+
+### Patch Changes
+
+- Updated dependencies [338cc35]
+  - @vercel/build-utils@13.27.0
+
+## 17.5.8
+
+### Patch Changes
+
+- 3019788: [services] Remove the `services` field from `vercel.json` and the `VERCEL_USE_SERVICES` gate.
+- fe893ec: [services] Add `experimentalServicesV2` field to `vercel.json` implementing the new schema for services.
+- Updated dependencies [3019788]
+- Updated dependencies [fe893ec]
+- Updated dependencies [fddeb55]
+  - @vercel/build-utils@13.26.6
+  - @vercel/error-utils@2.2.0
+
+## 17.5.7
+
+### Patch Changes
+
+- Updated dependencies [1180675]
+  - @vercel/build-utils@13.26.5
+
+## 17.5.6
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+- Updated dependencies [6495585]
+  - @vercel/build-utils@13.26.4
+
+## 17.5.5
+
+### Patch Changes
+
+- Updated dependencies [b66bd3e]
+  - @vercel/build-utils@13.26.3
+
+## 17.5.4
+
+### Patch Changes
+
+- Updated dependencies [647c1e8]
+  - @vercel/build-utils@13.26.2
+
+## 17.5.3
+
+### Patch Changes
+
+- Updated dependencies [fa25cb7]
+- Updated dependencies [972cc84]
+  - @vercel/build-utils@13.26.1
+
+## 17.5.2
+
+### Patch Changes
+
+- Updated dependencies [bb61428]
+- Updated dependencies [137e5d1]
+  - @vercel/build-utils@13.26.0
+
+## 17.5.1
+
+### Patch Changes
+
+- Updated dependencies [fb0cb8d]
+- Updated dependencies [4fc110b]
+  - @vercel/build-utils@13.25.0
+
 ## 17.5.0
 
 ### Minor Changes

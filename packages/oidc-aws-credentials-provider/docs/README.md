@@ -4,9 +4,10 @@
 
 # @vercel/oidc-aws-credentials-provider
 
-## Interfaces
+## Type Aliases
 
-- [AwsCredentialsProviderInit](interfaces/AwsCredentialsProviderInit.md)
+- [AwsCredentialsProviderInit](type-aliases/AwsCredentialsProviderInit.md)
+- [VercelOidcExchangeInit](type-aliases/VercelOidcExchangeInit.md)
 
 ## Functions
 

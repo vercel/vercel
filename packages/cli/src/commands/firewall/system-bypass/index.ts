@@ -17,7 +17,7 @@ import {
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import output from '../../../output-manager';
 import { getCommandAliases } from '../..';
-import { FirewallTelemetryClient } from '../../../util/telemetry/commands/firewall';
+import type { FirewallTelemetryClient } from '../../../util/telemetry/commands/firewall';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(systemBypassListSubcommand),
@@ -25,13 +25,11 @@ const COMMAND_CONFIG = {
   remove: getCommandAliases(systemBypassRemoveSubcommand),
 };
 
-export default async function main(client: Client, args: string[]) {
-  const telemetry = new FirewallTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
-  });
-
+export default async function main(
+  client: Client,
+  args: string[],
+  telemetry: FirewallTelemetryClient
+) {
   const flagsSpecification = getFlagsSpecification(
     systemBypassSubcommand.options
   );
@@ -42,7 +40,7 @@ export default async function main(client: Client, args: string[]) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -57,16 +55,18 @@ export default async function main(client: Client, args: string[]) {
     telemetry.trackCliFlagHelp('firewall', 'system-bypass');
     output.print(
       help(systemBypassSubcommand, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
@@ -81,7 +81,7 @@ export default async function main(client: Client, args: string[]) {
           `system-bypass:${subcommandOriginal}`
         );
         printHelp(systemBypassListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSystemBypassList(subcommandOriginal);
       return list(client, subArgs);
@@ -92,7 +92,7 @@ export default async function main(client: Client, args: string[]) {
           `system-bypass:${subcommandOriginal}`
         );
         printHelp(systemBypassAddSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSystemBypassAdd(subcommandOriginal);
       return add(client, subArgs);
@@ -103,7 +103,7 @@ export default async function main(client: Client, args: string[]) {
           `system-bypass:${subcommandOriginal}`
         );
         printHelp(systemBypassRemoveSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSystemBypassRemove(subcommandOriginal);
       return remove(client, subArgs);
@@ -111,6 +111,7 @@ export default async function main(client: Client, args: string[]) {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
         help(systemBypassSubcommand, {
+          stream: client.stderr,
           parent: firewallCommand,
           columns: client.stderr.columns,
         })

@@ -1,0 +1,15 @@
+[package]
+name = "crate-api-plain"
+version = "0.1.0"
+edition = "2021"
+
+# Each handler is its own binary, so a non-default path needs a `[[bin]]`.
+[[bin]]
+name = "hello"
+path = "api/hello.rs"
+
+# No HTTP framework and no crate features: just `vercel_runtime` on its own,
+# which is the most basic way to write a Rust function on Vercel.
+[dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+vercel_runtime = "2"

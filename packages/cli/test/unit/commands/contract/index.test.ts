@@ -60,7 +60,7 @@ describe('contract', () => {
 
       const output = client.getFullOutput();
       expect(output).toContain('Show contract information');
-      expect(output).toContain('--format');
+      expect(output).toContain('--json');
     });
   });
 
@@ -111,7 +111,7 @@ describe('contract', () => {
       expect(output).toContain('Usage');
     });
 
-    it('should output JSON with --format json', async () => {
+    it('should output JSON with --json', async () => {
       const mockCommitments = [
         createMockCommitment({
           ContractCommitmentType: 'Pro',
@@ -121,7 +121,7 @@ describe('contract', () => {
       ];
       useContractCommitments(mockCommitments);
 
-      client.setArgv('contract', '--format', 'json');
+      client.setArgv('contract', '--json');
       const exitCode = await contract(client);
 
       expect(exitCode).toEqual(0);
@@ -133,14 +133,14 @@ describe('contract', () => {
       expect(json.commitments[0].commitmentCost).toEqual(20);
     });
 
-    it('should track telemetry for format option', async () => {
+    it('should track telemetry for the JSON flag', async () => {
       useContractCommitments([]);
 
-      client.setArgv('contract', '--format', 'json');
+      client.setArgv('contract', '--json');
       await contract(client);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        { key: 'option:format', value: 'json' },
+        { key: 'flag:json', value: 'TRUE' },
       ]);
     });
 

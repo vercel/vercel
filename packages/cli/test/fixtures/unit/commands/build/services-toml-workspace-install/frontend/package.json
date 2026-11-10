@@ -1,0 +1,7 @@
+{
+  "name": "frontend",
+  "private": true,
+  "dependencies": {
+    "local-dep": "file:./local-dep"
+  }
+}

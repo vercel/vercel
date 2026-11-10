@@ -1,5 +1,8 @@
 import { cacheHeader } from 'pretty-cache-header';
-import { sourceToRegex } from '@vercel/routing-utils';
+import {
+  compilePathToRegexpTemplate,
+  sourceToRegex,
+} from '@vercel/routing-utils';
 import { validateRegexPattern, parseCronExpression } from './utils/validation';
 import type {
   Condition,
@@ -259,10 +262,10 @@ export interface TransformTarget {
 }
 
 /**
- * Transform defines a single transformation operation on request or response data.
+ * A transform that targets a specific request/response header or query key.
  * Supports environment variables (e.g., $BEARER_TOKEN) and path parameters (e.g., $userId).
  */
-export interface Transform {
+export interface TargetTransform {
   /** The scope of what the transform will apply to */
   type: TransformType;
   /** The operation to perform */
@@ -276,18 +279,53 @@ export interface Transform {
 }
 
 /**
+ * A transform that overrides the request path observed by the target runtime
+ * (its `req.url`), independent of how the route was selected.
+ *
+ * Unlike header/query transforms there is no `target`/key: the path is a single
+ * scalar value and only the `set` operation is supported. On a low-level
+ * `Route`, capture groups use `$1` or `$name`. High-level rewrites instead use
+ * path-to-regexp parameters such as `/:path*`, which are compiled before the
+ * route is emitted. Environment variables use `$VAR` with an `env` allowlist.
+ *
+ * @example
+ * {
+ *   type: 'request.path',
+ *   op: 'set',
+ *   args: '/$1'
+ * }
+ */
+export interface RequestPathTransform {
+  /** Discriminator. Always `request.path`. */
+  type: 'request.path';
+  /** Only `set` is supported for request path transforms. */
+  op: 'set';
+  /** The runtime-visible request path. Must be an origin-form path (leading `/`, no query or fragment). */
+  args: string;
+  /** List of environment variable names that are used in args (without the $ prefix) */
+  env?: string[];
+}
+
+/**
+ * Transform defines a single transformation operation on request or response data.
+ * It is either a header/query {@link TargetTransform} or a path-rewriting
+ * {@link RequestPathTransform}.
+ */
+export type Transform = TargetTransform | RequestPathTransform;
+
+/**
  * Route defines a routing rule with transforms.
  * This is the newer, more powerful route format that supports transforms.
  *
  * @example
  * {
- *   src: "/users/:userId/posts/:postId",
+ *   src: "^/users/([^/]+)/posts/([^/]+)$",
  *   transforms: [
  *     {
  *       type: "request.headers",
  *       op: "set",
  *       target: { key: "x-user-id" },
- *       args: "$userId"
+ *       args: "$1"
  *     },
  *     {
  *       type: "request.headers",
@@ -299,7 +337,7 @@ export interface Transform {
  * }
  */
 export interface Route {
-  /** Pattern to match request paths using path-to-regexp syntax */
+  /** Regular expression used by the low-level routes format */
   src?: string;
   /** Alias for `src`. A pattern that matches each incoming pathname (excluding querystring). */
   source?: string;
@@ -640,9 +678,19 @@ export class Router {
    *    router.rewrite('/admin/(.*)', 'https://admin.example.com/$1', {
    *      has: [{ type: 'header', key: 'x-admin-token' }]
    *    })
+   *
+   *    // Override the path observed by the target runtime
+   *    router.rewrite('/api/:path*', '/internal/:path*', {
+   *      requestPath: '/:path*'
+   *    })
    * @internal Can return Route with transforms internally
    */
   rewrite<T extends string>(source: T, destination: string): Rewrite;
+  /**
+   * The callback form exposes `$param` references for header and query
+   * transforms. Use the object options form for `requestPath`, whose source
+   * parameters use `:param` syntax.
+   */
   rewrite<T extends string>(
     source: T,
     destination: string,
@@ -664,6 +712,7 @@ export class Router {
       requestHeaders?: Record<string, string | string[]>;
       responseHeaders?: Record<string, string | string[]>;
       requestQuery?: Record<string, string | string[]>;
+      requestPath?: string;
       respectOriginCacheControl?: boolean;
     } & Record<never, never> // Make this structurally distinct from functions
   ): Rewrite | Route;
@@ -677,6 +726,7 @@ export class Router {
           requestHeaders?: Record<string, string | string[]>;
           responseHeaders?: Record<string, string | string[]>;
           requestQuery?: Record<string, string | string[]>;
+          requestPath?: string;
           respectOriginCacheControl?: boolean;
         }
       | ((params: PathParams<T>) => {
@@ -697,6 +747,7 @@ export class Router {
           requestHeaders?: Record<string, string | string[]>;
           responseHeaders?: Record<string, string | string[]>;
           requestQuery?: Record<string, string | string[]>;
+          requestPath?: string;
           respectOriginCacheControl?: boolean;
         }
       | undefined;
@@ -718,11 +769,16 @@ export class Router {
       requestHeaders,
       responseHeaders,
       requestQuery,
+      requestPath,
       respectOriginCacheControl,
     } = options || {};
 
     // Check if any transforms were provided
-    const hasTransforms = requestHeaders || responseHeaders || requestQuery;
+    const hasTransforms =
+      requestHeaders ||
+      responseHeaders ||
+      requestQuery ||
+      requestPath !== undefined;
 
     if (hasTransforms) {
       // Build a Route object with transforms
@@ -775,6 +831,19 @@ export class Router {
           }
           transforms.push(transform);
         }
+      }
+
+      if (requestPath !== undefined) {
+        const transform: RequestPathTransform = {
+          type: 'request.path',
+          op: 'set',
+          args: compilePathToRegexpTemplate(source, requestPath, has),
+        };
+        const envVars = extractEnvVars(requestPath, pathParams);
+        if (envVars.length > 0) {
+          transform.env = envVars;
+        }
+        transforms.push(transform);
       }
 
       // Convert path-to-regexp patterns to regex for routes format
@@ -1027,19 +1096,20 @@ export class Router {
 
   /**
    * Adds a route with transforms support.
-   * This is the newer, more powerful routing format that supports transforms.
+   * This is the lower-level routes format. Use a regular-expression `src` and
+   * `$1`/`$name` capture references in destinations and transform arguments.
    *
    * @example
    *    // Add a route with transforms for path parameters and environment variables
    *    router.route({
-   *      src: '/users/:userId/posts/:postId',
-   *      dest: 'https://api.example.com/users/$userId/posts/$postId',
+   *      src: '^/users/([^/]+)/posts/([^/]+)$',
+   *      dest: 'https://api.example.com/users/$1/posts/$2',
    *      transforms: [
    *        {
    *          type: 'request.headers',
    *          op: 'set',
    *          target: { key: 'x-user-id' },
-   *          args: '$userId'
+   *          args: '$1'
    *        },
    *        {
    *          type: 'request.headers',
@@ -1048,6 +1118,14 @@ export class Router {
    *          args: 'Bearer $BEARER_TOKEN'
    *        }
    *      ]
+   *    });
+   *
+   * @example
+   *    // Override the request path the target runtime observes
+   *    router.route({
+   *      src: '^/api/(.*)$',
+   *      dest: '/internal/$1',
+   *      transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
    *    });
    */
   public route(config: Route): this {

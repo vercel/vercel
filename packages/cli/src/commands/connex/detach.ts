@@ -7,6 +7,7 @@ import { selectConnexTeam } from '../../util/connex/select-team';
 import { getLinkedProject } from '../../util/projects/link';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
 import { ProjectNotFound } from '../../util/errors-ts';
+import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { packageName } from '../../util/pkg-name';
 import type { ConnexClientIdentity, ConnexClientProject } from './types';
 
@@ -23,22 +24,22 @@ export async function detach(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
   const skipConfirmation = !!flags['--yes'];
 
   if (asJson && !skipConfirmation) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
-    return 1;
+    output.error('--json requires --yes to skip confirmation prompts');
+    return 2;
   }
 
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connect detach <client>'
+      'Missing connector ID or UID. Usage: vercel connect detach <connector>'
     );
-    return 1;
+    return 2;
   }
 
   // Resolve project — explicit --project takes priority over the linked one.
@@ -56,7 +57,7 @@ export async function detach(
       resolvedProject = await getProjectByNameOrId(client, projectFlag, team);
     } catch (err: unknown) {
       output.stopSpinner();
-      printError(err);
+      printError(err, client);
       return 1;
     }
     output.stopSpinner();
@@ -69,7 +70,7 @@ export async function detach(
     }
 
     projectId = resolvedProject.id;
-    projectName = resolvedProject.name;
+    projectName = sanitizeForTerminal(resolvedProject.name);
   } else {
     const linked = await getLinkedProject(client);
     if (linked.status === 'error') {
@@ -87,7 +88,7 @@ export async function detach(
       client.config.currentTeam = undefined;
     }
     projectId = linked.project.id;
-    projectName = linked.project.name;
+    projectName = sanitizeForTerminal(linked.project.name);
   }
 
   // Resolve client identity → canonical id + display name.
@@ -104,12 +105,14 @@ export async function detach(
       output.error(`No connector found for ${chalk.bold(clientIdOrUid)}.`);
       return 1;
     }
-    printError(err);
+    printError(err, client);
     return 1;
   }
   output.stopSpinner();
 
-  const displayName = target.uid || target.name || target.id;
+  const displayName = sanitizeForTerminal(
+    target.uid || target.name || target.id
+  );
 
   // Pre-fetch existing attachment. If absent, treat as a no-op success.
   let existingAttachment: ConnexClientProject | undefined;
@@ -120,7 +123,7 @@ export async function detach(
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status !== 404) {
-      printError(err);
+      printError(err, client);
       return 1;
     }
   }
@@ -213,7 +216,7 @@ export async function detach(
       );
       return 0;
     }
-    printError(err);
+    printError(err, client);
     return 1;
   }
   output.stopSpinner();

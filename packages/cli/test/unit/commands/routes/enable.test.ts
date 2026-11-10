@@ -3,7 +3,10 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { useEditRoute } from '../../../mocks/routes';
 import routes from '../../../../src/commands/routes';
 
@@ -23,7 +26,7 @@ describe('routes enable', () => {
   it('should show help with --help flag', async () => {
     client.setArgv('routes', 'enable', '--help');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(2);
+    expect(exitCode).toEqual(0);
   });
 
   it('should enable a disabled route', async () => {
@@ -31,6 +34,28 @@ describe('routes enable', () => {
     client.setArgv('routes', 'enable', 'Disabled Route');
     const exitCode = await routes(client);
     expect(exitCode).toEqual(0);
+    await expect(client.stderr).toOutput('Enabled');
+  });
+
+  it('enables a route for the project selected by --project', async () => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-routes',
+      name: 'explicit-routes',
+      accountId: 'team_dummy',
+    });
+    useEditRoute();
+    client.setArgv(
+      'routes',
+      'enable',
+      'Disabled Route',
+      '--project',
+      'explicit-routes'
+    );
+
+    await expect(routes(client)).resolves.toEqual(0);
     await expect(client.stderr).toOutput('Enabled');
   });
 
@@ -46,7 +71,7 @@ describe('routes enable', () => {
     useEditRoute();
     client.setArgv('routes', 'enable');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
   });
 
   it('should error when route not found', async () => {

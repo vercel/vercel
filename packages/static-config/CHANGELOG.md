@@ -1,5 +1,35 @@
 # @vercel/static-config
 
+## 3.4.4
+
+### Patch Changes
+
+- 5d88f1f: Include ajv's validation error details in the error thrown when the exported `config` object fails schema validation, so users can see which property is invalid and why instead of a generic "Invalid data" message.
+
+## 3.4.3
+
+### Patch Changes
+
+- b9e12f0: Lazy-load `oxc-parser` so a native binding or `require(esm)` failure falls back to ts-morph instead of crashing config extraction. Load failures are tagged on `vc.builder.static_config` as `static_config.oxc_error:load`.
+
+## 3.4.2
+
+### Patch Changes
+
+- 2c363fd: Use Oxc as `@vercel/static-config`'s primary parser with a traced ts-morph compatibility fallback.
+
+## 3.4.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
+## 3.4.0
+
+### Minor Changes
+
+- eecd10d: Allow opting into the Web API handler interface (`Request` → `Response`) from the static `config` export of a Node.js Serverless Function by setting `useWebApi: true`.
+
 ## 3.3.0
 
 ### Minor Changes

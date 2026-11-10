@@ -119,7 +119,7 @@ export default async function add(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args } = parsedArgs;
@@ -132,19 +132,19 @@ export default async function add(
           status: 'error',
           reason: 'missing_arguments',
           message:
-            'Token name is required. Example: `vercel tokens add "My token"`',
+            'Token name is required. Example: `vercel tokens create "My token"`',
         },
-        1
+        2
       );
     }
     output.error(
-      'Token name is required. Example: `vercel tokens add "My token"`'
+      'Token name is required. Example: `vercel tokens create "My token"`'
     );
-    return 1;
+    return 2;
   }
   if (args.length > 1) {
     output.error('Too many arguments. Pass a single token name.');
-    return 1;
+    return 2;
   }
 
   const validation = validateJsonOutput(parsedArgs.flags);

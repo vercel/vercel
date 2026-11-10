@@ -3,11 +3,64 @@ import fs from 'fs-extra';
 import path from 'path';
 import { parse } from 'dotenv';
 import env from '../../../../src/commands/env';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import pull from '../../../../src/commands/env/pull';
+import { getAcrValuesFromWWWAuthenticate } from '../../../../src/util/env/challenge-recovery';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
-import { defaultProject, envs, useProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import {
+  defaultProject,
+  envs,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
+import { useTeams, type Team } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
+import { VERCEL_OIDC_TOKEN } from '../../../../src/util/env/constants';
+import stripAnsi from 'strip-ansi';
+
+vi.mock('../../../../src/commands/login/future', async importOriginal => ({
+  ...(await importOriginal<
+    typeof import('../../../../src/commands/login/future')
+  >()),
+  performDeviceCodeFlow: vi.fn(),
+}));
+
+describe('getAcrValuesFromWWWAuthenticate', () => {
+  it.each([
+    [undefined, undefined],
+    ['', undefined],
+    ['Basic realm="Vercel"', undefined],
+    ['Bearer error="insufficient_user_authentication"', undefined],
+    [
+      'Bearer error="insufficient_user_authentication", acr_values="urn:vercel:loa:sudo"',
+      'urn:vercel:loa:sudo',
+    ],
+    [
+      'Bearer error="insufficient_user_authentication", acr_values="foo bar"',
+      'foo bar',
+    ],
+    [
+      'Bearer error="insufficient_user_authentication", acr_values=urn:vercel:loa:sudo',
+      'urn:vercel:loa:sudo',
+    ],
+    [
+      'Digest realm="api", Bearer error="insufficient_user_authentication", acr_values="urn:vercel:loa:sudo"',
+      'urn:vercel:loa:sudo',
+    ],
+    ['Bearer acr_values="urn:vercel:loa:\\"sudo\\""', 'urn:vercel:loa:"sudo"'],
+    [
+      'Bearer acr_values="urn:first", error="insufficient_user_authentication", acr_values="urn:second"',
+      'urn:first',
+    ],
+    ['Bearer error="insufficient_user_authentication", acr_values=""', ''],
+  ])('parses %s as %s', (header, expected) => {
+    expect(getAcrValuesFromWWWAuthenticate(header)).toBe(expected);
+  });
+});
 
 describe('env pull', () => {
   describe('--help', () => {
@@ -17,7 +70,7 @@ describe('env pull', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = env(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -26,6 +79,314 @@ describe('env pull', () => {
         },
       ]);
     });
+  });
+
+  it('pulls variables from the project selected by --project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+      accountId: 'team_dummy',
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'env',
+      'pull',
+      '.env.test',
+      '--yes',
+      '--project',
+      'vercel-env-pull'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+  });
+
+  it.each([
+    403, 404,
+  ])('uses the team ID in deployment lookup errors without an owner lookup (%s)', async status => {
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    const requests: string[] = [];
+    client.scenario.get('*', (req, _res, next) => {
+      requests.push(req.path);
+      next?.();
+    });
+    client.scenario.get('/v9/projects/prj_scoped', (_req, res) => {
+      res.json({
+        ...defaultProject,
+        id: 'prj_scoped',
+        accountId: 'team_dummy',
+      });
+    });
+    client.scenario.get('/v13/deployments/dpl_denied', (_req, res) => {
+      res.status(status).json({ error: { message: 'Deployment unavailable' } });
+    });
+    const envPath = path.join(client.cwd, '.env.local');
+    await fs.writeFile(envPath, 'EXISTING=value\n');
+    client.setArgv(
+      'env',
+      'pull',
+      '--deployment',
+      'dpl_denied',
+      '--project',
+      'prj_scoped',
+      '--yes'
+    );
+
+    await expect(env(client)).rejects.toThrow(/dpl_denied.*team_dummy/);
+    expect(requests).toEqual([
+      '/v9/projects/prj_scoped',
+      '/v13/deployments/dpl_denied',
+    ]);
+    expect(await fs.readFile(envPath, 'utf8')).toBe('EXISTING=value\n');
+  });
+
+  it('rejects --project when --deployment belongs to another project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+      accountId: 'team_dummy',
+    });
+    client.scenario.get('/v13/deployments/dpl_other', (_req, res) => {
+      res.json({ id: 'dpl_other', projectId: 'other-project' });
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'env',
+      'pull',
+      '--deployment',
+      'dpl_other',
+      '--project',
+      'vercel-env-pull',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(1);
+    await expect(client.stderr).toOutput(
+      'does not belong to project vercel-env-pull'
+    );
+  });
+
+  it('accepts --project when --deployment belongs to the selected project', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+      accountId: 'team_dummy',
+    });
+    client.scenario.get('/v13/deployments/dpl_same', (_req, res) => {
+      res.json({ id: 'dpl_same', projectId: 'vercel-env-pull' });
+    });
+    client.scenario.get('/v3/env/pull/dpl_same', (_req, res) => {
+      res.json({ env: {}, buildEnv: { DEPLOYMENT_VAR: 'value' } });
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'env',
+      'pull',
+      '.env.test',
+      '--deployment',
+      'dpl_same',
+      '--project',
+      'vercel-env-pull',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
+  });
+
+  describe('deployment option', () => {
+    function useDeploymentEnv() {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+        accountId: 'team_dummy',
+      });
+      client.scenario.get('/v13/deployments/dpl_same', (_req, res) => {
+        res.json({ id: 'dpl_same', projectId: 'vercel-env-pull' });
+      });
+      client.scenario.get('/v3/env/pull/dpl_same', (_req, res) => {
+        res.json({ env: {}, buildEnv: { DEPLOYMENT_VAR: 'value' } });
+      });
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_dummy';
+    }
+
+    function optionEvents() {
+      return client.telemetryEventStore.readonlyEvents
+        .map(event => event.key)
+        .filter(key => key === 'option:deployment' || key === 'option:id');
+    }
+
+    it('pulls the deployment variables with --deployment', async () => {
+      useDeploymentEnv();
+      client.setArgv(
+        'env',
+        'pull',
+        '.env.test',
+        '--deployment',
+        'dpl_same',
+        '--project',
+        'vercel-env-pull',
+        '--yes'
+      );
+
+      await expect(env(client)).resolves.toEqual(0);
+      const content = await fs.readFile(
+        path.join(client.cwd, '.env.test'),
+        'utf8'
+      );
+      expect(content).toContain('DEPLOYMENT_VAR="value"');
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(optionEvents()).toEqual(['option:deployment']);
+    });
+
+    it('still accepts the deprecated --id with a warning', async () => {
+      useDeploymentEnv();
+      client.setArgv(
+        'env',
+        'pull',
+        '.env.test',
+        '--id',
+        'dpl_same',
+        '--project',
+        'vercel-env-pull',
+        '--yes'
+      );
+
+      await expect(env(client)).resolves.toEqual(0);
+      const content = await fs.readFile(
+        path.join(client.cwd, '.env.test'),
+        'utf8'
+      );
+      expect(content).toContain('DEPLOYMENT_VAR="value"');
+      expect(client.stderr.getFullOutput()).toContain(
+        '! --id is deprecated. Use --deployment.'
+      );
+      expect(optionEvents()).toEqual(['option:id']);
+    });
+
+    it('rejects --deployment with --id before any request', async () => {
+      useDeploymentEnv();
+      const fetch = vi.spyOn(client, 'fetch');
+      client.setArgv(
+        'env',
+        'pull',
+        '.env.test',
+        '--deployment',
+        'dpl_same',
+        '--id',
+        'dpl_same',
+        '--yes'
+      );
+
+      await expect(env(client)).resolves.toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use --deployment with --id."
+      );
+      expect(fetch).not.toHaveBeenCalled();
+      expect(fs.existsSync(path.join(client.cwd, '.env.test'))).toBe(false);
+      fetch.mockRestore();
+    });
+
+    it('rejects an empty --deployment before any request', async () => {
+      useDeploymentEnv();
+      const fetch = vi.spyOn(client, 'fetch');
+      client.setArgv('env', 'pull', '.env.test', '--deployment=', '--yes');
+
+      await expect(env(client)).resolves.toEqual(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "--deployment can't be empty."
+      );
+      expect(fetch).not.toHaveBeenCalled();
+      fetch.mockRestore();
+    });
+
+    it('writes a JSON error for --deployment with --id in non-interactive mode', async () => {
+      useDeploymentEnv();
+      client.nonInteractive = true;
+      client.setArgv(
+        'env',
+        'pull',
+        '--deployment',
+        'dpl_same',
+        '--id',
+        'dpl_same'
+      );
+
+      await expect(env(client)).resolves.toEqual(2);
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: "Can't use --deployment with --id.",
+      });
+    });
+
+    it('suggests --deployment when --id was used in an unlinked directory', async () => {
+      useUser();
+      client.cwd = setupTmpDir();
+      client.nonInteractive = true;
+      vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      client.setArgv('env', 'pull', '--id', 'dpl_same', '--yes');
+
+      await env(client);
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload.reason).toBe('not_linked');
+      const commands: string[] = payload.next.map(
+        (next: { command: string }) => next.command
+      );
+      expect(commands).toContainEqual(
+        expect.stringMatching(/^vercel env pull --deployment dpl_same /)
+      );
+      for (const command of commands) {
+        expect(command).not.toMatch(/--id\b/);
+      }
+      vi.restoreAllMocks();
+    });
+  });
+
+  it('accepts --project when the deployment response omits projectId', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+      accountId: 'team_dummy',
+    });
+    client.scenario.get('/v13/deployments/dpl_legacy', (_req, res) => {
+      res.json({ id: 'dpl_legacy' });
+    });
+    client.scenario.get('/v3/env/pull/dpl_legacy', (_req, res) => {
+      res.json({ env: {}, buildEnv: { DEPLOYMENT_VAR: 'value' } });
+    });
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    client.setArgv(
+      'env',
+      'pull',
+      '.env.test',
+      '--deployment',
+      'dpl_legacy',
+      '--project',
+      'vercel-env-pull',
+      '--yes'
+    );
+
+    await expect(env(client)).resolves.toEqual(0);
   });
 
   it('should handle pulling', async () => {
@@ -41,19 +402,25 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
     await expect(client.stderr).toOutput(
-      'Created .env.local file and added it to .gitignore'
+      'Created         .env.local file and added it to .gitignore'
     );
+    expect(client.stderr.getFullOutput()).not.toContain('✅');
+    expect(client.stderr.getFullOutput()).not.toMatch(/\[\d+(?:ms|s)\]/);
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
 
     const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
+    const gitignore = await fs.readFile(path.join(cwd, '.gitignore'), 'utf8');
 
     // check for development env value
     const devFileHasDevEnv = rawDevEnv.toString().includes('SPECIAL_FLAG');
     expect(devFileHasDevEnv).toBeTruthy();
+    expect(gitignore.replaceAll('\r\n', '\n')).toBe(
+      '.next\nyarn.lock\n!.vercel\n.env*\n'
+    );
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
@@ -65,6 +432,155 @@ describe('env pull', () => {
         value: 'TRUE',
       },
     ]);
+  });
+
+  it('writes only OIDC for link-origin pulls', async () => {
+    const project = {
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    };
+    let pullCount = 0;
+
+    useUser();
+    useTeams('team_dummy');
+    client.scenario.get(
+      `/v3/env/pull/${project.id}/:target?/:gitBranch?`,
+      (_req, res) => {
+        pullCount += 1;
+        res.json({
+          env: {
+            SPECIAL_FLAG: 'remote-value',
+            [VERCEL_OIDC_TOKEN]: `fresh-token-${pullCount}`,
+          },
+        });
+      }
+    );
+    useProject(project);
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+
+    await expect(
+      pull(client, ['--yes'], 'vercel-cli:link', { oidcTokenOnly: true })
+    ).resolves.toEqual(0);
+
+    let contents = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(contents).toBe(
+      '# Created by Vercel CLI\nVERCEL_OIDC_TOKEN="fresh-token-1"\n'
+    );
+    expect(contents).not.toContain('SPECIAL_FLAG');
+
+    await expect(
+      pull(client, ['--yes'], 'vercel-cli:link', { oidcTokenOnly: true })
+    ).resolves.toEqual(0);
+
+    contents = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(contents).toBe(
+      '# Created by Vercel CLI\nVERCEL_OIDC_TOKEN="fresh-token-2"\n'
+    );
+    expect(contents.match(/^VERCEL_OIDC_TOKEN=/gm)).toHaveLength(1);
+  });
+
+  it('preserves every other entry while refreshing OIDC for link-origin pulls', async () => {
+    const project = {
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    };
+
+    useUser();
+    useTeams('team_dummy');
+    client.scenario.get(
+      `/v3/env/pull/${project.id}/:target?/:gitBranch?`,
+      (_req, res) => {
+        res.json({
+          env: {
+            SPECIAL_FLAG: 'remote-value',
+            [VERCEL_OIDC_TOKEN]: 'fresh-token',
+          },
+        });
+      }
+    );
+    useProject(project);
+
+    const cwd = setupUnitFixture('vercel-env-pull');
+    await fs.writeFile(
+      path.join(cwd, '.env.local'),
+      'LOCAL_ONLY=value\nSPECIAL_FLAG=local-value\nexport VERCEL_OIDC_TOKEN=stale-token\nTAIL=keep',
+      'utf8'
+    );
+    client.cwd = cwd;
+
+    await expect(
+      pull(client, ['--yes'], 'vercel-cli:link', { oidcTokenOnly: true })
+    ).resolves.toEqual(0);
+
+    const contents = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(contents).toBe(
+      'LOCAL_ONLY=value\nSPECIAL_FLAG=local-value\nVERCEL_OIDC_TOKEN="fresh-token"\nTAIL=keep'
+    );
+    expect(contents).not.toContain('remote-value');
+  });
+
+  it('should retry after fresh authentication when sensitive env vars require a challenge', async () => {
+    const project = {
+      ...defaultProject,
+      id: 'vercel-env-pull',
+      name: 'vercel-env-pull',
+    };
+    let pullRequests = 0;
+
+    useUser();
+    useTeams('team_dummy');
+    client.scenario.get(
+      `/v3/env/pull/${project.id}/:target?/:gitBranch?`,
+      (_req, res, next) => {
+        pullRequests += 1;
+        if (pullRequests === 1) {
+          res
+            .status(403)
+            .set(
+              'WWW-Authenticate',
+              'Bearer error="insufficient_user_authentication", acr_values="urn:vercel:loa:sudo"'
+            )
+            .json({
+              code: 'challenge_required',
+              message: 'Challenge required',
+            });
+          return;
+        }
+        next?.();
+      }
+    );
+    useProject(project);
+
+    vi.mocked(performDeviceCodeFlow).mockResolvedValueOnce({
+      access_token: 'vca_new',
+      expires_in: 3600,
+      refresh_token: 'vcr_new',
+    });
+
+    client.authConfig.refreshToken = 'vcr_old';
+    client.cwd = setupUnitFixture('vercel-env-pull');
+    client.setArgv('env', 'pull', '--yes');
+
+    const exitCodePromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Sensitive Environment Variables require fresh authentication.'
+    );
+    await expect(client.stderr).toOutput(
+      'Created         .env.local file and added it to .gitignore'
+    );
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+    expect(performDeviceCodeFlow).toHaveBeenCalledWith(client, {
+      refreshToken: 'vcr_old',
+      acrValues: 'urn:vercel:loa:sudo',
+      fallbackToLoginOnStepUpFailure: true,
+    });
+    expect(pullRequests).toBe(2);
+    expect(client.authConfig.token).toBe('vca_new');
+    expect(client.authConfig.refreshToken).toBe('vcr_new');
   });
 
   it('should handle pulling from Preview env vars', async () => {
@@ -80,10 +596,10 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--yes', '--environment', 'preview');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `preview` Environment Variables for'
+      'Downloading `preview` environment variables for'
     );
     await expect(client.stderr).toOutput(
-      'Created .env.local file and added it to .gitignore'
+      'Created         .env.local file and added it to .gitignore'
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
@@ -95,6 +611,191 @@ describe('env pull', () => {
     );
     expect(rawDevEnv).not.toContain(
       'BRANCH_ENV_VAR="env var for a specific branch"'
+    );
+  });
+
+  it.each([
+    ['visibility-only Secret', { type: 'encrypted', visibility: 'secret' }],
+    ['legacy sensitive Secret', { type: 'sensitive' }],
+  ] as const)('writes a placeholder for redacted sensitive env vars using a %s record', async (_recordKind, secretShape) => {
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      },
+      [
+        ...envs,
+        {
+          ...secretShape,
+          id: 'sens1234sens5678',
+          key: 'SENSITIVE_SECRET',
+          value: 'server-only-secret-value',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+        {
+          type: 'encrypted',
+          id: 'empt1234empt5678',
+          key: 'ACTUALLY_EMPTY',
+          value: '',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+    client.setArgv('env', 'pull', '--yes', '--environment', 'production');
+    const exitCode = await env(client);
+    expect(exitCode, 'exit code for "env"').toEqual(0);
+
+    const rawProdEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(rawProdEnv).toContain('SENSITIVE_SECRET="[SENSITIVE]"');
+    expect(rawProdEnv).not.toContain('SENSITIVE_SECRET=""');
+    expect(rawProdEnv).toContain('ACTUALLY_EMPTY=""');
+    await expect(client.stderr).toOutput(
+      '1 Secret value cannot be pulled from the `production` Environment'
+    );
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      '! 1 Secret value cannot be pulled'
+    );
+  });
+
+  it.each([
+    ['visibility-only Secret', { type: 'encrypted', visibility: 'secret' }],
+    ['legacy sensitive Secret', { type: 'sensitive' }],
+  ] as const)('pulls a returned Development value using a %s record', async (_recordKind, secretShape) => {
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      },
+      [
+        {
+          ...secretShape,
+          id: 'devs1234devs5678',
+          key: 'RETURNED_DEV_SECRET',
+          value: 'development-secret-value',
+          target: ['development'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ],
+      { decryptDevelopmentSecrets: true }
+    );
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+    client.setArgv('env', 'pull', '--yes');
+
+    await expect(env(client)).resolves.toBe(0);
+
+    const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(rawDevEnv).toContain(
+      'RETURNED_DEV_SECRET="development-secret-value"'
+    );
+    expect(rawDevEnv).not.toContain('[SENSITIVE]');
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'not returned by Vercel'
+    );
+  });
+
+  it.each([
+    ['visibility-only Secret', { type: 'encrypted', visibility: 'secret' }],
+    ['legacy sensitive Secret', { type: 'sensitive' }],
+  ] as const)('uses neutral guidance when a Development %s is not returned', async (_recordKind, secretShape) => {
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      },
+      [
+        {
+          ...secretShape,
+          id: 'devs-empty-secret',
+          key: 'UNAVAILABLE_DEV_SECRET',
+          value: 'server-only-development-value',
+          target: ['development'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+    client.setArgv('env', 'pull', '--yes');
+
+    await expect(env(client)).resolves.toBe(0);
+
+    const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(rawDevEnv).toContain('UNAVAILABLE_DEV_SECRET="[SENSITIVE]"');
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      '1 Development Secret value was not returned by Vercel'
+    );
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'Development Secret value cannot be pulled'
+    );
+  });
+
+  it.each([
+    ['visibility-only Secret', { type: 'encrypted', visibility: 'secret' }],
+    ['legacy sensitive Secret', { type: 'sensitive' }],
+  ] as const)('preserves an existing local value when a %s is redacted', async (_recordKind, secretShape) => {
+    useUser();
+    useTeams('team_dummy');
+    useProject(
+      {
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      },
+      [
+        {
+          ...secretShape,
+          id: 'sens1234sens5678',
+          key: 'SENSITIVE_SECRET',
+          value: '',
+          target: ['production'],
+          gitBranch: undefined,
+          configurationId: null,
+          updatedAt: 1557241361455,
+          createdAt: 1557241361455,
+        },
+      ]
+    );
+    const cwd = setupUnitFixture('vercel-env-pull');
+    client.cwd = cwd;
+    await fs.writeFile(
+      path.join(cwd, '.env.local'),
+      'SENSITIVE_SECRET="local-only-value"\n'
+    );
+    client.setArgv('env', 'pull', '--yes', '--environment', 'production');
+
+    await expect(env(client)).resolves.toBe(0);
+
+    const rawProdEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+    expect(rawProdEnv).toContain('SENSITIVE_SECRET="local-only-value"');
+    expect(rawProdEnv).not.toContain('[SENSITIVE]');
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Kept 1 existing local value'
     );
   });
 
@@ -118,13 +819,13 @@ describe('env pull', () => {
       'feat/awesome-thing'
     );
     const exitCodePromise = env(client);
-    // Full output: "Downloading `preview` Environment Variables for jqkgv/vercel-env-pull and any overrides for branch feat/awesome-thing"
+    // Full output: "Downloading `preview` environment variables for jqkgv/vercel-env-pull and any overrides for branch feat/awesome-thing"
     // Note: Can't match the full string due to hyperlink ANSI codes around the org/project slug
     await expect(client.stderr).toOutput(
       'vercel-env-pull and any overrides for branch feat/awesome-thing'
     );
     await expect(client.stderr).toOutput(
-      'Created .env.local file and added it to .gitignore'
+      'Created         .env.local file and added it to .gitignore'
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
@@ -178,9 +879,9 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', 'other.env', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
-    await expect(client.stderr).toOutput('Created other.env file');
+    await expect(client.stderr).toOutput('Created         other.env file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
@@ -220,10 +921,10 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--environment', 'production');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      `Downloading \`production\` Environment Variables for`
+      `Downloading \`production\` environment variables for`
     );
     await expect(client.stderr).toOutput(
-      'Created .env.local file and added it to .gitignore'
+      'Created         .env.local file and added it to .gitignore'
     );
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
@@ -258,9 +959,9 @@ describe('env pull', () => {
     );
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `production` Environment Variables for'
+      'Downloading `production` environment variables for'
     );
-    await expect(client.stderr).toOutput('Created other.env file');
+    await expect(client.stderr).toOutput('Created         other.env file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
@@ -287,9 +988,9 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', 'other.env', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
-    await expect(client.stderr).toOutput('Created other.env file');
+    await expect(client.stderr).toOutput('Created         other.env file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
@@ -321,12 +1022,12 @@ describe('env pull', () => {
       client.setArgv('env', 'add', 'NEW_VAR');
       const addPromise = env(client);
 
-      await expect(client.stderr).toOutput("What's the value of NEW_VAR?");
+      await expect(client.stderr).toOutput('Environment Variable type?');
+      client.stdin.write('\x1B[B\n'); // Select Config
+      await expect(client.stderr).toOutput('Value?');
       client.stdin.write('testvalue\n');
 
-      await expect(client.stderr).toOutput(
-        'Add NEW_VAR to which Environments (select multiple)?'
-      );
+      await expect(client.stderr).toOutput('Environments?');
       client.stdin.write('\x1B[B'); // Down arrow
       client.stdin.write('\x1B[B');
       client.stdin.write(' ');
@@ -337,20 +1038,48 @@ describe('env pull', () => {
       client.setArgv('env', 'pull', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for'
+        'Downloading `development` environment variables for'
       );
       await expect(client.stderr).toOutput(
-        '+ SPECIAL_FLAG (Updated)\n+ NEW_VAR\n- TEST\n'
+        '  Changes:\n  + SPECIAL_FLAG (Updated)\n  + NEW_VAR\n\n> Kept TEST (defined locally, not found in the development Environment)'
       );
       await expect(client.stderr).toOutput(
-        'Updated .env.local file and added it to .gitignore'
+        'Updated         .env.local file and added it to .gitignore'
       );
 
       await expect(pullPromise).resolves.toEqual(0);
+
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'));
+      expect(rawDevEnv.toString()).toContain('TEST="hi"');
     } finally {
       client.setArgv('env', 'rm', 'NEW_VAR', '--yes');
       await env(client);
     }
+  });
+
+  it('should keep variables that only exist locally', async () => {
+    const cwd = setupUnitFixture('vercel-env-pull-delta');
+    client.cwd = cwd;
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'env-pull-delta',
+      name: 'env-pull-delta',
+    });
+
+    client.setArgv('env', 'pull', '--yes');
+    const pullPromise = env(client);
+    await expect(client.stderr).toOutput(
+      'Kept TEST (defined locally, not found in the development Environment)'
+    );
+    await expect(pullPromise).resolves.toEqual(0);
+
+    const rawDevEnv = (
+      await fs.readFile(path.join(cwd, '.env.local'))
+    ).toString();
+    expect(rawDevEnv).toContain('TEST="hi"');
+    expect(rawDevEnv).toContain('SPECIAL_FLAG="1"');
   });
 
   it('should not show a delta string when it fails to read a file', async () => {
@@ -366,7 +1095,7 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--yes');
     const pullPromise = env(client);
     await expect(client.stderr).toOutput(
-      'Updated .env.local file and added it to .gitignore'
+      'Updated         .env.local file and added it to .gitignore'
     );
     await expect(pullPromise).resolves.toEqual(0);
   });
@@ -384,7 +1113,7 @@ describe('env pull', () => {
     const pullPromise = env(client);
     await expect(client.stderr).toOutput('> No changes found.');
     await expect(client.stderr).toOutput(
-      'Updated .env.local file and added it to .gitignore'
+      'Updated         .env.local file and added it to .gitignore'
     );
     await expect(pullPromise).resolves.toEqual(0);
   });
@@ -419,11 +1148,11 @@ describe('env pull', () => {
       client.setArgv('env', 'pull', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for'
+        'Downloading `development` environment variables for'
       );
       await expect(client.stderr).toOutput('No changes found.\n');
       await expect(client.stderr).toOutput(
-        'Updated .env.local file and added it to .gitignore'
+        'Updated         .env.local file and added it to .gitignore'
       );
 
       await expect(pullPromise).resolves.toEqual(0);
@@ -463,10 +1192,12 @@ describe('env pull', () => {
       client.setArgv('env', 'pull', '.env.testquotes', '--yes');
       const pullPromise = env(client);
       await expect(client.stderr).toOutput(
-        'Downloading `development` Environment Variables for'
+        'Downloading `development` environment variables for'
       );
       await expect(client.stderr).toOutput('No changes found.\n');
-      await expect(client.stderr).toOutput('Updated .env.testquotes file');
+      await expect(client.stderr).toOutput(
+        'Updated         .env.testquotes file'
+      );
 
       await expect(pullPromise).resolves.toEqual(0);
     } finally {
@@ -493,9 +1224,9 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
-    await expect(client.stderr).toOutput('Created .env.local file');
+    await expect(client.stderr).toOutput('Created         .env.local file');
     await expect(client.stderr).not.toOutput('and added it to .gitignore');
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
@@ -565,9 +1296,9 @@ describe('env pull', () => {
     client.setArgv('env', 'pull', '--yes');
     const exitCodePromise = env(client);
     await expect(client.stderr).toOutput(
-      'Downloading `development` Environment Variables for'
+      'Downloading `development` environment variables for'
     );
-    await expect(client.stderr).toOutput('Created .env.local file');
+    await expect(client.stderr).toOutput('Created         .env.local file');
     const exitCode = await exitCodePromise;
     expect(exitCode, 'exit code for "env"').toEqual(0);
 
@@ -707,6 +1438,77 @@ describe('env pull', () => {
 
       exitSpy.mockRestore();
       logSpy.mockRestore();
+    });
+  });
+
+  describe('unlinked project', () => {
+    it('links the directory inline and pulls in the same invocation', async () => {
+      useUser({ version: 'northstar' });
+      const cwd = setupTmpDir();
+      const [team] = useTeams('team_dummy') as Team[];
+      const { project } = useProject({
+        ...defaultProject,
+        id: path.basename(cwd),
+        name: path.basename(cwd),
+      });
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('env', 'pull');
+      const exitCodePromise = env(client);
+
+      // Single team auto-selects, so the project picker is the first prompt.
+      await expect(client.stderr).toOutput('Which project?');
+      client.stdin.write('\n');
+
+      await expect(client.stderr).toOutput(
+        `✓ Linked          ${team.slug}/${project.name}`
+      );
+      await expect(client.stderr).toOutput(
+        'Downloading `development` environment variables for'
+      );
+      await expect(client.stderr).toOutput('Created         .env.local file');
+      await expect(exitCodePromise).resolves.toEqual(0);
+
+      expect(
+        await fs.readJSON(path.join(cwd, '.vercel', 'project.json'))
+      ).toMatchObject({
+        orgId: team.id,
+        projectId: project.id,
+      });
+
+      const rawDevEnv = await fs.readFile(path.join(cwd, '.env.local'), 'utf8');
+      expect(parse(rawDevEnv)).toMatchObject({ SPECIAL_FLAG: '1' });
+
+      // `env pull` downloads the variables itself, so linking must not offer to.
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Pull development environment variables into .env.local?'
+      );
+    });
+
+    it('errors without prompting when there is no TTY', async () => {
+      useUser();
+      useTeams('team_dummy');
+      client.cwd = setupTmpDir();
+      client.stdin.isTTY = false;
+      client.setArgv('env', 'pull');
+
+      await expect(env(client)).resolves.toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Your codebase isn’t linked to a project on Vercel. Run `vercel link` to begin.'
+      );
+    });
+
+    it('errors without prompting when `--yes` is passed', async () => {
+      useUser();
+      useTeams('team_dummy');
+      client.cwd = setupTmpDir();
+      client.setArgv('env', 'pull', '--yes');
+
+      await expect(env(client)).resolves.toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Your codebase isn’t linked to a project on Vercel. Run `vercel link` to begin.'
+      );
     });
   });
 

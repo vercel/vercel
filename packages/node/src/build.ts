@@ -28,9 +28,11 @@ import {
   isSymbolicLink,
   walkParentDirs,
   execCommand,
+  findMatchingFunction,
   getEnvForPackageManager,
   scanParentDirs,
   isBunVersion,
+  getReportedServiceType,
 } from '@vercel/build-utils';
 import type {
   File,
@@ -40,16 +42,20 @@ import type {
   BuildV3,
   NodeVersion,
   BuildResultV3,
+  WorkspaceInstallTarget,
 } from '@vercel/build-utils';
 import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
 import { Register, register } from './typescript';
 import { generateProjectManifest } from './diagnostics';
 import {
-  validateConfiguredRuntime,
+  edgeMiddlewareDeprecationWarning,
   entrypointToOutputPath,
   getRegExpFromMatchers,
   isEdgeRuntime,
+  resolveMiddlewareMatcher,
+  resolveMiddlewareRuntime,
+  validateMiddlewareRuntime,
 } from './utils';
 
 interface DownloadOptions {
@@ -87,6 +93,7 @@ async function downloadInstallAndBundle({
     lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
@@ -94,13 +101,25 @@ async function downloadInstallAndBundle({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
   });
 
+  const functionInstallCommand = findMatchingFunction(config.functions, [
+    entrypoint,
+  ])?.functionConfig?.installCommand;
   const installCommand = config.projectSettings?.installCommand;
-  if (typeof installCommand === 'string' && considerBuildCommand) {
+  if (typeof functionInstallCommand === 'string') {
+    await runFunctionInstallCommand({
+      installCommand: functionInstallCommand,
+      workPath,
+      spawnEnv,
+      meta,
+    });
+  } else if (typeof installCommand === 'string' && considerBuildCommand) {
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
@@ -111,12 +130,20 @@ async function downloadInstallAndBundle({
       console.log(`Skipping "install" command...`);
     }
   } else {
+    const workspaceInstallTargets = Array.isArray(meta.workspaceInstallTargets)
+      ? meta.workspaceInstallTargets.filter(
+          (target): target is WorkspaceInstallTarget =>
+            Boolean(target && typeof target === 'object')
+        )
+      : [];
     await runNpmInstall(
       entrypointFsDirname,
       [],
       { env: spawnEnv },
       meta,
-      config.projectSettings?.createdAt
+      config.projectSettings?.createdAt,
+      undefined,
+      { targets: workspaceInstallTargets }
     );
   }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
@@ -129,6 +156,60 @@ async function downloadInstallAndBundle({
     lockfilePath,
     lockfileVersion,
   };
+}
+
+const pendingFunctionInstalls = new WeakMap<
+  Set<string>,
+  Map<string, Promise<void>>
+>();
+
+async function runFunctionInstallCommand({
+  installCommand,
+  workPath,
+  spawnEnv,
+  meta,
+}: {
+  installCommand: string;
+  workPath: string;
+  spawnEnv: NodeJS.ProcessEnv;
+  meta: Meta;
+}) {
+  if (!installCommand.trim()) {
+    console.log(`Skipping "install" command...`);
+    return;
+  }
+  if (meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+    return;
+  }
+
+  // Several functions usually share one glob, so run each command once per root.
+  const ran =
+    meta.functionInstallCommandSet instanceof Set
+      ? (meta.functionInstallCommandSet as Set<string>)
+      : new Set<string>();
+  meta.functionInstallCommandSet = ran;
+  const key = `${workPath}\0${installCommand}`;
+  if (ran.has(key)) {
+    return;
+  }
+
+  const pending =
+    pendingFunctionInstalls.get(ran) ?? new Map<string, Promise<void>>();
+  pendingFunctionInstalls.set(ran, pending);
+  let install = pending.get(key);
+  if (!install) {
+    console.log(`Running "install" command: \`${installCommand}\`...`);
+    install = execCommand(installCommand, { env: spawnEnv, cwd: workPath })
+      .then(() => {
+        ran.add(key);
+      })
+      .finally(() => {
+        pending.delete(key);
+      });
+    pending.set(key, install);
+  }
+  await install;
 }
 
 function renameTStoJS(path: string) {
@@ -188,17 +269,21 @@ async function compile(
   }
 
   let tsCompile: Register;
-  function compileTypeScript(path: string, source: string): string {
+  async function compileTypeScript(
+    path: string,
+    source: string
+  ): Promise<string> {
     const relPath = relative(baseDir, path);
     if (!tsCompile) {
       tsCompile = register({
         basePath: workPath, // The base is the same as root now.json dir
         project: path, // Resolve tsconfig.json from entrypoint dir
+        rootDir: baseDir,
         files: true, // Include all files such as global `.d.ts`
         nodeVersionMajor: nodeVersion.major,
       });
     }
-    const { code, map } = tsCompile(source, path);
+    const { code, map } = await tsCompile(source, path);
     tsCompiled.add(relPath);
     preparedFiles[renameTStoJS(relPath) + '.map'] = new FileBlob({
       data: JSON.stringify(map),
@@ -222,6 +307,7 @@ async function compile(
       processCwd: workPath,
       ts: true,
       mixedModules: true,
+      moduleSyncCatchall: true,
       conditions,
       resolve(id, parent, job, cjsResolve) {
         const normalizedWasmImports = id.replace(/\.wasm\?module$/i, '.wasm');
@@ -276,7 +362,7 @@ async function compile(
             fsPath.endsWith('.mts') ||
             fsPath.endsWith('.cts')
           ) {
-            source = compileTypeScript(fsPath, source.toString());
+            source = await compileTypeScript(fsPath, source.toString());
           }
 
           if (!entry) {
@@ -432,6 +518,9 @@ export const build = async ({
   repoRootPath,
   config = {},
   meta = {},
+  service,
+  diagnosticsValues,
+  span,
   considerBuildCommand = false,
   entrypointCallback,
   checks = () => {},
@@ -516,15 +605,36 @@ export const build = async ({
   }
 
   const isMiddleware = config.middleware === true;
-  let isEdgeFunction = isMiddleware;
 
   const project = new Project();
-  const staticConfig = getConfig(project, entrypointPath);
+  const staticConfig = getConfig(project, entrypointPath, undefined, span);
 
   const runtime = staticConfig?.runtime;
-  validateConfiguredRuntime(runtime, entrypoint);
+  validateMiddlewareRuntime(
+    runtime,
+    entrypoint,
+    isMiddleware ? config.middlewareRuntime : undefined
+  );
 
-  if (runtime) {
+  let isEdgeFunction = false;
+  if (isMiddleware) {
+    const middleware = resolveMiddlewareRuntime({
+      configuredRuntime: runtime,
+      middlewareRuntime: config.middlewareRuntime,
+      projectCreatedAt: config.projectSettings?.createdAt,
+      isDev: meta.isDev,
+      env: process.env,
+    });
+    isEdgeFunction = middleware.runtime === 'edge';
+    debug(
+      `Middleware runtime for "${entrypoint}": ${middleware.runtime} (${middleware.reason})`
+    );
+    if (isEdgeFunction) {
+      console.warn(
+        `\x1b[33m\x1b[1mWARNING! \x1b[22m${edgeMiddlewareDeprecationWarning(entrypoint)}\x1b[39m`
+      );
+    }
+  } else if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
   }
 
@@ -555,14 +665,19 @@ export const build = async ({
   // Add a `route` for Middleware
   if (isMiddleware) {
     // Middleware is a catch-all for all paths unless a `matcher` property is defined
-    const src = getRegExpFromMatchers(staticConfig?.matcher);
+    const matcher = resolveMiddlewareMatcher(
+      config.middlewareMatcher,
+      staticConfig?.matcher,
+      entrypoint
+    );
+    const src = getRegExpFromMatchers(matcher);
 
     const middlewareRawSrc: string[] = [];
-    if (staticConfig?.matcher) {
-      if (Array.isArray(staticConfig.matcher)) {
-        middlewareRawSrc.push(...staticConfig.matcher);
+    if (matcher) {
+      if (Array.isArray(matcher)) {
+        middlewareRawSrc.push(...matcher);
       } else {
-        middlewareRawSrc.push(staticConfig.matcher as string);
+        middlewareRawSrc.push(matcher as string);
       }
     }
 
@@ -614,11 +729,7 @@ export const build = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
-    // AWS custom handlers can't stream responses. The canonical gate
-    // lives in `@vercel/build-utils`'s `getLambdaSupportsStreaming`, but
-    // the build-container picks that up on its own rollout cadence —
-    // until then this build-time signal is what protects users on the
-    // Node builder. Keep this in sync with the central gate.
+    /** AWS custom handlers return response objects and cannot stream. */
     let supportsResponseStreaming: boolean | undefined;
     if (awsLambdaHandler) {
       supportsResponseStreaming = false;
@@ -697,7 +808,7 @@ export const build = async ({
       experimentalAllowBundling: enableBundling || undefined,
       architecture: staticConfig?.architecture,
       runtime: nodeVersion.runtime,
-      useWebApi: isMiddleware ? true : useWebApi,
+      useWebApi: isMiddleware ? true : (useWebApi ?? staticConfig?.useWebApi),
       shouldAddHelpers: isMiddleware ? false : shouldAddHelpers,
       shouldAddSourcemapSupport,
       awsLambdaHandler,
@@ -719,6 +830,8 @@ export const build = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
+      framework: diagnosticsValues?.framework,
+      serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {
     debug(

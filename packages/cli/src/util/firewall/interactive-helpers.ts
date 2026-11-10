@@ -6,6 +6,12 @@ import { CONDITION_TYPES, type ConditionTypeMeta } from './condition-types';
 export interface PlanInfo {
   isEnterprise: boolean;
   hasSecurityPlus: boolean;
+  /**
+   * Whether the plan was actually read. False means the defaults below stood
+   * in for a lookup that failed, which is safe for hiding plan-gated choices
+   * but not for anything that would tell the reader what their plan allows.
+   */
+  known: boolean;
 }
 
 /**
@@ -18,15 +24,14 @@ export async function fetchPlanInfo(client: Client): Promise<PlanInfo> {
     if (team) {
       return {
         isEnterprise: team.billing.plan === 'enterprise',
-        hasSecurityPlus:
-          (team as unknown as { securityPlus?: { enabled?: boolean } })
-            .securityPlus?.enabled === true,
+        hasSecurityPlus: team.securityPlus?.enabled === true,
+        known: true,
       };
     }
   } catch {
     // If we can't fetch team info, default to hiding plan-gated types
   }
-  return { isEnterprise: false, hasSecurityPlus: false };
+  return { isEnterprise: false, hasSecurityPlus: false, known: false };
 }
 
 /**

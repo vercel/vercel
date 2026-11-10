@@ -1,0 +1,6 @@
+{
+  "projectSettings": {
+    "rootDirectory": "backend",
+    "framework": "fastapi"
+  }
+}

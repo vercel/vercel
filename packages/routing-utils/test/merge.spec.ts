@@ -532,3 +532,71 @@ test('mergeRoutes ensure beforeFiles comes after redirects (check)', () => {
   ];
   deepStrictEqual(actual, expected);
 });
+
+test('mergeRoutes projectMiddleware runs before other builder routes', () => {
+  const userRoutes: Route[] = [{ src: '/user1', dest: '/u1', check: true }];
+  const builds: Build[] = [
+    {
+      use: '@vercel/python',
+      entrypoint: 'main.py',
+      routes: [
+        { src: '/old', headers: { Location: '/new' }, status: 308 },
+        { src: '/app', dest: '/main' },
+        { src: '/(.*)', headers: { 'x-h': '1' }, continue: true },
+        { handle: 'filesystem' },
+        { src: '/(.*)', dest: '/main' },
+      ],
+    },
+    {
+      use: '@vercel/node',
+      entrypoint: 'proxy.ts',
+      projectMiddleware: true,
+      routes: [
+        {
+          src: '/(.*)',
+          middlewarePath: 'proxy',
+          continue: true,
+          override: true,
+        },
+      ],
+    },
+  ];
+  const actual = mergeRoutes({ userRoutes, builds });
+  const expected = [
+    { src: '/(.*)', headers: { 'x-h': '1' }, continue: true },
+    { src: '/user1', dest: '/u1', check: true },
+    { src: '/(.*)', middlewarePath: 'proxy', continue: true, override: true },
+    { src: '/old', headers: { Location: '/new' }, status: 308 },
+    { src: '/app', dest: '/main' },
+    { handle: 'filesystem' },
+    { src: '/(.*)', dest: '/main' },
+  ];
+  deepStrictEqual(actual, expected);
+});
+
+test('mergeRoutes projectMiddleware keeps handle phases only it uses', () => {
+  const builds: Build[] = [
+    {
+      use: '@vercel/node',
+      entrypoint: 'proxy.ts',
+      projectMiddleware: true,
+      routes: [
+        {
+          src: '/(.*)',
+          middlewarePath: 'proxy',
+          continue: true,
+          override: true,
+        },
+        { handle: 'miss' },
+        { src: '/x', dest: '/y' },
+      ],
+    },
+  ];
+  const actual = mergeRoutes({ userRoutes: [], builds });
+  const expected = [
+    { src: '/(.*)', middlewarePath: 'proxy', continue: true, override: true },
+    { handle: 'miss' },
+    { src: '/x', dest: '/y' },
+  ];
+  deepStrictEqual(actual, expected);
+});

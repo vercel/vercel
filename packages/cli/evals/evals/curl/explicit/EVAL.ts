@@ -23,4 +23,12 @@ test('agent ran vc curl', () => {
     /\b(vercel|vc)\s+curl\b/.test(command)
   );
   expect(curlCommands.length).toBeGreaterThan(0);
+  expect(
+    curlCommands.some(command => /\b(vercel|vc)\s+curl\s+\//.test(command))
+  ).toBe(true);
+  expect(
+    curlCommands.some(
+      command => command.includes('--yes') || /\s-y(\s|$)/.test(command)
+    )
+  ).toBe(true);
 });

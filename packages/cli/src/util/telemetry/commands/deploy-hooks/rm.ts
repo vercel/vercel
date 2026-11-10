@@ -10,16 +10,7 @@ export class DeployHooksRmTelemetryClient
     if (id) {
       this.trackCliArgument({
         arg: 'id',
-        value: id,
-      });
-    }
-  }
-
-  trackCliOptionProject(project: string | undefined) {
-    if (project) {
-      this.trackCliOption({
-        option: 'project',
-        value: project,
+        value: this.redactedValue,
       });
     }
   }

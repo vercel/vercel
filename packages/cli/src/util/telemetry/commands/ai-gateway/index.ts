@@ -12,4 +12,53 @@ export class AiGatewayTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandBudgets(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'budgets',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandVirtualModels(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'virtual-models',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandCodingAgents(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'coding-agents',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSetup(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'setup',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandModels(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'models',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandLeaderboard(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'leaderboard',
+      value: actual,
+    });
+  }
 }

@@ -34,9 +34,23 @@ export class DomainsTelemetryClient
     });
   }
 
+  trackCliSubcommandCheck(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'check',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandPrice(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'price',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSearch(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'search',
       value: actual,
     });
   }
@@ -55,9 +69,30 @@ export class DomainsTelemetryClient
     });
   }
 
+  trackCliSubcommandRenew(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'renew',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAutoRenew(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'auto-renew',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandList(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandVerify(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'verify',
       value: actual,
     });
   }

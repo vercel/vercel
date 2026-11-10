@@ -21,17 +21,9 @@ import { inviteSubcommand } from './command';
 import {
   outputActionRequired,
   outputAgentError,
+  withGlobalFlags,
 } from '../../util/agent-output';
-import {
-  getGlobalFlagsOnlyFromArgs,
-  getSameSubcommandSuggestionFlags,
-} from '../../util/arg-common';
-
-/** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
+import { getSameSubcommandSuggestionFlags } from '../../util/arg-common';
 
 const validateEmail = (data: string) =>
   regexEmail.test(data.trim()) || data.length === 0;
@@ -58,8 +50,7 @@ export default async function invite(
   argv: string[],
   { introMsg = '', noopMsg = 'No changes made' } = {}
 ): Promise<number> {
-  const { config, telemetryEventStore } = client;
-  const { currentTeam: currentTeamId } = config;
+  const { telemetryEventStore } = client;
   const telemetry = new TeamsInviteTelemetryClient({
     opts: {
       store: telemetryEventStore,
@@ -79,11 +70,11 @@ export default async function invite(
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
   const { args: emails } = parsedArgs;
 
@@ -110,11 +101,12 @@ export default async function invite(
           },
         ],
       },
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
+  const currentTeamId = await client.resolveCurrentTeam();
   output.spinner('Fetching teams');
   const teams = await getTeams(client);
   const currentTeam = teams.find(team => team.id === currentTeamId);

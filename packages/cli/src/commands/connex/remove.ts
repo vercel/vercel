@@ -2,6 +2,7 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
+import { sanitizeForTerminal } from '../../util/connex/sanitize';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import type {
   ConnexClientIdentity,
@@ -22,7 +23,7 @@ export async function remove(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -30,16 +31,16 @@ export async function remove(
   const disconnectAll = !!flags['--disconnect-all'];
 
   if (asJson && !skipConfirmation) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
-    return 1;
+    output.error('--json requires --yes to skip confirmation prompts');
+    return 2;
   }
 
   const clientIdOrUid = args[0];
   if (!clientIdOrUid) {
     output.error(
-      'Missing connector ID or UID. Usage: vercel connect remove <client>'
+      'Missing connector ID or UID. Usage: vercel connect delete <connector>'
     );
-    return 1;
+    return 2;
   }
 
   await selectConnexTeam(client, 'Select the team for this connector');
@@ -64,7 +65,7 @@ export async function remove(
   }
   output.stopSpinner();
 
-  const displayName = target.uid || target.id;
+  const displayName = sanitizeForTerminal(target.uid || target.id);
 
   let projectLinks: ConnexClientProject[];
   try {
@@ -86,7 +87,7 @@ export async function remove(
     const count = projectLinks.length;
     const plural = count === 1 ? 'project' : 'projects';
     output.error(
-      `Cannot delete connector ${chalk.bold(displayName)} while it has ${count} connected ${plural}. Please disconnect any projects using this connector first or use the \`--disconnect-all\` flag.`
+      `Cannot delete connector ${chalk.bold(displayName)} while it has ${count} connected ${plural}. Please disconnect any projects using this connector first or use the \`--disconnect-all\` option.`
     );
     return 1;
   }
@@ -138,6 +139,6 @@ export async function remove(
     return 0;
   }
 
-  output.success(`Connector ${chalk.bold(displayName)} successfully removed.`);
+  output.success(`Connector ${chalk.bold(displayName)} successfully deleted.`);
   return 0;
 }

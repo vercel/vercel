@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
-import { STANDARD_ENVIRONMENTS } from '../../../target/standard-environments';
+import {
+  STANDARD_ENVIRONMENTS,
+  type StandardEnvironment,
+} from '../../../target/standard-environments';
 import type { enableSubcommand } from '../../../../commands/flags/command';
 import type { TelemetryMethods } from '../../types';
-
-type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];
-
 export class FlagsEnableTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof enableSubcommand>

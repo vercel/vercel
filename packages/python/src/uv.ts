@@ -1,17 +1,29 @@
-import { execSync } from 'child_process';
+import { createHash } from 'crypto';
+import { execFileSync } from 'child_process';
 import { join } from 'path';
 import { delimiter as pathDelimiter } from 'path';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import execa from 'execa';
 import fs from 'fs';
 import os from 'os';
 import which from 'which';
-import { debug } from '@vercel/build-utils';
+import semver from 'semver';
+import { debug, NowBuildError } from '@vercel/build-utils';
 import { getVenvPythonBin } from './utils';
 
-export const UV_VERSION = '0.10.11';
+export const UV_VERSION = '0.13.5';
+// Minimum uv version we require at runtime. We currently require
+// 0.9.25 at least, since it adds `--exclude-newer-package
+// <pkg>=false`.
+export const MIN_UV_VERSION = '0.9.25';
 export const UV_PYTHON_PATH_PREFIX = '/uv/python/';
 export const UV_PYTHON_DOWNLOADS_MODE = 'automatic';
 export const UV_CACHE_DIR_SUBPATH = ['.vercel', 'python', 'cache', 'uv'];
+
+// SHA-256 checksum for the Linux x86_64 uv tarball.  Update with UV_VERSION.
+export const UV_BINARY_CHECKSUM =
+  'f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f';
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';
@@ -66,9 +78,14 @@ export class UvRunner {
   listInstalledPythons(): Set<string> {
     let output: string;
     try {
-      output = execSync(
-        `${this.uvPath} python list --only-installed --output-format json`,
-        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+      output = execFileSync(
+        this.uvPath,
+        ['python', 'list', '--only-installed', '--output-format', 'json'],
+        {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+          shell: isWin,
+        }
       );
     } catch (err) {
       throw new Error(
@@ -118,9 +135,19 @@ export class UvRunner {
     frozen?: boolean;
     noBuild?: boolean;
     noInstallProject?: boolean;
+    onlyGroup?: string;
+    pythonPlatform?: string;
   }): Promise<void> {
-    const { venvPath, projectDir, locked, frozen, noBuild, noInstallProject } =
-      options;
+    const {
+      venvPath,
+      projectDir,
+      locked,
+      frozen,
+      noBuild,
+      noInstallProject,
+      onlyGroup,
+      pythonPlatform,
+    } = options;
     const args = ['sync', '--active', '--no-dev', '--link-mode', 'hardlink'];
     if (frozen) {
       args.push('--frozen');
@@ -132,6 +159,12 @@ export class UvRunner {
     }
     if (noInstallProject) {
       args.push('--no-install-project');
+    }
+    if (onlyGroup) {
+      args.push('--only-group', onlyGroup);
+    }
+    if (pythonPlatform) {
+      args.push('--python-platform', pythonPlatform);
     }
     args.push('--no-editable');
     await this.runUvCmd(args, projectDir, venvPath);
@@ -181,6 +214,11 @@ export class UvRunner {
 
   /**
    * Run a `uv pip` command (e.g., `uv pip install`).
+   *
+   * Only packages the builder adds on top of the user's dependencies are
+   * installed this way. Their pins carry no hashes, so the user's
+   * UV_REQUIRE_HASHES is dropped; uv also rejects `--no-require-hashes`
+   * while it is set.
    */
   async pip(options: {
     venvPath: string;
@@ -189,7 +227,28 @@ export class UvRunner {
   }): Promise<void> {
     const { venvPath, projectDir, args } = options;
     const fullArgs = ['pip', ...args];
-    await this.runUvCmd(fullArgs, projectDir, venvPath);
+    // `undefined` rather than omitted, because execa merges process.env back in.
+    await this.runUvCmd(fullArgs, projectDir, venvPath, {
+      UV_REQUIRE_HASHES: undefined,
+    });
+  }
+
+  /**
+   * Run a command through `uv run` inside the active virtual environment.
+   */
+  async run(options: {
+    venvPath: string;
+    projectDir: string;
+    args: string[];
+    env?: Record<string, string>;
+  }): Promise<{ stdout: string; stderr: string }> {
+    const { venvPath, projectDir, args, env } = options;
+    return this.runUvCmdWithOutput(
+      ['run', '--active', '--no-sync', ...args],
+      projectDir,
+      venvPath,
+      env
+    );
   }
 
   /**
@@ -215,7 +274,8 @@ export class UvRunner {
   private async runUvCmd(
     args: string[],
     cwd: string,
-    venvPath: string
+    venvPath: string,
+    env?: NodeJS.ProcessEnv
   ): Promise<void> {
     const pretty = `uv ${args.join(' ')}`;
     debug(`Running "${pretty}"...`);
@@ -223,13 +283,44 @@ export class UvRunner {
     try {
       await execa(this.uvPath, args, {
         cwd,
-        env: this.getVenvEnv(venvPath),
+        env: { ...this.getVenvEnv(venvPath), ...env },
       });
     } catch (err) {
       const error: Error & { code?: unknown } = new Error(
         `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
       );
       // retain code/signal to ensure it's treated as a build error
+      if (err && typeof err === 'object') {
+        if ('code' in err) {
+          error.code = (err as { code: number | string }).code;
+        } else if ('signal' in err) {
+          error.code = (err as { signal: string }).signal;
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  private async runUvCmdWithOutput(
+    args: string[],
+    cwd: string,
+    venvPath: string,
+    env?: Record<string, string>
+  ): Promise<{ stdout: string; stderr: string }> {
+    const pretty = `uv ${args.join(' ')}`;
+    debug(`Running "${pretty}"...`);
+
+    try {
+      const result = await execa(this.uvPath, args, {
+        cwd,
+        env: { ...this.getVenvEnv(venvPath), ...env },
+      });
+      return { stdout: result.stdout, stderr: result.stderr };
+    } catch (err) {
+      const error: Error & { code?: unknown } = new Error(
+        `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
+      );
       if (err && typeof err === 'object') {
         if ('code' in err) {
           error.code = (err as { code: number | string }).code;
@@ -328,6 +419,54 @@ export async function findUvBinary(pythonPath: string): Promise<string | null> {
   return null;
 }
 
+/**
+ * Verify the uv binary at `uvPath` is at least {@link MIN_UV_VERSION}.
+ *
+ * Returns the raw `uv --version` output (e.g. `uv 0.9.25 (<hash> <date>)`) so
+ * callers can report the version without invoking uv a second time.
+ *
+ * Throws a NowBuildError if uv can't be run, its version can't be determined,
+ * or it's older than the minimum — uv is unusable in all of those cases.
+ */
+export function checkUvBinaryVersion(uvPath: string): string {
+  let output: string;
+  try {
+    output = execFileSync(uvPath, ['--version'], {
+      encoding: 'utf8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      shell: isWin,
+    }).trim();
+  } catch (err) {
+    throw new NowBuildError({
+      code: 'UV_ERROR',
+      link: 'https://vercel.link/python-version',
+      message: `Found uv at "${uvPath}" but could not run "uv --version": ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    });
+  }
+
+  // `uv --version` prints e.g. `uv 0.9.25 (<hash> <date>)`.
+  const found = semver.coerce(output);
+  if (!found) {
+    throw new NowBuildError({
+      code: 'UV_ERROR',
+      link: 'https://vercel.link/python-version',
+      message: `Could not determine the uv version from "${output}".`,
+    });
+  }
+
+  if (semver.lt(found, MIN_UV_VERSION)) {
+    throw new NowBuildError({
+      code: 'UV_VERSION_TOO_OLD',
+      link: 'https://vercel.link/python-version',
+      message: `Found uv ${found.version} at "${uvPath}", but Vercel requires uv ${MIN_UV_VERSION} or newer. Please upgrade uv: https://docs.astral.sh/uv/getting-started/installation/`,
+    });
+  }
+
+  return output;
+}
+
 export async function getUvBinaryOrInstall(
   pythonPath: string
 ): Promise<string> {
@@ -418,4 +557,127 @@ export async function getUvBinaryForBundling(
   // the Lambda will contain a symlink rather than the actual binary.
   const resolvedPath = await fs.promises.realpath(uvPath);
   return resolvedPath;
+}
+
+export const UV_LINUX_TARGET = 'x86_64-unknown-linux-gnu';
+
+/**
+ * Download the Linux x86_64 uv binary for bundling into the Lambda.
+ *
+ * Cached at `{cacheDir}/uv-{UV_VERSION}-{target}/uv`.  The tarball's
+ * SHA-256 is verified against {@link UV_BINARY_CHECKSUM}.
+ */
+export async function downloadUvBinaryForTarget(
+  cacheDir: string
+): Promise<string> {
+  const destDir = join(cacheDir, `uv-${UV_VERSION}-${UV_LINUX_TARGET}`);
+  const destBinary = join(destDir, 'uv');
+
+  // Return cached binary if it exists and is executable.
+  try {
+    await fs.promises.access(destBinary, fs.constants.X_OK);
+    debug(`Using cached uv binary at ${destBinary}`);
+    return destBinary;
+  } catch {
+    // Not cached -- continue to download.
+  }
+
+  const tarballName = `uv-${UV_LINUX_TARGET}.tar.gz`;
+  const url = `https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/${tarballName}`;
+
+  debug(`Downloading uv ${UV_VERSION} from ${url}`);
+  console.log(
+    `Downloading uv ${UV_VERSION} (linux x86_64) for runtime dependency installation...`
+  );
+
+  await fs.promises.mkdir(destDir, { recursive: true });
+  const tarballPath = join(destDir, tarballName);
+
+  await downloadUvTarball(url, tarballPath);
+
+  const actualHash = await sha256File(tarballPath);
+  if (actualHash !== UV_BINARY_CHECKSUM) {
+    await fs.promises.unlink(tarballPath).catch(() => {});
+    throw new NowBuildError({
+      code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+      message:
+        `checksum mismatch for ${tarballName}: ` +
+        `expected ${UV_BINARY_CHECKSUM}, got ${actualHash}`,
+    });
+  }
+
+  // Archive contains `uv-{target}/uv` (and uvx).
+  try {
+    await execa('tar', [
+      'xzf',
+      tarballPath,
+      '--strip-components=1',
+      '-C',
+      destDir,
+    ]);
+  } catch (err) {
+    throw new NowBuildError({
+      code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+      message: `could not extract ${tarballName}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    });
+  }
+
+  await fs.promises.chmod(destBinary, 0o755);
+  await fs.promises.unlink(tarballPath).catch(() => {});
+
+  debug(`Downloaded uv binary to ${destBinary}`);
+  return destBinary;
+}
+
+async function downloadUvTarball(url: string, dest: string): Promise<void> {
+  const tmpDest = `${dest}.${process.pid}.${Date.now()}.tmp`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
+
+  try {
+    const response = await fetch(url, {
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message: `could not download ${url}: HTTP ${response.status}`,
+      });
+    }
+
+    if (!response.body) {
+      throw new NowBuildError({
+        code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+        message: `could not download ${url}: response body was empty`,
+      });
+    }
+
+    await pipeline(
+      Readable.fromWeb(response.body),
+      fs.createWriteStream(tmpDest)
+    );
+    await fs.promises.rename(tmpDest, dest);
+  } catch (err) {
+    await fs.promises.unlink(tmpDest).catch(() => {});
+    if (err instanceof NowBuildError) {
+      throw err;
+    }
+    throw new NowBuildError({
+      code: 'RUNTIME_DEPENDENCY_INSTALLATION_FAILED',
+      message: `could not download ${url}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function sha256File(filePath: string): Promise<string> {
+  const data = await fs.promises.readFile(filePath);
+  return createHash('sha256').update(new Uint8Array(data)).digest('hex');
 }

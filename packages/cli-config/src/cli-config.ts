@@ -1,10 +1,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { homedir } from 'node:os';
-import XDGAppPaths from 'xdg-app-paths';
-import { z } from 'zod';
+import * as z from 'zod';
 import { authConfigSchema, globalConfigSchema } from './schema';
-import type { AuthConfig, GlobalConfig } from './types';
+import type { AuthConfig, AuthFileConfig, GlobalConfig } from './types';
+import {
+  getAuthConfigFilePath,
+  getCachePath,
+  getConfigFilePath,
+  getDataPath,
+  getGlobalPathConfig,
+} from './paths';
+
+export {
+  getAuthConfigFilePath,
+  getCachePath,
+  getConfigFilePath,
+  getDataPath,
+  getGlobalPathConfig,
+};
 
 const DOCS_URL =
   'https://vercel.com/docs/projects/project-configuration/global-configuration';
@@ -18,6 +31,7 @@ export const defaultGlobalConfig: GlobalConfig = {
   '// Note':
     'This is your Vercel config file. For more information see the global configuration documentation.',
   '// Docs': `${DOCS_URL}#config.json`,
+  usedBefore: false,
 };
 
 export function getDefaultAuthConfig(): AuthConfig {
@@ -29,12 +43,35 @@ export function getDefaultAuthConfig(): AuthConfig {
 
 export const defaultAuthConfig: AuthConfig = getDefaultAuthConfig();
 
+function normalizeConfigError(error: unknown): never {
+  if (error instanceof z.ZodError) {
+    const credStorageIssue = error.issues.find(
+      issue => issue.path[0] === 'credStorage'
+    );
+
+    if (credStorageIssue) {
+      throw new Error(credStorageIssue.message);
+    }
+  }
+
+  throw error;
+}
+
 export function parseGlobalConfig(value: unknown): GlobalConfig {
-  return globalConfigSchema.parse(value);
+  try {
+    return globalConfigSchema.parse(value);
+  } catch (error) {
+    normalizeConfigError(error);
+  }
 }
 
 export function parseAuthConfig(value: unknown): AuthConfig {
   return authConfigSchema.parse(value);
+}
+
+export function parseAuthFileConfig(value: unknown): AuthFileConfig {
+  const { tokenSource, ...authConfig } = parseAuthConfig(value);
+  return authConfig;
 }
 
 function readJsonFileSync(filePath: string): unknown {
@@ -93,40 +130,12 @@ export function writeConfigFile<S extends z.ZodType>(
   });
 }
 
-function isReadableDirectory(targetPath: string): boolean {
-  try {
-    return fs.lstatSync(targetPath).isDirectory();
-  } catch (_) {
-    // We don't care which kind of error occured, it isn't a readable directory anyway.
-    return false;
-  }
-}
-
-export function getGlobalPathConfig(): string {
-  const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
-
-  const possibleConfigPaths = [
-    ...vercelDirectories, // latest vercel directory
-    path.join(homedir(), '.now'), // legacy config in user's home directory
-    ...XDGAppPaths('now').dataDirs(), // legacy XDG directory
-  ];
-
-  return (
-    possibleConfigPaths.find(configPath => isReadableDirectory(configPath)) ||
-    vercelDirectories[0]
-  );
-}
-
-export function getConfigFilePath(configDir: string): string {
-  return path.join(configDir, 'config.json');
-}
-
-export function getAuthConfigFilePath(configDir: string): string {
-  return path.join(configDir, 'auth.json');
-}
-
 export function readGlobalConfigFile(configPath: string): GlobalConfig {
-  return readConfigFile(configPath, globalConfigSchema);
+  try {
+    return readConfigFile(configPath, globalConfigSchema);
+  } catch (error) {
+    normalizeConfigError(error);
+  }
 }
 
 export function writeGlobalConfigFile(
@@ -140,6 +149,22 @@ export function readAuthConfigFile(configPath: string): AuthConfig {
   return readConfigFile(configPath, authConfigSchema);
 }
 
+export function readAuthFileConfig(configPath: string): AuthFileConfig {
+  return parseAuthFileConfig(readJsonFileSync(configPath));
+}
+
+export function readAuthConfig(configDir: string): AuthConfig {
+  return readAuthConfigFile(getAuthConfigFilePath(configDir));
+}
+
+export function tryReadAuthConfig(configDir: string): AuthConfig | null {
+  try {
+    return readAuthConfig(configDir);
+  } catch {
+    return null;
+  }
+}
+
 export function writeAuthConfigFile(
   configPath: string,
   authConfig: AuthConfig
@@ -151,4 +176,19 @@ export function writeAuthConfigFile(
   writeConfigFile(configPath, authConfigSchema, authConfig, {
     mode: 0o600,
   });
+}
+
+export function writeAuthConfig(
+  configDir: string,
+  authConfig: AuthConfig
+): void {
+  writeAuthConfigFile(getAuthConfigFilePath(configDir), authConfig);
+}
+
+export function deleteAuthConfigFile(configPath: string): void {
+  fs.rmSync(configPath, { force: true });
+}
+
+export function deleteAuthConfig(configDir: string): void {
+  deleteAuthConfigFile(getAuthConfigFilePath(configDir));
 }

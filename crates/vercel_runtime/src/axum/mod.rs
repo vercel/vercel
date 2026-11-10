@@ -58,6 +58,15 @@ impl StreamingUtils {
     ) -> Result<Response<ResponseBody>, Error> {
         let (parts, body) = response.into_parts();
 
+        // A `101 Switching Protocols` is a WebSocket handshake response: it
+        // carries no body, and the upgraded socket is driven separately by
+        // hyper (via `OnUpgrade`) once the 101 is written. Pass it through with
+        // an empty body instead of running it through the streaming/`to_bytes`
+        // path.
+        if parts.status == axum::http::StatusCode::SWITCHING_PROTOCOLS {
+            return Ok(Response::from_parts(parts, axum::body::Bytes::new().into()));
+        }
+
         // Check if this is a streaming response based on headers
         let is_streaming = Self::is_streaming_response(&parts.headers);
 

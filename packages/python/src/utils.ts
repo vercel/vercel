@@ -1,8 +1,7 @@
 import fs from 'fs';
-import os from 'os';
 import { delimiter as pathDelimiter, join } from 'path';
 import { readConfigFile, execCommand, debug } from '@vercel/build-utils';
-import * as detectLibc from 'detect-libc';
+import { normalizePackageName, parseUvLock } from '@vercel/python-analysis';
 import execa from 'execa';
 import { getProtectedUvEnv } from './uv';
 
@@ -144,6 +143,37 @@ export async function ensureVenv({
   }
 }
 
+// Packages `uv venv --seed` adds to the build venv that the function never
+// needs. setuptools (also seeded below Python 3.12) stays bundled for now
+// because older libraries such as Jinja2 2.11 import its `pkg_resources`
+// without declaring setuptools.
+// TODO: Add setuptools once dropping `pkg_resources` support is acceptable.
+// setuptools deprecated it in v67.5.0 and removed it in v82.0.0.
+const BUILD_ONLY_SEED_PACKAGES = ['pip'];
+
+/**
+ * Return the build-only seed packages that the project's uv.lock does not
+ * require, so they can be left out of the function bundle. Returns an empty
+ * list when the lock cannot be read, which keeps them bundled.
+ */
+export async function getSeedPackagesMissingFromLock(
+  uvLockPath: string
+): Promise<string[]> {
+  let lockedPackages: Set<string>;
+  try {
+    const content = await fs.promises.readFile(uvLockPath, 'utf8');
+    lockedPackages = new Set(
+      parseUvLock(content, uvLockPath).packages.map(pkg =>
+        normalizePackageName(pkg.name)
+      )
+    );
+  } catch (err) {
+    debug(`could not read lock file "${uvLockPath}" for seed packages: ${err}`);
+    return [];
+  }
+  return BUILD_ONLY_SEED_PACKAGES.filter(name => !lockedPackages.has(name));
+}
+
 export function getVenvPythonBin(venvPath: string) {
   return join(getVenvBinDir(venvPath), isWin ? 'python.exe' : 'python');
 }
@@ -198,103 +228,4 @@ export async function runPyprojectScript(
 
   // No command string was provided for the found script name
   return false;
-}
-
-export interface PlatformInfo {
-  /** Wheel tag OS name: "manylinux" or "musllinux" */
-  osName: string;
-  /** Wheel tag arch: "x86_64", "aarch64", etc. */
-  archName: string;
-  /** Libc major version (glibc major or musl major) */
-  osMajor: number;
-  /** Libc minor version */
-  osMinor: number;
-  /** High-level OS for PythonBuild: "linux", "macos", or "windows" */
-  os: string;
-  /** PEP 508 sys_platform value: "linux", "win32", or "darwin" */
-  sysPlatform: string;
-  /** High-level libc for PythonBuild: "gnu" or "musl" */
-  libc: string;
-}
-
-// Map Node.js arch names to uv platform tag arch names
-const ARCH_MAP: Record<string, string> = {
-  x64: 'x86_64',
-  arm64: 'aarch64',
-  ia32: 'i686',
-  arm: 'armv7l',
-  ppc64: 'ppc64le',
-  s390x: 's390x',
-};
-
-/**
- * Detect the host platform for wheel compatibility checking and build selection.
- *
- * On the Vercel build image (Linux), we use `detect-libc` to get the exact
- * glibc/musl version. For local `vercel build` on non-Linux hosts we fall
- * back to conservative manylinux defaults for wheel tags (since the host
- * doesn't have a Linux libc).
- */
-export function detectPlatform(): PlatformInfo {
-  const arch = os.arch();
-  const archName = ARCH_MAP[arch] || arch;
-
-  // Detect libc family and version from the host. On the Vercel build
-  // image this matches the Lambda runtime; on non-Linux hosts it will
-  // be null and we fall back to conservative defaults.
-  const libcFamily = detectLibc.familySync();
-  const libcVersion = detectLibc.versionSync();
-
-  let osName: string;
-  let osMajor: number;
-  let osMinor: number;
-
-  if (libcFamily === detectLibc.MUSL) {
-    osName = 'musllinux';
-  } else {
-    osName = 'manylinux';
-  }
-
-  if (libcVersion) {
-    const parts = libcVersion.split('.');
-    osMajor = parseInt(parts[0], 10);
-    osMinor = parseInt(parts[1], 10) || 0;
-  } else if (libcFamily === detectLibc.GLIBC) {
-    // glibc detected but version unknown -- use conservative default
-    osMajor = 2;
-    osMinor = 17;
-  } else {
-    // Non-Linux host (local `vercel build` on macOS/Windows).
-    // Fall back to conservative manylinux defaults.
-    osMajor = 2;
-    osMinor = 17;
-  }
-
-  const libc = libcFamily === detectLibc.MUSL ? 'musl' : 'gnu';
-
-  // PEP 508 sys_platform value derived from the Node.js process platform.
-  const SYS_PLATFORM_MAP: Record<string, string> = {
-    linux: 'linux',
-    win32: 'win32',
-    darwin: 'darwin',
-  };
-  const sysPlatform = SYS_PLATFORM_MAP[process.platform] || 'linux';
-
-  // High-level OS for PythonBuild selection, derived from the host platform.
-  const OS_MAP: Record<string, string> = {
-    linux: 'linux',
-    win32: 'windows',
-    darwin: 'macos',
-  };
-  const detectedOs = OS_MAP[process.platform] || 'linux';
-
-  return {
-    osName,
-    archName,
-    osMajor,
-    osMinor,
-    os: detectedOs,
-    sysPlatform,
-    libc,
-  };
 }
