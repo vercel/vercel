@@ -55,6 +55,13 @@ export class IntegrationTelemetryClient
     });
   }
 
+  trackCliSubcommandCategories(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'categories',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'remove',
@@ -72,6 +79,13 @@ export class IntegrationTelemetryClient
   trackCliSubcommandGuide(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'guide',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandResource(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'resource',
       value: actual,
     });
   }

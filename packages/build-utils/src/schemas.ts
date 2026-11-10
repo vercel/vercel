@@ -1,3 +1,6 @@
+import { getMaxDurationSchema } from './max-duration';
+import { MAX_CONCURRENCY } from './max-concurrency';
+
 const triggerEventSchemaV1 = {
   type: 'object',
   properties: {
@@ -66,11 +69,27 @@ const triggerEventSchemaV2 = {
   additionalProperties: false,
 };
 
-const triggerEventSchema = {
-  oneOf: [triggerEventSchemaV1, triggerEventSchemaV2],
+const scheduleTriggerEventSchemaV1 = {
+  type: 'object',
+  properties: {
+    type: {
+      type: 'string',
+      const: 'schedule/v1beta',
+    },
+  },
+  required: ['type'],
+  additionalProperties: false,
 };
 
-export const functionsSchema = {
+const triggerEventSchema = {
+  oneOf: [
+    triggerEventSchemaV1,
+    triggerEventSchemaV2,
+    scheduleTriggerEventSchemaV1,
+  ],
+};
+
+export const getFunctionsSchema = () => ({
   type: 'object',
   minProperties: 1,
   maxProperties: 50,
@@ -92,11 +111,22 @@ export const functionsSchema = {
           minimum: 128,
           maximum: 10240,
         },
-        maxDuration: {
-          oneOf: [
-            { type: 'integer', minimum: 1, maximum: 900 },
-            { type: 'string', enum: ['max'] },
-          ],
+        maxDuration: getMaxDurationSchema(),
+        affinity: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['mode'],
+          properties: {
+            mode: {
+              type: 'string',
+              const: 'strict',
+            },
+          },
+        },
+        maxConcurrency: {
+          type: 'integer',
+          minimum: 1,
+          maximum: MAX_CONCURRENCY,
         },
         regions: {
           type: 'array',
@@ -118,6 +148,10 @@ export const functionsSchema = {
           type: 'string',
           maxLength: 256,
         },
+        installCommand: {
+          type: 'string',
+          maxLength: 256,
+        },
         experimentalTriggers: {
           type: 'array',
           items: triggerEventSchema,
@@ -128,7 +162,15 @@ export const functionsSchema = {
       },
     },
   },
-};
+});
+
+/**
+ * @deprecated Evaluated once at module load, so it does not reflect
+ * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` when the variable is set after this
+ * module is first imported. Prefer {@link getFunctionsSchema}, which reads the
+ * limit at call time.
+ */
+export const functionsSchema = getFunctionsSchema();
 
 export const buildsSchema = {
   type: 'array',
@@ -176,6 +218,17 @@ export const packageManifestSchema = {
     framework: {
       type: 'string',
       description: 'Detected framework slug, e.g. "fastapi", "flask", "hono".',
+    },
+    serviceType: {
+      type: 'string',
+      description:
+        'Deployment topology for service builds: "web", "schedule", "queue", or "workflow".',
+    },
+    buildType: {
+      type: 'string',
+      enum: ['app', 'api-dir', 'middleware'],
+      description:
+        'What triggered this build: "app" (full application build), "api-dir" (api/ directory build), or "middleware" (middleware build).',
     },
     runtimeVersion: {
       type: 'object',

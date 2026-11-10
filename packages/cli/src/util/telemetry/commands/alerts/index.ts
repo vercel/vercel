@@ -22,13 +22,6 @@ export class AlertsTelemetryClient
     });
   }
 
-  trackCliSubcommandRules(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'rules',
-      value: actual,
-    });
-  }
-
   trackCliOptionType(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({
@@ -56,15 +49,6 @@ export class AlertsTelemetryClient
     }
   }
 
-  trackCliOptionProject(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'project',
-        value: this.redactedValue,
-      });
-    }
-  }
-
   trackCliFlagAll(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('all');
@@ -83,6 +67,12 @@ export class AlertsTelemetryClient
         option: 'limit',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

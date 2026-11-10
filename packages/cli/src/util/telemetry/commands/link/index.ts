@@ -31,15 +31,6 @@ export class LinkTelemetryClient
     }
   }
 
-  trackCliOptionProject(project: string | undefined) {
-    if (project) {
-      this.trackCliOption({
-        option: 'project',
-        value: this.redactedValue,
-      });
-    }
-  }
-
   trackCliOptionTeam(value: string | undefined) {
     if (value) {
       this.trackCliOption({

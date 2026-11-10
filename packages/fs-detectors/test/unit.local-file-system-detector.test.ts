@@ -35,7 +35,7 @@ describe('LocalFileSystemDetector', () => {
   });
 
   it('should call hasPath correctly', async () => {
-    const hasPathSpy = jest.spyOn(localFileSystem, '_hasPath');
+    const hasPathSpy = vi.spyOn(localFileSystem, '_hasPath');
     const hasPath = await Promise.all(
       filePaths.map(filePath => localFileSystem.hasPath(filePath))
     );
@@ -109,7 +109,6 @@ describe('LocalFileSystemDetector', () => {
 
   it('should call chdir correctly', async () => {
     const a = localFileSystem.chdir('a');
-    expect(a instanceof LocalFileSystemDetector);
     const readdirResult = await a.readdir('');
     expect(readdirResult.map(stat => stat.name).sort()).toEqual([
       'b',

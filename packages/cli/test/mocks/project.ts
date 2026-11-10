@@ -224,11 +224,39 @@ export function useUnknownProject() {
   });
 }
 
+/**
+ * Serves `GET /v9/projects` from a fixed list the way the API pages it: newest
+ * `updatedAt` first, an exclusive `until`, and `next` set to the last
+ * project's `updatedAt` when the page is full. Returns each request's query.
+ */
+export function useProjectList(projects: Array<Partial<Project>>) {
+  const all = projects
+    .map(project => ({ ...defaultProject, ...project }))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+  const requests: Array<Record<string, unknown>> = [];
+  client.scenario.get('/v9/projects', (req, res) => {
+    requests.push(req.query);
+    const limit = Number(req.query.limit ?? 20);
+    const until = req.query.until ? Number(req.query.until) : Infinity;
+    const page = all.filter(p => p.updatedAt < until).slice(0, limit);
+    res.json({
+      projects: page,
+      pagination: {
+        count: page.length,
+        next: page.length === limit ? page[page.length - 1].updatedAt : null,
+        prev: null,
+      },
+    });
+  });
+  return requests;
+}
+
 export function useProject(
   project: Partial<
     Project & { customEnvironments?: CustomEnvironment[] }
   > = defaultProject,
-  projectEnvs: ProjectEnvVariable[] = envs
+  projectEnvs: ProjectEnvVariable[] = envs,
+  options: { decryptDevelopmentSecrets?: boolean } = {}
 ) {
   client.scenario.get(`/:version/projects/${project.name}`, (_req, res) => {
     res.json(project);
@@ -273,7 +301,8 @@ export function useProject(
           systemEnvs.map(env => env.key),
           project.autoExposeSystemEnvs,
           undefined,
-          target
+          target,
+          options.decryptDevelopmentSecrets
         )
       );
 
@@ -443,7 +472,8 @@ function exposeSystemEnvs(
   systemEnvValues: string[],
   autoExposeSystemEnvs: boolean | undefined,
   vercelUrl?: string,
-  target?: ProjectEnvTarget
+  target?: ProjectEnvTarget,
+  decryptDevelopmentSecrets = false
 ) {
   const envs: Env = {};
 
@@ -459,6 +489,9 @@ function exposeSystemEnvs(
   for (const env of projectEnvs) {
     if (env.type === 'system') {
       envs[env.key] = getSystemEnvValue(env.value, { vercelUrl });
+    } else if (env.type === 'sensitive' || env.visibility === 'secret') {
+      envs[env.key] =
+        decryptDevelopmentSecrets && target === 'development' ? env.value : '';
     } else {
       envs[env.key] = env.value;
     }

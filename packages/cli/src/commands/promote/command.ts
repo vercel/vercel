@@ -1,6 +1,15 @@
 import { packageName } from '../../util/pkg-name';
 import { yesOption } from '../../util/arg-common';
 
+const timeoutOption = {
+  name: 'timeout',
+  description: 'Time to wait for promotion completion (default: 3m)',
+  argument: 'TIME',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+} as const;
+
 export const statusSubcommand = {
   name: 'status',
   aliases: [],
@@ -12,6 +21,7 @@ export const statusSubcommand = {
     },
   ],
   options: [
+    timeoutOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when linking a Project',
@@ -19,12 +29,17 @@ export const statusSubcommand = {
   ],
   examples: [
     {
-      name: 'Show the status of any current pending promotions',
-      value: [
-        `${packageName} promote status`,
-        `${packageName} promote status <project>`,
-        `${packageName} promote status --timeout 30s`,
-      ],
+      name: 'Show status for the linked project',
+      value: `${packageName} promote status`,
+    },
+    {
+      name: 'Show status for a named project',
+      placeholders: ['<project>'],
+      value: `${packageName} promote status <project>`,
+    },
+    {
+      name: 'Wait up to 30 seconds for status',
+      value: `${packageName} promote status --timeout 30s`,
     },
   ],
 } as const;
@@ -35,20 +50,13 @@ export const promoteCommand = {
   description: 'Promote an existing Deployment to current',
   arguments: [
     {
-      name: 'url|deploymentId',
+      name: 'deployment',
       required: true,
     },
   ],
   subcommands: [statusSubcommand],
   options: [
-    {
-      name: 'timeout',
-      description: 'Time to wait for promotion completion [3m]',
-      argument: 'TIME',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-    },
+    timeoutOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when linking a Project',
@@ -57,7 +65,8 @@ export const promoteCommand = {
   examples: [
     {
       name: 'Promote a Deployment using ID or URL',
-      value: `${packageName} promote <deployment id|url>`,
+      placeholders: ['<DEPLOYMENT>'],
+      value: `${packageName} promote <DEPLOYMENT>`,
     },
   ],
 } as const;

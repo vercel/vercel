@@ -1,8 +1,5 @@
 import { printError } from '../../util/error';
-import {
-  writeToConfigFile,
-  writeToAuthConfigFile,
-} from '../../util/config/files';
+import { persistAuthConfig, writeToConfigFile } from '../../util/config/files';
 import { parseArguments } from '../../util/get-args';
 import type Client from '../../util/client';
 import { getCommandName } from '../../util/pkg-name';
@@ -33,12 +30,17 @@ export default async function logout(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('logout');
-    output.print(help(logoutCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(logoutCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 
@@ -79,10 +81,13 @@ export default async function logout(client: Client): Promise<number> {
 
   delete authConfig.token;
   delete authConfig.userId;
+  delete authConfig.cachedUser;
 
   try {
-    writeToConfigFile(config);
-    writeToAuthConfigFile(authConfig);
+    if (!authConfig.skipWrite) {
+      writeToConfigFile(config);
+      persistAuthConfig(authConfig, config);
+    }
     output.debug('Configuration has been deleted');
   } catch (err: unknown) {
     output.debug(errorToString(err));

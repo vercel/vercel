@@ -36,7 +36,7 @@ describe('extractEnvVarNames', () => {
     ]);
   });
 
-  it('should NOT extract lowercase vars (path params)', () => {
+  it('should NOT extract lowercase named-regex captures', () => {
     expect(extractEnvVarNames('/api/$path/test')).toEqual([]);
   });
 
@@ -105,6 +105,67 @@ describe('populateRouteEnv', () => {
     populateRouteEnv(route);
     expect(route.transforms![0].env).toContain('VAR1');
     expect(route.transforms![0].env).toContain('VAR2');
+  });
+
+  it('should preserve explicitly allowlisted lowercase transform env vars', () => {
+    const route: RouteForEnv = {
+      transforms: [{ args: '/$path/$LOCALE', env: ['path'] }],
+    };
+    populateRouteEnv(route);
+    expect(route.transforms![0].env).toEqual(['path', 'LOCALE']);
+  });
+
+  it('should remove explicit transform env vars no longer referenced by args', () => {
+    const route: RouteForEnv = {
+      transforms: [{ args: '/static', env: ['path'] }],
+    };
+    populateRouteEnv(route);
+    expect(route.transforms![0].env).toBeUndefined();
+  });
+
+  it('should preserve explicitly allowlisted lowercase route env vars', () => {
+    const route: RouteForEnv = { dest: '/$path', env: ['path'] };
+    populateRouteEnv(route);
+    expect(route.env).toEqual(['path']);
+  });
+
+  it('should not classify uppercase named regex captures as env vars', () => {
+    const route: RouteForEnv = {
+      src: '^/api/(?<PATH>.*)$',
+      dest: '/internal/$PATH',
+      transforms: [{ args: '/$PATH' }],
+    };
+    populateRouteEnv(route, 'regex');
+    expect(route.env).toBeUndefined();
+    expect(route.transforms![0].env).toBeUndefined();
+  });
+
+  it('should preserve explicit env metadata matching a named regex capture', () => {
+    const route: RouteForEnv = {
+      src: '^/api/(?<PATH>.*)$',
+      transforms: [{ args: '/$PATH', env: ['PATH'] }],
+    };
+    populateRouteEnv(route, 'regex');
+    expect(route.transforms![0].env).toEqual(['PATH']);
+  });
+
+  it('should infer a braced env var matching a named regex capture', () => {
+    const route: RouteForEnv = {
+      src: '^/api/(?<PATH>.*)$',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: testing literal ${VAR} extraction
+      transforms: [{ args: '/${PATH}' }],
+    };
+    populateRouteEnv(route, 'regex');
+    expect(route.transforms![0].env).toEqual(['PATH']);
+  });
+
+  it('should infer uppercase env vars on path-to-regexp routes', () => {
+    const route: RouteForEnv = {
+      src: '/api/:PATH*',
+      transforms: [{ args: '/$PATH' }],
+    };
+    populateRouteEnv(route, 'path-to-regexp');
+    expect(route.transforms![0].env).toEqual(['PATH']);
   });
 
   it('should not set env when no vars found', () => {

@@ -1,0 +1,8 @@
+{
+  "experimentalServicesV2": {
+    "app": {
+      "root": ".",
+      "runtime": "container"
+    }
+  }
+}

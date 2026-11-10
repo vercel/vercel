@@ -1,7 +1,6 @@
 import type { ServerResponse, IncomingMessage } from 'http';
 import { serializeBody } from '../utils';
 import { PassThrough } from 'stream';
-import { parse as parseURL } from 'url';
 import { parse as parseContentType } from 'content-type';
 import { parse as parseQS } from 'querystring';
 import etag from 'etag';
@@ -69,7 +68,19 @@ export function getBodyParser(body: Buffer, contentType: string | undefined) {
 
 function getQueryParser({ url = '/' }: IncomingMessage) {
   return function parseQuery(): VercelRequestQuery {
-    return parseURL(url, true).query as VercelRequestQuery;
+    const urlObj = new URL(url, 'http://localhost');
+    const query: VercelRequestQuery = {};
+    urlObj.searchParams.forEach((value, key) => {
+      const existing = query[key];
+      if (existing !== undefined) {
+        query[key] = Array.isArray(existing)
+          ? [...existing, value]
+          : [existing, value];
+      } else {
+        query[key] = value;
+      }
+    });
+    return query;
   };
 }
 

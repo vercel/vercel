@@ -5,7 +5,10 @@ import { client } from '../../mocks/client';
 import { useUser } from '../../mocks/user';
 import { useTeam } from '../../mocks/team';
 import { setupTmpDir } from '../../helpers/setup-unit-fixture';
-import getScope, { applyScopeFromLink } from '../../../src/util/get-scope';
+import getScope, {
+  applyScopeFromLink,
+  detectExplicitScope,
+} from '../../../src/util/get-scope';
 
 describe('resolveScopeContext', () => {
   describe('with no local links', () => {
@@ -23,7 +26,7 @@ describe('resolveScopeContext', () => {
 
       expect(ctx.org.id).toEqual(mockTeam.id);
       expect(ctx.contextName).toEqual(mockTeam.slug);
-      expect(ctx.user.id).toEqual(mockUser.id);
+      expect(ctx.user?.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
       expect(ctx.linkedRepo).toBeNull();
       expect(ctx.isCrossTeamRepo).toBe(false);
@@ -42,7 +45,7 @@ describe('resolveScopeContext', () => {
 
     it('should detect --scope flag as explicit scope', async () => {
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', '--scope', mockTeam.slug];
+      client.setArgv('projects', 'ls', '--scope', mockTeam.slug);
 
       const ctx = await getScope(client, { resolveLocalScope: true });
 
@@ -51,7 +54,7 @@ describe('resolveScopeContext', () => {
 
     it('should detect --scope=value flag as explicit scope', async () => {
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', `--scope=${mockTeam.slug}`];
+      client.setArgv('projects', 'ls', `--scope=${mockTeam.slug}`);
 
       const ctx = await getScope(client, { resolveLocalScope: true });
 
@@ -60,7 +63,16 @@ describe('resolveScopeContext', () => {
 
     it('should detect --team flag as explicit scope', async () => {
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', '--team', mockTeam.slug];
+      client.setArgv('projects', 'ls', '--team', mockTeam.slug);
+
+      const ctx = await getScope(client, { resolveLocalScope: true });
+
+      expect(ctx.explicitScopeProvided).toBe(true);
+    });
+
+    it('should detect -S flag as explicit scope', async () => {
+      client.config.currentTeam = mockTeam.id;
+      client.setArgv('projects', 'ls', '-S', mockTeam.slug);
 
       const ctx = await getScope(client, { resolveLocalScope: true });
 
@@ -69,7 +81,7 @@ describe('resolveScopeContext', () => {
 
     it('should detect -T flag as explicit scope', async () => {
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', '-T', mockTeam.slug];
+      client.setArgv('projects', 'ls', '-T', mockTeam.slug);
 
       const ctx = await getScope(client, { resolveLocalScope: true });
 
@@ -145,13 +157,14 @@ describe('resolveScopeContext', () => {
       expect(selectSpy).not.toHaveBeenCalled();
       expect(ctx.isCrossTeamRepo).toBe(true);
       expect(ctx.org.id).toEqual(mockTeam.id);
+      expect(ctx.localOrgId).toBeUndefined();
     });
 
     it('should not warn about cross-team repo when explicit --scope is provided', async () => {
       const cwd = setupTmpDir();
       client.cwd = cwd;
       client.config.currentTeam = mockTeam.id;
-      client.argv = ['projects', 'ls', '--scope', mockTeam.slug];
+      client.setArgv('projects', 'ls', '--scope', mockTeam.slug);
 
       await outputFile(
         join(cwd, '.vercel', 'repo.json'),
@@ -217,6 +230,30 @@ describe('resolveScopeContext', () => {
 
       expect(ctx.isCrossTeamRepo).toBe(true);
       expect(ctx.org.id).toEqual(mockTeam.id);
+      expect(ctx.localOrgId).toBe(mockTeam.id);
+    });
+
+    it('resolves the repo root team from legacy repository orgId without prompting', async () => {
+      const cwd = setupTmpDir();
+      client.cwd = cwd;
+      const select = vi.spyOn(client.input, 'select');
+      await outputFile(
+        join(cwd, '.vercel', 'repo.json'),
+        JSON.stringify({
+          remoteName: 'origin',
+          orgId: mockTeam.id,
+          projects: [
+            { id: 'prj_a', name: 'app-a', directory: 'apps/a' },
+            { id: 'prj_b', name: 'app-b', directory: 'apps/b' },
+          ],
+        })
+      );
+
+      const ctx = await getScope(client, { resolveLocalScope: true });
+
+      expect(ctx.team?.id).toBe(mockTeam.id);
+      expect(ctx.localOrgId).toBe(mockTeam.id);
+      expect(select).not.toHaveBeenCalled();
     });
   });
 
@@ -227,7 +264,7 @@ describe('resolveScopeContext', () => {
     });
 
     it('should return false when no scope indicators present', async () => {
-      client.argv = ['deploy'];
+      client.setArgv('deploy');
       client.localConfig = {};
 
       const ctx = await getScope(client, { resolveLocalScope: true });
@@ -236,12 +273,19 @@ describe('resolveScopeContext', () => {
     });
 
     it('should not false-positive on unrelated flags', async () => {
-      client.argv = ['deploy', '--force', '--yes'];
+      client.setArgv('deploy', '--force', '--yes');
       client.localConfig = {};
 
       const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.explicitScopeProvided).toBe(false);
+    });
+
+    it('should ignore scope flags after the argument delimiter', async () => {
+      client.setArgv('env', 'run', '--', 'child', '--scope', 'child-scope');
+      client.localConfig = {};
+
+      expect(detectExplicitScope(client)).toBe(false);
     });
   });
 
@@ -261,7 +305,7 @@ describe('resolveScopeContext', () => {
       const ctx = await getScope(client, { resolveLocalScope: true });
 
       expect(ctx.org.id).toEqual(mockTeam.id);
-      expect(ctx.user.id).toEqual(mockUser.id);
+      expect(ctx.user?.id).toEqual(mockUser.id);
       expect(ctx.team?.id).toEqual(mockTeam.id);
     });
   });

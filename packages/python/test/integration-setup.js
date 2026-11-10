@@ -6,19 +6,32 @@ const {
   testDeployment,
 } = require('../../../test/lib/deployment/test-deployment.js');
 
-jest.setTimeout(4 * 60 * 1000);
+vi.setConfig({ testTimeout: 4 * 60 * 1000, hookTimeout: 4 * 60 * 1000 });
 
 module.exports = function setupTests(groupIndex) {
   const fixturesPath = path.resolve(__dirname, 'fixtures');
   const testsThatFailToBuild = new Map([
-    ['30-fail-build-invalid-pipfile', 'Could not parse config file'],
+    ['10-fail-build-invalid-pipfile', 'Could not parse config file'],
     [
-      '31-fail-build-invalid-python36',
+      '11-fail-build-invalid-python36',
       'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded.',
     ],
   ]);
   const allFixtures = fs.readdirSync(fixturesPath);
   const skipFixtures = [];
+  const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+
+  beforeAll(() => {
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+  });
+
+  afterAll(() => {
+    if (originalCompileAllEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_COMPILEALL;
+    } else {
+      process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+    }
+  });
 
   let chunkedFixtures = allFixtures.filter(
     fixture => !skipFixtures.includes(fixture)

@@ -1,9 +1,51 @@
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Iterable, Mapping
+import os
+from collections.abc import Iterable, Iterator, Mapping
+from contextvars import ContextVar
 from importlib import import_module
-from typing import cast
+from typing import Protocol, cast
+
+OIDC_HEADER_NAME = "x-vercel-oidc-token"
+INTERNAL_OIDC_HEADER_NAME = "x-vercel-internal-oidc-token"
+INTERNAL_HEADER_PREFIX = "x-vercel-internal-"
+FORWARDED_HOST_HEADER = "x-forwarded-host"
+
+# The host the proxy routed the current request on. Routing is by host, so
+# this is trustworthy provenance: environment aliases (production and custom
+# domains) only ever route to the currently promoted deployment.
+_forwarded_host: ContextVar[str | None] = ContextVar(
+    "vercel_forwarded_host",
+    default=None,
+)
+
+
+class _MutableHeaders(Protocol):
+    def __iter__(self) -> Iterator[str]: ...
+
+    def __delitem__(self, name: str, /) -> None: ...
+
+
+def current_forwarded_host() -> str | None:
+    """Return the host the current request arrived on, if any."""
+    return _forwarded_host.get()
+
+
+def is_internal_header(name: str) -> bool:
+    return name.lower().startswith(INTERNAL_HEADER_PREFIX)
+
+
+def strip_internal_headers(headers: _MutableHeaders) -> None:
+    for name in tuple(headers):
+        if is_internal_header(name):
+            del headers[name]
+
+
+def _remember_forwarded_host(normalized: Mapping[str, str]) -> None:
+    _forwarded_host.set(
+        normalized.get(FORWARDED_HOST_HEADER) or normalized.get("host") or None
+    )
 
 
 def _iter_header_items(headers: object) -> list[tuple[object, object]]:
@@ -47,14 +89,12 @@ def _iter_event_header_pairs(
 def _normalize_internal_oidc_header(
     headers: list[tuple[str, str]],
 ) -> list[tuple[str, str]]:
-    has_public_oidc = any(
-        key.lower() == "x-vercel-oidc-token" for key, _ in headers
-    )
+    has_public_oidc = any(key.lower() == OIDC_HEADER_NAME for key, _ in headers)
     internal_oidc_token = next(
         (
             value
             for key, value in headers
-            if key.lower() == "x-vercel-internal-oidc-token"
+            if key.lower() == INTERNAL_OIDC_HEADER_NAME
         ),
         None,
     )
@@ -62,13 +102,45 @@ def _normalize_internal_oidc_header(
     without_internal = [
         (key, value)
         for key, value in headers
-        if key.lower() != "x-vercel-internal-oidc-token"
+        if key.lower() != INTERNAL_OIDC_HEADER_NAME
     ]
 
-    if not has_public_oidc and internal_oidc_token is not None:
-        without_internal.append(("x-vercel-oidc-token", internal_oidc_token))
+    oidc_token = get_oidc_token_for_request(
+        has_public_oidc=has_public_oidc,
+        internal_oidc_token=internal_oidc_token,
+    )
+    if oidc_token:
+        without_internal.append((OIDC_HEADER_NAME, oidc_token))
 
     return without_internal
+
+
+def get_oidc_token_for_request(
+    *,
+    has_public_oidc: bool,
+    internal_oidc_token: str | None,
+) -> str | None:
+    if has_public_oidc:
+        return None
+    if internal_oidc_token:
+        return internal_oidc_token
+    return os.environ.get("VERCEL_OIDC_TOKEN") or None
+
+
+def append_oidc_header_if_missing(
+    headers_list: list[tuple[bytes, bytes]],
+    *,
+    internal_oidc_token: str | None,
+) -> None:
+    oidc_token = get_oidc_token_for_request(
+        has_public_oidc=any(
+            decode_header_bytes(k).lower() == OIDC_HEADER_NAME
+            for k, _ in headers_list
+        ),
+        internal_oidc_token=internal_oidc_token,
+    )
+    if oidc_token:
+        headers_list.append((OIDC_HEADER_NAME.encode(), oidc_token.encode()))
 
 
 def set_headers(headers: Mapping[str, str] | None) -> None:
@@ -101,6 +173,7 @@ def set_vercel_headers_from_asgi_pairs(
         value = decode_header_bytes(value_bytes)
         normalized[key] = value
 
+    _remember_forwarded_host(normalized)
     set_headers(normalized if normalized else None)
 
 
@@ -113,10 +186,12 @@ def set_vercel_headers_from_http_headers(
             continue
         normalized[str(key).lower()] = str(value)
 
+    _remember_forwarded_host(normalized)
     set_headers(normalized if normalized else None)
 
 
 def clear_vercel_headers_context() -> None:
+    _forwarded_host.set(None)
     set_headers(None)
 
 

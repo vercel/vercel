@@ -1,6 +1,6 @@
 {
   "name": "@vercel/static-build",
-  "version": "2.9.21",
+  "version": "25.0.0",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/build-step",
@@ -14,9 +14,10 @@
   },
   "scripts": {
     "build": "node ../../utils/build-builder.mjs",
-    "test": "jest --reporters=default --reporters=jest-junit --env node --verbose --bail --runInBand",
-    "test-unit": "pnpm test test/build.test.ts test/hugo.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
-    "test-e2e": "pnpm test test/integration-*.test.js",
+    "test": "vitest run --config ../../vitest.config.mts",
+    "test-unit": "vitest run --config ../../vitest.config.mts test/build.test.ts test/hugo.test.ts test/gatsby.test.ts test/prepare-cache.test.ts",
+    "test-e2e": "vitest run --config ../../vitest.config.mts test/integration-",
+    "test-e2e-builder": "pnpm run test-e2e",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -25,17 +26,19 @@
     "@vercel/static-config": "workspace:*",
     "ts-morph": "12.0.0"
   },
+  "peerDependencies": {
+    "@vercel/build-utils": "workspace:*"
+  },
   "devDependencies": {
+    "@vercel/build-utils": "workspace:*",
     "@types/aws-lambda": "8.10.64",
     "@types/cross-spawn": "6.0.0",
     "@types/fs-extra": "9.0.13",
-    "@types/jest": "27.4.1",
     "@types/ms": "0.7.31",
     "@types/node": "20.11.0",
     "@types/node-fetch": "2.5.4",
     "@types/promise-timeout": "1.3.0",
     "@types/semver": "7.3.13",
-    "@vercel/build-utils": "workspace:*",
     "@vercel/error-utils": "workspace:*",
     "@vercel/frameworks": "workspace:*",
     "@vercel/fs-detectors": "workspace:*",
@@ -44,11 +47,11 @@
     "fs-extra": "10.0.0",
     "get-port": "5.0.0",
     "is-port-reachable": "2.0.1",
-    "jest-junit": "16.0.0",
     "ms": "2.1.2",
     "node-fetch": "2.6.7",
     "rc9": "1.2.0",
     "semver": "7.5.2",
-    "tree-kill": "1.2.2"
+    "tree-kill": "1.2.2",
+    "vitest": "4.1.10"
   }
 }

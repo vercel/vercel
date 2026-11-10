@@ -12,7 +12,7 @@ describe('webhooks ls', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = webhooks(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -145,7 +145,7 @@ describe('webhooks ls', () => {
       const output = client.stdout.getFullOutput();
       const jsonOutput = JSON.parse(output);
       expect(jsonOutput.status).toBe('ok');
-      expect(jsonOutput.next[0].command).toBe('vercel webhooks get <id>');
+      expect(jsonOutput.next[0].command).toBe('vercel webhooks inspect <id>');
     });
   });
 });

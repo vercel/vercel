@@ -77,8 +77,28 @@ export interface FirewallConfigChange {
   value?: unknown;
 }
 
+export type ManagedRuleAction = 'log' | 'challenge' | 'deny';
+
+export interface ManagedRuleGroupConfig {
+  active: boolean;
+  action?: ManagedRuleAction;
+}
+
+export interface ManagedRuleConfig {
+  active: boolean;
+  action?: ManagedRuleAction;
+  ruleGroups?: Record<string, ManagedRuleGroupConfig>;
+}
+
 export interface ManagedRulesResponse {
-  [key: string]: unknown;
+  /** Legacy key for Bot Protection; `bot_protection` supersedes it. */
+  bot_filter?: ManagedRuleConfig;
+  bot_protection?: ManagedRuleConfig;
+  ai_bots?: ManagedRuleConfig;
+  owasp?: ManagedRuleConfig;
+  traffic_sources?: ManagedRuleConfig;
+  vercel_ruleset?: ManagedRuleConfig;
+  [key: string]: ManagedRuleConfig | undefined;
 }
 
 export interface FirewallConfigResponse {
@@ -115,6 +135,20 @@ export interface ProjectSecurityResponse {
     /** Epoch milliseconds */
     attackModeActiveUntil?: number | null;
     attackModeUpdatedAt?: number;
+    /**
+     * System bypass entries encoded as `<cidr>#<expiry>`, where `<expiry>` is
+     * epoch seconds. An unexpired all-sources entry (`0.0.0.0/0` or `::/0`)
+     * means system mitigations are paused.
+     *
+     * Unlike the `/firewall/bypass` endpoint this is not plan-gated, so it is
+     * the only reliable source for mitigation status.
+     */
+    firewallBypassIps?: string[];
+    /**
+     * Security+ enabled for this project alone, independent of the team's
+     * subscription. Both grant the entitlement.
+     */
+    securityPlus?: boolean;
   };
 }
 

@@ -17,6 +17,8 @@ import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import output from '../../src/output-manager';
+import { resetDeprecatedShorthands } from '../../src/util/get-args';
+import { setCommandFlagsSpecification } from '../../src/util/get-flags-specification';
 
 const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
@@ -162,6 +164,20 @@ function setupMockServer(mockClient: MockClient): Express {
     mockClient.scenario(req, res, next);
   });
 
+  // Deploy follows `/events` even without `--logs`. Tests that don't stub it
+  // used to 500 here, and printEvents retried after the command returned,
+  // leaking sockets until the chunk watchdog killed the vitest worker.
+  app.use((req, res, next) => {
+    if (
+      req.method === 'GET' &&
+      /^\/v\d+\/now\/deployments\/[^/]+\/events$/.test(req.path)
+    ) {
+      res.end();
+      return;
+    }
+    next?.();
+  });
+
   // catch requests that were not intercepted
   app.use((req, res) => {
     const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
@@ -258,28 +274,33 @@ export class MockClient extends Client {
       supportsHyperlink: false,
     });
 
-    this.argv = [];
+    super.setArgv([]);
     this.authConfig = {
       token: 'token_dummy',
       skipWrite: true,
     };
     this.config = {};
+    this.savedTeam = undefined;
     this.localConfig = {};
     this.localConfigPath = undefined;
+    this.user = undefined;
+    this.userPromise = undefined;
+    this.teams = undefined;
+    this.teamsPromise = undefined;
 
     this.scenario = Router();
 
-    this.agent?.destroy();
-    this.agent = undefined;
-
     this.cwd = originalCwd;
     this.telemetryEventStore.reset();
+    resetDeprecatedShorthands();
+    setCommandFlagsSpecification(undefined);
 
     // Reset agent and confirmation flags
     this.isAgent = false;
     this.agentName = undefined;
     this.dangerouslySkipPermissions = false;
     this.nonInteractive = false;
+    this.ignoresSavedTeam = false;
   }
 
   events = {
@@ -335,6 +356,7 @@ export class MockClient extends Client {
         return;
       }
 
+      this.mockServer.closeAllConnections?.();
       this.mockServer.close(error => {
         if (error) {
           reject(error);
@@ -345,8 +367,20 @@ export class MockClient extends Client {
     });
   }
 
-  setArgv(...argv: string[]) {
-    this.argv = [process.execPath, 'cli.js', ...argv];
+  setArgv(argv: string[]): void;
+  setArgv(...argv: string[]): void;
+  setArgv(argvOrFirst?: string[] | string, ...rest: string[]) {
+    if (Array.isArray(argvOrFirst) && argvOrFirst[0] === process.execPath) {
+      super.setArgv(argvOrFirst);
+      return;
+    }
+    const argv = Array.isArray(argvOrFirst)
+      ? argvOrFirst
+      : typeof argvOrFirst === 'string'
+        ? [argvOrFirst, ...rest]
+        : [];
+
+    super.setArgv([process.execPath, 'cli.js', ...argv]);
 
     output.initialize({
       debug: argv.includes('--debug') || argv.includes('-d'),

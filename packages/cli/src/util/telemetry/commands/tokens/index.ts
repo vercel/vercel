@@ -6,16 +6,16 @@ export class TokensTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof tokensCommand>
 {
-  trackCliSubcommandAdd(actual: string) {
+  trackCliSubcommandCreate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'add',
+      subcommand: 'create',
       value: actual,
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandRevoke(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'remove',
+      subcommand: 'revoke',
       value: actual,
     });
   }

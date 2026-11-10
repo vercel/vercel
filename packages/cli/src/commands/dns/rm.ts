@@ -7,7 +7,7 @@ import deleteDNSRecordById from '../../util/dns/delete-dns-record-by-id';
 import getDNSRecordById from '../../util/dns/get-dns-record-by-id';
 import getScope from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName } from '../../util/pkg-name';
 import output from '../../output-manager';
 import { DnsRmTelemetryClient } from '../../util/telemetry/commands/dns/rm';
 import { removeSubcommand } from './command';
@@ -18,18 +18,13 @@ import {
   buildCommandWithYes,
   outputActionRequired,
   outputAgentError,
+  withGlobalFlags,
 } from '../../util/agent-output';
 import {
   AGENT_ACTION,
   AGENT_REASON,
   AGENT_STATUS,
 } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
-
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 export default async function rm(client: Client, argv: string[]) {
   let parsedArgs;
@@ -45,11 +40,11 @@ export default async function rm(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags } = parsedArgs;
   const { telemetryEventStore } = client;
@@ -63,7 +58,7 @@ export default async function rm(client: Client, argv: string[]) {
   const [recordId] = args;
   if (args.length !== 1) {
     if (client.nonInteractive) {
-      const cmd = withGlobalFlags(client, 'dns rm <id> --yes');
+      const cmd = withGlobalFlags(client, 'dns remove <id> --yes');
       outputActionRequired(
         client,
         {
@@ -78,15 +73,15 @@ export default async function rm(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('dns rm <id>')}`
+        `${getCommandName('dns remove <id>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   telemetry.trackCliArgumentId(recordId);

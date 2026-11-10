@@ -20,7 +20,11 @@ describe('integration', () => {
       client.config.currentTeam = team.id;
     });
 
-    it('installs via API when --yes and non-interactive', async () => {
+    it('rejects non-interactive mode for terms acceptance', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+
       const { installRequestBodies } = useIntegration({
         withInstallation: false,
         ownerId: team.id,
@@ -31,29 +35,16 @@ describe('integration', () => {
         'integration',
         'accept-terms',
         'acme',
-        '--yes',
         '--non-interactive'
       );
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
 
-      const code = await integrationCommand(client);
-      expect(code).toBe(0);
+      expect(installRequestBodies).toHaveLength(0);
 
-      expect(installRequestBodies).toHaveLength(1);
-      const body = installRequestBodies[0] as {
-        acceptedPolicies: Record<string, string>;
-        source: string;
-      };
-      expect(body.source).toBe('cli');
-      expect(body.acceptedPolicies.toc).toBeDefined();
-      expect(body.acceptedPolicies.privacy).toBeDefined();
-      expect(body.acceptedPolicies.eula).toBeDefined();
-
-      const out = JSON.parse(client.stdout.getFullOutput().trim());
-      expect(out).toMatchObject({
-        integration: 'acme',
-        installed: true,
-      });
-      expect(out.policy_links?.marketplace_addendum).toMatch(
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.status).toBe('error');
+      expect(payload.reason).toBe('integration_terms_acceptance_required');
+      expect(payload.policy_links?.marketplace_addendum).toMatch(
         /integration-marketplace-end-users-addendum/
       );
     });
@@ -69,7 +60,6 @@ describe('integration', () => {
         'integration',
         'accept-terms',
         'acme',
-        '--yes',
         '--non-interactive'
       );
 
@@ -94,21 +84,32 @@ describe('integration', () => {
         'integration',
         'accept-terms',
         'aws-apg',
-        '--yes',
         '--non-interactive'
       );
 
-      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      await expect(integrationCommand(client)).rejects.toThrow('exit:2');
       const errPayload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(errPayload.message).toMatch(/browser/);
     });
 
-    it('requires --yes in non-interactive mode', async () => {
-      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-        throw new Error(`exit:${code ?? 0}`);
-      }) as () => never);
+    it('rejects --yes for integrations other than neon', async () => {
+      const { installRequestBodies } = useIntegration({
+        withInstallation: false,
+        ownerId: team.id,
+      });
 
-      useIntegration({
+      client.setArgv('integration', 'accept-terms', 'acme', '--yes');
+      const code = await integrationCommand(client);
+
+      expect(code).toBe(2);
+      expect(installRequestBodies).toHaveLength(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'The --yes option is not supported for integration "acme"'
+      );
+    });
+
+    it('accepts terms with --yes for neon in non-interactive mode', async () => {
+      const { installRequestBodies } = useIntegration({
         withInstallation: false,
         ownerId: team.id,
       });
@@ -117,14 +118,20 @@ describe('integration', () => {
       client.setArgv(
         'integration',
         'accept-terms',
-        'acme',
+        'neon',
+        '--yes',
         '--non-interactive'
       );
 
-      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
-      const payload = JSON.parse(client.stdout.getFullOutput().trim());
-      expect(payload.status).toBe('error');
-      expect(payload.reason).toBe('missing_arguments');
+      const code = await integrationCommand(client);
+      expect(code).toBe(0);
+      expect(installRequestBodies).toHaveLength(1);
+      expect(installRequestBodies[0]).toMatchObject({
+        acceptedPolicies: { toc: expect.any(String) },
+      });
+
+      const out = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(out).toMatchObject({ integration: 'neon', installed: true });
     });
 
     describe('--help', () => {

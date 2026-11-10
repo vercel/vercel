@@ -7,6 +7,7 @@ import type DevServer from './server';
 import type { VercelConfig, HttpHeadersConfig, RouteResult } from './types';
 import { isHandler, type Route, type HandleValue } from '@vercel/routing-utils';
 import { parseQueryString } from './parse-query-string';
+import { resolveTransforms, type Transform } from './transforms';
 
 export function resolveRouteParameters(
   str: string,
@@ -64,6 +65,9 @@ export async function devRouter(
   let status: number | undefined;
   let isContinue = false;
 
+  const requestTransforms: Transform[] = [];
+  let responseTransforms: Transform[] | undefined;
+
   // Try route match
   if (routes) {
     let idx = -1;
@@ -89,6 +93,25 @@ export async function devRouter(
         matcher.exec(reqPathname) || matcher.exec(reqPathname.substring(1));
 
       if (match) {
+        const routeTransforms = routeConfig.transforms
+          ? resolveTransforms(routeConfig.transforms, {
+              match,
+              keys,
+              env: devServer?.envConfigs.runEnv,
+            })
+          : [];
+
+        // A `service` destination is a terminal marker-only handoff, no
+        // transforms will be applied for this route
+        const isServiceMarker =
+          typeof routeConfig.destination === 'object' &&
+          routeConfig.destination !== null &&
+          routeConfig.destination.type === 'service';
+
+        if (!isServiceMarker && routeTransforms.length > 0) {
+          requestTransforms.push(...routeTransforms);
+        }
+
         let destPath: string = reqPathname;
 
         if (routeConfig.dest) {
@@ -116,6 +139,9 @@ export async function devRouter(
           if (routeConfig.status) {
             status = routeConfig.status;
           }
+          if (routeTransforms.length > 0) {
+            responseTransforms = routeTransforms;
+          }
           reqPathname = destPath;
           isContinue = true;
           continue;
@@ -142,6 +168,11 @@ export async function devRouter(
             if (routeConfig.status && phase !== 'miss') {
               // Equivalent to now-proxy exit_with_status() function
             } else if (missRoutes && missRoutes.length > 0) {
+              // A `check` rewrite that misses proceeds past the transform step,
+              // so its transforms become the latest response context.
+              if (routeTransforms.length > 0) {
+                responseTransforms = routeTransforms;
+              }
               // Trigger a 'miss'
               const missResult = await devRouter(
                 destPath,
@@ -154,6 +185,16 @@ export async function devRouter(
                 'miss'
               );
               if (missResult.found) {
+                // Carry transforms matched before the miss into the miss result.
+                if (requestTransforms.length > 0) {
+                  missResult.requestTransforms = [
+                    ...requestTransforms,
+                    ...(missResult.requestTransforms ?? []),
+                  ];
+                }
+                if (!missResult.responseTransforms && responseTransforms) {
+                  missResult.responseTransforms = responseTransforms;
+                }
                 return missResult;
               } else {
                 reqPathname = destPath;
@@ -163,10 +204,27 @@ export async function devRouter(
               if (routeConfig.status && phase === 'miss') {
                 status = routeConfig.status;
               }
+              // The rewrite proceeds past the transform step, so its transforms
+              // become the latest response context.
+              if (routeTransforms.length > 0) {
+                responseTransforms = routeTransforms;
+              }
               reqPathname = destPath;
               continue;
             }
           }
+        }
+
+        // The proxy's `handle_status()` only finishes routing for redirects, when
+        // non-redirect status sets the status and still runs
+        // transforms.
+        const effectiveStatus = routeConfig.status || status;
+        const isRedirectExit =
+          typeof effectiveStatus === 'number' &&
+          effectiveStatus >= 300 &&
+          effectiveStatus < 400;
+        if (!isServiceMarker && !isRedirectExit && routeTransforms.length > 0) {
+          responseTransforms = routeTransforms;
         }
 
         if (isDestUrl) {
@@ -182,6 +240,8 @@ export async function devRouter(
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
+            requestTransforms,
+            responseTransforms,
           };
           break;
         } else {
@@ -205,6 +265,8 @@ export async function devRouter(
             matched_route: routeConfig,
             matched_route_idx: idx,
             phase,
+            requestTransforms,
+            responseTransforms,
           };
           break;
         }
@@ -222,6 +284,8 @@ export async function devRouter(
       query: reqQuery,
       headers: combinedHeaders,
       phase,
+      requestTransforms,
+      responseTransforms,
     };
   }
 

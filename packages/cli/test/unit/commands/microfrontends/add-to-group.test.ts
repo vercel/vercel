@@ -2,7 +2,7 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import microfrontends from '../../../../src/commands/microfrontends';
 import * as linkModule from '../../../../src/util/projects/link';
-import { teamCache } from '../../../../src/util/teams/get-team-by-id';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
 import type { MicrofrontendsGroupsResponse } from '../../../../src/commands/microfrontends/types';
 
 vi.mock('../../../../src/util/projects/link');
@@ -102,7 +102,7 @@ describe('microfrontends add-to-group', () => {
     it('prints usage', async () => {
       client.setArgv('microfrontends', 'add-to-group', '--help');
       const exitCode = await microfrontends(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
     });
   });
 

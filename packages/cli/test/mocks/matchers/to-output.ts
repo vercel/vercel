@@ -1,12 +1,5 @@
-import {
-  getLabelPrinter,
-  matcherHint,
-  printExpected,
-  printReceived,
-} from 'jest-matcher-utils';
 import type { Readable } from 'stream';
 import type { MatcherState } from '@vitest/expect';
-import type { MatcherHintOptions } from 'jest-matcher-utils';
 import stripAnsi from 'strip-ansi';
 
 export interface ToOutputMatchers<R = unknown> {
@@ -23,16 +16,10 @@ export async function toOutput(
   message: () => string;
 }> {
   const { isNot } = this;
-  const matcherName = 'toOutput';
-  const matcherHintOptions: MatcherHintOptions = {
-    isNot,
-    promise: this.promise,
-  };
   return new Promise(resolve => {
     let output = '';
     const timeoutId = setTimeout(onTimeout, timeout);
-    const hint =
-      matcherHint(matcherName, 'stream', 'test', matcherHintOptions) + '\n\n';
+    const hint = `expect(stream)${isNot ? '.not' : ''}.toOutput(test)\n\n`;
 
     function onData(data: string) {
       output += stripAnsi(data);
@@ -41,18 +28,11 @@ export async function toOutput(
         resolve({
           pass: true,
           message() {
-            const labelExpected = 'Expected output';
-            const labelReceived = 'Received output';
-            const printLabel = getLabelPrinter(labelExpected, labelReceived);
             return (
               hint +
-              printLabel(labelExpected) +
-              (isNot ? 'not ' : '') +
-              printExpected(test) +
+              `Expected output: ${isNot ? 'not ' : ''}${JSON.stringify(test)}` +
               '\n' +
-              printLabel(labelReceived) +
-              (isNot ? '    ' : '') +
-              printReceived(output)
+              `Received output: ${JSON.stringify(output)}`
             );
           },
         });

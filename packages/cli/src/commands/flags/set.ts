@@ -1,9 +1,9 @@
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag } from '../../util/flags/get-flags';
 import {
@@ -13,8 +13,8 @@ import {
 import { updateFlag } from '../../util/flags/update-flag';
 import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
 import {
-  buildVariantOverrideEnvironmentConfig,
-  isOverridingEnvironmentToVariant,
+  buildPausedEnvironmentConfig,
+  isPausingEnvironmentToVariant,
   resolveFlagEnvironment,
   resolveFlagUpdateMessage,
 } from '../../util/flags/environment-variant';
@@ -22,6 +22,7 @@ import output from '../../output-manager';
 import { FlagsSetTelemetryClient } from '../../util/telemetry/commands/flags/set';
 import { setSubcommand } from './command';
 import type { Flag, FlagVariant } from '../../util/flags/types';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function set(
   client: Client,
@@ -39,7 +40,7 @@ export default async function set(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -51,26 +52,28 @@ export default async function set(
   const message = normalizeOptionalInput(
     flags['--message'] as string | undefined
   );
+  const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to set');
     output.log(
       `Example: ${getCommandName('flags set my-feature --environment production --variant true')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionVariant(variantSelector);
   telemetryClient.trackCliOptionMessage(message);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -85,12 +88,7 @@ export default async function set(
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
-    if (flag.state === 'archived') {
-      output.error(
-        `Flag ${chalk.bold(flag.slug)} is archived and cannot be set`
-      );
-      return 1;
-    }
+    logArchivedFlagNotice(flag);
 
     const selectedEnvironment = await resolveFlagEnvironment(
       client,
@@ -109,9 +107,9 @@ export default async function set(
     );
     const envConfig = flag.environments[selectedEnvironment];
 
-    if (isOverridingEnvironmentToVariant(envConfig, selectedVariant.id)) {
-      output.warn(
-        `Flag ${chalk.bold(flag.slug)} is already serving ${formatVariantForDisplay(selectedVariant)} in ${selectedEnvironment}`
+    if (isPausingEnvironmentToVariant(envConfig, selectedVariant.id)) {
+      output.warning(
+        `Flag ${chalk.bold(flag.slug)} is already ${flag.state === 'archived' ? 'configured with' : 'serving'} ${formatVariantForDisplay(selectedVariant)} in ${selectedEnvironment}`
       );
       return 0;
     }
@@ -126,7 +124,7 @@ export default async function set(
     output.spinner(presentation.spinner(selectedEnvironment));
     await updateFlag(client, project.id, flagArg, {
       environments: {
-        [selectedEnvironment]: buildVariantOverrideEnvironmentConfig(
+        [selectedEnvironment]: buildPausedEnvironmentConfig(
           envConfig,
           selectedVariant.id
         ),
@@ -135,9 +133,13 @@ export default async function set(
     });
     output.stopSpinner();
 
-    output.success(presentation.success(flag.slug, selectedEnvironment));
+    output.success(
+      flag.state === 'archived'
+        ? `Archived flag ${chalk.bold(flag.slug)} configuration has been updated in ${chalk.bold(selectedEnvironment)}`
+        : presentation.success(flag.slug, selectedEnvironment)
+    );
     output.log(
-      `  ${chalk.dim('Serving variant:')} ${formatVariantForDisplay(selectedVariant)}`
+      `  ${chalk.dim(flag.state === 'archived' ? 'Configured variant:' : 'Serving variant:')} ${formatVariantForDisplay(selectedVariant)}`
     );
   } catch (err) {
     output.stopSpinner();
@@ -164,7 +166,7 @@ async function resolveVariantToSet(
 
   if (!client.stdin.isTTY) {
     throw new Error(
-      'Missing required flag --variant. Use --variant <VARIANT>, or run interactively in a terminal.'
+      'Missing required option --variant. Use --variant <VARIANT>, or run interactively in a terminal.'
     );
   }
 

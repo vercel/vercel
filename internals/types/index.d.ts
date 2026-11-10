@@ -26,49 +26,23 @@ export interface JSONObject {
   [key: string]: JSONValue;
 }
 
-export interface AuthConfig {
-  '// Note'?: string;
-  '// Docs'?: string;
-  skipWrite?: boolean;
-  /** An `access_token` obtained using the OAuth Device Authorization flow.  */
-  token?: string;
-  /** The ID of the currently authenticated user, cached from `/v2/user`. */
-  userId?: string;
-  /** A `refresh_token` obtained using the OAuth Device Authorization flow. */
-  refreshToken?: string;
-  /**
-   * The absolute time (seconds) when the {@link AuthConfig.token} expires.
-   * Used to optimistically check if the token is still valid.
-   */
-  expiresAt?: number;
-  /**
-   * Indicates where the token was provided from when using external tokens.
-   * Only set when token is provided via `--token` flag or `VERCEL_TOKEN` env var.
-   */
-  tokenSource?: 'flag' | 'env';
-}
+export type AuthConfig = import('@vercel/cli-config').AuthConfig;
 
-export interface GlobalConfig {
-  '// Note'?: string;
-  '// Docs'?: string;
-  currentTeam?: string;
-  api?: string;
-
-  telemetry?: {
-    enabled?: boolean;
-  };
-  guidance?: {
-    enabled?: boolean;
-  };
-}
+export type GlobalConfig = import('@vercel/cli-config').GlobalConfig;
 
 type Billing = {
   addons: string[];
   cancelation?: number;
+  email?: string;
   period: { start: number; end: number };
   plan: string;
+  planIteration?: string;
   platform: string;
   status: 'active' | 'trialing' | 'overdue' | 'canceled' | 'expired';
+  subscriptions?: {
+    period: { start: number; end: number };
+    frequency: { interval: string; intervalCount: number };
+  }[];
   trial: { start: number; end: number };
 };
 
@@ -107,6 +81,23 @@ export interface Team {
    * Preview Environment Variables to `sensitive` on create.
    */
   sensitiveEnvironmentVariablePolicy?: 'default' | 'on' | 'off';
+  /** Require Production Secret values to be stored separately. */
+  disjunctiveProductionSecretPolicy?: 'default' | 'on' | 'off';
+  /**
+   * Team-wide Security+ subscription. Absent when the team has never had it.
+   * A project can also carry Security+ on its own, so this is not the whole
+   * entitlement — see `resolveFirewallEntitlements`.
+   */
+  securityPlus?: {
+    enabled: boolean;
+    updatedAt: number;
+    firstEnabledAt?: number;
+  };
+  /**
+   * The organization ID, set on an organization's root team and on every child
+   * team. Absent on teams outside an organization.
+   */
+  parentId?: string;
 }
 
 export type Domain = {
@@ -228,6 +219,10 @@ export type Deployment = {
   initReadyAt?: number;
   inspectorUrl?: string | null;
   lambdas?: Build[];
+  manualProvisioning?: {
+    state: 'PENDING' | 'COMPLETE' | 'TIMEOUT';
+    completedAt?: number;
+  };
   meta?: {
     [key: string]: string | undefined;
   };
@@ -235,6 +230,7 @@ export type Deployment = {
   name: string;
   ownerId?: string;
   plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
+  prebuilt?: boolean;
   previewCommentsEnabled?: boolean;
   private?: boolean;
   proposedExpiration?: number;
@@ -254,8 +250,26 @@ export type Deployment = {
     | 'INITIALIZING'
     | 'QUEUED'
     | 'READY'
-    | 'CANCELED';
+    | 'CANCELED'
+    | 'BLOCKED';
+  readyStateReason?: string;
   regions: string[];
+  resourceConfig?: {
+    buildMachine?: {
+      purchaseType?: 'basic' | 'enhanced' | 'turbo' | 'standard';
+      defaultPurchaseType?: 'basic' | 'standard' | 'enhanced';
+      machineSelectionType?: 'elastic' | 'fixed';
+      selectionSource?:
+        | 'project-setting'
+        | 'team-setting'
+        | 'team-entitlement'
+        | 'plan-default'
+        | 'elastic-algorithm'
+        | 'deployment-override';
+      cores?: number;
+      memory?: number;
+    };
+  };
   routes?: RouteOrMiddleware[] | null;
   source?: 'cli' | 'git' | 'import' | 'import/repo' | 'clone/repo';
   status:
@@ -264,7 +278,8 @@ export type Deployment = {
     | 'INITIALIZING'
     | 'QUEUED'
     | 'READY'
-    | 'CANCELED';
+    | 'CANCELED'
+    | 'BLOCKED';
   target?: 'staging' | 'production' | null;
   team?: {
     id: string;
@@ -354,6 +369,7 @@ export interface ProjectEnvVariable {
   key: string;
   value: string;
   type: ProjectEnvType;
+  visibility?: 'config' | 'secret';
   configurationId?: string | null;
   createdAt?: number;
   updatedAt?: number;
@@ -403,6 +419,34 @@ export type ProjectProtectionBypass = Record<
   AutomationProtectionBypass | IntegrationAutomationProtectionBypass
 >;
 
+export interface ProjectSandboxConfig {
+  region?: string;
+  failoverRegions?: string[];
+}
+
+/**
+ * One trace sampling rule. `rate` is a fraction from 0 to 1. A rule with no
+ * `env` applies to every environment, and a rule with no `requestPath` applies
+ * to every path in that environment.
+ */
+export interface ProjectTracingSamplingRule {
+  rate: number;
+  env?: 'production' | 'preview';
+  requestPath?: string;
+  /** Tracing destination: Vercel internal or customer external drain. */
+  destination?: 'internal' | 'external';
+}
+
+/**
+ * Tracing configuration for a project. `domains` is a comma-separated list of
+ * drain endpoint domains. The API caps `samplingRules` at ten items.
+ */
+export interface ProjectTracing {
+  domains?: string;
+  ignorePaths?: string[];
+  samplingRules?: ProjectTracingSamplingRule[];
+}
+
 export interface Project extends ProjectSettings {
   id: string;
   analytics?: {
@@ -424,6 +468,10 @@ export interface Project extends ProjectSettings {
   customEnvironments?: CustomEnvironment[];
   rollingRelease?: ProjectRollingRelease;
   protectionBypass?: ProjectProtectionBypass;
+  sandbox?: ProjectSandboxConfig;
+  tracing?: ProjectTracing | null;
+  /** Whether production traffic for the project is paused. */
+  paused?: boolean;
 }
 
 export interface Org {
@@ -552,6 +600,11 @@ export interface GitMetadata {
   commitSha?: string | undefined;
   dirty?: boolean | undefined;
   remoteUrl?: string;
+  /**
+   * Path of the deployed directory relative to the detected git repository
+   * root. Empty string when deploying from the repository root.
+   */
+  rootDirectory?: string;
 }
 
 /**

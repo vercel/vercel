@@ -184,14 +184,6 @@ describe('parse-transforms', () => {
         const result = collectTransforms({});
         expect(result).toEqual([]);
       });
-
-      it('should return empty array when flags are undefined', () => {
-        const result = collectTransforms({
-          setResponseHeader: undefined,
-          appendResponseHeader: undefined,
-        });
-        expect(result).toEqual([]);
-      });
     });
 
     describe('error handling', () => {

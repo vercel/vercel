@@ -7,6 +7,12 @@ import {
   generateRequestCode,
   awaitConnexResult,
 } from '../../util/connex/request-code';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+  type DeprecatedOptionWarning,
+} from '../../util/renamed-option';
 
 interface ConnexTokenResponse {
   token: string;
@@ -22,13 +28,21 @@ type ActionableErrorCode =
   | 'user_authorization_required'
   | 'client_installation_required';
 
+/** Token params shared by the token request and the recovery URL. */
+interface TokenRequestParams {
+  installationId?: string;
+  scopes?: string[];
+}
+
 export async function token(
   client: Client,
   args: string[],
   flags: {
     '--subject'?: string;
+    '--installation'?: string;
     '--installation-id'?: string;
     '--scopes'?: string;
+    '--no-default-scopes'?: boolean;
     '--format'?: string;
     '--json'?: boolean;
     '--yes'?: boolean;
@@ -37,25 +51,51 @@ export async function token(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
+  const installation = getRenamedOption(
+    flags,
+    '--installation',
+    '--installation-id',
+    { json: asJson }
+  );
+  if ('error' in installation) {
+    return reportRenamedOptionError(client, installation.error, {
+      json: asJson,
+    });
+  }
+
   const clientId = args[0];
   if (!clientId) {
-    output.error('Missing client ID or UID. Usage: vercel connex token <id>');
-    return 1;
+    output.error(
+      'Missing connector ID or UID. Usage: vercel connect token <id>'
+    );
+    return 2;
   }
 
   const subject = flags['--subject'];
   if (subject && subject !== 'app' && subject !== 'user') {
     output.error('Invalid --subject value. Must be "app" or "user".');
-    return 1;
+    return 2;
   }
 
   await selectConnexTeam(client, 'Select the team for this token request');
 
-  const body: Record<string, unknown> = {};
+  const tokenParams: TokenRequestParams = {};
+  if (installation.value) {
+    tokenParams.installationId = installation.value;
+  }
+  if (flags['--scopes']) {
+    tokenParams.scopes = parseScopes(flags['--scopes']);
+  } else if (!flags['--no-default-scopes']) {
+    tokenParams.scopes = ['*'];
+  }
+
+  // Spread token params into the body; `subject` is body-only (the
+  // authorize/install endpoints derive the subject from the caller).
+  const body: Record<string, unknown> = { ...tokenParams };
   if (subject === 'app') {
     body.subject = { type: 'app' };
   } else if (subject === 'user') {
@@ -63,32 +103,30 @@ export async function token(
     // it's reliably available here for authenticated callers.
     body.subject = { type: 'user', id: client.authConfig.userId };
   }
-  if (flags['--installation-id']) {
-    body.installationId = flags['--installation-id'];
-  }
-  if (flags['--scopes']) {
-    body.scopes = parseScopes(flags['--scopes']);
-  }
 
   output.spinner('Fetching token...');
   const result = await fetchToken(client, clientId, body);
   output.stopSpinner();
 
   if (result.ok) {
-    return printTokenResult(client, result.data, asJson);
+    return printTokenResult(client, result.data, asJson, [
+      installation.warning,
+    ]);
   }
 
   const errorCode = result.errorCode;
   const errorMessage = result.errorMessage ?? 'Failed to get token';
 
   if (errorCode === 'not_found') {
-    output.error('Client not found or Connex is not enabled for this team.');
+    output.error(
+      'Connector not found or Connect is not enabled for this team.'
+    );
     return 1;
   }
 
   if (errorCode === 'unresolved_token') {
     output.error(
-      `${errorMessage} This client does not support getting a token for the requested subject.`
+      `${errorMessage} This connector does not support getting a token for the requested subject.`
     );
     return 1;
   }
@@ -111,26 +149,34 @@ export async function token(
       ? 'authorization'
       : 'installation';
 
-  // Recovery opens a browser a human must complete. Only attempt it when
-  // the session is fully interactive AND the user hasn't declared
-  // non-interactive mode.
-  const attemptRecovery =
-    !client.nonInteractive &&
-    Boolean(client.stdin.isTTY && client.stdout.isTTY);
+  // Attempt recovery when explicitly opted in (--yes) or when we're in a
+  // fully interactive TTY. In any other context (pipe, script, agent)
+  // we fail fast so `TOKEN=$(vc connect token ...)` stays safe.
+  const isInteractive = Boolean(client.stdin.isTTY && client.stdout.isTTY);
+  const attemptRecovery = Boolean(flags['--yes']) || isInteractive;
 
   if (!attemptRecovery) {
     const { requestCode } = generateRequestCode();
-    const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode);
+    const actionUrl = buildActionUrl(
+      errorCode,
+      clientId,
+      teamId,
+      requestCode,
+      tokenParams
+    );
     output.error(errorMessage);
     output.log(`To ${actionLabel}, open: ${actionUrl}`);
     output.log(
-      `Or re-run \`vercel connex token ${clientId}\` in an interactive terminal.`
+      `Or re-run with --yes to open the browser automatically: vercel connect token ${clientId} --yes`
     );
     return 1;
   }
 
   output.error(errorMessage);
-  if (!flags['--yes']) {
+  // Only prompt when we have a real TTY and the user hasn't pre-approved.
+  // Agents/scripts that reach this branch did so via --yes, so they
+  // skip straight to the browser + poll.
+  if (!flags['--yes'] && isInteractive) {
     const confirmed = await client.input.confirm(
       `Open browser to ${actionLabel}?`,
       true
@@ -141,7 +187,13 @@ export async function token(
   }
 
   const { verifier, requestCode } = generateRequestCode();
-  const actionUrl = buildActionUrl(errorCode, clientId, teamId, requestCode);
+  const actionUrl = buildActionUrl(
+    errorCode,
+    clientId,
+    teamId,
+    requestCode,
+    tokenParams
+  );
 
   output.log(`Opening browser for ${actionLabel}...`);
   output.log(`If the browser doesn't open, visit:\n${actionUrl}`);
@@ -167,7 +219,9 @@ export async function token(
   output.stopSpinner();
 
   if (retryResult.ok) {
-    return printTokenResult(client, retryResult.data, asJson);
+    return printTokenResult(client, retryResult.data, asJson, [
+      installation.warning,
+    ]);
   }
 
   output.error(
@@ -196,23 +250,38 @@ function buildActionUrl(
   code: ActionableErrorCode,
   clientId: string,
   teamId: string,
-  requestCode: string
+  requestCode: string,
+  tokenParams: TokenRequestParams
 ): string {
   const path = code === 'user_authorization_required' ? 'authorize' : 'install';
   const params = new URLSearchParams({
     teamId,
     request_code: requestCode,
   });
-  return `https://vercel.com/api/v1/connex/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
+
+  // Merge the same token params the POST body carried so the consent flow
+  // grants what the user asked for. Array values (e.g. scopes) are
+  // comma-joined; the authorize/install endpoints split them via
+  // parseListParam. The query-param names match the body field names.
+  for (const [key, value] of Object.entries(tokenParams)) {
+    if (value === undefined) {
+      continue;
+    }
+    params.set(key, Array.isArray(value) ? value.join(',') : value);
+  }
+  return `https://vercel.com/api/v1/connect/${path}/${encodeURIComponent(clientId)}?${params.toString()}`;
 }
 
 function printTokenResult(
   client: Client,
   data: ConnexTokenResponse,
-  asJson: boolean
+  asJson: boolean,
+  warnings: ReadonlyArray<DeprecatedOptionWarning | undefined>
 ): number {
   if (asJson) {
-    client.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
+    client.stdout.write(
+      `${JSON.stringify(withWarnings(data, warnings), null, 2)}\n`
+    );
   } else {
     client.stdout.write(`${data.token}\n`);
   }
@@ -230,7 +299,7 @@ async function fetchToken(
 ): Promise<TokenResult> {
   try {
     const data = await client.fetch<ConnexTokenResponse>(
-      `/v1/connex/token/${encodeURIComponent(clientId)}`,
+      `/v1/connect/token/${encodeURIComponent(clientId)}`,
       {
         method: 'POST',
         body: JSON.stringify(body),

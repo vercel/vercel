@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { client } from '../../../mocks/client';
 import {
-  getRollupColumnName,
-  formatQueryJson,
   formatErrorJson,
+  formatQueryJson,
+  getRollupColumnName,
   handleApiError,
 } from '../../../../src/commands/metrics/output';
 import type { QueryMetadata } from '../../../../src/commands/metrics/types';
@@ -20,6 +20,15 @@ describe('output', () => {
       expect(
         getRollupColumnName('vercel.request.route_cpu_duration_ms', 'p95')
       ).toBe('vercel_request_route_cpu_duration_ms_p95');
+    });
+
+    it('should flatten field-qualified aggregations', () => {
+      expect(
+        getRollupColumnName(
+          'vercel.analytics_pageview.count',
+          'unique/visitor_id'
+        )
+      ).toBe('vercel_analytics_pageview_count_unique_visitor_id');
     });
   });
 
@@ -42,10 +51,11 @@ describe('output', () => {
 
       const result = JSON.parse(formatQueryJson(query, response));
 
-      expect(result.query).toEqual(query);
-      expect(result.data).toEqual(response.data);
-      expect(result.summary).toEqual(response.summary);
-      expect(result.statistics).toEqual(response.statistics);
+      expect(result).toEqual({
+        query,
+        data: response.data,
+        summary: response.summary,
+      });
     });
 
     it('should handle missing optional fields', () => {
@@ -63,9 +73,138 @@ describe('output', () => {
         formatQueryJson(query, { summary: [], statistics: {} })
       );
 
-      expect(result.data).toEqual([]);
-      expect(result.summary).toEqual([]);
-      expect(result.statistics).toEqual({});
+      expect(result).toEqual({ query, data: [], summary: [] });
+    });
+
+    it('should include returned ordering metadata', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.request.count',
+        aggregation: 'sum',
+        groupBy: [],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should include returned count ordering metadata for Speed Insights', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.speed_insights.lcp_ms',
+        aggregation: 'p75',
+        groupBy: ['route'],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_count_sum',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should display default response ordering as count', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.speed_insights.lcp_ms',
+        aggregation: 'p75',
+        groupBy: ['route'],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_speed_insights_lcp_ms_p75',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should display implicit default ordering as event count for non-count metrics', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.request.route_cpu_duration_ms',
+        aggregation: 'p95',
+        groupBy: ['route'],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'defaultOrderingRollup',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('count');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('count');
+      expect(result.query.orderDirection).toBe('desc');
+    });
+
+    it('should keep explicit requested ordering metadata compact', () => {
+      const query: QueryMetadata = {
+        metric: 'vercel.request.count',
+        aggregation: 'sum',
+        groupBy: [],
+        filter: undefined,
+        startTime: '2025-01-15T10:00:00Z',
+        endTime: '2025-01-15T11:00:00Z',
+        granularity: { minutes: 1 } as const,
+        orderBy: 'value',
+      };
+
+      const result = JSON.parse(
+        formatQueryJson(query, {
+          summary: [],
+          statistics: {},
+          orderBy: 'vercel_request_count_sum',
+          orderDirection: 'desc',
+        })
+      );
+
+      expect(result.orderBy).toBe('value');
+      expect(result.orderDirection).toBe('desc');
+      expect(result.query.orderBy).toBe('value');
+      expect(result.query.orderDirection).toBe('desc');
     });
   });
 
@@ -145,6 +284,125 @@ describe('output', () => {
         'The metrics schema API request was not authorized.'
       );
       expect(result.error.allowedValues).toEqual(['value1']);
+    });
+
+    it('prefers meta.reason over a generic Observability Plus 402 message', () => {
+      client.reset();
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage: 'Observability Plus is required for this query.',
+          meta: { reason: 'project_excluded' },
+        },
+        true,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.error.next[0].command).toContain(
+        'project observability enable'
+      );
+      expect(result.error.next[0].command).not.toContain('buy addon');
+    });
+
+    it('does not suggest an Observability command from a generic plan reason', () => {
+      client.reset();
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage: 'This feature requires a higher plan.',
+          meta: { reason: 'project_excluded' },
+        },
+        true,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.error.next).toBeUndefined();
+      expect(result.error.hint).not.toContain('Observability Plus');
+    });
+
+    it('converts --project to a positional Priority recovery target', () => {
+      client.reset();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--project',
+        'my-app',
+        '--non-interactive'
+      );
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage: 'A Priority project is required for this query.',
+        },
+        true,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.error.next[0].command).toBe(
+        'vercel project priority enable my-app'
+      );
+      expect(result.error.next[0].command).not.toContain('--project');
+      expect(result.error.next[0].command).not.toContain('--non-interactive');
+      expect(result.error.next[0].when).toContain('interactive terminal');
+      expect(result.error.hint).toBeUndefined();
+    });
+
+    it('prints the Priority command once for a person', () => {
+      client.reset();
+      client.setArgv('metrics', 'vercel.request.count', '--project', 'my-app');
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage: 'A Priority project is required for this query.',
+        },
+        false,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('A Priority project is required');
+      expect(output).toContain('vercel project priority enable my-app');
+      expect(output).not.toContain('A person must');
+      expect(output.match(/project priority enable/g)).toHaveLength(1);
+    });
+
+    it('converts --project=value to a positional Observability recovery target', () => {
+      client.reset();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--project=my-app',
+        '--non-interactive'
+      );
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage:
+            'Observability Plus is enabled for team acme, but this project is excluded from it. Include the project in Observability Plus to query its data.',
+        },
+        true,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.error.next[0].command).toBe(
+        'vercel project observability enable my-app'
+      );
+      expect(result.error.next[0].command).not.toContain('--project');
+      expect(result.error.next[0].command).not.toContain('--non-interactive');
     });
   });
 });

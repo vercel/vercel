@@ -1,0 +1,6 @@
+{
+  "probes": [
+    { "logMustContain": "Using Python 3.14 from .python-version" },
+    { "path": "/api", "status": 200, "mustContain": "\"minor\":14" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "runtime": "nodejs20.x",
+  "handler": "index.js",
+  "filePathMap": {
+    "index.js": "safe-handler.js",
+    "leaked.env": ".env",
+    "escaped.txt": "../outside.txt"
+  }
+}

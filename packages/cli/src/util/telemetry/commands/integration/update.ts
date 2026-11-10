@@ -15,10 +15,29 @@ export class IntegrationUpdateTelemetryClient
     }
   }
 
+  trackCliOptionBillingPlan(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'billing-plan',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated names keep their own keys, to measure who still uses them.
   trackCliOptionPlan(v: string | undefined) {
     if (v) {
       this.trackCliOption({
         option: 'plan',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionAuthorization(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'authorization',
         value: this.redactedValue,
       });
     }
@@ -42,6 +61,15 @@ export class IntegrationUpdateTelemetryClient
     }
   }
 
+  trackCliOptionInstallation(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionInstallationId(v: string | undefined) {
     if (v) {
       this.trackCliOption({
@@ -57,6 +85,12 @@ export class IntegrationUpdateTelemetryClient
         option: 'format',
         value: v,
       });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

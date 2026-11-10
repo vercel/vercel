@@ -5,8 +5,6 @@ on:
 
 env:
   TURBO_REMOTE_ONLY: 'true'
-  TURBO_TEAM: 'vercel'
-  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   NODE_VERSION: '22'
 
 concurrency:
@@ -26,8 +24,8 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - run: git fetch origin ${{ github.event.pull_request.head.sha }}:pr-${{ github.event.pull_request.number }}
       - run: git checkout pr-${{ github.event.pull_request.number }}
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
       - run: pnpm install
       # Enforce a changeset file to be present
       - run: pnpm exec changeset status --since=main
@@ -37,21 +35,28 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Version Packages'
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
           # Check out the PR commit directly instead of a merge commit.
           ref: ${{ github.event.pull_request.head.sha }}
+      - name: Setup Turborepo Remote Cache
+        uses: vercel/setup-turborepo-remote-cache-action@3df3d75a5268bbe2a4ee66048f56f3a86d6e21b7
+        with:
+          team: ${{ vars.TURBO_TEAM }}
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@f7ccc83f9ed1e5b9c81d8a67d7ad1a747e22a561 # 2025-12-16
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
-          toolchain: stable
+          toolchain: '1.96.1'
           targets: wasm32-wasip2
-      - name: install pnpm@8.3.1
-        run: npm i -g pnpm@8.3.1
+      - name: install pnpm@10.29.3
+        run: npm i -g pnpm@10.29.3
       - run: pnpm install
       - name: Biome lint
         run: pnpm run lint
@@ -78,7 +83,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install pyyaml
+      - run: python -m pip install pyyaml==6.0.3 zizmor==1.24.1
       - name: Enforce actions/checkout ref
         shell: python
         run: |
@@ -116,6 +121,10 @@ jobs:
               print("\n".join(errors))
               sys.exit(1)
           print("All actions/checkout steps have a 'ref' specified.")
+      - name: Run zizmor
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: zizmor --collect=workflows --color=never .github/workflows/
 
   summary:
     name: Summary (lint)

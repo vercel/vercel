@@ -1,18 +1,23 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, nextOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  limitOption,
+  nextCursorOption,
+} from '../../util/arg-common';
 
 export const requestSubcommand = {
   name: 'request',
   aliases: ['access-request'],
   description:
-    'Show join-request status for the current team (defaults to the authenticated user)',
+    'Show join-request status for the current team (default: the authenticated user)',
   arguments: [
     {
       name: 'userId',
       required: false,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Status for your pending request',
@@ -26,8 +31,8 @@ export const requestSubcommand = {
 } as const;
 
 export const addSubcommand = {
-  name: 'add',
-  aliases: ['create'],
+  name: 'create',
+  aliases: ['add'],
   description: 'Create a new team',
   arguments: [],
   options: [
@@ -51,11 +56,11 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Create a team (interactive)',
-      value: `${packageName} teams add`,
+      value: `${packageName} teams create`,
     },
     {
       name: 'Create a team non-interactively',
-      value: `${packageName} teams add --slug acme --name "Acme Corp"`,
+      value: `${packageName} teams create --slug acme --name "Acme Corp"`,
     },
   ],
 } as const;
@@ -66,16 +71,19 @@ export const listSubcommand = {
   description: "Show all teams that you're a member of",
   arguments: [],
   options: [
-    nextOption,
+    nextCursorOption,
+    limitOption,
     formatOption,
+    jsonOption,
     { name: 'since', shorthand: null, type: String, deprecated: true },
     { name: 'until', shorthand: null, type: String, deprecated: true },
     { name: 'count', shorthand: 'C', type: Number, deprecated: true },
   ],
   examples: [
     {
-      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: `${packageName} teams ls --next 1584722256178`,
+      name: 'Show the next page, using the cursor from the previous output',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} teams list --next <CURSOR>`,
     },
   ],
 } as const;
@@ -94,19 +102,22 @@ export const switchSubcommand = {
   examples: [
     {
       name: "Switch to a team. If your team's url is 'vercel.com/name', then 'name' is the slug. If the slug is omitted, you can choose interactively",
+      placeholders: ['<slug>'],
       value: `${packageName} teams switch <slug>`,
     },
   ],
+  disabledGlobalOptions: ['token'],
 } as const;
 
 export const inviteSubcommand = {
   name: 'invite',
   aliases: [],
-  description: 'Invite a new member to a team',
+  description:
+    'Invite a new member to a team (prompts for emails when none are given, except in non-interactive mode)',
   arguments: [
     {
       name: 'email',
-      required: true,
+      required: false,
       multiple: true,
     },
   ],
@@ -128,7 +139,7 @@ export const ssoSubcommand = {
   aliases: [],
   description: 'Show SAML / SSO configuration for the current team',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Human-readable SAML summary',
@@ -136,7 +147,7 @@ export const ssoSubcommand = {
     },
     {
       name: 'JSON',
-      value: `${packageName} teams sso --format json`,
+      value: `${packageName} teams sso --json`,
     },
   ],
 } as const;
@@ -144,9 +155,9 @@ export const ssoSubcommand = {
 export const membersSubcommand = {
   name: 'members',
   aliases: ['member'],
-  description: 'List members for the currently scoped team',
+  description: 'List, invite, or remove members from the current team',
   arguments: [],
-  options: [nextOption, formatOption],
+  options: [nextCursorOption, limitOption, formatOption, jsonOption],
   examples: [
     {
       name: 'List team members',
@@ -154,11 +165,49 @@ export const membersSubcommand = {
     },
     {
       name: 'List team members as JSON',
-      value: `${packageName} teams members --format json`,
+      value: `${packageName} teams members --json`,
     },
     {
-      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: `${packageName} teams members --next 1584722256178`,
+      name: 'Show the next page, using the cursor from the previous output',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} teams members --next <CURSOR>`,
+    },
+    {
+      name: 'Invite a member to the currently scoped team',
+      value: `${packageName} teams members invite user@example.com`,
+    },
+    {
+      name: 'Remove a member from the currently scoped team',
+      value: `${packageName} teams members remove user@example.com`,
+    },
+  ],
+} as const;
+
+export const membersInviteSubcommand = {
+  name: 'members invite',
+  aliases: [],
+  description:
+    'Invite members to the current team (prompts for emails when none are given, except in non-interactive mode)',
+  arguments: [{ name: 'email', required: false, multiple: true }],
+  options: [],
+  examples: [
+    {
+      name: 'Invite a member',
+      value: `${packageName} teams members invite user@example.com`,
+    },
+  ],
+} as const;
+
+export const membersRemoveSubcommand = {
+  name: 'members remove',
+  aliases: ['members rm'],
+  description: 'Remove a member from the current team',
+  arguments: [{ name: 'member', required: true }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Remove a member',
+      value: `${packageName} teams members remove user@example.com`,
     },
   ],
 } as const;

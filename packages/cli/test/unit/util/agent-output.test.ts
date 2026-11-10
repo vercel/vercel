@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { getExitCodeForReason } from '../../../src/util/agent-output-constants';
 import {
   isActionRequiredPayload,
   outputActionRequired,
@@ -9,6 +10,14 @@ import {
   buildCommandWithYes,
   buildCommandWithGlobalFlags,
   getGlobalFlagsFromArgv,
+  getPreservedArgsForEnvAdd,
+  getPreservedArgsForEnvPull,
+  getPreservedArgsForEnvRm,
+  getPreservedArgsForEnvUpdate,
+  redactEnvValueArgs,
+  buildEnvAddCommandWithPreservedArgs,
+  buildEnvRmCommandWithPreservedArgs,
+  buildEnvUpdateCommandWithPreservedArgs,
   enrichActionRequiredWithInvokingCommand,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
@@ -214,6 +223,62 @@ describe('outputAgentError', () => {
     expect(parsed.message).toBe('Something went wrong');
     expect(exitSpy).toHaveBeenCalledWith(3);
   });
+
+  it.each([
+    ['invalid_arguments', 2],
+    ['missing_arguments', 2],
+    ['unknown_command', 2],
+    ['api_error', 1],
+    ['not_found', 1],
+    ['test_reason', 1],
+  ])('exits by default with the code for the %s reason', (reason, code) => {
+    const client = {
+      nonInteractive: true,
+      stdout: { write: vi.fn() },
+    } as unknown as Client;
+
+    outputAgentError(client, { ...errorPayload, reason });
+    expect(exitSpy).toHaveBeenCalledWith(code);
+  });
+
+  it.each([
+    true,
+    false,
+  ])('includes feedback only for agents (isAgent=%s)', isAgent => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      isAgent,
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+    } as unknown as Client;
+
+    outputAgentError(client, errorPayload);
+
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const written = JSON.parse(stdoutWrite.mock.calls[0][0] as string);
+    expect(written).toMatchObject(errorPayload);
+    if (isAgent) {
+      expect(written.feedback).toEqual({
+        message:
+          "Please send one brief feedback report about this error while helping the user resolve it. Don't delay the user's request for feedback.",
+        command:
+          "Run the 'vercel feedback --help' command to see how to report feedback. Make sure all feedback, including text copied from errors or logs, excludes personal data, account identifiers (e.g., usernames, team IDs, project names), and secrets (e.g., API keys, tokens, env values, credentials).",
+      });
+    } else {
+      expect(written).not.toHaveProperty('feedback');
+    }
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+});
+
+describe('getExitCodeForReason', () => {
+  it('returns 2 for usage errors and 1 for every other failure', () => {
+    expect(getExitCodeForReason('invalid_arguments')).toBe(2);
+    expect(getExitCodeForReason('missing_name')).toBe(2);
+    expect(getExitCodeForReason('login_required')).toBe(1);
+    expect(getExitCodeForReason('invalid_cron_expression')).toBe(1);
+    expect(getExitCodeForReason(undefined)).toBe(1);
+  });
 });
 
 describe('buildCommandWithYes', () => {
@@ -230,6 +295,32 @@ describe('buildCommandWithYes', () => {
   it('keeps existing -y when present', () => {
     const argv = ['/node', '/vc.js', 'deploy', '-y'];
     expect(buildCommandWithYes(argv)).toBe('vercel deploy -y');
+  });
+
+  it('removes --token from suggested command', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token', 'secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+
+  it('removes bare --token value even when it starts with a dash', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token', '-secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+
+  it('removes --token=<value> from suggested command', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token=secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+});
+
+describe('redactEnvValueArgs', () => {
+  it('redacts separated and inline Environment Variable values', () => {
+    expect(
+      redactEnvValueArgs(['env', 'update', 'API_KEY', '--value', 'secret'])
+    ).toEqual(['env', 'update', 'API_KEY', '--value', '"<value>"']);
+    expect(
+      redactEnvValueArgs(['env', 'update', 'API_KEY', '--value=secret'])
+    ).toEqual(['env', 'update', 'API_KEY', '--value="<value>"']);
   });
 });
 
@@ -282,6 +373,27 @@ describe('buildCommandWithScope', () => {
       'vercel deploy --scope new-team'
     );
   });
+
+  it('strips token flags before adding scope', () => {
+    const argv = [
+      '/node',
+      '/vc.js',
+      'deploy',
+      '--token',
+      'secret-token',
+      '--yes',
+    ];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --yes --scope new-team'
+    );
+  });
+
+  it('strips shorthand token value when it starts with a dash', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '-t', '-secret-token', '--yes'];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --yes --scope new-team'
+    );
+  });
 });
 
 describe('enrichActionRequiredWithInvokingCommand', () => {
@@ -289,6 +401,7 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     const payload: ActionRequiredPayload = {
       status: 'action_required',
       message: 'Choose scope.',
+      reason: 'missing_scope',
       choices: [
         { id: 'team_1', name: 'team-a' },
         { id: 'team_2', name: 'team-b' },
@@ -308,10 +421,39 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     expect(out.next![3].command).toBe('vercel deploy --scope team-b');
   });
 
+  it('does not treat non-scope choices as team slugs', () => {
+    const payload: ActionRequiredPayload = {
+      status: 'action_required',
+      reason: 'public_prefix_requires_type',
+      message: 'Choose how to store this variable.',
+      choices: [
+        { id: 'private', name: 'Keep private' },
+        { id: 'public', name: 'Expose publicly' },
+      ],
+      next: [
+        { command: 'vercel env add SAFE_NAME production --type secret' },
+        { command: 'vercel env add NEXT_PUBLIC_NAME production --type config' },
+      ],
+    };
+
+    const out = enrichActionRequiredWithInvokingCommand(payload, [
+      '/node',
+      '/vc.js',
+      'env',
+      'add',
+      'NEXT_PUBLIC_NAME',
+      'production',
+    ]);
+
+    expect(out).toBe(payload);
+    expect(out.next).toEqual(payload.next);
+  });
+
   it('preserves --project and other flags in link command when present in argv', () => {
     const payload: ActionRequiredPayload = {
       status: 'action_required',
       message: 'Choose scope.',
+      reason: 'missing_scope',
       choices: [{ id: 'team_1', name: 'team-a' }],
       next: [],
     };
@@ -323,6 +465,30 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     );
     expect(out.next![1].command).toBe(
       'vercel link --project my-app --scope team-a'
+    );
+  });
+
+  it("links without the invoking command's subcommand or arguments", () => {
+    const payload: ActionRequiredPayload = {
+      status: 'action_required',
+      message: 'Choose scope.',
+      reason: 'missing_scope',
+      choices: [{ id: 'team_1', name: 'team-a' }],
+      next: [],
+    };
+    const argv = [
+      '/node',
+      '/vc.js',
+      'domains',
+      'add',
+      'example.com',
+      '--cwd',
+      '/app',
+    ];
+    const out = enrichActionRequiredWithInvokingCommand(payload, argv);
+    expect(out.next![0].command).toBe('vercel link --cwd /app --scope team-a');
+    expect(out.next![1].command).toBe(
+      'vercel domains add example.com --cwd /app --scope team-a'
     );
   });
 
@@ -369,29 +535,6 @@ describe('outputAgentError', () => {
 
     exitSpy.mockRestore();
   });
-
-  it('does nothing when not nonInteractive', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
-      throw new Error('should not exit');
-    }) as never);
-
-    const client = {
-      nonInteractive: false,
-      argv: ['node', 'vc.js', 'login'],
-    } as Client;
-    outputAgentError(client, {
-      status: 'error',
-      reason: 'no_credentials',
-      message: 'No credentials.',
-    });
-
-    expect(logSpy).not.toHaveBeenCalled();
-    expect(exitSpy).not.toHaveBeenCalled();
-
-    logSpy.mockRestore();
-    exitSpy.mockRestore();
-  });
 });
 
 describe('argvHasNonInteractive', () => {
@@ -421,6 +564,18 @@ describe('argvHasNonInteractive', () => {
 });
 
 describe('getGlobalFlagsFromArgv', () => {
+  it.each([
+    [
+      ['--config', 'custom.json'],
+      ['--config', 'custom.json'],
+    ],
+    [['--config=custom.json'], ['--config=custom.json']],
+  ])('preserves config arguments %#', (configArgs, expected) => {
+    expect(
+      getGlobalFlagsFromArgv(['node', 'vc.js', 'deploy', ...configArgs])
+    ).toEqual(expected);
+  });
+
   it('does not treat the subcommand after --non-interactive as a flag value', () => {
     const argv = [
       'node',
@@ -442,6 +597,193 @@ describe('getGlobalFlagsFromArgv', () => {
   });
 });
 
+describe('env suggestion argument preservation', () => {
+  it('does not mistake a global option value for the env command', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--scope',
+      'env',
+      'env',
+      'add',
+      'API_KEY',
+      'preview',
+      '--value',
+      'secret',
+      '--yes',
+    ];
+
+    expect(getPreservedArgsForEnvAdd(argv)).toEqual([
+      '--value',
+      'secret',
+      '--yes',
+    ]);
+    expect(
+      buildEnvAddCommandWithPreservedArgs(
+        argv,
+        'env add API_KEY preview --value <value> --yes'
+      )
+    ).toBe('vercel env add API_KEY preview --value <value> --yes');
+  });
+
+  it.each([
+    {
+      name: 'add',
+      getPreserved: getPreservedArgsForEnvAdd,
+      argv: [
+        'env',
+        'add',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--value',
+        'next-value',
+        '--yes',
+      ],
+      expected: ['--project', 'payments-api', '--value', 'next-value', '--yes'],
+    },
+    {
+      name: 'pull',
+      getPreserved: getPreservedArgsForEnvPull,
+      argv: [
+        'env',
+        'pull',
+        '--project',
+        'payments-api',
+        '.env.test',
+        '--environment',
+        'preview',
+        '--git-branch',
+        'feature',
+        '--id',
+        'dpl_123',
+        '--yes',
+      ],
+      expected: [
+        '--project',
+        'payments-api',
+        '--environment',
+        'preview',
+        '--git-branch',
+        'feature',
+        '--id',
+        'dpl_123',
+        '--yes',
+      ],
+    },
+    {
+      name: 'remove alias',
+      getPreserved: getPreservedArgsForEnvRm,
+      argv: [
+        'env',
+        'remove',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--yes',
+      ],
+      expected: ['--project', 'payments-api', '--yes'],
+    },
+    {
+      name: 'update',
+      getPreserved: getPreservedArgsForEnvUpdate,
+      argv: [
+        'env',
+        'update',
+        '--project=payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--value=next-value',
+        '--yes',
+      ],
+      expected: ['--project=payments-api', '--value=next-value', '--yes'],
+    },
+  ])('preserves $name flags regardless of positional order', testCase => {
+    expect(testCase.getPreserved(['node', 'vc.js', ...testCase.argv])).toEqual(
+      testCase.expected
+    );
+  });
+
+  it.each([
+    {
+      name: 'add',
+      build: buildEnvAddCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'add',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--value',
+        'old-value',
+        '--yes',
+      ],
+      template: 'env add <name> preview --value <value> --yes',
+    },
+    {
+      name: 'remove',
+      build: buildEnvRmCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'remove',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--yes',
+      ],
+      template: 'env rm <name> preview --yes',
+    },
+    {
+      name: 'update',
+      build: buildEnvUpdateCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'update',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--value',
+        'old-value',
+        '--yes',
+      ],
+      template: 'env update <name> preview --value <value> --yes',
+    },
+  ])('deduplicates flags already present in $name templates', testCase => {
+    expect(
+      testCase.build(['node', 'vc.js', ...testCase.argv], testCase.template)
+    ).toBe(`vercel ${testCase.template} --project payments-api`);
+  });
+
+  it.each([
+    ['add', buildEnvAddCommandWithPreservedArgs, 'add'],
+    ['remove', buildEnvRmCommandWithPreservedArgs, 'remove'],
+    ['update', buildEnvUpdateCommandWithPreservedArgs, 'update'],
+  ] as const)('shell-quotes preserved values in %s suggestions', (_name, build, subcommand) => {
+    const argv = [
+      'node',
+      'vc.js',
+      'env',
+      subcommand,
+      'API_KEY',
+      'preview',
+      '--cwd',
+      '/tmp/project $(touch unsafe)',
+    ];
+
+    expect(build(argv, 'env add API_KEY preview')).toBe(
+      "vercel env add API_KEY preview --cwd '/tmp/project $(touch unsafe)'"
+    );
+  });
+});
+
 describe('buildCommandWithGlobalFlags', () => {
   it('prepends globals without swallowing the integration subcommand', () => {
     const argv = [
@@ -458,19 +800,88 @@ describe('buildCommandWithGlobalFlags', () => {
     expect(
       buildCommandWithGlobalFlags(
         argv,
-        'integration-resource remove r1 --disconnect-all --yes',
+        'integration resource remove r1 --disconnect-all --yes',
         'vercel',
         { prependGlobalFlags: true, excludeFlags: ['--yes', '-y'] }
       )
     ).toBe(
-      'vercel --cwd /tmp/p --non-interactive integration-resource remove r1 --disconnect-all --yes'
+      'vercel --cwd /tmp/p --non-interactive integration resource remove r1 --disconnect-all --yes'
     );
+  });
+
+  it('does not append a global flag the template already carries', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(
+      buildCommandWithGlobalFlags(
+        argv,
+        'deploy --project my-app --scope <team-slug> --yes'
+      )
+    ).toBe('vercel deploy --project my-app --scope <team-slug> --yes');
+  });
+
+  it('dedupes shorthand and long form of the same global flag', () => {
+    const argv = ['node', 'vc.js', 'deploy', '-S', 'vercel'];
+    expect(
+      buildCommandWithGlobalFlags(argv, 'deploy --scope <team-slug>')
+    ).toBe('vercel deploy --scope <team-slug>');
+  });
+
+  it('still appends globals absent from the template', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(buildCommandWithGlobalFlags(argv, 'link')).toBe(
+      'vercel link --scope vercel --yes'
+    );
+  });
+
+  it.each([
+    [['--project', 'payments-api'], '--project payments-api'],
+    [['--project=payments-api'], '--project=payments-api'],
+  ])('optionally preserves an explicit project selector', (project, expected) => {
+    const argv = [
+      'node',
+      'vc.js',
+      'routes',
+      'list',
+      '--cwd',
+      '/tmp/project',
+      ...project,
+    ];
+
+    expect(
+      buildCommandWithGlobalFlags(argv, 'routes list', undefined, {
+        globalFlags: 'all',
+        preserveProject: true,
+      })
+    ).toBe(`vercel routes list --cwd /tmp/project ${expected}`);
+  });
+
+  it('does not preserve authentication or child-command project options', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      'env',
+      'run',
+      '--cwd',
+      '/tmp/project',
+      '--token',
+      'secret',
+      '--',
+      '--project',
+      'child-project',
+    ];
+
+    expect(
+      buildCommandWithGlobalFlags(argv, 'env run', undefined, {
+        globalFlags: 'all',
+        preserveProject: true,
+      })
+    ).toBe('vercel env run --cwd /tmp/project');
   });
 });
 
 describe('exitWithNonInteractiveError', () => {
   it('emits JSON when argv includes --non-interactive even if client.nonInteractive is false', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch-primitives');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Project not found.' },
@@ -542,7 +953,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('includes action and resource from a 403 APIError', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch-primitives');
     const res = new Response(
       JSON.stringify({
         error: {
@@ -592,7 +1003,7 @@ describe('exitWithNonInteractiveError', () => {
   });
 
   it('omits action and resource from a 404 APIError', async () => {
-    const { Response } = await import('node-fetch');
+    const { Response } = await import('../../../src/util/fetch-primitives');
     const res = new Response(
       JSON.stringify({
         error: { code: 'not_found', message: 'Not found.' },
@@ -630,36 +1041,5 @@ describe('exitWithNonInteractiveError', () => {
     expect(payload).not.toHaveProperty('resource');
 
     vi.restoreAllMocks();
-  });
-});
-
-describe('getGlobalFlagsFromArgv', () => {
-  it('does not treat the subcommand after --non-interactive as a flag value', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        '--non-interactive',
-        'oauth-apps',
-        'register',
-        '--name',
-        'x',
-      ])
-    ).toEqual(['--non-interactive']);
-  });
-
-  it('collects --cwd and --non-interactive from anywhere in argv', () => {
-    expect(
-      getGlobalFlagsFromArgv([
-        'node',
-        'vc.js',
-        'oauth-apps',
-        'register',
-        '--name',
-        'display-name',
-        '--cwd=/tmp/proj',
-        '--non-interactive',
-      ])
-    ).toEqual(['--cwd=/tmp/proj', '--non-interactive']);
   });
 });

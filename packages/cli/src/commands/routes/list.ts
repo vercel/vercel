@@ -1,22 +1,28 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   findVersionById,
   formatCondition,
   formatTransform,
   withGlobalFlags,
 } from './shared';
 import { outputAgentError } from '../../util/agent-output';
+import { getTypedOptionName } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-import { getCommandName } from '../../util/pkg-name';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
@@ -29,16 +35,48 @@ export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const asJson = Boolean(parsed.flags['--json']);
+  const spec = getFlagsSpecification(listSubcommand.options);
+  const query = getRenamedOption(parsed.flags, '--query', '--search', {
+    json: asJson,
+    typedName: getTypedOptionName(argv, spec, '--search'),
+  });
+  if ('error' in query) {
+    return reportRenamedOptionError(client, query.error, { json: asJson });
+  }
+  const type = getRenamedOption(parsed.flags, '--type', '--filter', {
+    json: asJson,
+    typedName: getTypedOptionName(argv, spec, '--filter'),
+  });
+  if ('error' in type) {
+    return reportRenamedOptionError(client, type.error, { json: asJson });
+  }
+  const routesVersion = getRenamedOption(
+    parsed.flags,
+    '--routes-version',
+    '--version-id',
+    { json: asJson }
+  );
+  if ('error' in routesVersion) {
+    return reportRenamedOptionError(client, routesVersion.error, {
+      json: asJson,
+    });
+  }
+
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const { flags } = parsed;
   const teamId = org.type === 'team' ? org.id : undefined;
-  const search = flags['--search'] as string | undefined;
-  const filter = flags['--filter'] as RouteType | undefined;
+  const search = query.value;
+  const filter = type.value as RouteType | undefined;
   const production = flags['--production'] as boolean | undefined;
-  const versionIdFlag = flags['--version-id'] as string | undefined;
+  const versionIdFlag = routesVersion.value;
   const diffFlag = flags['--diff'] as boolean | undefined;
   const expand = flags['--expand'] as boolean | undefined;
 
@@ -62,12 +100,13 @@ export default async function list(client: Client, argv: string[]) {
         process.exit(1);
       }
       output.error(msg);
-      return 1;
+      return 2;
     }
   }
 
   if (production && versionIdFlag) {
-    const msg = 'Cannot use both --production and --version-id flags together';
+    const msg =
+      'Cannot use both --production and --routes-version options together';
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -78,12 +117,12 @@ export default async function list(client: Client, argv: string[]) {
       process.exit(1);
     }
     output.error(msg);
-    return 1;
+    return 2;
   }
 
   if (production && diffFlag) {
     const msg =
-      'Cannot use both --production and --diff flags together. --diff compares staged changes against production.';
+      'Cannot use both --production and --diff options together. --diff compares staged changes against production.';
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -94,7 +133,7 @@ export default async function list(client: Client, argv: string[]) {
       process.exit(1);
     }
     output.error(msg);
-    return 1;
+    return 2;
   }
 
   let versionId: string | undefined;
@@ -102,7 +141,7 @@ export default async function list(client: Client, argv: string[]) {
   let useDiff = false;
 
   if (production) {
-    output.spinner('Fetching production version');
+    if (!asJson) output.spinner('Fetching production version');
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
     });
@@ -130,15 +169,15 @@ export default async function list(client: Client, argv: string[]) {
   }
 
   if (diffFlag && !versionIdFlag) {
-    // --diff without --version-id: diff staging against production
-    output.spinner('Fetching staging version');
+    // --diff without --routes-version: diff staging against production
+    if (!asJson) output.spinner('Fetching staging version');
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
     });
     const stagingVersion = versions.find(v => v.isStaging);
 
     if (!stagingVersion) {
-      const msg = `No staged changes to diff. Run ${getCommandName('routes add')} or ${getCommandName('routes edit')} to make changes.`;
+      const msg = `No staged changes to diff. Run ${withGlobalFlags(client, 'routes add')} or ${withGlobalFlags(client, 'routes update')} to make changes.`;
       if (client.nonInteractive) {
         outputAgentError(client, {
           status: 'error',
@@ -152,9 +191,7 @@ export default async function list(client: Client, argv: string[]) {
         process.exit(1);
       }
       output.error(
-        `No staged changes to diff. Run ${chalk.cyan(
-          getCommandName('routes add')
-        )} or ${chalk.cyan(getCommandName('routes edit'))} to make changes.`
+        `No staged changes to diff. Run ${chalk.cyan(withGlobalFlags(client, 'routes add'))} or ${chalk.cyan(withGlobalFlags(client, 'routes update'))} to make changes.`
       );
       return 1;
     }
@@ -165,11 +202,11 @@ export default async function list(client: Client, argv: string[]) {
   }
 
   if (versionIdFlag) {
-    output.spinner('Fetching version');
+    if (!asJson) output.spinner('Fetching version');
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
     });
-    const result = findVersionById(versions, versionIdFlag);
+    const result = findVersionById(client, versions, versionIdFlag);
 
     if (result.error || !result.version) {
       const msg = result.error ?? 'Version not found';
@@ -178,7 +215,11 @@ export default async function list(client: Client, argv: string[]) {
           status: 'error',
           reason: 'not_found',
           message: msg,
-          next: [{ command: withGlobalFlags(client, 'routes list-versions') }],
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list-versions'),
+            },
+          ],
         });
         process.exit(1);
       }
@@ -206,7 +247,7 @@ export default async function list(client: Client, argv: string[]) {
   if (filter) {
     spinnerMessage += ` filtered by ${filter}`;
   }
-  output.spinner(spinnerMessage);
+  if (!asJson) output.spinner(spinnerMessage);
 
   const { routes, version, limit } = await getRoutes(client, project.id, {
     teamId,
@@ -215,6 +256,21 @@ export default async function list(client: Client, argv: string[]) {
     versionId,
     diff: useDiff,
   });
+
+  if (asJson) {
+    client.stdout.write(
+      `${JSON.stringify(
+        withWarnings({ routes, version, limit: limit ?? null }, [
+          query.warning,
+          type.warning,
+          routesVersion.warning,
+        ]),
+        null,
+        2
+      )}\n`
+    );
+    return 0;
+  }
 
   if (useDiff) {
     const added = routes.filter(r => r.action === '+');

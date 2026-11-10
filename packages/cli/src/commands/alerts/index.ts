@@ -2,9 +2,8 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { printError } from '../../util/error';
-import { help, type Command } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import output from '../../output-manager';
+import getCommonArgs from '../../util/arg-common';
 import { getCommandAliases } from '..';
 import { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
 import {
@@ -15,19 +14,45 @@ import {
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { alertsCommand, inspectSubcommand, listSubcommand } from './command';
 import {
-  rulesAddSubcommand,
-  rulesAggregateCommand,
-  rulesInspectSubcommand,
-  rulesLsSubcommand,
-  rulesRmSubcommand,
-  rulesUpdateSubcommand,
-} from './rules/command';
+  findCommandIndex,
+  normalizeHelpAlias,
+  type FlagsSpecification,
+} from '../../util/raw-command-args';
+import { runMonitors } from '../monitors/run';
+import { ALERT_RULES_API } from '../monitors/util';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   ls: getCommandAliases(listSubcommand),
   rules: ['rules'],
 };
+
+function getAlertsSubcommand(
+  rawArgs: string[],
+  parsedArgs: string[],
+  flagsSpecification: FlagsSpecification
+) {
+  const commandIndex = findCommandIndex(
+    rawArgs,
+    parsedArgs[0],
+    flagsSpecification
+  );
+  const rawArgsAfterCommand =
+    commandIndex === -1 ? [] : rawArgs.slice(commandIndex + 1);
+  const rawSubcommand = rawArgsAfterCommand[0];
+  if (!rawSubcommand || rawSubcommand.startsWith('-')) {
+    return {
+      ...getSubcommand([], COMMAND_CONFIG),
+      rawSubcommandArgs: rawArgsAfterCommand,
+    };
+  }
+
+  return {
+    ...getSubcommand(parsedArgs.slice(1), COMMAND_CONFIG),
+    rawSubcommandArgs: rawArgsAfterCommand.slice(1),
+  };
+}
 
 export default async function alerts(client: Client): Promise<number> {
   const telemetry = new AlertsTelemetryClient({
@@ -38,8 +63,9 @@ export default async function alerts(client: Client): Promise<number> {
 
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(alertsCommand.options);
+  const rawArgs = normalizeHelpAlias(client.argv.slice(2));
   try {
-    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+    parsedArgs = parseArguments(rawArgs, flagsSpecification, {
       permissive: true,
     });
   } catch (err) {
@@ -69,7 +95,7 @@ export default async function alerts(client: Client): Promise<number> {
                     client.argv,
                     'alerts --help'
                   ),
-                  when: 'See all `alerts` flags and examples',
+                  when: 'See all `alerts` options and examples',
                 },
               ]
             : [
@@ -78,81 +104,31 @@ export default async function alerts(client: Client): Promise<number> {
                     client.argv,
                     'alerts --help'
                   ),
-                  when: 'See valid flags and examples',
+                  when: 'See valid options and examples',
                 },
               ],
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
 
-  const { subcommand, args, subcommandOriginal } = getSubcommand(
-    parsedArgs.args.slice(1),
-    COMMAND_CONFIG
-  );
-  const needHelp = parsedArgs.flags['--help'];
-
-  function printHelp(command: Command): void {
-    output.print(
-      help(command, { parent: alertsCommand, columns: client.stderr.columns })
-    );
-  }
-
-  if (needHelp) {
-    if (subcommand === 'inspect') {
-      telemetry.trackCliFlagHelp('alerts', 'inspect');
-      printHelp(inspectSubcommand);
-      return 0;
-    }
-    if (subcommand === 'rules') {
-      telemetry.trackCliFlagHelp('alerts', 'rules');
-      const nested = args[0];
-      if (nested === 'ls' || nested === 'list') {
-        printHelp(rulesLsSubcommand);
-        return 0;
-      }
-      if (nested === 'add' || nested === 'create') {
-        printHelp(rulesAddSubcommand);
-        return 0;
-      }
-      if (nested === 'inspect' || nested === 'get') {
-        printHelp(rulesInspectSubcommand);
-        return 0;
-      }
-      if (nested === 'rm' || nested === 'remove' || nested === 'delete') {
-        printHelp(rulesRmSubcommand);
-        return 0;
-      }
-      if (nested === 'update' || nested === 'patch') {
-        printHelp(rulesUpdateSubcommand);
-        return 0;
-      }
-      output.print(
-        help(rulesAggregateCommand, {
-          parent: alertsCommand,
-          columns: client.stderr.columns,
-        })
-      );
-      return 0;
-    }
-    telemetry.trackCliFlagHelp('alerts', subcommandOriginal);
-    output.print(help(alertsCommand, { columns: client.stderr.columns }));
-    return 0;
-  }
-
+  const { subcommand, subcommandOriginal, rawSubcommandArgs } =
+    getAlertsSubcommand(rawArgs, parsedArgs.args, {
+      ...getCommonArgs(),
+      ...flagsSpecification,
+    });
   switch (subcommand) {
     case 'inspect': {
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       const inspectFn = (await import('./inspect')).default;
-      return inspectFn(client, args);
+      return inspectFn(client, rawSubcommandArgs);
     }
     case 'rules': {
-      telemetry.trackCliSubcommandRules(args[0] ?? 'ls');
-      const rulesFn = (await import('./rules')).default;
-      return rulesFn(client, args);
+      warnDeprecatedSubcommand(client, 'alerts rules', 'monitors');
+      return runMonitors(client, rawSubcommandArgs, ALERT_RULES_API);
     }
     default: {
       telemetry.trackCliSubcommandLs(subcommandOriginal);

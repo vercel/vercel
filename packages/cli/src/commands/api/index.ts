@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import type { Response } from 'node-fetch';
+import type { Response } from '../../util/fetch';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -20,7 +20,7 @@ import {
   GLOBAL_CLI_QUERY_PARAMS,
 } from './operation-request-builder';
 import {
-  OpenApiCache,
+  createOpenApiCache,
   resolveEndpointByTagAndOperationId,
   type ResolveByTagOperationResult,
 } from '../../util/openapi';
@@ -35,6 +35,7 @@ import {
 import output from '../../output-manager';
 import { renderCard, renderTable, parseArrayColumns } from './display-columns';
 import { packageName } from '../../util/pkg-name';
+import { validateJsonOutput } from '../../util/output-format';
 import type {
   ParsedFlags,
   EndpointInfo,
@@ -59,7 +60,7 @@ export default async function api(client: Client): Promise<number> {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -68,14 +69,14 @@ export default async function api(client: Client): Promise<number> {
   // Check for 'ls' or 'list' subcommand first (before general --help)
   const firstArg = args[1];
   if (firstArg === 'ls' || firstArg === 'list') {
-    // Re-parse with listSubcommand options to capture --format
+    // Re-parse with listSubcommand options to capture output flags
     const lsFlagsSpec = getFlagsSpecification(listSubcommand.options);
     let lsParsedArgs;
     try {
       lsParsedArgs = parseArguments(client.argv.slice(2), lsFlagsSpec);
     } catch (err) {
       printError(err);
-      return 1;
+      return 2;
     }
     const lsFlags = lsParsedArgs.flags;
 
@@ -84,10 +85,17 @@ export default async function api(client: Client): Promise<number> {
       telemetryClient.trackCliFlagHelp('api', firstArg);
       output.print(
         help(listSubcommand, {
+          stream: client.stderr,
           parent: apiCommand,
           columns: client.stderr.columns,
         })
       );
+      return 0;
+    }
+
+    const formatResult = validateJsonOutput(lsFlags);
+    if (!formatResult.valid) {
+      output.error(formatResult.error);
       return 2;
     }
 
@@ -95,18 +103,27 @@ export default async function api(client: Client): Promise<number> {
     if (lsFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
     if (lsFlags['--format'])
       telemetryClient.trackCliOptionFormat(lsFlags['--format']);
+    telemetryClient.trackCliFlagJson(lsFlags['--json']);
+    if (lsFlags['--spec-url'])
+      telemetryClient.trackCliOptionSpecUrl(lsFlags['--spec-url']);
     return listEndpoints(
       client,
       lsFlags['--refresh'] ?? false,
-      lsFlags['--format'] ?? 'table'
+      lsFlags['--spec-url'],
+      formatResult.jsonOutput ? 'json' : 'table'
     );
   }
 
   // Handle 'api --help' (no subcommand)
   if (needHelp) {
     telemetryClient.trackCliFlagHelp('api');
-    output.print(help(apiCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(apiCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   // Set dangerously-skip-permissions flag for DELETE confirmation handling
@@ -122,7 +139,8 @@ export default async function api(client: Client): Promise<number> {
     if (client.stdin.isTTY) {
       const selected = await promptEndpointSelection(
         client,
-        flags['--refresh'] ?? false
+        flags['--refresh'] ?? false,
+        flags['--spec-url']
       );
       if (!selected) {
         return 1;
@@ -132,7 +150,7 @@ export default async function api(client: Client): Promise<number> {
       selectedBodyFields = selected.bodyFields;
     } else {
       output.error('Endpoint is required. Usage: vercel api <endpoint>');
-      return 1;
+      return 2;
     }
   } else {
     endpoint = firstArg;
@@ -142,7 +160,7 @@ export default async function api(client: Client): Promise<number> {
     output.error(
       `Invalid arguments. Use an API path starting with /, or run \`${packageName} api\` interactively.`
     );
-    return 1;
+    return 2;
   }
 
   try {
@@ -151,7 +169,7 @@ export default async function api(client: Client): Promise<number> {
       output.error(
         'Invalid endpoint: must be a Vercel API path, not an external URL'
       );
-      return 1;
+      return 2;
     }
   } catch {
     output.error('Invalid endpoint URL format');
@@ -188,6 +206,8 @@ export default async function api(client: Client): Promise<number> {
   if (flags['--verbose']) telemetryClient.trackCliFlagVerbose(true);
   if (flags['--raw']) telemetryClient.trackCliFlagRaw(true);
   if (flags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
+  if (flags['--spec-url'])
+    telemetryClient.trackCliOptionSpecUrl(flags['--spec-url']);
   if (flags['--generate'])
     telemetryClient.trackCliOptionGenerate(flags['--generate']);
   if (flags['--dangerously-skip-permissions'])
@@ -210,14 +230,15 @@ export default async function api(client: Client): Promise<number> {
 }
 
 export async function printOperationHelpForTagCommand(
+  client: Client,
   flags: ParsedFlags,
   tag: string,
   operationId: string
 ): Promise<number> {
-  const openApi = new OpenApiCache();
+  const openApi = createOpenApiCache(client, flags['--spec-url']);
   const loaded = await openApi.loadWithSpinner(flags['--refresh'] ?? false);
   if (!loaded) {
-    output.error('Could not load API specification');
+    output.error(openApi.loadError ?? 'Could not load API specification');
     return 1;
   }
 
@@ -555,7 +576,7 @@ function printTagOperationResolveError(
     const tags = [...new Set(allEndpoints.flatMap(ep => ep.tags || []))].sort();
     const preview = tags.slice(0, 25).join(', ');
     output.error(
-      `No operations use tag "${result.tag}".${tags.length > 0 ? ` Example tags: ${preview}${tags.length > 25 ? ', …' : ''}.` : ''} Run \`vercel api ls --format json\` to inspect tags.`
+      `No operations use tag "${result.tag}".${tags.length > 0 ? ` Example tags: ${preview}${tags.length > 25 ? ', …' : ''}.` : ''} Run \`vercel api ls --json\` to inspect tags.`
     );
     return;
   }
@@ -706,6 +727,27 @@ function extractPaginatedData(page: Record<string, unknown>): unknown[] {
   return [rest];
 }
 
+/**
+ * `--raw`, or stdout is not a terminal (piped or captured by an agent): print
+ * the response as single-line JSON instead of tables or summary text.
+ */
+function wantsRawOutput(client: Client, flags: ParsedFlags): boolean {
+  return Boolean(flags['--raw']) || !client.stdout.isTTY;
+}
+
+/**
+ * Match a single JSON document: `application/json` or a structured
+ * `application/json-*+json` type such as `application/json-patch+json`.
+ * Streaming formats such as `application/jsonl` are printed as text.
+ */
+function isJsonContentType(contentType: string): boolean {
+  const mediaType = contentType.split(';')[0].trim().toLowerCase();
+  return (
+    mediaType === 'application/json' ||
+    (mediaType.startsWith('application/json-') && mediaType.endsWith('+json'))
+  );
+}
+
 async function handleResponse(
   client: Client,
   response: Response,
@@ -724,8 +766,9 @@ async function handleResponse(
 
   const contentType = response.headers.get('content-type') || '';
   const isMutation = options?.tagOperation && method !== 'GET';
+  const raw = wantsRawOutput(client, flags);
 
-  if (contentType.includes('application/json')) {
+  if (isJsonContentType(contentType)) {
     const json = await response.json();
 
     if (flags['--verbose']) {
@@ -734,11 +777,11 @@ async function handleResponse(
       );
     }
 
-    if (displayColumns && response.ok && !flags['--raw']) {
+    if (displayColumns && response.ok && !raw) {
       return outputWithDisplayColumns(client, json, displayColumns);
     }
 
-    if (isMutation && !flags['--raw']) {
+    if (isMutation && !raw) {
       if (!response.ok) {
         return outputMutationResult(client, response, method, json);
       }
@@ -750,7 +793,7 @@ async function handleResponse(
 
   const text = await response.text();
 
-  if (isMutation && !flags['--raw']) {
+  if (isMutation && !raw) {
     return outputMutationResult(
       client,
       response,
@@ -843,7 +886,7 @@ function outputResults(
   flags: ParsedFlags
 ): number {
   const formatted = formatOutput(data, {
-    raw: flags['--raw'],
+    raw: wantsRawOutput(client, flags),
   });
 
   client.stdout.write(formatted + '\n');
@@ -852,13 +895,17 @@ function outputResults(
 
 async function promptEndpointSelection(
   client: Client,
-  forceRefresh: boolean
+  forceRefresh: boolean,
+  specUrl: string | undefined
 ): Promise<SelectedEndpoint | null> {
   try {
-    const openApi = new OpenApiCache();
+    const openApi = createOpenApiCache(client, specUrl);
     const success = await openApi.loadWithSpinner(forceRefresh);
     if (!success) {
-      output.error('Could not load API specification for endpoint selection');
+      output.error(
+        openApi.loadError ??
+          'Could not load API specification for endpoint selection'
+      );
       return null;
     }
 
@@ -894,21 +941,22 @@ async function promptForEndpoint(
   client: Client,
   endpoints: EndpointInfo[]
 ): Promise<EndpointInfo> {
-  const allChoices = endpoints.map(ep => ({
-    name: `${colorizeMethodPadded(ep.method)} ${ep.path}`,
-    value: ep,
-    // Show full description if available, otherwise show summary
-    description: ep.description || ep.summary || undefined,
-    // Include summary in searchable metadata
-    summary: ep.summary,
-    tags: ep.tags,
-  }));
-
-  const total = allChoices.length;
+  const total = endpoints.length;
+  const buildChoices = () =>
+    endpoints.map(ep => ({
+      name: `${colorizeMethodPadded(ep.method)} ${ep.path}`,
+      value: ep,
+      // Show full description if available, otherwise show summary
+      description: ep.description || ep.summary || undefined,
+      // Include summary in searchable metadata
+      summary: ep.summary,
+      tags: ep.tags,
+    }));
 
   return client.input.search<EndpointInfo>({
     message: `Search for an API endpoint (${total} available):`,
     source: async (term: string | undefined) => {
+      const allChoices = buildChoices();
       if (!term) {
         return allChoices;
       }
@@ -935,12 +983,13 @@ async function promptForEndpoint(
 async function listEndpoints(
   client: Client,
   forceRefresh: boolean,
+  specUrl: string | undefined,
   format: string
 ): Promise<number> {
-  const openApi = new OpenApiCache();
+  const openApi = createOpenApiCache(client, specUrl);
   const success = await openApi.loadWithSpinner(forceRefresh);
   if (!success) {
-    output.error('Could not load API specification');
+    output.error(openApi.loadError ?? 'Could not load API specification');
     return 1;
   }
 
@@ -950,7 +999,7 @@ async function listEndpoints(
     return outputEndpointsAsJson(client, endpoints);
   }
 
-  return outputEndpointsAsTable(endpoints);
+  return outputEndpointsAsTable(client, endpoints);
 }
 
 function outputEndpointsAsJson(
@@ -984,7 +1033,10 @@ function groupEndpointsByPath(
 
   for (const ep of endpoints) {
     const existing = grouped.get(ep.path) || [];
-    existing.push({ method: ep.method, summary: ep.summary });
+    existing.push({
+      method: ep.method,
+      summary: ep.summary,
+    });
     grouped.set(ep.path, existing);
   }
 
@@ -1000,25 +1052,28 @@ function groupEndpointsByPath(
   return grouped;
 }
 
-function outputEndpointsAsTable(endpoints: EndpointInfo[]): number {
+function outputEndpointsAsTable(
+  client: Client,
+  endpoints: EndpointInfo[]
+): number {
   const grouped = groupEndpointsByPath(endpoints);
   const methodWidth = 7;
 
-  output.log('');
+  client.stdout.write('\n');
 
   for (const [path, methods] of grouped) {
     // Print path as header
-    output.log(chalk.bold(path));
+    client.stdout.write(chalk.bold(path) + '\n');
 
     // Print each method underneath with indentation
     for (const { method, summary } of methods) {
       const coloredMethod = colorizeMethod(method);
       const paddedMethod = method.padEnd(methodWidth);
       const methodDisplay = coloredMethod + paddedMethod.slice(method.length);
-      output.log(`  ${methodDisplay}  ${chalk.gray(summary || '')}`);
+      client.stdout.write(`  ${methodDisplay}  ${chalk.gray(summary || '')}\n`);
     }
 
-    output.log(''); // Blank line between paths
+    client.stdout.write('\n'); // Blank line between paths
   }
 
   output.log(
@@ -1073,20 +1128,22 @@ async function promptForParameters(
   // Collect path parameter values (always required)
   let finalPath = path;
   for (const param of pathParams) {
-    const value = await client.input.text({
-      message: `Enter value for ${formatPathParam(param.name)}${formatDescription(param.description)}:`,
-      validate: createRequiredValidator(param.name),
-    });
+    const value = await promptForParameterValue(
+      client,
+      param,
+      `Enter value for ${formatPathParam(param.name)}${formatDescription(param.description)}:`
+    );
     finalPath = finalPath.replace(`{${param.name}}`, encodeURIComponent(value));
   }
 
   // Collect required query parameter values
   const queryValues: Record<string, string> = {};
   for (const param of requiredQueryParams) {
-    queryValues[param.name] = await client.input.text({
-      message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
-      validate: createRequiredValidator(param.name),
-    });
+    queryValues[param.name] = await promptForParameterValue(
+      client,
+      param,
+      `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`
+    );
   }
 
   // Select which optional query parameters to provide
@@ -1103,10 +1160,11 @@ async function promptForParameters(
     // Prompt for values of selected optional query params
     for (const paramName of selectedOptionalParams) {
       const param = optionalQueryParams.find(p => p.name === paramName)!;
-      queryValues[param.name] = await client.input.text({
-        message: `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`,
-        validate: createRequiredValidator(param.name),
-      });
+      queryValues[param.name] = await promptForParameterValue(
+        client,
+        param,
+        `Enter value for ${chalk.cyan(param.name)}${formatDescription(param.description)}:`
+      );
     }
   }
 
@@ -1143,6 +1201,36 @@ async function promptForParameters(
   }
 
   return { finalUrl: finalPath, bodyFields: bodyFieldValues };
+}
+
+/**
+ * Prompt for a single parameter value, honoring the schema's enum (select
+ * prompt) and default value when present.
+ */
+async function promptForParameterValue(
+  client: Client,
+  param: Parameter,
+  message: string
+): Promise<string> {
+  const schemaDefault =
+    param.schema?.default !== undefined
+      ? String(param.schema.default)
+      : undefined;
+
+  const enumValues = param.schema?.enum;
+  if (enumValues && enumValues.length > 0) {
+    return client.input.select<string>({
+      message,
+      choices: enumValues.map(v => ({ name: String(v), value: String(v) })),
+      default: schemaDefault,
+    });
+  }
+
+  return client.input.text({
+    message,
+    default: schemaDefault,
+    validate: createRequiredValidator(param.name),
+  });
 }
 
 /**
@@ -1223,12 +1311,12 @@ export async function runTagOperation(
 
   const finalFlags = { ...flags } as ParsedFlags;
 
-  const openApi = new OpenApiCache();
+  const openApi = createOpenApiCache(client, finalFlags['--spec-url']);
   const loaded = await openApi.loadWithSpinner(
     finalFlags['--refresh'] ?? false
   );
   if (!loaded) {
-    output.error('Could not load API specification');
+    output.error(openApi.loadError ?? 'Could not load API specification');
     return 1;
   }
 
@@ -1313,6 +1401,8 @@ export async function runTagOperation(
   if (finalFlags['--verbose']) telemetryClient.trackCliFlagVerbose(true);
   if (finalFlags['--raw']) telemetryClient.trackCliFlagRaw(true);
   if (finalFlags['--refresh']) telemetryClient.trackCliFlagRefresh(true);
+  if (finalFlags['--spec-url'])
+    telemetryClient.trackCliOptionSpecUrl(finalFlags['--spec-url']);
   if (finalFlags['--generate'])
     telemetryClient.trackCliOptionGenerate(finalFlags['--generate']);
   if (finalFlags['--dangerously-skip-permissions'])

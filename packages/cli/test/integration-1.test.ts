@@ -1,10 +1,17 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
-import nodeFetch from 'node-fetch';
+import { getCliPath } from './helpers/get-cli-path';
+import nodeFetch from '../src/util/fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import waitForPrompt from './helpers/wait-for-prompt';
+import waitForPrompt, {
+  answerTeamPromptThenWait,
+} from './helpers/wait-for-prompt';
+import {
+  pickDeploymentUrl,
+  waitForDeployment,
+} from './helpers/wait-for-deployment';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise } from './helpers/get-account';
 import {
@@ -16,9 +23,9 @@ import type { CLIProcess } from './helpers/types';
 import { randomBytes } from 'crypto';
 
 const TEST_TIMEOUT = 3 * 60 * 1000;
-jest.setTimeout(TEST_TIMEOUT);
+vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
-const binaryPath = path.resolve(__dirname, '../scripts/start.js');
+const binaryPath = getCliPath();
 
 async function vcLink(projectPath: string) {
   const { exitCode, stdout, stderr } = await execCli(
@@ -101,7 +108,7 @@ test('default command should deploy directory', async () => {
   expect(stdout).toMatch(/https:\/\/output-.+\.vercel\.app/);
 });
 
-test('default command should warn when deploying with conflicting subdirectory', async () => {
+test('default command should not warn about conflicting subdirectory when cwd is already linked', async () => {
   const projectDir = await setupE2EFixture(
     'deploy-default-with-conflicting-sub-directory'
   );
@@ -121,12 +128,27 @@ test('default command should warn when deploying with conflicting subdirectory',
   );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(stderr || '').toMatch(
+  expect(stderr || '').not.toMatch(
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
   const listHeader = /No deployments found/;
   expect(stderr || '').toMatch(listHeader); // ensure `list` command still ran
+});
+
+test('default command should warn about conflicting subdirectory when cwd is not linked', async () => {
+  const projectDir = await setupE2EFixture(
+    'deploy-default-with-conflicting-sub-directory',
+    { removeProjectLink: true }
+  );
+
+  const { stderr } = await execCli(binaryPath, ['list', '--help'], {
+    cwd: projectDir,
+  });
+
+  expect(stderr || '').toMatch(
+    /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
+  );
 });
 
 test('deploy command should not warn when deploying with conflicting subdirectory and using --cwd', async () => {
@@ -182,18 +204,19 @@ test('default command should work with --cwd option', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
+  const url = pickDeploymentUrl(stdout);
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
-  const body = await deploymentResult.text();
+  // Root README.md is intentionally excluded from zero-config static deployments.
+  const { text: body } = await waitForDeployment(`${url}/content.txt`);
   expect(body).toEqual(
-    'readme contents for deploy-default-with-conflicting-sub-directory'
+    'root contents for deploy-default-with-conflicting-sub-directory'
   );
 });
 
 test('should allow deploying a directory that was built with a target environment of "preview" and `--prebuilt` is used without specifying a target', async () => {
   const projectDir = await setupE2EFixture(
-    'deploy-default-with-prebuilt-preview'
+    'deploy-default-with-prebuilt-preview',
+    { removeProjectLink: true }
   );
 
   await vcLink(projectDir);
@@ -211,17 +234,18 @@ test('should allow deploying a directory that was built with a target environmen
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
+  const url = pickDeploymentUrl(stdout);
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
-  const body = await deploymentResult.text();
+  const { text: body } = await waitForDeployment(`${url}/README.md`);
   expect(body).toEqual(
     'readme contents for deploy-default-with-prebuilt-preview'
   );
 });
 
 test('should allow deploying a directory that was prebuilt, but has no builds.json', async () => {
-  const projectDir = await setupE2EFixture('build-output-api-raw');
+  const projectDir = await setupE2EFixture('build-output-api-raw', {
+    removeProjectLink: true,
+  });
 
   await vcLink(projectDir);
 
@@ -238,10 +262,9 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
+  const url = pickDeploymentUrl(stdout);
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
-  const body = await deploymentResult.text();
+  const { text: body } = await waitForDeployment(`${url}/README.md`);
   expect(body).toEqual('readme contents for build-output-api-raw');
 });
 
@@ -291,7 +314,7 @@ test('[vc link] with vercel.json configuration overrides should create a valid d
   expect(json.buildCommand).toBe('mkdir public && echo "1" > public/index.txt');
 });
 
-test('deploy using only now.json with `redirects` defined', async () => {
+test('deploy using only vercel.json with `redirects` defined', async () => {
   const target = await setupE2EFixture('redirects-v2');
 
   const { exitCode, stdout, stderr } = await execCli(binaryPath, [
@@ -301,8 +324,10 @@ test('deploy using only now.json with `redirects` defined', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
-  const res = await nodeFetch(`${url}/foo/bar`, { redirect: 'manual' });
+  const url = pickDeploymentUrl(stdout);
+  const { response: res } = await waitForDeployment(`${url}/foo/bar`, {
+    redirect: 'manual',
+  });
   const location = res.headers.get('location');
   expect(location).toBe('https://example.com/foo/bar');
 });
@@ -322,11 +347,12 @@ test('deploy using --local-config flag v2', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(pickDeploymentUrl(stdout));
   expect(host).toMatch(/secondary/gm);
 
-  const testRes = await nodeFetch(`https://${host}/test-${team.slug}.html`);
-  const testText = await testRes.text();
+  const { text: testText } = await waitForDeployment(
+    `https://${host}/test-${team.slug}.html`
+  );
   expect(testText).toBe('<h1>hello test</h1>');
 
   const anotherTestRes = await nodeFetch(`https://${host}/another-test`);
@@ -372,23 +398,19 @@ test('deploy from a nested directory', async () => {
     },
   });
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, 'Directory');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });
@@ -410,23 +432,19 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
     }
   );
 
-  await waitForPrompt(vc, /Set up and deploy[^?]+\?/);
-  vc.stdin?.write('yes\n');
-
-  await waitForPrompt(vc, 'Which scope should contain your project?');
+  await waitForPrompt(vc, 'Directory');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
 
-  await waitForPrompt(vc, 'Link to existing project?');
-  vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, `What’s your project’s name? (${projectName})`);
+  await waitForPrompt(vc, `Name? (${projectName})`);
   vc.stdin?.write(`\n`);
 
-  await waitForPrompt(vc, 'In which directory is your code located?');
+  await waitForPrompt(vc, 'Code directory?');
   vc.stdin?.write('app\n');
 
   // This means the framework detection worked!
-  await waitForPrompt(vc, 'Auto-detected Project Settings for Next.js');
+  await waitForPrompt(vc, 'Detected');
 
   vc.kill();
 });
@@ -445,10 +463,11 @@ test('deploy using --local-config flag above target', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(pickDeploymentUrl(stdout));
 
-  const testRes = await nodeFetch(`https://${host}/index.html`);
-  const testText = await testRes.text();
+  const { text: testText } = await waitForDeployment(
+    `https://${host}/index.html`
+  );
   expect(testText).toBe('<h1>hello index</h1>');
 
   const anotherTestRes = await nodeFetch(`https://${host}/another.html`);
@@ -498,22 +517,14 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
       cwd: target,
     });
 
-    await waitForPrompt(vc, "What's the name of the variable?");
+    await waitForPrompt(vc, 'Name?');
     vc.stdin?.write(`${promptEnvVar}\n`);
-    await waitForPrompt(vc, 'Mark as sensitive?');
-    vc.stdin?.write('n\n');
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes("What's the value of") && chunk.includes(promptEnvVar)
-    );
+    await waitForPrompt(vc, 'Environment Variable type?');
+    vc.stdin?.write('\x1B[B\n'); // Select Config
+    await waitForPrompt(vc, 'Value?');
     vc.stdin?.write('my plaintext value\n');
 
-    await waitForPrompt(
-      vc,
-      chunk =>
-        chunk.includes('which Environments') && chunk.includes(promptEnvVar)
-    );
+    await waitForPrompt(vc, 'Environments?');
     vc.stdin?.write('a\n'); // select all
 
     const { exitCode, stdout, stderr } = await vc;

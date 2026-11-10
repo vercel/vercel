@@ -77,6 +77,15 @@ export class ApiTelemetryClient
     }
   }
 
+  trackCliOptionSpecUrl(specUrl: string | undefined) {
+    if (specUrl) {
+      this.trackCliOption({
+        option: 'spec-url',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagPaginate(value: boolean | undefined) {
     if (value) {
       this.trackCliFlag('paginate');
@@ -142,6 +151,12 @@ export class ApiTelemetryClient
         option: 'format',
         value,
       });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 

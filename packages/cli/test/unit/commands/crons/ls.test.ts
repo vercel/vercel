@@ -62,7 +62,7 @@ describe('crons ls', () => {
     it('prints help and tracks telemetry', async () => {
       client.setArgv('crons', 'ls', '--help');
       const exitCode = await crons(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'crons:ls' },
       ]);
@@ -78,6 +78,18 @@ describe('crons ls', () => {
       const exitCode = await crons(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput("isn't linked");
+    });
+
+    it('reports project not found when --project does not resolve', async () => {
+      mockedGetLinkedProject.mockResolvedValue({
+        status: 'not_linked',
+      } as any);
+      client.setArgv('crons', 'ls', '--project', 'no-such-project');
+      const exitCode = await crons(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Project "no-such-project" was not found'
+      );
     });
   });
 
@@ -277,6 +289,25 @@ describe('crons ls', () => {
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:list', value: 'ls' },
         { key: 'option:format', value: 'json' },
+      ]);
+    });
+
+    it('tracks project option and passes it to project resolution', async () => {
+      mockLinkedProject();
+      mockProjectWithCrons([]);
+      client.setArgv('crons', 'ls', '--project', 'crons-project');
+      const exitCode = await crons(client);
+
+      expect(exitCode).toEqual(0);
+      expect(mockedGetLinkedProject).toHaveBeenCalledWith(client, {
+        cwd: client.cwd,
+        projectName: 'crons-project',
+        projectNameIsExplicit: true,
+        scopeIsExplicit: false,
+      });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:list', value: 'ls' },
+        { key: 'option:project', value: '[REDACTED]' },
       ]);
     });
   });

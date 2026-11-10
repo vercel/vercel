@@ -4,56 +4,55 @@ import { Transform, Writable, type TransformCallback } from 'stream';
 import type { ChildProcess } from 'child_process';
 import getPort from 'get-port';
 import chalk from 'chalk';
+import { frameworkList, type Framework } from '@vercel/frameworks';
+import { getNextCronDelay } from './cron';
 import {
   getInternalServiceCronPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceWorkerPathPrefix,
-  type Service,
-} from '@vercel/fs-detectors';
-import type { Cron } from '@vercel/build-utils';
-import { frameworkList, type Framework } from '@vercel/frameworks';
-import { getNextCronDelay } from './cron';
-import {
+  isExperimentalServiceV2,
+  isExperimentalService,
+  isQueueBackedService,
   isQueueTriggeredService,
   isScheduleTriggeredService,
+  isWorkflowTriggeredService,
   cloneEnv,
   getNodeBinPaths,
   spawnCommand,
   NowBuildError,
   runNpmInstall,
   getServiceUrlEnvVars,
+  getExperimentalServiceUrlEnvVars,
+  type BuilderV2,
   type BuilderV3,
   type BuilderVX,
   type Config,
+  type Meta,
+  type StartDevServerOptions,
+  type Cron,
+  type DevQueueSubscription,
+  type ExperimentalService,
+  type ExperimentalServiceV2,
+  type Service,
 } from '@vercel/build-utils';
 import { checkForPort } from './port-utils';
-import { importBuilders } from '../build/import-builders';
+import {
+  buildpackServicesDevUnsupportedError,
+  getBuildpackRuntime,
+} from './buildpack-dev';
+import { importBuilders } from '../../builders/import-builders';
+import { getStaticServiceSchedules } from '@vercel-internals/cli-builder-integration/service-schedules';
 import output from '../../output-manager';
+import pkg from '../pkg';
 import { treeKill } from '../tree-kill';
+import { injectNextDevWebSocketShimIfNeeded } from './next-dev-websocket-shim-injection';
+import replaceDevCommandPort from './replace-dev-command-port';
+import type { DevResourceEndpoints } from './resource-servers';
+import { getDevQueueEnv, getDevSchedulesEnv } from './resource-servers';
+import { getDevRuntimeCacheEnv } from './runtime-cache';
+import { dev, ServiceStartError } from './diagnostics';
 
 const STARTUP_TIMEOUT = ms('5m');
-
-export class ServiceStartError extends Error {
-  constructor(failures: Error[]) {
-    // Deduplicate errors that are the same for all services
-    const dedupeErrorCodes = new Set(['PYTHON_EXTERNAL_VENV_DETECTED']);
-    const seenCodes = new Set<string>();
-    const uniqueMessages: string[] = [];
-
-    for (const err of failures) {
-      if (err instanceof NowBuildError && dedupeErrorCodes.has(err.code)) {
-        if (!seenCodes.has(err.code)) {
-          uniqueMessages.push(err.message);
-          seenCodes.add(err.code);
-        }
-      } else {
-        uniqueMessages.push(err.message);
-      }
-    }
-
-    super(uniqueMessages.join('\n'));
-  }
-}
 
 const SERVICE_COLORS = [
   chalk.cyan,
@@ -141,10 +140,11 @@ interface ServiceDevProcess {
   workspace: string;
   logger: ServiceLogger;
   crons?: Cron[];
+  queueSubscriptions?: DevQueueSubscription[];
 }
 
-function getServiceRoutePrefixes(service: Service): string[] {
-  if (isQueueTriggeredService(service)) {
+function getServiceRoutePrefixes(service: ExperimentalService): string[] {
+  if (isQueueTriggeredService(service) || isWorkflowTriggeredService(service)) {
     return [getInternalServiceWorkerPathPrefix(service.name)];
   }
   if (isScheduleTriggeredService(service)) {
@@ -156,28 +156,160 @@ function getServiceRoutePrefixes(service: Service): string[] {
   return [];
 }
 
+interface ServiceStartSpec {
+  rootPath: string;
+  rootLabel: string;
+  framework: Framework | undefined;
+  builderSpec: string | undefined;
+  entrypoint: string;
+  builderConfig: Config | undefined;
+  frameworkForDev: string;
+  servicePayload: NonNullable<StartDevServerOptions['service']>;
+  routePrefixes: string[];
+  env: NodeJS.ProcessEnv;
+  explicitDevCommand?: string;
+}
+
+// Use the resolved builder.src which includes framework defaults,
+// or fall back to explicit entrypoint.
+// Strip the root prefix since it is already in the service workspace.
+// e.g., builder.src="frontend/package.json" + workspace="frontend"
+//   → entrypoint="package.json" (relative to workspacePath)
+function getEntrypointForService(
+  builderSrc: string | undefined,
+  entrypoint: string | undefined,
+  dir: string
+): string {
+  let resolved = builderSrc || entrypoint || '';
+  if (dir && dir !== '.') {
+    const prefix = dir.endsWith('/') ? dir : `${dir}/`;
+    if (resolved.startsWith(prefix)) {
+      resolved = resolved.slice(prefix.length);
+    }
+  }
+  return resolved;
+}
+
 interface ServicesOrchestratorOptions {
   services: Service[];
   cwd: string;
   repoRoot: string;
   env: NodeJS.ProcessEnv;
   proxyOrigin: string;
+  resourceEndpoints: DevResourceEndpoints;
+  useImplicitEnvInjection: boolean;
+  preferServiceBuilder?: boolean;
+  /**
+   * Invoked when a service's dev server reports the queue subscriptions its
+   * code registered, so the dev queue broker can deliver with the
+   * SDK-registered consumer groups.
+   */
+  onQueueSubscriptions?: (
+    serviceName: string,
+    subscriptions: DevQueueSubscription[]
+  ) => void;
+}
+
+// Max time we wait between SIGTERM and SIGKILL when force-stopping a service.
+// We poll process liveness instead of sleeping the full window, so well-behaved
+// services exit immediately.
+const FORCE_KILL_GRACE_MS = 2000;
+
+// Hard upper bound on `stopAll`. If individual kills hang (e.g. `ps` from
+// `tree-kill` stalls, a builder's async `shutdown` never resolves), we still
+// return so the dev process can exit. Synchronous `'exit'` backstop will
+// SIGKILL anything we couldn't reach.
+const STOP_ALL_TIMEOUT_MS = 8000;
+
+// Send `signal` to the entire process group led by `pid`. Services are spawned
+// with `detached: true`, so each child becomes its own process-group leader
+// (pgid === pid). Killing the group covers grandchildren that re-parent to
+// init when their direct parent exits — which `tree-kill`'s PPID walk would
+// miss. Treats ESRCH (group gone) and EPERM (e.g. pid reused for a process
+// we don't own) as non-fatal: nothing further we can do, callers move on.
+function killGroup(pid: number, signal: NodeJS.Signals): boolean {
+  try {
+    process.kill(-pid, signal);
+    return true;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ESRCH' || code === 'EPERM') return false;
+    throw err;
+  }
+}
+
+// Returns true if a process with `pid` exists right now. EPERM means it exists
+// but we can't signal it (e.g. credentials mismatch after pid reuse) — from
+// our perspective it's "alive but unreachable," which we treat as alive so the
+// caller stops waiting and escalates rather than spinning.
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+// Wait until `pid` is gone or `timeoutMs` elapses. Uses the ChildProcess `exit`
+// event when available (immediate, no polling); otherwise polls every 100 ms.
+// Returns true if the process died within the window.
+function waitForExit(
+  pid: number,
+  proc: ChildProcess | undefined,
+  timeoutMs: number
+): Promise<boolean> {
+  if (proc && (proc.exitCode !== null || proc.signalCode !== null)) {
+    return Promise.resolve(true);
+  }
+  if (!isProcessAlive(pid)) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = (died: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearInterval(poll);
+      clearTimeout(deadline);
+      if (proc) proc.removeListener('exit', onExit);
+      resolve(died);
+    };
+    const onExit = () => finish(true);
+    if (proc) proc.once('exit', onExit);
+
+    const poll = setInterval(() => {
+      if (!isProcessAlive(pid)) finish(true);
+    }, 100);
+    const deadline = setTimeout(() => finish(false), timeoutMs);
+  });
 }
 
 export class ServicesOrchestrator {
   private managedServices = new Map<string, ServiceDevProcess>();
   private managedProcesses = new Map<string, ChildProcess>();
+  private servicePorts = new Map<string, number>();
+  private installMeta: Meta = {};
   private cronTimers: ReturnType<typeof setTimeout>[] = [];
   private stopping = false;
+  private exitBackstop: (() => void) | undefined;
 
   private services: Service[];
   private cwd: string;
   private repoRoot: string;
-  private env: NodeJS.ProcessEnv;
+  private envFilesValues: NodeJS.ProcessEnv;
   private maxNameLength: number;
   private proxyOrigin: string;
+  private resourceEndpoints: DevResourceEndpoints;
   private pythonServiceCount: number;
   private hasQueueServices: boolean;
+  private useImplicitEnvInjection: boolean;
+  private preferServiceBuilder: boolean;
+  private onQueueSubscriptions?: (
+    serviceName: string,
+    subscriptions: DevQueueSubscription[]
+  ) => void;
 
   constructor(options: ServicesOrchestratorOptions) {
     this.services = options.services;
@@ -185,15 +317,70 @@ export class ServicesOrchestrator {
     this.repoRoot = options.repoRoot;
     this.maxNameLength = Math.max(...options.services.map(s => s.name.length));
     this.proxyOrigin = options.proxyOrigin;
-    this.env = options.env;
-    this.pythonServiceCount = options.services.filter(
-      s => s.runtime === 'python'
-    ).length;
-    this.hasQueueServices = options.services.some(isQueueTriggeredService);
+    this.resourceEndpoints = options.resourceEndpoints;
+    this.envFilesValues = options.env;
+    this.useImplicitEnvInjection = options.useImplicitEnvInjection;
+    this.preferServiceBuilder = options.preferServiceBuilder ?? false;
+    this.onQueueSubscriptions = options.onQueueSubscriptions;
+    // Python services in one workspace intentionally share a managed virtualenv.
+    // Count environments, rather than processes, for the external-venv guard.
+    const pythonWorkspaces = options.services
+      .filter(service => service.runtime === 'python')
+      .map(service =>
+        path.resolve(
+          this.cwd,
+          isExperimentalServiceV2(service)
+            ? service.root || '.'
+            : service.workspace || '.'
+        )
+      );
+    this.pythonServiceCount = new Set(pythonWorkspaces).size;
+    this.hasQueueServices = options.services
+      .filter(isExperimentalService)
+      .some(isQueueBackedService);
+  }
+
+  // Synchronously SIGKILL every tracked process group. Used from
+  // `process.on('exit' | 'uncaughtException')` so that orphans are reaped even
+  // when normal async cleanup never runs (crash, uncaught exception, plain
+  // `process.exit`). Must stay synchronous — the 'exit' event allows no I/O.
+  // Each kill is isolated so one failure (EPERM, unexpected error) cannot
+  // abort the loop and leave siblings orphaned.
+  private forceKillAllSync(): void {
+    const killOne = (pid: number | undefined) => {
+      if (!pid) return;
+      try {
+        killGroup(pid, 'SIGKILL');
+      } catch {
+        // best-effort during exit; the process is going down anyway
+      }
+    };
+    for (const [, proc] of this.managedProcesses) killOne(proc.pid);
+    for (const [, service] of this.managedServices) killOne(service.pid);
+  }
+
+  private registerExitBackstop(): void {
+    if (this.exitBackstop) return;
+    const backstop = () => this.forceKillAllSync();
+    this.exitBackstop = backstop;
+    process.on('exit', backstop);
+  }
+
+  private unregisterExitBackstop(): void {
+    if (this.exitBackstop) {
+      process.removeListener('exit', this.exitBackstop);
+      this.exitBackstop = undefined;
+    }
   }
 
   async startAll(): Promise<void> {
     output.debug(`Starting ${this.services.length} services`);
+
+    this.registerExitBackstop();
+
+    // Pre-allocate a port for every service before starting any of them,
+    // so if a service requires bindings we can provide them
+    await this.allocateServicePorts();
 
     const startPromises = this.services.map((service, index) =>
       this.startService(service, index).then(result => {
@@ -233,7 +420,7 @@ export class ServicesOrchestrator {
       output.debug(`Stopping service "${name}" (PID: ${service.pid})`);
 
       // For some builders (e.g. @vercel/python) `shutdown` is defined as no-op,
-      // so we'll try to be nice at first, but then proceed with killing the tree.
+      // so we'll try to be nice at first, but then proceed with killing the group.
       const stopService = async () => {
         if (service.shutdown) {
           await service.shutdown().catch(err => {
@@ -242,7 +429,11 @@ export class ServicesOrchestrator {
         }
 
         if (service.pid) {
-          await treeKill(service.pid).catch(err => {
+          await this.terminateProcessGroup(
+            name,
+            service.pid,
+            service.process
+          ).catch(err => {
             output.debug(`Failed to kill service "${name}": ${err}`);
           });
         }
@@ -256,7 +447,7 @@ export class ServicesOrchestrator {
       if (proc.pid && !this.managedServices.has(name)) {
         output.debug(`Stopping process "${name}" (PID: ${proc.pid})`);
         stopPromises.push(
-          treeKill(proc.pid).catch(err => {
+          this.terminateProcessGroup(name, proc.pid, proc).catch(err => {
             output.debug(`Failed to stop process "${name}": ${err}`);
           })
         );
@@ -268,10 +459,70 @@ export class ServicesOrchestrator {
     }
     this.cronTimers = [];
 
-    await Promise.all(stopPromises);
-    this.managedServices.clear();
-    this.managedProcesses.clear();
-    output.debug('All services stopped');
+    // Hard timeout: even if individual kills hang (tree-kill's `ps` stalls,
+    // a builder's `shutdown` never resolves, etc.), don't block exit forever.
+    // The synchronous `'exit'` backstop will SIGKILL whatever remains.
+    let timedOut = false;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<void>(resolve => {
+      timeoutHandle = setTimeout(() => {
+        timedOut = true;
+        output.debug(
+          `stopAll timed out after ${STOP_ALL_TIMEOUT_MS}ms; remaining processes will be SIGKILLed on exit`
+        );
+        resolve();
+      }, STOP_ALL_TIMEOUT_MS);
+    });
+    try {
+      await Promise.race([Promise.all(stopPromises), timeout]);
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
+
+    // If we timed out, leave the maps populated so `forceKillAllSync` (on
+    // 'exit') can still reach the survivors with SIGKILL.
+    if (!timedOut) {
+      this.managedServices.clear();
+      this.managedProcesses.clear();
+      this.unregisterExitBackstop();
+      output.debug('All services stopped');
+    }
+  }
+
+  // Graceful → forceful termination of a single service's process group.
+  // Sends SIGTERM to the entire pgid (services run with `detached: true`, so
+  // pgid === pid), waits *up to* a grace window — polling so well-behaved
+  // services exit immediately — and escalates to SIGKILL only if still alive.
+  // `tree-kill` runs in parallel to mop up descendants that switched process
+  // groups via `setsid` and so escape `kill(-pgid)`. Every step is wrapped:
+  // no error from a single service can prevent the rest of `stopAll` from
+  // completing.
+  private async terminateProcessGroup(
+    name: string,
+    pid: number,
+    proc?: ChildProcess
+  ): Promise<void> {
+    try {
+      killGroup(pid, 'SIGTERM');
+    } catch (err) {
+      output.debug(`SIGTERM group kill for "${name}" failed: ${err}`);
+    }
+    await treeKill(pid, 'SIGTERM').catch(err => {
+      output.debug(`tree-kill (SIGTERM) for "${name}" failed: ${err}`);
+    });
+
+    const died = await waitForExit(pid, proc, FORCE_KILL_GRACE_MS);
+    if (died) return;
+
+    output.debug(`Escalating to SIGKILL for "${name}" (PID: ${pid})`);
+    try {
+      killGroup(pid, 'SIGKILL');
+    } catch (err) {
+      output.debug(`SIGKILL group kill for "${name}" failed: ${err}`);
+    }
+    await treeKill(pid, 'SIGKILL').catch(() => {
+      // tolerate: group is likely already dead
+    });
   }
 
   getServiceForRoute(pathname: string): ServiceDevProcess | null {
@@ -320,34 +571,153 @@ export class ServicesOrchestrator {
     return this.managedServices;
   }
 
+  // Pre-allocate ports for services in advance, can be subject for
+  //  TOCTOU but for dev purposes it shouldn't be an often case
+  private async allocateServicePorts(): Promise<void> {
+    const used = new Set<number>();
+    for (const service of this.services) {
+      let port = await getPort();
+      while (used.has(port)) {
+        port = await getPort();
+      }
+      used.add(port);
+      this.servicePorts.set(service.name, port);
+    }
+  }
+
   private async startService(
     service: Service,
     colorIndex: number
   ): Promise<ServiceDevProcess> {
-    const workspacePath = path.join(this.cwd, service.workspace || '.');
-    const framework = frameworkList.find(f => f.slug === service.framework);
     const logger = createServiceLogger(
       service.name,
       colorIndex,
       this.maxNameLength
     );
+    const spec = isExperimentalServiceV2(service)
+      ? this.getV2StartSpec(service)
+      : this.getV1StartSpec(service);
 
-    const serviceUrlEnvVars = getServiceUrlEnvVars({
-      services: this.services,
-      frameworkList: framework ? [framework] : [],
-      origin: this.proxyOrigin,
-      currentEnv: this.env,
-      envPrefix: service.envPrefix,
+    const port = this.servicePorts.get(service.name);
+    if (port !== undefined) {
+      spec.env.VERCEL_DEV_PORT = String(port);
+    }
+
+    // A buildpack-backed service builds a container image, which nothing
+    // here can run yet; `vercel dev` rejects these before starting any
+    // service, so this only guards other entry paths.
+    const buildpackRuntime = getBuildpackRuntime(service.builder);
+    if (buildpackRuntime) {
+      throw buildpackServicesDevUnsupportedError([
+        { name: service.name, runtime: buildpackRuntime },
+      ]);
+    }
+
+    if (spec.builderSpec) {
+      const result = await this.tryStartWithBuilder(
+        service.name,
+        spec,
+        logger,
+        port
+      );
+      if (result) {
+        return result;
+      }
+    }
+
+    const devCommand =
+      spec.explicitDevCommand || spec.framework?.settings?.devCommand?.value;
+    if (!devCommand) {
+      throw dev.DEV_SERVICE_NO_DEV_SERVER({
+        name: service.name,
+        framework: service.framework ?? 'none',
+      });
+    }
+
+    return this.spawnDevCommandProcess({
+      name: service.name,
+      devCommand,
+      framework: spec.framework,
+      workspacePath: spec.rootPath,
+      env: spec.env,
+      logger,
+      builderConfig: spec.builderConfig,
+      routePrefixes: spec.routePrefixes,
+      workspaceLabel: spec.rootLabel,
+      port,
     });
+  }
 
+  /**
+   * Every service shares the dev server's Runtime Cache store, so a value one
+   * service writes is readable by the others, like in a deployment. A cache
+   * endpoint the developer configured themselves takes precedence.
+   */
+  private applyRuntimeCacheEnv(env: NodeJS.ProcessEnv): void {
+    if (env.RUNTIME_CACHE_ENDPOINT) {
+      return;
+    }
+    Object.assign(
+      env,
+      getDevRuntimeCacheEnv(this.resourceEndpoints.runtimeCache.direct, '')
+    );
+  }
+
+  private applyContainerResourceProxyEnv(env: NodeJS.ProcessEnv): void {
+    const endpoints = this.resourceEndpoints;
+    Object.assign(env, getDevSchedulesEnv(endpoints.schedules?.proxy, true));
+    if (env.VERCEL_QUEUE_BASE_URL === endpoints.queues.direct) {
+      Object.assign(
+        env,
+        getDevQueueEnv(
+          endpoints.queues.proxy,
+          env.VERCEL_HAS_WORKER_SERVICES !== undefined
+        )
+      );
+    }
+    if (env.RUNTIME_CACHE_ENDPOINT === endpoints.runtimeCache.direct) {
+      Object.assign(
+        env,
+        getDevRuntimeCacheEnv(endpoints.runtimeCache.proxy, '')
+      );
+    }
+  }
+
+  private getV1StartSpec(service: ExperimentalService): ServiceStartSpec {
+    const framework = frameworkList.find(f => f.slug === service.framework);
+    const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
+
+    let perServiceEnv: Record<string, string> = {};
+    // other services URLs injection (`experimentalServices` only feature)
+    if (this.useImplicitEnvInjection) {
+      perServiceEnv = getExperimentalServiceUrlEnvVars({
+        services: this.services,
+        frameworkList: framework ? [framework] : [],
+        origin: this.proxyOrigin,
+        currentEnv: effectiveProcessEnv,
+      });
+    } else if (service.env) {
+      perServiceEnv = getServiceUrlEnvVars({
+        requestedEnv: service.env,
+        consumerService: service,
+        services: this.services,
+        frameworkList,
+        origin: this.proxyOrigin,
+        currentEnv: effectiveProcessEnv,
+      });
+    }
+
+    // Precedence: process env > env* files > per-service env > config env > defaults
+    //
+    // per-service env already contains config env that is folded into it during
+    // service's resolution
     const env = cloneEnv(
       {
         FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
         BROWSER: 'none',
       },
-      process.env,
-      this.env,
-      serviceUrlEnvVars
+      perServiceEnv,
+      effectiveProcessEnv
     );
     env.VERCEL_SERVICE_TYPE = service.type;
     if (service.trigger) {
@@ -361,113 +731,186 @@ export class ServicesOrchestrator {
       env.VERCEL_HAS_WORKER_SERVICES = '1';
     }
 
-    // When any worker service exists, point all services at the dev server's
-    // queue proxy so that send() calls from web services are routed through
-    // the proxy and dispatched to the matching worker process.
-    if (this.hasQueueServices) {
-      env.VERCEL_QUEUE_BASE_URL = `${this.proxyOrigin}/_svc/_queues`;
-      env.VERCEL_QUEUE_TOKEN = 'vc-dev-token';
-    }
+    Object.assign(
+      env,
+      getDevQueueEnv(
+        this.resourceEndpoints.queues.direct,
+        this.hasQueueServices
+      )
+    );
+
+    this.applyRuntimeCacheEnv(env);
+    Object.assign(
+      env,
+      getDevSchedulesEnv(this.resourceEndpoints.schedules?.direct)
+    );
 
     if (service.routePrefix && service.routePrefix !== '/') {
       env.VERCEL_SERVICE_ROUTE_PREFIX = service.routePrefix;
       env.VERCEL_SERVICE_ROUTE_PREFIX_STRIP = '1';
     }
 
-    // Try to use builder's startDevServer if available
-    // Prefer framework's useRuntime, but fall back to resolved builder from service config
-    const builderSpec = framework?.useRuntime?.use || service.builder?.use;
-    if (builderSpec) {
-      const result = await this.tryStartWithBuilder(
-        service,
-        builderSpec,
-        workspacePath,
-        env,
-        logger
-      );
-      if (result) {
-        return result;
-      }
-    }
-
-    // Fallback to framework's devCommand
-    return this.startServiceWithDevCommand(
-      service,
+    const workspace = service.workspace || '.';
+    return {
+      rootPath: path.join(this.cwd, workspace),
+      rootLabel: workspace,
       framework,
-      workspacePath,
+      builderSpec: this.preferServiceBuilder
+        ? service.builder?.use || framework?.useRuntime?.use
+        : framework?.useRuntime?.use || service.builder?.use,
+      entrypoint: getEntrypointForService(
+        service.builder?.src,
+        service.entrypoint,
+        workspace
+      ),
+      builderConfig: service.builder?.config,
+      frameworkForDev: service.framework || 'services',
+      servicePayload: {
+        name: service.name,
+        type: service.type,
+        trigger: service.trigger,
+        routePrefix: service.routePrefix,
+        subdomain: service.subdomain,
+        workspace: service.workspace,
+        schedule: service.schedule,
+      },
+      routePrefixes: getServiceRoutePrefixes(service),
       env,
-      logger
-    );
+    };
   }
 
+  private getV2StartSpec(service: ExperimentalServiceV2): ServiceStartSpec {
+    const framework = frameworkList.find(f => f.slug === service.framework);
+    const effectiveProcessEnv = cloneEnv(this.envFilesValues, process.env);
+
+    const perServiceEnv: Record<string, string> = {};
+    for (const binding of service.bindings ?? []) {
+      if (
+        (binding.type !== undefined && binding.type !== 'service') ||
+        binding.format !== 'url'
+      ) {
+        continue;
+      }
+      if (binding.env in effectiveProcessEnv) {
+        continue;
+      }
+      const targetPort = this.servicePorts.get(binding.service);
+      if (targetPort === undefined) {
+        continue;
+      }
+      perServiceEnv[binding.env] = `http://127.0.0.1:${targetPort}`;
+    }
+
+    const env = cloneEnv(
+      {
+        FORCE_COLOR: process.stdout.isTTY ? '1' : '0',
+        BROWSER: 'none',
+      },
+      effectiveProcessEnv,
+      perServiceEnv
+    );
+
+    if (
+      this.hasQueueServices &&
+      service.runtime === 'python' &&
+      env.VERCEL_HAS_WORKER_SERVICES === undefined
+    ) {
+      env.VERCEL_HAS_WORKER_SERVICES = '1';
+    }
+    Object.assign(
+      env,
+      getDevQueueEnv(
+        this.resourceEndpoints.queues.direct,
+        this.hasQueueServices
+      )
+    );
+
+    this.applyRuntimeCacheEnv(env);
+    Object.assign(
+      env,
+      getDevSchedulesEnv(this.resourceEndpoints.schedules?.direct)
+    );
+
+    const root = service.root || '.';
+    return {
+      rootPath: path.join(this.cwd, root),
+      rootLabel: root,
+      framework,
+      builderSpec: framework?.useRuntime?.use || service.builder?.use,
+      entrypoint: getEntrypointForService(
+        service.builder?.src,
+        service.entrypoint,
+        root
+      ),
+      builderConfig: service.builder?.config,
+      frameworkForDev: service.framework || 'services',
+      servicePayload: { name: service.name, workspace: root },
+      routePrefixes: [],
+      env,
+      explicitDevCommand: service.devCommand,
+    };
+  }
+
+  // Start a service via its builder's `startDevServer`, if it exposes one.
+  // Returns null to fall back to a dev command
   private async tryStartWithBuilder(
-    service: Service,
-    builderSpec: string,
-    workspacePath: string,
-    env: NodeJS.ProcessEnv,
-    logger: ServiceLogger
+    name: string,
+    spec: ServiceStartSpec,
+    logger: ServiceLogger,
+    port?: number
   ): Promise<ServiceDevProcess | null> {
+    if (!spec.builderSpec) {
+      return null;
+    }
     try {
-      const builders = await importBuilders(new Set([builderSpec]), this.cwd);
-      const builderWithPkg = builders.get(builderSpec);
+      const builders = await importBuilders(
+        new Set([spec.builderSpec]),
+        this.cwd
+      );
+      const builderWithPkg = builders.get(spec.builderSpec);
       const builder = builderWithPkg?.builder as
+        | BuilderV2
         | BuilderV3
         | BuilderVX
         | undefined;
 
-      if (
-        (builder?.version !== 3 && builder?.version !== -1) ||
-        !builder?.startDevServer
-      ) {
+      if (!builder?.startDevServer) {
         return null;
       }
 
+      if (builderWithPkg?.pkg.name === '@vercel/container') {
+        this.applyContainerResourceProxyEnv(spec.env);
+      }
+
       output.debug(
-        `Starting ${chalk.bold(service.name)} using ${chalk.cyan.bold(builderSpec)}`
+        `Starting ${chalk.bold(name)} using ${chalk.cyan.bold(spec.builderSpec)}`
       );
 
-      // Use the resolved builder.src which includes framework defaults,
-      // or fall back to explicit entrypoint.
-      // Strip the workspace prefix since workPath is already the service workspace.
-      // e.g., builder.src="frontend/package.json" + workspace="frontend"
-      //   → entrypoint="package.json" (relative to workspacePath)
-      let entrypoint = service.builder?.src || service.entrypoint || '';
-      const workspace = service.workspace || '.';
-      if (workspace !== '.') {
-        const wsPrefix = workspace + '/';
-        if (entrypoint.startsWith(wsPrefix)) {
-          entrypoint = entrypoint.slice(wsPrefix.length);
-        }
-      }
-      // Mirror services build behavior in dev: when a service doesn't declare
-      // an explicit framework (runtime-only services), builders should still
-      // receive the project framework context of "services".
-      const frameworkForDev = service.framework || 'services';
+      injectNextDevWebSocketShimIfNeeded(
+        spec.env,
+        spec.framework?.settings.devCommand?.value || '',
+        { framework: spec.framework?.slug }
+      );
+
       const result = await builder.startDevServer({
-        entrypoint,
-        workPath: workspacePath,
+        entrypoint: spec.entrypoint,
+        workPath: spec.rootPath,
         repoRootPath: this.repoRoot,
         config: {
-          ...(service.builder?.config || {}),
-          framework: frameworkForDev,
+          ...(spec.builderConfig || {}),
+          framework: spec.frameworkForDev,
         },
         meta: {
           isDev: true,
-          env,
+          env: spec.env,
+          port,
           serviceCount: this.services.length,
           pythonServiceCount: this.pythonServiceCount,
           syncDependencies: true,
-          serviceName: service.name,
+          serviceName: name,
+          devResourceEndpoints: this.resourceEndpoints,
         },
-        service: {
-          name: service.name,
-          type: service.type,
-          trigger: service.trigger,
-          routePrefix: service.routePrefix,
-          subdomain: service.subdomain,
-          workspace: service.workspace,
-          schedule: service.schedule,
-        },
+        service: spec.servicePayload,
         files: {},
         onStdout: (data: Buffer) => logger.stdout.write(data),
         onStderr: (data: Buffer) => logger.stderr.write(data),
@@ -478,21 +921,26 @@ export class ServicesOrchestrator {
       }
 
       const host = await checkForPort(result.port, STARTUP_TIMEOUT);
-      output.debug(`Service ${service.name} started on ${host}:${result.port}`);
+      output.debug(`Service ${name} started on ${host}:${result.port}`);
+
+      if (result.queueSubscriptions?.length) {
+        this.onQueueSubscriptions?.(name, result.queueSubscriptions);
+      }
 
       return {
-        name: service.name,
+        name,
         host,
         port: result.port,
         pid: result.pid,
         shutdown: result.shutdown,
-        routePrefixes: getServiceRoutePrefixes(service),
-        workspace: service.workspace || '.',
+        routePrefixes: spec.routePrefixes,
+        workspace: spec.rootLabel,
         logger,
         crons: result.crons,
+        queueSubscriptions: result.queueSubscriptions,
       };
     } catch (err) {
-      output.debug(`Failed to use startDevServer for ${service.name}: ${err}`);
+      output.debug(`Failed to use startDevServer for ${name}: ${err}`);
       // Re-throw NowBuildError so user-facing errors are displayed properly
       if (err instanceof NowBuildError) {
         throw err;
@@ -501,25 +949,36 @@ export class ServicesOrchestrator {
     }
   }
 
-  // Adapted from DevServer
-  private async startServiceWithDevCommand(
-    service: Service,
-    framework: Framework | undefined,
-    workspacePath: string,
-    env: NodeJS.ProcessEnv,
-    logger: ServiceLogger
-  ): Promise<ServiceDevProcess> {
-    const devCommand = framework?.settings?.devCommand?.value;
-    if (!devCommand) {
-      throw new Error(
-        `No dev server available for service "${service.name}" (framework: ${service.framework})`
-      );
-    }
+  private async spawnDevCommandProcess(params: {
+    name: string;
+    devCommand: string;
+    framework: Framework | undefined;
+    workspacePath: string;
+    env: NodeJS.ProcessEnv;
+    logger: ServiceLogger;
+    builderConfig: Config | undefined;
+    routePrefixes: string[];
+    workspaceLabel: string;
+    port?: number;
+  }): Promise<ServiceDevProcess> {
+    const {
+      name,
+      devCommand,
+      framework,
+      workspacePath,
+      env,
+      logger,
+      builderConfig,
+      routePrefixes,
+      workspaceLabel,
+    } = params;
 
-    await this.syncDependencies(service.builder?.config, workspacePath, logger);
+    await this.syncDependencies(builderConfig, workspacePath, logger);
 
-    const port = await getPort();
+    const port = params.port ?? (await getPort());
     env.PORT = `${port}`;
+    env.VERCEL_CLI_VERSION = pkg.version;
+    const command = replaceDevCommandPort(devCommand, port);
 
     // Add node_modules/.bin to PATH
     const nodeBinPaths = getNodeBinPaths({
@@ -530,7 +989,7 @@ export class ServicesOrchestrator {
     env.PATH = `${nodeBinPath}${path.delimiter}${env.PATH}`;
 
     output.debug(
-      `Starting ${chalk.bold(service.name)} with ${chalk.cyan.bold(`"${devCommand}"`)}`
+      `Starting ${chalk.bold(name)} with ${chalk.cyan.bold(`"${command}"`)}`
     );
 
     // Pass terminal width so child frameworks can format output correctly.
@@ -538,7 +997,11 @@ export class ServicesOrchestrator {
       env.COLUMNS = `${process.stdout.columns}`;
     }
 
-    const child = spawnCommand(devCommand, {
+    injectNextDevWebSocketShimIfNeeded(env, command, {
+      framework: framework?.slug,
+    });
+
+    const child = spawnCommand(command, {
       cwd: workspacePath,
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -546,17 +1009,13 @@ export class ServicesOrchestrator {
     });
 
     if (!child.pid) {
-      throw new Error(
-        `Failed to start service "${service.name}": no PID returned`
-      );
+      throw dev.DEV_SERVICE_NO_PID({ name });
     } else if (!child.stdout || !child.stderr) {
-      throw new Error(
-        `Failed to start service "${service.name}": expected child process to have stdout and stderr`
-      );
+      throw dev.DEV_SERVICE_NO_STDIO({ name });
     }
 
     // Track process immediately so we can kill it if startup fails
-    this.managedProcesses.set(service.name, child);
+    this.managedProcesses.set(name, child);
 
     child.stdout?.on('data', (chunk: Buffer) => {
       logger.stdout.write(chunk);
@@ -567,22 +1026,22 @@ export class ServicesOrchestrator {
 
     let host: string;
     try {
-      host = await this.waitForPort(child, service.name, port);
+      host = await this.waitForPort(child, name, port);
     } catch (error) {
-      this.managedProcesses.delete(service.name);
+      this.managedProcesses.delete(name);
       throw error;
     }
 
-    output.debug(`Service ${service.name} listening on ${host}:${port}`);
+    output.debug(`Service ${name} listening on ${host}:${port}`);
 
     return {
-      name: service.name,
+      name,
       host,
       port,
       pid: child.pid,
       process: child,
-      routePrefixes: getServiceRoutePrefixes(service),
-      workspace: service.workspace || '.',
+      routePrefixes,
+      workspace: workspaceLabel,
       logger,
     };
   }
@@ -705,7 +1164,7 @@ export class ServicesOrchestrator {
           workspacePath,
           [],
           undefined,
-          undefined,
+          this.installMeta,
           undefined,
           { stdout, stderr }
         );
@@ -727,19 +1186,17 @@ export class ServicesOrchestrator {
         managed.crons && managed.crons.length > 0
           ? managed.crons
           : service &&
+              isExperimentalService(service) &&
               isScheduleTriggeredService(service) &&
-              service.schedule &&
-              service.schedule !== '<dynamic>'
-            ? [
-                {
-                  path: getInternalServiceCronPath(
-                    name,
-                    service.entrypoint || service.builder.src || 'index',
-                    service.handlerFunction || 'cron'
-                  ),
-                  schedule: service.schedule,
-                },
-              ]
+              service.schedule
+            ? getStaticServiceSchedules(service.schedule).map(schedule => ({
+                path: getInternalServiceCronPath(
+                  name,
+                  service.entrypoint || service.builder.src || 'index',
+                  service.handlerFunction || 'cron'
+                ),
+                schedule,
+              }))
             : [];
       if (crons.length === 0) continue;
 

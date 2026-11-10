@@ -80,6 +80,37 @@ describe('parseGoModVersion', function () {
 
   it('returns the latest patch version for go 1.26', () => {
     const version = parseGoModVersion('go 1.26');
-    expect(version?.go).toEqual('1.26.1');
+    expect(version?.go).toEqual('1.26.8');
+  });
+
+  it('returns the latest patch version for go 1.27', () => {
+    const version = parseGoModVersion('go 1.27');
+    expect(version?.go).toEqual('1.27.1');
+  });
+
+  it('maps a language version newer than the version map to its first release', () => {
+    const version = parseGoModVersion('go 1.99');
+    expect(version?.go).toEqual('1.99.0');
+    expect(version?.toolchain).toBeUndefined();
+  });
+
+  it('keeps an explicit toolchain alongside a newer language version', () => {
+    const version = parseGoModVersion('go 1.99\ntoolchain go1.99.3');
+    expect(version?.go).toEqual('1.99.0');
+    expect(version?.toolchain).toEqual('1.99.3');
+  });
+
+  it('still rejects an unsupported old version', () => {
+    expect(() => parseGoModVersion('go 1.12')).toThrowError(
+      expect.objectContaining({ code: 'ERR_UNSUPPORTED_GO_VERSION' })
+    );
+  });
+
+  it('parses a go.work file', () => {
+    const version = parseGoModVersion(
+      'go 1.27.0\n\ntoolchain go1.27.1\n\nuse (\n\t./services/api\n\t./services/worker\n)\n'
+    );
+    expect(version?.go).toEqual('1.27.0');
+    expect(version?.toolchain).toEqual('1.27.1');
   });
 });

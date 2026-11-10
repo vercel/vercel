@@ -9,8 +9,15 @@ import { membersSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
-import cmd from '../../util/output/cmd';
 import output from '../../output-manager';
+import {
+  getPaginationOpts,
+  INVALID_NEXT_MESSAGE,
+  parseNumericCursor,
+} from '../../util/get-pagination-opts';
+import { printNextPageCommand } from '../../util/pagination';
+import invite from './invite';
+import { membersRemove } from './members-remove';
 
 interface TeamMember {
   uid: string;
@@ -32,6 +39,14 @@ export default async function members(
   client: Client,
   argv: string[]
 ): Promise<number> {
+  if (argv[0] === 'invite') {
+    return invite(client, argv.slice(1));
+  }
+
+  if (argv[0] === 'remove' || argv[0] === 'rm') {
+    return membersRemove(client, argv.slice(1));
+  }
+
   let parsedArgs;
   const flagsSpecification = getFlagsSpecification(membersSubcommand.options);
   try {
@@ -45,27 +60,34 @@ export default async function members(
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
-  const next = parsedArgs.flags['--next'];
+  const next = parseNumericCursor(parsedArgs.flags['--next']);
+  const limit = parsedArgs.flags['--limit'];
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
   if (typeof next !== 'undefined' && !Number.isInteger(next)) {
-    output.error('Please provide a number for flag `--next`');
+    output.error(INVALID_NEXT_MESSAGE);
+    return 2;
+  }
+  try {
+    getPaginationOpts(parsedArgs.flags);
+  } catch (error) {
+    output.error(error instanceof Error ? error.message : String(error));
     return 1;
   }
 
-  const teamId = client.config.currentTeam;
+  const teamId = await client.resolveCurrentTeam();
   if (!teamId) {
     output.error(
       'Team scope is required. Run `vercel teams switch <slug>` or pass `--scope`.'
@@ -73,9 +95,9 @@ export default async function members(
     return 1;
   }
 
-  const query = new URLSearchParams({ limit: '20' });
+  const query = new URLSearchParams({ limit: String(limit ?? 20) });
   if (next) {
-    query.set('next', String(next));
+    query.set('until', String(next));
   }
 
   const result = await client.fetch<TeamMembersResponse>(
@@ -101,10 +123,11 @@ export default async function members(
   ];
   client.stderr.write(`${table(rows, { hsep: 3 })}\n`);
 
-  if (pagination?.count === 20) {
+  if (pagination?.next) {
     const flags = getCommandFlags(parsedArgs.flags, ['--next', '-N']);
     const nextCmd = `${packageName} teams members${flags} --next ${pagination.next}`;
-    output.log(`To display the next page run ${cmd(nextCmd)}`);
+    output.print('\n');
+    printNextPageCommand(nextCmd);
   }
 
   return 0;

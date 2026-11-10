@@ -1,6 +1,31 @@
 import type { File, HasField, Chain } from './types';
 import { Lambda } from './lambda';
 
+/**
+ * The framework's own description of what it prerendered at build time,
+ * rather than re-deriving it from build artifacts. These are *initial*
+ * values: revalidation can regenerate a route's output over the lifetime of
+ * a deployment, so readers must treat them as the state as of the build,
+ * not as live state.
+ */
+export interface PrerenderInitialMetadata {
+  /**
+   * What has to happen at request time to finish the response, as of build
+   * time: `static` needs no server compute, `resuming` streams the static
+   * response while the server resumes postponed work, and `blocking` cannot
+   * start the response until request-time compute starts.
+   */
+  compute: 'blocking' | 'resuming' | 'static';
+  /**
+   * Byte size of the prerendered HTML shell, when the entry has one. `0` is
+   * a real size — a shell that postponed everything — and `undefined` means
+   * there is no HTML shell to measure (route handlers, Pages Router).
+   */
+  htmlSize?: number;
+}
+
+export type PrerenderOnMiss = 'sync' | 'dynamic';
+
 interface PrerenderOptions {
   expiration: number | false;
   staleExpiration?: number;
@@ -19,6 +44,8 @@ interface PrerenderOptions {
   chain?: Chain;
   exposeErrBody?: boolean;
   partialFallback?: boolean;
+  initialMetadata?: PrerenderInitialMetadata;
+  onMiss?: PrerenderOnMiss;
 }
 
 export class Prerender {
@@ -49,6 +76,15 @@ export class Prerender {
   public chain?: Chain;
   public exposeErrBody?: boolean;
   public partialFallback?: boolean;
+  /**
+   * The framework's build-time serving metadata for this prerender.
+   * `undefined` when the framework did not provide it, which is legitimate:
+   * not-found routes, Pages Router `fallback: false` templates, and builds
+   * from frameworks that predate the field carry none.
+   */
+  public initialMetadata?: PrerenderInitialMetadata;
+  /** Serving mode when no prerendered output exists yet. Absent means `sync`. Interpreted by the proxy; carried unvalidated. */
+  public onMiss?: PrerenderOnMiss;
 
   constructor({
     expiration,
@@ -68,11 +104,15 @@ export class Prerender {
     chain,
     exposeErrBody,
     partialFallback,
+    initialMetadata,
+    onMiss,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
     this.staleExpiration = staleExpiration;
     this.sourcePath = sourcePath;
+    this.initialMetadata = initialMetadata;
+    this.onMiss = onMiss;
 
     this.lambda = lambda;
     if (this.lambda) {

@@ -4,15 +4,28 @@ import getInvalidSubcommand from '../../util/get-invalid-subcommand';
 import getSubcommand from '../../util/get-subcommand';
 import { type Command, help } from '../help';
 import create from './api-keys-create';
-import { apiKeysSubcommand, createSubcommand } from './command';
+import list from './api-keys-list';
+import inspect from './api-keys-inspect';
+import remove from './api-keys-remove';
+import {
+  apiKeysSubcommand,
+  createSubcommand,
+  listSubcommand,
+  inspectSubcommand,
+  removeSubcommand,
+} from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 import { AiGatewayApiKeysTelemetryClient } from '../../util/telemetry/commands/ai-gateway/api-keys';
 import { printError } from '../../util/error';
 
 const COMMAND_CONFIG = {
   create: getCommandAliases(createSubcommand),
+  list: getCommandAliases(listSubcommand),
+  inspect: getCommandAliases(inspectSubcommand),
+  revoke: getCommandAliases(removeSubcommand),
 };
 
 export default async function apiKeys(client: Client) {
@@ -30,7 +43,7 @@ export default async function apiKeys(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(2);
@@ -43,13 +56,19 @@ export default async function apiKeys(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('ai-gateway api-keys', subcommand);
-    output.print(help(apiKeysSubcommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(apiKeysSubcommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: apiKeysSubcommand,
         columns: client.stderr.columns,
       })
@@ -61,13 +80,49 @@ export default async function apiKeys(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway api-keys', subcommandOriginal);
         printHelp(createSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandCreate(subcommandOriginal);
       return create(client, args);
+    case 'list':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('ai-gateway api-keys', subcommandOriginal);
+        printHelp(listSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandList(subcommandOriginal);
+      return list(client, args);
+    case 'inspect':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('ai-gateway api-keys', subcommandOriginal);
+        printHelp(inspectSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      return inspect(client, args);
+    case 'revoke':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('ai-gateway api-keys', subcommandOriginal);
+        printHelp(removeSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandRevoke(subcommandOriginal);
+      if (subcommandOriginal !== 'revoke') {
+        warnDeprecatedSubcommand(
+          client,
+          `ai-gateway api-keys ${subcommandOriginal}`,
+          'ai-gateway api-keys revoke'
+        );
+      }
+      return remove(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(apiKeysSubcommand, { columns: client.stderr.columns }));
+      output.print(
+        help(apiKeysSubcommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

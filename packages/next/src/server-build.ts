@@ -547,6 +547,7 @@ export async function serverBuild({
     }
   >();
 
+  let instrumentationHookBuildTrace;
   if (hasLambdas) {
     const initialTracingLabel = 'Traced Next.js server files in';
 
@@ -555,7 +556,6 @@ export async function serverBuild({
     let initialFileList: string[];
     let initialFileReasons: NodeFileTraceReasons;
     let nextServerBuildTrace;
-    let instrumentationHookBuildTrace;
 
     const useBundledServer = semver.gte(
       nextVersion,
@@ -623,6 +623,7 @@ export async function serverBuild({
         base: baseDir,
         cache: {},
         processCwd: entryPath,
+        moduleSyncCatchall: true,
         ignore: [
           ...requiredServerFilesManifest.ignore.map(file =>
             path.join(entryPath, file)
@@ -960,6 +961,7 @@ export async function serverBuild({
         base: baseDir,
         cache: traceCache,
         processCwd: projectDir,
+        moduleSyncCatchall: true,
       });
       traceResult.esmFileList.forEach(file => traceResult?.fileList.add(file));
       parentFilesMap = getFilesMapFromReasons(
@@ -1425,11 +1427,13 @@ export async function serverBuild({
           '___next_launcher.cjs'
         ),
         operationType,
+        affinity: group.affinity,
         memory: group.memory,
         regions: group.regions,
         functionFailoverRegions: group.functionFailoverRegions,
         runtime: nodeVersion.runtime,
         maxDuration: group.maxDuration,
+        maxConcurrency: group.maxConcurrency,
         supportsCancellation: group.supportsCancellation,
         isStreaming: group.isStreaming,
         nextVersion,
@@ -1586,6 +1590,7 @@ export async function serverBuild({
     isCorrectMiddlewareOrder,
     functionsConfigManifest,
     requiredServerFilesManifest,
+    instrumentationHookBuildTrace: instrumentationHookBuildTrace,
   });
 
   const middleware = await getMiddlewareBundle({
@@ -2982,7 +2987,7 @@ export async function serverBuild({
             },
           ]),
     ],
-    framework: { version: nextVersion },
+    framework: { slug: 'nextjs', version: nextVersion },
     flags: variantsManifest || undefined,
   };
 }

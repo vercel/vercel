@@ -5,16 +5,25 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName } from '../../util/pkg-name';
-import { getFlags } from '../../util/flags/get-flags';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
+import getCommandFlags from '../../util/get-command-flags';
+import { getFlags, MAX_FLAGS_PAGE_LIMIT } from '../../util/flags/get-flags';
 import formatTable from '../../util/format-table';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
 import { FlagsLsTelemetryClient } from '../../util/telemetry/commands/flags/ls';
 import { listSubcommand } from './command';
 import type { Flag } from '../../util/flags/types';
+import { quoteArg } from '../../util/flags/quote-arg';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+  type DeprecatedOptionWarning,
+} from '../../util/renamed-option';
 import { formatProject } from '../../util/projects/format-project';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function ls(
   client: Client,
@@ -32,22 +41,55 @@ export default async function ls(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { flags } = parsedArgs;
   const state = (flags['--state'] as 'active' | 'archived') || 'active';
+  const tags = flags['--tag'] as string[] | undefined;
+  const createdBy = flags['--created-by'] as string | undefined;
+  const limit = flags['--limit'] as number | undefined;
+  const next = flags['--next'] as string | undefined;
   const json = flags['--json'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
+  const maintainer = getRenamedOption<string[]>(
+    flags,
+    '--maintainer',
+    '--maintainer-id',
+    { json }
+  );
 
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionState(state);
+  telemetryClient.trackCliOptionTag(tags);
+  telemetryClient.trackCliOptionCreatedBy(createdBy);
+  telemetryClient.trackCliOptionMaintainer(flags['--maintainer']);
+  telemetryClient.trackCliOptionMaintainerId(flags['--maintainer-id']);
+  telemetryClient.trackCliOptionLimit(limit);
+  telemetryClient.trackCliOptionNext(next);
   telemetryClient.trackCliFlagJson(json);
 
-  const link = await getLinkedProject(client);
+  if ('error' in maintainer) {
+    return reportRenamedOptionError(client, maintainer.error, { json });
+  }
+  const maintainerIds = maintainer.value;
+
+  if (
+    limit !== undefined &&
+    (!Number.isInteger(limit) || limit < 1 || limit > MAX_FLAGS_PAGE_LIMIT)
+  ) {
+    output.error(
+      `The --limit option must be an integer between 1 and ${MAX_FLAGS_PAGE_LIMIT}.`
+    );
+    return 2;
+  }
+
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -62,14 +104,22 @@ export default async function ls(
   output.spinner(`Fetching ${state} feature flags for ${projectSlugLink}`);
 
   try {
-    const flagsList = await getFlags(client, project.id, state);
+    const { flags: flagsList, next: nextCursor } = await getFlags(
+      client,
+      project.id,
+      {
+        state,
+        tags,
+        createdBy,
+        maintainerIds,
+        limit,
+        cursor: next,
+      }
+    );
     output.stopSpinner();
 
-    // Sort by updatedAt descending (most recently updated first)
-    const sortedFlags = flagsList.sort((a, b) => b.updatedAt - a.updatedAt);
-
     if (json) {
-      outputJson(client, sortedFlags);
+      outputJson(client, flagsList, nextCursor, [maintainer.warning]);
     } else if (flagsList.length === 0) {
       output.log(
         `No ${state} feature flags found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
@@ -78,7 +128,17 @@ export default async function ls(
       output.log(
         `${plural('feature flag', flagsList.length, true)} found for ${projectSlugLink} ${chalk.gray(lsStamp())}`
       );
-      printFlagsTable(sortedFlags);
+      printFlagsTable(flagsList);
+      if (nextCursor) {
+        const nextCmd = buildNextPageCommand(
+          flags,
+          tags,
+          maintainerIds,
+          nextCursor
+        );
+        output.print('\n');
+        printNextPageCommand(getCommandNamePlain(nextCmd));
+      }
     }
   } catch (err) {
     output.stopSpinner();
@@ -89,7 +149,37 @@ export default async function ls(
   return 0;
 }
 
-function outputJson(client: Client, flags: Flag[]) {
+function buildNextPageCommand(
+  flags: { [key: string]: unknown },
+  tags: string[] | undefined,
+  maintainerIds: string[] | undefined,
+  nextCursor: string
+): string {
+  // Forward all passed flags (including globals like --scope/--cwd) except the
+  // cursor and repeatable filters. getCommandFlags joins arrays with commas, so
+  // re-append --tag/--maintainer explicitly to preserve one value per flag.
+  const baseFlags = getCommandFlags(flags, [
+    '_',
+    '--tag',
+    '--maintainer',
+    '--maintainer-id',
+    '--next',
+    '--json',
+  ]);
+  const repeatable = [
+    ...(tags ?? []).map(tag => `--tag ${quoteArg(tag)}`),
+    ...(maintainerIds ?? []).map(id => `--maintainer ${quoteArg(id)}`),
+  ];
+  const suffix = repeatable.length > 0 ? ` ${repeatable.join(' ')}` : '';
+  return `flags ls${baseFlags}${suffix} --next ${nextCursor}`;
+}
+
+function outputJson(
+  client: Client,
+  flags: Flag[],
+  next: string | null,
+  warnings: ReadonlyArray<DeprecatedOptionWarning | undefined>
+) {
   const jsonOutput = {
     flags: flags.map(flag => ({
       id: flag.id,
@@ -101,8 +191,11 @@ function outputJson(client: Client, flags: Flag[]) {
       createdAt: flag.createdAt,
       updatedAt: flag.updatedAt,
     })),
+    pagination: { next },
   };
-  client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+  client.stdout.write(
+    `${JSON.stringify(withWarnings(jsonOutput, warnings), null, 2)}\n`
+  );
 }
 
 function printFlagsTable(flags: Flag[]) {

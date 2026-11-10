@@ -2,7 +2,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getFlag, getFlagSettings } from '../../util/flags/get-flags';
 import output from '../../output-manager';
@@ -10,6 +9,7 @@ import { FlagsInspectTelemetryClient } from '../../util/telemetry/commands/flags
 import { inspectSubcommand } from './command';
 import { formatProject } from '../../util/projects/format-project';
 import { printFlagDetails } from '../../util/flags/print-flag-details';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function inspect(
   client: Client,
@@ -27,27 +27,31 @@ export default async function inspect(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
-  const { args } = parsedArgs;
+  const { args, flags } = parsedArgs;
   const [flagArg] = args;
+  const json = flags['--json'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
     output.error(
       `Missing required argument: flag. Usage: ${getCommandName('flags inspect <flag>')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
+  telemetryClient.trackCliOptionProject(projectName);
+  telemetryClient.trackCliFlagJson(json);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -59,6 +63,12 @@ export default async function inspect(
   const projectSlugLink = formatProject(org.slug, project.name);
 
   try {
+    if (json) {
+      const flag = await getFlag(client, project.id, flagArg);
+      client.stdout.write(`${JSON.stringify({ flag }, null, 2)}\n`);
+      return 0;
+    }
+
     const [flag, settings] = await Promise.all([
       getFlag(client, project.id, flagArg),
       getFlagSettings(client, project.id),

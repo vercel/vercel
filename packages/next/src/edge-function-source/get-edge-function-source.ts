@@ -76,13 +76,13 @@ function getWasmImportStatements(wasm: { name: string }[] = []) {
 }
 
 async function validateSize(script: string, wasmFiles: string[]) {
-  const buffers = [Buffer.from(script, 'utf8')];
+  const buffers = [Uint8Array.from(Buffer.from(script, 'utf8'))];
   for (const filePath of wasmFiles) {
-    buffers.push(await readFile(filePath));
+    buffers.push(Uint8Array.from(await readFile(filePath)));
   }
   const content = Buffer.concat(buffers);
 
-  const gzipped = await gzip(content);
+  const gzipped = await gzip(Uint8Array.from(content));
   if (gzipped.length > EDGE_FUNCTION_SIZE_LIMIT) {
     throw new Error(
       `Exceeds maximum edge function size: ${prettyBytes(

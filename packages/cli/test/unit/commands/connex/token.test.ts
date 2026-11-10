@@ -2,7 +2,9 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
-import connex from '../../../../src/commands/connex';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import connect from '../../../../src/commands/connex';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
 
@@ -11,6 +13,7 @@ describe('connex token', () => {
 
   beforeEach(() => {
     client.reset();
+    client.cwd = setupTmpDir();
     const user = useUser();
     team = useTeam();
     client.config.currentTeam = team.id;
@@ -18,25 +21,25 @@ describe('connex token', () => {
   });
 
   it('should error when no clientId argument is provided', async () => {
-    client.setArgv('connex', 'token');
+    client.setArgv('connect', 'token');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
-    await expect(client.stderr).toOutput('Missing client ID or UID');
-    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Missing connector ID or UID');
+    expect(exitCode).toBe(2);
   });
 
   it('should error with invalid --subject value', async () => {
-    client.setArgv('connex', 'token', 'scl_abc', '--subject', 'invalid');
+    client.setArgv('connect', 'token', 'scl_abc', '--subject', 'invalid');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Invalid --subject value');
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
   });
 
   it('should print the raw token value in plain mode', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.json({
         token: 'xoxb-test-token-123',
         expiresAt: 1712345678,
@@ -44,16 +47,16 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     await expect(client.stdout).toOutput('xoxb-test-token-123\n');
   });
 
   it('should output JSON when --format=json is used', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.json({
         token: 'xoxb-json-token',
         expiresAt: 1712345678,
@@ -62,9 +65,9 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123', '--format=json');
+    client.setArgv('connect', 'token', 'scl_abc123', '--format=json');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     await expect(client.stdout).toOutput('"token": "xoxb-json-token"');
@@ -72,13 +75,13 @@ describe('connex token', () => {
 
   it('should pass subject and installationId in request body', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxb-app-token', expiresAt: 1712345678 });
     });
 
     client.setArgv(
-      'connex',
+      'connect',
       'token',
       'scl_abc123',
       '--subject',
@@ -87,7 +90,7 @@ describe('connex token', () => {
       'inst_42'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.subject).toEqual({ type: 'app' });
@@ -96,14 +99,14 @@ describe('connex token', () => {
 
   it('should include requester userId when --subject user', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxp-user-token', expiresAt: 1712345678 });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123', '--subject', 'user');
+    client.setArgv('connect', 'token', 'scl_abc123', '--subject', 'user');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.subject).toEqual({
@@ -114,35 +117,70 @@ describe('connex token', () => {
 
   it('should omit subject when no --subject flag is provided', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxp-default', expiresAt: 1712345678 });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.subject).toBeUndefined();
   });
 
+  it('should request the connector default scopes when --scopes is omitted', async () => {
+    let requestBody: Record<string, unknown> = {};
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
+      requestBody = req.body;
+      res.json({ token: 'xoxp-default', expiresAt: 1712345678 });
+    });
+
+    client.setArgv('connect', 'token', 'scl_abc123');
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestBody.scopes).toEqual(['*']);
+  });
+
+  it('should omit scopes when --no-default-scopes is provided', async () => {
+    let requestBody: Record<string, unknown> = {};
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
+      requestBody = req.body;
+      res.json({ token: 'xoxp-unscoped', expiresAt: 1712345678 });
+    });
+
+    client.setArgv('connect', 'token', 'scl_abc123', '--no-default-scopes');
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestBody.scopes).toBeUndefined();
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:token', value: 'token' },
+      { key: 'argument:id', value: '[REDACTED]' },
+      { key: 'flag:no-default-scopes', value: 'TRUE' },
+    ]);
+  });
+
   it('should accept comma-separated scopes', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxb-scoped', expiresAt: 1712345678 });
     });
 
     client.setArgv(
-      'connex',
+      'connect',
       'token',
       'scl_abc123',
       '--scopes',
       'chat:write,channels:read'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.scopes).toEqual(['chat:write', 'channels:read']);
@@ -150,41 +188,41 @@ describe('connex token', () => {
 
   it('should accept space-separated scopes', async () => {
     let requestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       requestBody = req.body;
       res.json({ token: 'xoxb-scoped', expiresAt: 1712345678 });
     });
 
     client.setArgv(
-      'connex',
+      'connect',
       'token',
       'scl_abc123',
       '--scopes',
       'chat:write channels:read'
     );
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(requestBody.scopes).toEqual(['chat:write', 'channels:read']);
   });
 
   it('should show friendly error when client is not found (404)', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
-    await expect(client.stderr).toOutput('Client not found');
+    await expect(client.stderr).toOutput('Connector not found');
     expect(exitCode).toBe(1);
   });
 
   it('should handle unresolved_token as terminal error', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -194,16 +232,16 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('does not support');
     expect(exitCode).toBe(1);
   });
 
   it('should fail fast and print authorize URL when stdout is not a TTY', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -213,20 +251,53 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
-    // Simulate `TOKEN=$(vc connex token ...)` — stdout captured, stdin is still a TTY
+    client.setArgv('connect', 'token', 'scl_abc123');
+    // Simulate `TOKEN=$(vc connect token ...)` — stdout captured, stdin is still a TTY
     (client.stdout as any).isTTY = false;
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput(
-      'https://vercel.com/api/v1/connex/authorize/scl_abc123'
+      'https://vercel.com/api/v1/connect/authorize/scl_abc123'
+    );
+    expect(exitCode).toBe(1);
+  });
+
+  it('should forward --scopes and --installation-id into the authorize URL', async () => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
+      res.statusCode = 422;
+      res.json({
+        error: {
+          code: 'user_authorization_required',
+          message: 'User authorization required',
+        },
+      });
+    });
+
+    client.setArgv(
+      'connect',
+      'token',
+      'scl_abc123',
+      '--scopes',
+      'chat:write,channels:read',
+      '--installation-id',
+      'inst_42'
+    );
+    (client.stdout as any).isTTY = false;
+
+    const exitCode = await connect(client);
+
+    // Params follow tokenParams insertion order (installationId, then
+    // scopes); query-param order is not semantically significant. scopes are
+    // comma-joined; URLSearchParams encodes the colon as %3A and comma as %2C.
+    await expect(client.stderr).toOutput(
+      'installationId=inst_42&scopes=chat%3Awrite%2Cchannels%3Aread'
     );
     expect(exitCode).toBe(1);
   });
 
   it('should fail fast and print install URL when stdin is not a TTY', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -236,42 +307,52 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
     (client.stdin as any).isTTY = false;
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput(
-      'https://vercel.com/api/v1/connex/install/scl_abc123'
+      'https://vercel.com/api/v1/connect/install/scl_abc123'
     );
     expect(exitCode).toBe(1);
   });
 
-  it('should fail fast when client.nonInteractive is true', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
-      res.statusCode = 422;
-      res.json({
-        error: {
-          code: 'user_authorization_required',
-          message: 'User authorization required',
-        },
-      });
+  it('should recover when --yes is passed even in non-TTY (agent flow)', async () => {
+    let postCount = 0;
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
+      postCount++;
+      if (postCount === 1) {
+        res.statusCode = 422;
+        res.json({
+          error: {
+            code: 'user_authorization_required',
+            message: 'User authorization required',
+          },
+        });
+      } else {
+        res.json({ token: 'xoxp-agent-flow', expiresAt: 1712345678 });
+      }
     });
 
-    client.nonInteractive = true;
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+      res.json({ status: 'success', data: { clientId: 'scl_abc123' } });
+    });
 
-    const exitCode = await connex(client);
+    // Simulate an agent/script: stdout not a TTY, but user explicitly opted in
+    (client.stdout as any).isTTY = false;
+    client.setArgv('connect', 'token', 'scl_abc123', '--yes');
 
-    await expect(client.stderr).toOutput(
-      'https://vercel.com/api/v1/connex/authorize/scl_abc123'
-    );
-    expect(exitCode).toBe(1);
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(postCount).toBe(2);
+    await expect(client.stdout).toOutput('xoxp-agent-flow');
   });
 
   it('should auto-authorize when user_authorization_required and --yes', async () => {
     let postCount = 0;
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       postCount++;
       if (postCount === 1) {
         res.statusCode = 422;
@@ -289,16 +370,16 @@ describe('connex token', () => {
       }
     });
 
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       res.json({
         status: 'success',
         data: { clientId: 'scl_abc123' },
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123', '--yes');
+    client.setArgv('connect', 'token', 'scl_abc123', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postCount).toBe(2);
@@ -308,7 +389,7 @@ describe('connex token', () => {
   it('should auto-install when client_installation_required and --yes, and carry forward installationId', async () => {
     let postCount = 0;
     let secondRequestBody: Record<string, unknown> = {};
-    client.scenario.post('/v1/connex/token/:clientId', (req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
       postCount++;
       if (postCount === 1) {
         res.statusCode = 422;
@@ -328,16 +409,16 @@ describe('connex token', () => {
       }
     });
 
-    client.scenario.get('/v1/connex/result/:code', (_req, res) => {
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
       res.json({
         status: 'success',
         data: { clientId: 'scl_abc123', installationId: 'inst_new' },
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123', '--yes');
+    client.setArgv('connect', 'token', 'scl_abc123', '--yes');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     expect(exitCode).toBe(0);
     expect(postCount).toBe(2);
@@ -346,7 +427,7 @@ describe('connex token', () => {
   });
 
   it('should prompt in fully interactive mode and abort cleanly when user declines', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 422;
       res.json({
         error: {
@@ -356,9 +437,9 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCodePromise = connex(client);
+    const exitCodePromise = connect(client);
 
     await expect(client.stderr).toOutput('Open browser');
     client.stdin.write('n\n');
@@ -369,7 +450,7 @@ describe('connex token', () => {
   });
 
   it('should handle generic API errors', async () => {
-    client.scenario.post('/v1/connex/token/:clientId', (_req, res) => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
       res.statusCode = 500;
       res.json({
         error: {
@@ -379,11 +460,118 @@ describe('connex token', () => {
       });
     });
 
-    client.setArgv('connex', 'token', 'scl_abc123');
+    client.setArgv('connect', 'token', 'scl_abc123');
 
-    const exitCode = await connex(client);
+    const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Something went wrong');
     expect(exitCode).toBe(1);
+  });
+
+  it('should track the id argument and options in telemetry', async () => {
+    client.scenario.post('/v1/connect/token/:clientId', (_req, res) => {
+      res.json({ token: 'xoxb-app-token', expiresAt: 1712345678 });
+    });
+
+    client.setArgv(
+      'connect',
+      'token',
+      'scl_abc123',
+      '--subject',
+      'app',
+      '--installation-id',
+      'inst_42',
+      '--scopes',
+      'chat:write,channels:read'
+    );
+
+    const exitCode = await connect(client);
+
+    expect(exitCode).toBe(0);
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:token', value: 'token' },
+      { key: 'argument:id', value: '[REDACTED]' },
+      // Closed enum, so safe to emit raw — this is the user-vs-app token split.
+      { key: 'option:subject', value: 'app' },
+      { key: 'option:installation-id', value: '[REDACTED]' },
+      { key: 'option:scopes', value: '[REDACTED]' },
+    ]);
+  });
+
+  it('should redact an invalid --subject value', async () => {
+    client.setArgv('connect', 'token', 'scl_abc123', '--subject', 'nonsense');
+
+    await connect(client);
+
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:token', value: 'token' },
+      { key: 'argument:id', value: '[REDACTED]' },
+      { key: 'option:subject', value: '[REDACTED]' },
+    ]);
+  });
+});
+
+describe('connex token --installation', () => {
+  // Runs `connect token` with a fresh client, recording the token request.
+  async function run(...args: string[]) {
+    client.reset();
+    client.cwd = setupTmpDir();
+    const user = useUser();
+    const team = useTeam();
+    client.config.currentTeam = team.id;
+    client.authConfig.userId = user.id;
+    let body: Record<string, unknown> | undefined;
+    client.scenario.post('/v1/connect/token/:clientId', (req, res) => {
+      body = req.body;
+      res.json({ token: 'xoxb-1', expiresAt: 1712345678 });
+    });
+    client.setArgv('connect', 'token', 'scl_abc123', ...args);
+    const exitCode = await connect(client);
+    return {
+      exitCode,
+      body,
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  it('still accepts --installation-id, with one warning that names --installation', async () => {
+    const now = await run('--subject', 'app', '--installation', 'inst_1');
+    const before = await run('--subject', 'app', '--installation-id', 'inst_1');
+
+    expect(now.exitCode).toBe(0);
+    expect(now.body).toMatchObject({ installationId: 'inst_1' });
+    expect(now.stderr).not.toContain('deprecated');
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.body).toEqual(now.body);
+    expect(before.stdout).toBe(now.stdout);
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain(
+      '! --installation-id is deprecated. Use --installation.\n'
+    );
+
+    const nowJson = await run('--installation', 'inst_1', '--json');
+    const beforeJson = await run('--installation-id', 'inst_1', '--json');
+    expectDeprecationInJson(
+      beforeJson.stdout,
+      nowJson.stdout,
+      '--installation-id is deprecated. Use --installation.'
+    );
+    expect(beforeJson.stderr).not.toContain('deprecated');
+  });
+
+  it('rejects --installation with --installation-id before any request', async () => {
+    const result = await run(
+      '--installation',
+      'inst_1',
+      '--installation-id',
+      'inst_1'
+    );
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(
+      "Can't use --installation with --installation-id."
+    );
+    expect(result.body).toBeUndefined();
   });
 });

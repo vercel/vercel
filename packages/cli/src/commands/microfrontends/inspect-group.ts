@@ -78,7 +78,7 @@ export default async function inspectGroup(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);
@@ -86,7 +86,7 @@ export default async function inspectGroup(client: Client): Promise<number> {
     output.error(
       'error' in formatResult ? formatResult.error : 'Invalid output format'
     );
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -117,25 +117,25 @@ export default async function inspectGroup(client: Client): Promise<number> {
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         action: AGENT_ACTION.MISSING_ARGUMENTS,
         message:
-          'Missing required flag --group. Use --group and --format=json in non-interactive mode.',
+          'Missing required option --group. Use --group and --json in non-interactive mode.',
         next: [
           {
             command:
-              'vercel microfrontends inspect-group --group="<group-name-or-id>" --format=json',
+              'vercel microfrontends inspect-group --group="<group-name-or-id>" --json',
             when: 'to inspect a specific microfrontends group non-interactively',
           },
         ],
       },
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
   if (!client.stdin.isTTY && !groupFlag) {
     output.error(
-      'Missing required flag --group. Use --group to specify the microfrontends group, or run interactively.'
+      'Missing required option --group. Use --group to specify the microfrontends group, or run interactively.'
     );
-    return 1;
+    return 2;
   }
 
   let selectedGroup: MicrofrontendsGroupResponse;
@@ -182,7 +182,7 @@ export default async function inspectGroup(client: Client): Promise<number> {
     output.error(
       'Invalid --config-file-name. Value must end with .json or .jsonc.'
     );
-    return 1;
+    return 2;
   }
   const configFile = resolveLocalConfigFilePath(
     projects,
@@ -339,7 +339,7 @@ async function enrichGroupProject(
 
 async function getLocalRepoContext(client: Client): Promise<LocalRepoContext> {
   try {
-    const link = await getLinkedProject(client, client.cwd);
+    const link = await getLinkedProject(client, { cwd: client.cwd });
     // link is discriminated union, need to make TS happy
     if (link.status !== 'linked') {
       return {

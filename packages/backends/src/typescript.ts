@@ -9,25 +9,15 @@ import type {
 } from 'typescript';
 import type { TypescriptOptions } from './cervel/types.js';
 
-/**
- * Typecheck via the TypeScript compiler API (`createProgram`, `getPreEmitDiagnostics`),
- * not by spawning the `tsc` binary.
- *
- * We only want to validate the deployment entrypoint and its import graph, not every
- * file matched by `tsconfig` `include`. The CLI cannot combine `--project` with explicit
- * root files (TS5042), so expressing 'project options + entry-only roots' in one `tsc`
- * call requires a generated tsconfig on disk. Writing beside the user's config is
- * invasive; a temp config elsewhere often breaks `node_modules` / `@types` resolution
- * relative to the real project. The API lets us reuse `parseJsonConfigFileContent` (same
- * options as `-p`) with explicit `rootNames`, no files written, and a compiler host whose
- * current directory stays `workPath`.
- *
- * The `typescript` package is resolved with `require` from the user's app (peer dependency), not bundled.
- */
-
 const require_ = createRequire(import.meta.url);
 
 type TypeScriptModule = typeof import('typescript');
+
+// Diagnostic codes that `@vercel/node` ignores:
+// 6059: "'rootDir' is expected to contain all source files."
+// 18002: "The 'files' list in config file is empty."
+// 18003: "No inputs were found in config file."
+const IGNORED_DIAGNOSTIC_CODES = new Set([6059, 18002, 18003]);
 
 export const typescript = (args: TypescriptOptions) => {
   const { span } = args;
@@ -41,7 +31,9 @@ export const typescript = (args: TypescriptOptions) => {
       return;
     }
 
-    const ts = resolveTypeScriptModule(args.workPath);
+    const ts = resolveTypeScriptModule(
+      dirname(resolve(args.workPath, args.entrypoint))
+    );
     if (!ts) {
       console.log(
         c.gray(
@@ -58,11 +50,11 @@ export const typescript = (args: TypescriptOptions) => {
 };
 
 async function doTypeCheck(
-  args: { entrypoint: string; workPath: string },
+  args: { entrypoint: string; workPath: string; nodeVersionMajor?: number },
   ts: TypeScriptModule
 ): Promise<void> {
   const entryAbsolute = resolve(args.workPath, args.entrypoint);
-  const tsconfig = await findNearestTsconfig(args.workPath);
+  const tsconfig = findNearestTsconfig(dirname(entryAbsolute));
 
   const formatDiagnostics = process.stdout.isTTY
     ? ts.formatDiagnosticsWithColorAndContext
@@ -74,52 +66,99 @@ async function doTypeCheck(
     getCurrentDirectory: () => args.workPath,
   };
 
+  const filterIgnored = (diagnostics: readonly Diagnostic[]) =>
+    diagnostics.filter(d => !IGNORED_DIAGNOSTIC_CODES.has(d.code));
+
+  const fail = (diagnostics: readonly Diagnostic[]): never => {
+    const message = formatDiagnostics(diagnostics, diagnosticHost);
+    console.error('\nTypeScript type check failed:\n');
+    console.error(message);
+    throw new Error('TypeScript type check failed');
+  };
+
   let options: CompilerOptions;
-  let parseDiagnostics: readonly Diagnostic[] = [];
+  const rootNames = [entryAbsolute];
 
   if (tsconfig) {
     const configRead = ts.readConfigFile(tsconfig, ts.sys.readFile);
     if (configRead.error) {
-      const message = formatDiagnostics([configRead.error], diagnosticHost);
-      console.error('\nTypeScript type check failed:\n');
-      console.error(message);
-      throw new Error('TypeScript type check failed');
+      fail([configRead.error]);
     }
+    const config = configRead.config ?? {};
     const parsed = ts.parseJsonConfigFileContent(
-      configRead.config,
+      config,
       ts.sys,
       dirname(tsconfig),
       undefined,
       tsconfig
     );
-    parseDiagnostics = parsed.errors;
+    const parseErrors = filterIgnored(parsed.errors).filter(
+      d => d.category === ts.DiagnosticCategory.Error
+    );
+    if (parseErrors.length > 0) {
+      if (parsed.options.noEmitOnError) {
+        fail(parseErrors);
+      } else {
+        console.error(formatDiagnostics(parseErrors, diagnosticHost));
+      }
+    }
     options = {
       ...parsed.options,
       noEmit: true,
       skipLibCheck: true,
       allowJs: true,
-      esModuleInterop: true,
     };
+    // Emit-oriented options don't apply to a noEmit typecheck.
+    delete options.out;
+    delete options.outFile;
+    delete options.composite;
+    delete options.declarationDir;
+    delete options.declarationMap;
+    delete options.emitDeclarationOnly;
+    delete options.tsBuildInfoFile;
+    delete options.incremental;
+    if (options.target === undefined) {
+      options.target = defaultScriptTarget(ts, args.nodeVersionMajor);
+    }
+    if (options.esModuleInterop === undefined) {
+      options.esModuleInterop = true;
+    }
+    // Mirror `@vercel/node` fixConfig leniency, but only when the resolved
+    // config (post-`extends`) sets neither `module` nor `moduleResolution`,
+    // so explicit user resolution strategies are never overridden.
+    if (
+      options.module === undefined &&
+      options.moduleResolution === undefined
+    ) {
+      options.module = ts.ModuleKind.NodeNext;
+      options.moduleResolution = ts.ModuleResolutionKind.NodeNext;
+      options.strict = false;
+    }
+    // Ambient declaration files matched by the tsconfig contribute global
+    // types even when never imported; include them as extra program roots.
+    for (const fileName of parsed.fileNames) {
+      if (/\.d\.(ts|mts|cts)$/.test(fileName) && fileName !== entryAbsolute) {
+        rootNames.push(fileName);
+      }
+    }
   } else {
     options = {
       noEmit: true,
       skipLibCheck: true,
       allowJs: true,
       esModuleInterop: true,
-      target: ts.ScriptTarget.ES2022,
+      target: defaultScriptTarget(ts, args.nodeVersionMajor),
       module: ts.ModuleKind.NodeNext,
       moduleResolution: ts.ModuleResolutionKind.NodeNext,
+      strict: false,
     };
   }
 
   const compilerHost = ts.createCompilerHost(options);
   compilerHost.getCurrentDirectory = () => args.workPath;
 
-  const program = ts.createProgram([entryAbsolute], options, compilerHost);
-  const diagnostics = [
-    ...parseDiagnostics,
-    ...ts.getPreEmitDiagnostics(program),
-  ];
+  const program = ts.createProgram(rootNames, options, compilerHost);
+  const diagnostics = filterIgnored(ts.getPreEmitDiagnostics(program));
   const errors = diagnostics.filter(
     d => d.category === ts.DiagnosticCategory.Error
   );
@@ -129,30 +168,40 @@ async function doTypeCheck(
     return;
   }
 
-  const output = formatDiagnostics(errors, diagnosticHost);
-  console.error('\nTypeScript type check failed:\n');
-  console.error(output);
-  throw new Error('TypeScript type check failed');
+  fail(errors);
 }
 
-function resolveTypeScriptModule(workPath: string): TypeScriptModule | null {
+function defaultScriptTarget(
+  ts: TypeScriptModule,
+  nodeVersionMajor = 16
+): import('typescript').ScriptTarget {
+  if (nodeVersionMajor >= 16) return ts.ScriptTarget.ES2021;
+  if (nodeVersionMajor >= 14) return ts.ScriptTarget.ES2020;
+  return ts.ScriptTarget.ES2019;
+}
+
+function resolveTypeScriptModule(startDir: string): TypeScriptModule | null {
   try {
-    const id = require_.resolve('typescript', { paths: [workPath] });
-    return require_(id) as TypeScriptModule;
+    const id = require_.resolve('typescript', { paths: [startDir] });
+    const ts = require_(id) as TypeScriptModule;
+    console.log(`Using TypeScript ${ts.version} (local user-provided)`);
+    return ts;
   } catch (_e) {
     return null;
   }
 }
 
-export const findNearestTsconfig = async (
-  workPath: string
-): Promise<string | undefined> => {
-  const tsconfigPath = join(workPath, 'tsconfig.json');
-  if (existsSync(tsconfigPath)) {
-    return tsconfigPath;
+export const findNearestTsconfig = (startDir: string): string | undefined => {
+  let dir = resolve(startDir);
+  for (;;) {
+    const tsconfigPath = join(dir, 'tsconfig.json');
+    if (existsSync(tsconfigPath)) {
+      return tsconfigPath;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) {
+      return undefined;
+    }
+    dir = parent;
   }
-  if (workPath === '/') {
-    return undefined;
-  }
-  return findNearestTsconfig(join(workPath, '..'));
 };

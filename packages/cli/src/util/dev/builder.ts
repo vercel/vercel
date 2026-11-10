@@ -5,6 +5,7 @@ import { readFileSync, unlinkSync } from 'fs';
 import { delimiter, dirname, join } from 'path';
 import { fork, type ChildProcess } from 'child_process';
 import { createFunction } from '@vercel/fun';
+import { initializeFunRuntime } from './fun-runtime';
 import {
   type Builder,
   type BuildOptions,
@@ -16,6 +17,7 @@ import {
   isBackendFramework,
   isPythonFramework,
   type BuildResultVX,
+  getNodeExecPath,
 } from '@vercel/build-utils';
 import { isStaticRuntime } from '@vercel/fs-detectors';
 import plural from 'pluralize';
@@ -39,10 +41,11 @@ import type {
   BuiltLambda,
 } from './types';
 import { normalizeRoutes, type Route } from '@vercel/routing-utils';
-import getUpdateCommand from '../get-update-command';
-import { getTitleName } from '../pkg-name';
-import { importBuilders } from '../build/import-builders';
+import { importBuilders } from '../../builders/import-builders';
+import { getUnsupportedBuilderVersionError } from './unsupported-builder-version';
 import output from '../../output-manager';
+import { isNativeBinaryInstall } from '../native-install';
+import { dev } from './diagnostics';
 
 interface BuildMessage {
   type: string;
@@ -176,9 +179,10 @@ async function createBuildProcess(
   output.debug(`Creating build process for "${match.entrypoint}"`);
 
   const builderWorkerPath = join(__dirname, 'builder-worker.cjs');
+  const nodeExecPath = getNodeExecPath();
 
   // Ensure that `node` is in the builder's `PATH`
-  const PATH = `${dirname(process.execPath)}${delimiter}${process.env.PATH}`;
+  const PATH = `${dirname(nodeExecPath)}${delimiter}${process.env.PATH}`;
 
   const env: Env = {
     ...process.env,
@@ -189,6 +193,9 @@ async function createBuildProcess(
   const buildProcess = fork(builderWorkerPath, [], {
     cwd: workPath,
     execArgv: [],
+    // The native entrypoint dispatches bundled workers inside its snapshot.
+    // An external Node process cannot read the virtual worker path.
+    execPath: isNativeBinaryInstall() ? process.execPath : nodeExecPath,
     env,
   });
   match.buildProcess = buildProcess;
@@ -361,25 +368,41 @@ export async function executeBuild(
     const { output, ...rest } = buildResultOrOutputs as BuildResultV3;
 
     if (!output || (output as BuilderOutput).type !== 'Lambda') {
-      throw new Error('The result of "builder.build()" must be a `Lambda`');
+      throw dev.DEV_BUILDER_RESULT_NOT_LAMBDA();
     }
 
     if (output.maxDuration) {
+      throw dev.DEV_BUILDER_RESULT_HAS_MAXDURATION();
+    }
+
+    if (output.affinity) {
       throw new Error(
-        'The result of "builder.build()" must not contain `maxDuration`'
+        'The result of "builder.build()" must not contain `affinity`'
+      );
+    }
+
+    if (output.maxConcurrency) {
+      throw new Error(
+        'The result of "builder.build()" must not contain `maxConcurrency`'
       );
     }
 
     if (output.memory) {
-      throw new Error(
-        'The result of "builder.build()" must not contain `memory`'
-      );
+      throw dev.DEV_BUILDER_RESULT_HAS_MEMORY();
     }
 
     for (const [src, func] of Object.entries(config.functions || {})) {
       if (src === entrypoint || minimatch(entrypoint, src)) {
         if (func.maxDuration) {
           output.maxDuration = func.maxDuration;
+        }
+
+        if (func.affinity) {
+          output.affinity = func.affinity;
+        }
+
+        if (func.maxConcurrency) {
+          output.maxConcurrency = func.maxConcurrency;
         }
 
         if (func.memory) {
@@ -397,17 +420,13 @@ export async function executeBuild(
       },
     } as BuildResult;
   } else {
-    throw new Error(
-      `${getTitleName()} CLI does not support builder version ${
-        (builder as any).version
-      }.\nPlease run \`${await getUpdateCommand()}\` to update to the latest CLI.`
-    );
+    throw await getUnsupportedBuilderVersionError((builder as any).version);
   }
 
   // Normalize Builder Routes
   const normalized = normalizeRoutes(result.routes);
   if (normalized.error) {
-    throw new Error(normalized.error.message);
+    throw dev.DEV_INVALID_ROUTES({ message: normalized.error.message });
   } else {
     result.routes = normalized.routes || [];
   }
@@ -467,7 +486,13 @@ export async function executeBuild(
   for (const asset of Object.values(result.output)) {
     if (
       asset.type === 'Lambda' &&
-      !(typeof asset.runtime === 'string' && asset.runtime.startsWith('python'))
+      !(
+        typeof asset.runtime === 'string' && asset.runtime.startsWith('python')
+      ) &&
+      // Container Lambdas carry an OCI image reference in `handler`, not a code
+      // bundle — there is no zip to size-check. They are built and run locally
+      // by the builder's `startDevServer`, not by `fun`.
+      asset.runtime !== 'container'
     ) {
       const size = asset.zipBuffer.length;
       if (size > maxLambdaBytes) {
@@ -482,7 +507,11 @@ export async function executeBuild(
       const path: string = entry[0];
       const asset: BuilderOutput = entry[1];
 
-      if (asset.type === 'Lambda') {
+      // Container Lambdas are an OCI image reference, not a zip-based function:
+      // they have no `zipBuffer`/`createZip` and cannot run under `fun`. The
+      // builder's `startDevServer` builds and runs the image locally instead,
+      // so skip the `fun` function creation here.
+      if (asset.type === 'Lambda' && asset.runtime !== 'container') {
         // Tear down the previous `fun` Lambda instance for this asset
         const oldAsset = match.buildOutput && match.buildOutput[path];
         if (oldAsset && oldAsset.type === 'Lambda' && oldAsset.fn) {
@@ -491,6 +520,7 @@ export async function executeBuild(
 
         const ZipFile = asset.zipBuffer || (await asset.createZip());
 
+        await initializeFunRuntime(asset.runtime);
         asset.fn = await createFunction({
           Code: { ZipFile },
           Handler: asset.handler,
@@ -510,6 +540,7 @@ export async function executeBuild(
     })
   );
 
+  match.buildResultVersion = effectiveVersion;
   match.buildResults.set(requestPath, result);
   Object.assign(match.buildOutput, result.output);
 
@@ -584,6 +615,74 @@ export async function getBuildMatches(
         mapToEntrypoint.set(src, originalSrc);
       }
     }
+    // The Node framework preset uses `package.json` as a stable build src,
+    // while @vercel/backends discovers the actual server entrypoint. A
+    // package.json is optional, so match a detected server file in dev while
+    // preserving the sentinel passed to the builder.
+    if (buildConfig.config?.framework === 'node' && !fileList.includes(src)) {
+      const originalSrc = src;
+      const existing = fileList.find(path =>
+        /^(?:src\/)?server\.[cm]?[jt]s$/.test(path)
+      );
+      if (existing) {
+        src = existing;
+        mapToEntrypoint.set(src, originalSrc);
+      }
+    }
+    // The Go framework preset keeps `index.go` as the stable build src for
+    // deployment routing. In dev, if that sentinel file is absent, match one
+    // of the known standalone entrypoints but still pass `index.go` through
+    // as the builder entrypoint so @vercel/go performs the final resolution.
+    if (buildConfig.config?.framework === 'go' && !fileList.includes(src)) {
+      const originalSrc = src;
+      const goEntrypoints = [
+        'main.go',
+        'cmd/api/main.go',
+        'cmd/server/main.go',
+      ];
+      const existing = goEntrypoints.filter(p => fileList.includes(p));
+      if (existing.length > 0) {
+        src = existing[0];
+        mapToEntrypoint.set(src, originalSrc);
+      }
+    }
+    // If the Rust preset's `src/main.rs` is absent (e.g. a `[[bin]]`-only
+    // project), match `Cargo.toml` but keep `src/main.rs` as the builder
+    // entrypoint so @vercel/rust resolves the binary via `cargo metadata`.
+    if (
+      buildConfig.config?.framework === 'rust' &&
+      src === 'src/main.rs' &&
+      !fileList.includes(src)
+    ) {
+      const originalSrc = src;
+      if (fileList.includes('Cargo.toml')) {
+        src = 'Cargo.toml';
+        mapToEntrypoint.set(src, originalSrc);
+      }
+    }
+    // The container framework preset resolves its entrypoint via `<detect>`,
+    // which @vercel/container expands to a discovered Dockerfile at build time.
+    // Inside `services` the orchestrator owns this, but for a top-level
+    // container build the dev server needs to match a real Dockerfile so a
+    // BuildMatch is created — while still passing the original sentinel src
+    // through as the builder entrypoint.
+    if (
+      buildConfig.config?.framework === 'container' &&
+      !fileList.includes(src)
+    ) {
+      const originalSrc = src;
+      const dockerfileCandidates = [
+        'Dockerfile.vercel',
+        'Containerfile.vercel',
+        'Dockerfile',
+        'Containerfile',
+      ];
+      const existing = dockerfileCandidates.find(p => fileList.includes(p));
+      if (existing) {
+        src = existing;
+        mapToEntrypoint.set(src, originalSrc);
+      }
+    }
     const extensionless = devServer.getExtensionlessFile(src);
     if (extensionless) {
       mapToEntrypoint.set(extensionless, src);
@@ -617,7 +716,7 @@ export async function getBuildMatches(
 
       const builderWithPkg = buildersWithPkgs.get(use);
       if (!builderWithPkg) {
-        throw new Error(`Failed to load Builder "${use}"`);
+        throw dev.DEV_BUILDER_LOAD_FAILED({ use });
       }
 
       matches.push({

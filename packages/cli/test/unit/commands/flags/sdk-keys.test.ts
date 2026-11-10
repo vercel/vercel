@@ -1,11 +1,15 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import flags from '../../../../src/commands/flags';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  removeProjectLink,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useFlags, defaultSdkKeys } from '../../../mocks/flags';
+import type { SdkKey } from '../../../../src/util/flags/types';
 
 describe('flags sdk-keys', () => {
   beforeEach(() => {
@@ -15,6 +19,7 @@ describe('flags sdk-keys', () => {
       ...defaultProject,
       id: 'vercel-flags-test',
       name: 'vercel-flags-test',
+      accountId: 'team_dummy',
     });
     useFlags();
     const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
@@ -27,7 +32,7 @@ describe('flags sdk-keys', () => {
     it('tracks telemetry', async () => {
       client.setArgv('flags', 'sdk-keys', '--help');
       const exitCodePromise = flags(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -64,10 +69,143 @@ describe('flags sdk-keys', () => {
       ]);
     });
 
-    it('lists SDK keys successfully', async () => {
+    it('lists SDK keys with --project when the cwd is not linked', async () => {
+      const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+      removeProjectLink(cwd);
+      client.cwd = cwd;
+
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'ls',
+        '--project',
+        'vercel-flags-test',
+        '--json'
+      );
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(JSON.parse(client.stdout.getFullOutput()).sdkKeys).toHaveLength(2);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:sdk-keys', value: 'sdk-keys' },
+        { key: 'subcommand:ls', value: 'ls' },
+        { key: 'option:project', value: '[REDACTED]' },
+        { key: 'flag:json', value: 'TRUE' },
+      ]);
+    });
+
+    it('renders the partial key value in the default table output', async () => {
       client.setArgv('flags', 'sdk-keys', 'ls');
       const exitCode = await flags(client);
       expect(exitCode).toEqual(0);
+
+      const stderr = client.stderr.getFullOutput();
+      const stdout = client.stdout.getFullOutput();
+      const combined = `${stderr}\n${stdout}`;
+
+      expect(combined).toContain('Partial Key Value');
+      expect(combined).toContain('vf_server_abc********');
+      expect(combined).toContain('vf_client_def********');
+    });
+
+    it('never leaks cleartext secrets in the default table output', async () => {
+      // Simulate a mixed-version window where the API still returns
+      // plaintext `keyValue` / `tokenValue` / `connectionString` on LIST.
+      // The CLI must strip these fields regardless of what the API returns.
+      // Cast through `unknown` because we are deliberately simulating a
+      // non-conformant API payload: `SdkKey` no longer declares the
+      // plaintext fields, but we want to prove the CLI strips them even
+      // if a stale API deploy sneaks them onto the LIST response.
+      const sdkKeysWithSecrets = [
+        {
+          ...defaultSdkKeys[0],
+          keyValue: 'vf_server_fullsecretvalue_should_not_leak',
+          tokenValue: 'tok_fullsecrettoken_should_not_leak',
+          connectionString:
+            'https://flags.vercel.com/v1/flags/secret_should_not_leak',
+        },
+      ] as unknown as SdkKey[];
+      client.reset();
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-flags-test',
+        name: 'vercel-flags-test',
+      });
+      useFlags(undefined, sdkKeysWithSecrets);
+      const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+      client.cwd = cwd;
+      client.stdin.isTTY = false;
+
+      client.setArgv('flags', 'sdk-keys', 'ls');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const stderr = client.stderr.getFullOutput();
+      const stdout = client.stdout.getFullOutput();
+      const combined = `${stderr}\n${stdout}`;
+
+      expect(combined).not.toContain(
+        'vf_server_fullsecretvalue_should_not_leak'
+      );
+      expect(combined).not.toContain('tok_fullsecrettoken_should_not_leak');
+      expect(combined).not.toContain('secret_should_not_leak');
+    });
+
+    it('never leaks cleartext secrets in --json output', async () => {
+      // Same mixed-version simulation as the table-output test, but asserts
+      // the JSON contract exposed to scripts. Even if a stale API deploy
+      // still returns plaintext on LIST, `flags sdk-keys ls --json` must
+      // never surface `keyValue`, `tokenValue`, or `connectionString` to
+      // stdout.
+      // Cast through `unknown` because we are deliberately simulating a
+      // non-conformant API payload: `SdkKey` no longer declares the
+      // plaintext fields, but we want to prove the CLI strips them even
+      // if a stale API deploy sneaks them onto the LIST response.
+      const sdkKeysWithSecrets = [
+        {
+          ...defaultSdkKeys[0],
+          keyValue: 'vf_server_fullsecretvalue_should_not_leak_json',
+          tokenValue: 'tok_fullsecrettoken_should_not_leak_json',
+          connectionString:
+            'https://flags.vercel.com/v1/flags/secret_should_not_leak_json',
+        },
+        {
+          ...defaultSdkKeys[1],
+          keyValue: 'vf_client_fullsecretvalue_should_not_leak_json',
+        },
+      ] as unknown as SdkKey[];
+      client.reset();
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-flags-test',
+        name: 'vercel-flags-test',
+      });
+      useFlags(undefined, sdkKeysWithSecrets);
+      const cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+      client.cwd = cwd;
+      client.stdin.isTTY = false;
+
+      client.setArgv('flags', 'sdk-keys', 'ls', '--json');
+      const exitCode = await flags(client);
+      expect(exitCode).toEqual(0);
+
+      const raw = client.stdout.getFullOutput();
+      expect(raw).not.toContain('vf_server_fullsecretvalue_should_not_leak');
+      expect(raw).not.toContain('vf_client_fullsecretvalue_should_not_leak');
+      expect(raw).not.toContain('tok_fullsecrettoken_should_not_leak');
+      expect(raw).not.toContain('secret_should_not_leak');
+
+      const parsed = JSON.parse(raw);
+      expect(parsed.sdkKeys).toHaveLength(2);
+      for (const row of parsed.sdkKeys) {
+        expect(row).not.toHaveProperty('keyValue');
+        expect(row).not.toHaveProperty('tokenValue');
+        expect(row).not.toHaveProperty('connectionString');
+      }
     });
 
     describe('--json', () => {
@@ -85,6 +223,10 @@ describe('flags sdk-keys', () => {
         expect(parsed.sdkKeys[0]).toHaveProperty('type');
         expect(parsed.sdkKeys[0]).toHaveProperty('environment');
         expect(parsed.sdkKeys[0]).toHaveProperty('createdAt');
+        expect(parsed.sdkKeys[0]).toHaveProperty(
+          'partialKeyValue',
+          'vf_server_abc********'
+        );
       });
 
       it('tracks telemetry for --json', async () => {
@@ -127,7 +269,7 @@ describe('flags sdk-keys', () => {
           value: 'sdk-keys',
         },
         {
-          key: 'subcommand:add',
+          key: 'subcommand:create',
           value: 'add',
         },
         {
@@ -141,20 +283,6 @@ describe('flags sdk-keys', () => {
       ]);
     });
 
-    it('creates SDK key successfully', async () => {
-      client.setArgv(
-        'flags',
-        'sdk-keys',
-        'add',
-        '--type',
-        'server',
-        '--environment',
-        'production'
-      );
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
-    });
-
     it('errors with invalid type', async () => {
       client.setArgv(
         'flags',
@@ -166,7 +294,7 @@ describe('flags sdk-keys', () => {
         'production'
       );
       const exitCode = await flags(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       expect(client.stderr.getFullOutput()).toContain('Invalid type');
     });
 
@@ -181,7 +309,7 @@ describe('flags sdk-keys', () => {
         'invalid'
       );
       const exitCode = await flags(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       expect(client.stderr.getFullOutput()).toContain('Invalid environment');
     });
   });
@@ -203,7 +331,7 @@ describe('flags sdk-keys', () => {
           value: 'sdk-keys',
         },
         {
-          key: 'subcommand:rm',
+          key: 'subcommand:revoke',
           value: 'rm',
         },
         {
@@ -217,16 +345,23 @@ describe('flags sdk-keys', () => {
       ]);
     });
 
-    it('deletes SDK key successfully', async () => {
-      client.setArgv(
-        'flags',
-        'sdk-keys',
-        'rm',
-        defaultSdkKeys[0].hashKey,
-        '--yes'
-      );
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
+    it.each([
+      ['revoke', false],
+      ['remove', true],
+      ['rm', true],
+    ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+      // The mock deletes from the shared list, so add a key for each run.
+      const key: SdkKey = { ...defaultSdkKeys[0], hashKey: `sdk_key_${name}` };
+      defaultSdkKeys.push(key);
+      client.setArgv('flags', 'sdk-keys', name, key.hashKey, '--yes');
+      expect(await flags(client)).toEqual(0);
+      const warning = `\`vercel flags sdk-keys ${name}\` is deprecated. Use \`vercel flags sdk-keys revoke\`.`;
+      if (deprecated) {
+        expect(client.stderr.getFullOutput()).toContain(warning);
+      } else {
+        expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+      }
+      expect(client.stderr.getFullOutput()).toContain('has been revoked');
     });
 
     it('errors when SDK key is not found', async () => {
@@ -252,7 +387,7 @@ describe('flags sdk-keys', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       const out = client.stdout.getFullOutput();
       const parsed = JSON.parse(out);
       expect(parsed.status).toBe('error');
@@ -260,7 +395,7 @@ describe('flags sdk-keys', () => {
       expect(parsed.message).toContain('hash');
       expect(parsed.next).toBeDefined();
       expect(parsed.next.length).toBeGreaterThanOrEqual(1);
-      expect(parsed.next[0].command).toContain('flags sdk-keys rm');
+      expect(parsed.next[0].command).toContain('flags sdk-keys revoke');
       expect(parsed.next[0].command).toContain('<hashKey>');
       expect(parsed.next[0].command).toContain('--cwd');
       expect(parsed.next[0].command).toContain('--non-interactive');
@@ -286,7 +421,7 @@ describe('flags sdk-keys', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       const out = client.stdout.getFullOutput();
       const parsed = JSON.parse(out);
       expect(parsed.status).toBe('error');
@@ -294,12 +429,52 @@ describe('flags sdk-keys', () => {
       expect(parsed.message).toContain('--type');
       expect(parsed.next).toBeDefined();
       expect(parsed.next.length).toBeGreaterThan(0);
-      expect(parsed.next[0].command).toContain('flags sdk-keys add');
+      expect(parsed.next[0].command).toContain('flags sdk-keys create');
       expect(parsed.next[0].command).toContain('--type');
       expect(parsed.next[0].command).toContain('--cwd');
       expect(parsed.next[0].command).toContain('--non-interactive');
       exitSpy.mockRestore();
       client.nonInteractive = false;
+    });
+  });
+
+  describe('subcommand name', () => {
+    function useCreation() {
+      useFlags();
+    }
+
+    it('warns when invoked as the deprecated add name', async () => {
+      useCreation();
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'add',
+        '--type',
+        'server',
+        '--environment',
+        'production'
+      );
+
+      expect(await flags(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel flags sdk-keys add` is deprecated. Use `vercel flags sdk-keys create`.'
+      );
+    });
+
+    it('does not warn when invoked as create', async () => {
+      useCreation();
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'create',
+        '--type',
+        'server',
+        '--environment',
+        'production'
+      );
+
+      expect(await flags(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     });
   });
 });

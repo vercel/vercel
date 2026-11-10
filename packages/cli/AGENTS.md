@@ -1,305 +1,109 @@
-# Vercel CLI — Agent Guide
+# Vercel CLI Agent Guide
 
-This guide covers the conventions for building and testing CLI commands in `packages/cli`.
+Always-loaded guidance for work inside `packages/cli`. Keep this file small. The CLI UX design system lives in `packages/cli/.agents/skills/cli-ux/` and should be loaded only when the task or code review touches user-facing CLI behavior.
 
-## File Organization
+## First Steps
 
-Each command lives in `src/commands/<name>/` with this structure:
+1. Inspect the current source and tests before changing behavior.
+2. Identify whether the task or review changes implementation only, or CLI UX/copy/output/help/errors/prompts/non-interactive behavior.
+3. For CLI UX implementation or review, use `packages/cli/.agents/skills/cli-ux/SKILL.md` and its references. The `cli-ux` skill folder is the canonical source for CLI design, copywriting, output layout, prompts, machine-readable output, agent behavior, and command-specific UX contracts.
+4. Reuse local helpers and command-family patterns before adding new abstractions.
+5. Preserve compatibility for command names, flags, exit codes, env vars, config files, JSON fields, parseable stdout, and telemetry semantics unless the change intentionally migrates them with tests.
 
-```
-src/commands/my-command/
-├── command.ts              # Command metadata (flags, args, examples, description)
-├── index.ts                # Entry point: routing, flag parsing, telemetry
-├── do-something.ts         # Subcommand implementation
-└── do-something-else.ts    # Subcommand implementation
+## Task Routing
 
-src/util/telemetry/commands/my-command/
-└── index.ts                # Telemetry client with tracking methods
+- UX/copy/prompt/output/help/error/JSON/agent behavior: use `packages/cli/.agents/skills/cli-ux/SKILL.md` and load the references it names.
+- Vercel Agent Review and any other code review of those surfaces: load the `cli-ux` skill before assessing the diff or posting findings, even when the review makes no edits.
+- New or changed command metadata: update `src/commands/<name>/command.ts`, telemetry, help snapshots, and tests.
+- New or renamed command, option, noun, or verb: check `packages/cli/.agents/skills/cli-ux/references/registry.md` first and update it in the same change.
+- Command implementation: follow the surrounding command family in `src/commands/<name>/` and shared helpers in `src/util/`.
+- Shared output, prompt, target resolution, or remote-mutation behavior: inspect parallel command paths before editing one path.
+- New durable CLI UX rule or command-specific UX contract: update the `cli-ux` skill, not this file.
 
-test/unit/commands/my-command/
-├── do-something.test.ts    # Tests per subcommand
-└── do-something-else.test.ts
-```
+## Code Map
 
-## Defining Commands (`command.ts`)
+```text
+src/commands/<name>/
+  command.ts      command metadata: description, args, options, examples
+  index.ts        routing, parsing, telemetry, errors
+  <action>.ts     subcommand/action implementation
 
-Commands are defined as `const` objects satisfying the `Command` interface from `../help`:
+src/util/telemetry/commands/<name>/
+  index.ts        telemetry client
 
-```typescript
-export const mySubcommand = {
-  name: 'my-sub',
-  aliases: [],
-  description: 'Does something useful',
-  arguments: [{ name: 'target', required: true }],
-  options: [
-    {
-      name: 'output',
-      shorthand: 'o',
-      type: String,
-      argument: 'PATH',
-      deprecated: false,
-      description: 'Output file path',
-    },
-    {
-      name: 'force',
-      shorthand: 'f',
-      type: Boolean,
-      deprecated: false,
-      description: 'Skip confirmation prompts',
-    },
-    {
-      name: 'tag',
-      shorthand: null,
-      type: [String],
-      deprecated: false,
-      description: 'Tags to apply',
-    }, // Repeatable: --tag=a --tag=b
-  ],
-  examples: [
-    { name: 'Basic usage', value: `${packageName} my-command my-sub ./path` },
-  ],
-} as const;
+test/unit/commands/<name>/
+  *.test.ts
 ```
 
-**Option types**: `String`, `Boolean`, `Number`, `[String]` (repeatable), `[Number]` (repeatable).
-**Flag naming**: Use lowercase hyphens (`--advancement-type`, not `--advancementType`). Standard names: `--yes`, `--force`, `--debug`, `--json`.
-
-**`default: true`**: Set on a subcommand to make it the implicit action when the parent is invoked without a subcommand (e.g., `vc alias foo bar` implicitly calls `alias set`). This also makes the `command` argument optional in help text.
-
-## Routing and Flag Parsing (`index.ts`)
-
-The entry point resolves subcommands with `getSubcommand`, displays help for `--help`/`-h`, parses flags with `parseArguments(args, getFlagsSpecification(subcommand.options))`, tracks telemetry, and delegates to subcommand functions. Use `getCommandAliases` to build the `COMMAND_CONFIG` map. Wrap the body in `try/catch` with `printError(err)`. See `src/commands/rolling-release/index.ts` or `src/commands/alias/index.ts` for complete examples.
-
-**Exit codes**: `0` = success, `1` = error, `2` = help displayed.
-**Permissive parsing**: Parent commands with subcommands should use `permissive: true` so unknown flags pass through to subcommand handlers, which do strict parsing (default).
-
-## Interactive Prompts vs Flags
-
-For **structured JSON on stdout**, **`next[]` suggestions with global flags**, and **`--non-interactive`** conventions, see **`docs/non-interactive-mode.md`**.
-
-Commands should support both interactive (TTY) and non-interactive (CI/scripts) usage. Flags always take priority over interactive prompts.
-
-### Flag-based flow (non-interactive)
-
-Every action that can be done interactively must also be possible with flags. When `stdin` is not a TTY and required input is missing, fail with a message explaining which flags to use:
-
-```typescript
-if (!client.stdin.isTTY) {
-  output.error(
-    'Missing required flags. Use --name and --target, or run interactively in a terminal.'
-  );
-  return 1;
-}
-```
-
-### The `--yes` flag
-
-Use `--yes` (shorthand `-y`) to skip confirmation prompts — critical for CI. If `!yes && !client.stdin.isTTY`, fail with guidance. If `!yes` in TTY, prompt with `client.input.confirm`. Import the shared option definition from `src/util/arg-common.ts` rather than redefining it.
-
-### Interactive flow (TTY)
-
-Use `client.input` methods for prompts. Only prompt when `stdin.isTTY` is true:
-
-- `client.input.select({ message, choices: [{ name, value }] })` — single selection
-- `client.input.text({ message, validate })` — free-form input; `validate` returns `true` or an error string
-- `client.input.confirm(message, defaultValue)` — yes/no confirmation
-
-### Structuring the priority
-
-A common pattern is to build a payload from flags first, falling back to interactive mode:
-
-```typescript
-// 1. Explicit flags
-if (flags['--name']) {
-  return buildFromFlags(flags);
-}
-
-// 2. Interactive TTY
-if (client.stdin.isTTY) {
-  return buildInteractively(client);
-}
-
-// 3. Non-TTY with no flags = error
-output.error('Missing required flags. Use --name or run interactively.');
-return 1;
-```
-
-## Output
-
-All output methods write to `stderr` (via the `output` singleton), except `output.print` which writes to `stdout`.
-
-| Method                    | Format              | Use for                                                     |
-| ------------------------- | ------------------- | ----------------------------------------------------------- |
-| `output.log(msg)`         | `> msg`             | Success messages, status updates                            |
-| `output.error(msg)`       | `Error: msg`        | User-facing errors                                          |
-| `output.warn(msg)`        | `WARNING! msg`      | Warnings that don't stop execution                          |
-| `output.debug(msg)`       | `> [debug] msg`     | Debug info (only shown with `--debug`)                      |
-| `output.print(msg)`       | raw to stdout       | Help text, JSON output, primary data                        |
-| `output.spinner(msg)`     | animated            | Long-running operations (>100ms)                            |
-| `output.success(msg)`     | styled              | Completion messages                                         |
-| `output.prettyError(err)` | `Error: msg` + link | Structured error objects with `.link`/`.action` metadata    |
-| `output.link(text, url)`  | clickable hyperlink | Terminal hyperlinks with fallback for unsupported terminals |
-
-**Guidelines**:
-
-- Send primary data (JSON, lists) to `stdout` via `output.print` or `client.stdout.write` so it can be piped.
-- Send status/progress/errors to `stderr` via `output.log`, `output.error`, etc.
-- Use `output.spinner` for network requests or operations that may take time. Always call `output.stopSpinner()` before other output. The spinner has an optional delay parameter (default 300ms) and degrades to plain text in non-TTY environments.
-- Confirm before dangerous or irreversible operations.
-
-### JSON output
-
-Commands that return data should support `--json` for script consumption. Use `validateJsonOutput(parsedArgs.flags)` to check the flag. When outputting JSON, stop the spinner first and write to `stdout` so it can be piped:
-
-```typescript
-if (asJson) {
-  output.stopSpinner();
-  client.stdout.write(JSON.stringify(data, null, 2));
-}
-```
-
-### Table formatting
-
-Use the `table()` utility from `src/util/output/table.ts` with `{ align, hsep }` options for tabular output.
-
-### Terminal links
-
-Use `output.link(text, url, { fallback, color })` for clickable URLs that degrade gracefully in unsupported terminals.
-
-### Pagination
-
-List commands use `--next` (timestamp) and `--limit` with `client.fetchPaginated`. After iterating, print the next-page command if `pagination?.next` exists.
-
-## Error Handling
-
-Wrap top-level command logic in `try/catch` with `printError(err); return 1;`. For validation errors, use `output.error(msg)` and return `1`. Use `output.prettyError` for structured error objects with `.link` or `.action` metadata. Rewrite errors in human-friendly language with actionable guidance — don't expose raw API errors.
-
-## Telemetry
-
-Each command has a telemetry client in `src/util/telemetry/commands/<name>/index.ts` extending `TelemetryClient`. Add `trackCliFlag*` (boolean) and `trackCliOption*` (string) methods. Track flags/options after parsing, before executing the command logic. Use `trackCliFlagHelp` when help is displayed.
-
-## Writing Tests
-
-Tests live in `test/unit/commands/<name>/`. They use a shared mock client that starts an Express-based mock API server.
-
-### Basic structure
-
-```typescript
-import { describe, beforeEach, expect, it, vi } from 'vitest';
-import { client } from '../../../mocks/client';
-import myCommand from '../../../../src/commands/my-command';
-
-describe('my-command', () => {
-  beforeEach(() => {
-    client.reset();
-    // Set up mock API routes
-    client.scenario.get('/v1/some-endpoint', (req, res) => {
-      res.json({ data: 'value' });
-    });
-  });
-
-  it('should succeed with valid flags', async () => {
-    client.setArgv('my-command', 'sub', '--flag=value');
-
-    const exitCode = await myCommand(client);
-
-    expect(exitCode).toBe(0);
-  });
-});
-```
-
-### Mocking API routes with `client.scenario`
-
-Use Express route handlers to mock API endpoints. The mock server receives real HTTP requests from `client.fetch`:
-
-```typescript
-let requestBody: any;
-
-client.scenario.patch('/v1/projects/:projectId/config', (req, res) => {
-  requestBody = req.body;
-  res.json({});
-});
-
-// After command runs:
-expect(requestBody).toEqual({ enabled: true });
-```
-
-Unhandled routes return a 500 error with `mock_unimplemented`.
-
-### Checking output with `toOutput`
-
-Use `await expect(client.stderr).toOutput(text)` to assert on output. This waits (up to 3s) for the text to appear in the stderr stream:
-
-```typescript
-// For errors (output.error prefixes with "Error: ")
-const exitCodePromise = myCommand(client);
-await expect(client.stderr).toOutput('Error: Missing required flag --name.');
-expect(await exitCodePromise).toBe(1);
-
-// For success messages (output.log prefixes with "> ")
-const exitCode = await myCommand(client);
-await expect(client.stderr).toOutput('Successfully created.');
-expect(exitCode).toBe(0);
-```
-
-### Testing interactive prompts
-
-Wait for prompt text with `toOutput`, then send input:
-
-```typescript
-const exitCodePromise = myCommand(client);
-
-await expect(client.stderr).toOutput('Choose an option:');
-client.stdin.write('\n'); // select default option
-
-await expect(client.stderr).toOutput('Apply changes?');
-client.stdin.write('y\n'); // confirm
-
-expect(await exitCodePromise).toBe(0);
-```
-
-### Testing non-TTY behavior
-
-The mock client defaults `isTTY = true`. Override it to test non-interactive paths:
-
-```typescript
-client.setArgv('my-command', 'configure');
-(client.stdin as any).isTTY = false;
-
-const exitCodePromise = myCommand(client);
-
-await expect(client.stderr).toOutput('Error: Missing required flags.');
-expect(await exitCodePromise).toBe(1);
-```
-
-### Running tests
-
-From the repo root:
+Common shared areas:
+
+- `src/util/arg-common.ts` for shared flags and command-string helpers
+- `src/util/agent-output*` for non-interactive/agent payloads
+- `src/util/output/*` and output-manager helpers for terminal output
+- `src/util/input/*` for prompts and validated interactive input
+- `src/util/{projects,teams,target,config}` for shared resource and target resolution
+- `src/util/{deploy,link,env,domains,alias}` for high-impact remote mutation flows
+
+## Implementation Rules
+
+- Define commands in `command.ts` as const command objects.
+- Use lowercase kebab-case for flags.
+- Reuse shared options from `src/util/arg-common.ts` (`jsonOption`, `yesOption`, `limitOption`, `nextCursorOption`, `sinceOption`, `untilOption`, `projectOption`, and the rest). For a command-specific default, spread one and replace only `description`.
+- Rename a command or option by keeping the old name as a hidden alias (or a `deprecated: true` option), warning with `warnDeprecatedSubcommand()` when it's used, tracking telemetry under the canonical name, updating the `cli-ux` registry, and adding a `minor` changeset.
+- Parse flags with `parseArguments(args, getFlagsSpecification(command.options))`.
+- Parent commands with subcommands may use permissive parsing to route; subcommands should parse strictly.
+- Resolve subcommands with the `src/util/get-subcommand` default export and the named `getCommandAliases` helper.
+- Exit `0` for completed success, `1` for operational failure, `2` for usage errors (unknown option, missing or invalid argument or flag value, unknown subcommand), and `130` for user cancellation (see the `cli-ux` Exit Codes section). Change an existing command's exit codes only as an intentional, tested contract change. A usage error reported with `outputAgentError()` or `outputActionRequired()` gets exit code `2` from its `reason` (`getExitCodeForReason()`); return the same code from the human path. A new usage-error `reason` or error code must be added to `USAGE_ERROR_REASONS` (`src/util/agent-output-constants.ts`) or `USAGE_ERROR_CODES` (`src/util/command-validation.ts`), or it exits `1`.
+- Print warnings with `output.warning()` (the `!` gutter), not the legacy `output.warn()` and its `WARNING!` banner.
+- The CLI entry point answers `--help` for every command (stdout, exit `0`) and shows a group's help when it runs without a subcommand (stdout, exit `0`), from the command metadata, so do not add per-command `--help` or bare-group handling; describe help content in `command.ts`, set `dynamicHelp` only when help depends on runtime data, and set `runsWithoutSubcommand` on a group that does work when run bare.
+- Wrap top-level command logic in `try/catch`, print user-facing errors, and return `1`.
+- Track telemetry after parsing and before command execution.
+- Do not record tokens, secrets, env values, file contents, request bodies, or unredacted user content in telemetry.
+
+## Testing
+
+- Unit tests live under `packages/cli/test/unit/commands/<name>/`.
+- Prefer focused tests for changed command behavior before broad test runs.
+- Use existing mock client/scenario patterns for API behavior.
+- When changing output, update direct expectations and add negative assertions for removed strings.
+- When changing JSON, parse stdout and assert shape; do not snapshot incidental formatting only.
+- When changing interactive behavior, test both TTY and non-interactive paths when both exist.
+- When changing shared output, prompt, target-resolution, or remote-mutation helpers, inspect and test parallel command paths.
+- `test/unit/commands/option-uniformity.test.ts` checks every command's options against the `cli-ux` registry. Its exception lists only shrink: fixing a command removes its entry.
+
+Focused examples:
 
 ```bash
-npx vitest run packages/cli/test/unit/commands/my-command/my-test.test.ts
+cd packages/cli
+pnpm test test/unit/commands/<name>/<file>.test.ts
 ```
 
-### Manual testing
-
-Build and run the CLI locally:
+Repo-level checks when appropriate:
 
 ```bash
 pnpm build
-node packages/cli/dist/index.js <command> [args]
+pnpm type-check
+pnpm lint
+pnpm test-unit
 ```
 
-## General CLI Best Practices
+## Local CLI
 
-- **Prefer flags to positional arguments.** Flags are self-documenting and order-independent.
-- **Lead help text with examples.** Users gravitate toward examples over abstract descriptions.
-- **Validate early, fail fast.** Check inputs before making API calls or mutating state.
-- **Use curly braces** for all `if` statements, even single-line ones.
-- **Be responsive.** Print feedback within 100ms so the CLI doesn't appear to hang.
-- **Make errors actionable.** Tell the user what went wrong and what to do about it, not just that something failed.
-- **Keep output concise.** Say just enough — don't overwhelm with verbose success messages.
-- **Design for both humans and scripts.** Human-readable output by default, `--json` for machine consumption. Detect TTY and adapt behavior accordingly.
-- **Never require interactive prompts.** Every interactive action must have an equivalent flag-based path. Use `--yes` to skip confirmations in CI.
-- **Never accept secrets via flags.** Flags leak into `ps` output and shell history. Accept tokens and credentials via environment variables, config files, or stdin instead.
-- **Guide users to the next step.** After completing an action or encountering an error, suggest the next command to run (e.g., "Run `vercel link` to link a project" or "To display the next page, run `vercel ls --next 1234`").
-- **Use consistent flag names across subcommands.** The same concept should use the same flag name everywhere — `--yes` not `--confirm` in one place and `--yes` in another. Import shared options from `src/util/arg-common.ts`.
+Run the local CLI against an external project without installing globally:
+
+```bash
+cd packages/cli
+pnpm vercel --cwd /path/to/project
+```
+
+## Guardrails
+
+Always-loaded digest; full CLI UX gates live in `packages/cli/.agents/skills/cli-ux/references/guidelines.md` (Verification and Review).
+
+- Do not prompt in non-interactive mode.
+- Do not put human prose, warnings, ANSI, or spinners on JSON stdout.
+- Do not expose secrets in output, JSON, debug logs, telemetry, or suggested commands.
+- Validate local input before remote mutations.
+- Do not retry non-idempotent remote mutations in a way that can duplicate resources.
+- Do not edit examples, fixtures, generated files, or package-lock artifacts unless they are directly required for the task.
+- Every PR needs a changeset. Use an empty changeset only for guide-only or `packages/cli/.agents`-only changes.

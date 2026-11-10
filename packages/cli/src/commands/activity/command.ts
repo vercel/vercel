@@ -1,12 +1,20 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, limitOption, nextOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  limitOption,
+  nextCursorOption,
+  projectOption,
+  sinceOption,
+  untilOption,
+} from '../../util/arg-common';
 
 export const typesSubcommand = {
   name: 'types',
   aliases: [],
   description: 'List available event types with descriptions.',
   arguments: [],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'List all event types',
@@ -14,7 +22,7 @@ export const typesSubcommand = {
     },
     {
       name: 'Output JSON',
-      value: `${packageName} activity types --format json`,
+      value: `${packageName} activity types --json`,
     },
   ],
 } as const;
@@ -49,29 +57,11 @@ export const activityCommand = {
       description:
         'Filter by event type. Repeatable and comma-separated (e.g. --type deployment --type project-created or --type deployment,project-created).',
     },
+    sinceOption,
+    untilOption,
     {
-      name: 'since',
-      shorthand: null,
-      type: String,
-      argument: 'DATE',
-      deprecated: false,
-      description:
-        'Show events after this date (ISO 8601 or relative: 1d, 7d, 30d).',
-    },
-    {
-      name: 'until',
-      shorthand: null,
-      type: String,
-      argument: 'DATE',
-      deprecated: false,
-      description: 'Show events before this date (ISO 8601 or relative).',
-    },
-    {
-      name: 'project',
+      ...projectOption,
       shorthand: 'p',
-      type: String,
-      argument: 'NAME_OR_ID',
-      deprecated: false,
       description:
         'Filter by project (overrides auto-detected linked project).',
     },
@@ -83,8 +73,9 @@ export const activityCommand = {
       description: 'Show all team events (ignore linked project auto-scoping).',
     },
     limitOption,
-    nextOption,
+    nextCursorOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -105,7 +96,7 @@ export const activityCommand = {
     },
     {
       name: 'Output JSON',
-      value: `${packageName} activity --format json | jq '.events[]'`,
+      value: `${packageName} activity --json | jq '.events[]'`,
     },
     {
       name: 'List activity event types',

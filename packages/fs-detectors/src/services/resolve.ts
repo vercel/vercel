@@ -1,13 +1,16 @@
 import { posix as posixPath } from 'path';
 import type {
-  Service,
+  EnvVars,
+  ExperimentalService,
+  ConfiguredServices,
   ExperimentalServiceConfig,
-  ExperimentalServices,
   ServiceDetectionError,
   ServiceRuntime,
 } from './types';
 import {
   getServiceQueueTopics,
+  isQueueTriggeredService,
+  isScheduleTriggeredService,
   JOB_TRIGGERS,
   JobTrigger,
 } from '@vercel/build-utils';
@@ -16,15 +19,22 @@ import {
   RUNTIME_BUILDERS,
   STATIC_BUILDERS,
   RUNTIME_MANIFESTS,
-} from './types';
+} from './runtimes/constants';
+import {
+  BUILDPACK_PROJECT_MARKERS,
+  toBuildpackRuntime,
+} from '../buildpack-runtimes';
 import {
   filterFrameworksByRuntime,
-  getBuilderForRuntime,
-  hasFile,
   inferRuntimeFromFramework,
-  inferServiceRuntime,
-  INTERNAL_SERVICE_PREFIX,
-} from './utils';
+} from './runtimes/framework';
+import { getBuilderForRuntime, inferRuntime } from './runtimes/runtime';
+import {
+  parsePyModuleAttrEntrypoint,
+  isDockerfileEntrypoint,
+  stripTrailingSlash,
+} from './runtimes/entrypoint';
+import { hasFile, INTERNAL_SERVICE_PREFIX } from './utils';
 import { frameworkList } from '@vercel/frameworks';
 import { detectFrameworks } from '../detect-framework';
 import type { DetectorFilesystem } from '../detectors/filesystem';
@@ -33,36 +43,31 @@ import { isNodeBackendFramework } from '@vercel/build-utils';
 
 const frameworksBySlug = new Map(frameworkList.map(f => [f.slug, f]));
 
-/**
- * Match a Python `module:attr` entrypoint (e.g. `backend.jobs.scheduled:cleanup`).
- * Kept inline to avoid coupling fs-detectors to a Python-specific package.
- * Real verification would happen at the build time.
- */
-const PYTHON_MODULE_ATTR_RE =
-  /^([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*):([A-Za-z_][\w]*)$/;
-
-function parsePyModuleAttrEntrypoint(entrypoint: string): {
-  attrName: string;
-  filePath: string;
-} | null {
-  const match = PYTHON_MODULE_ATTR_RE.exec(entrypoint);
-  if (!match) return null;
-  return {
-    attrName: match[2],
-    filePath: match[1].replace(/\./g, '/') + '.py',
-  };
-}
-
 const SERVICE_NAME_REGEX = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/;
 const DNS_LABEL_RE = /^(?!-)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
-const ENV_PREFIX_RE = /^[A-Z][A-Z0-9_]*_$/;
+const ENV_VAR_NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const ENTRYPOINT_REQUIRED_RUNTIMES = new Set<ServiceRuntime>([
+  'node',
+  'python',
+  'go',
+]);
+
+function isContainerRuntime(config: ConfiguredServiceConfig): boolean {
+  return config.runtime === 'container';
+}
+
+function normalizeContainerCommand(command: string | string[]): string[] {
+  return Array.isArray(command) ? command : [command];
+}
+
+type ConfiguredServiceConfig = ExperimentalServiceConfig;
 
 interface ResolvedEntrypointPath {
   normalized: string;
   isDirectory: boolean;
 }
 
-async function getServiceFs(
+export async function getServiceFs(
   fs: DetectorFilesystem,
   serviceName: string,
   root?: string
@@ -73,7 +78,9 @@ async function getServiceFs(
   if (!root) {
     return { fs };
   }
-  const normalizedRoot = posixPath.normalize(root);
+  // Strip any trailing slash `posixPath.normalize` leaves behind so the chdir
+  // path matches what callers persist as the service `root`.
+  const normalizedRoot = stripTrailingSlash(posixPath.normalize(root));
   if (!(await fs.hasPath(normalizedRoot))) {
     return {
       fs,
@@ -102,7 +109,56 @@ function normalizeServiceEntrypoint(entrypoint: string): string {
   return normalized === '' ? '.' : normalized;
 }
 
-async function resolveEntrypointPath({
+function getEffectiveServiceTrigger(
+  config: ConfiguredServiceConfig
+): JobTrigger | undefined {
+  if (config.type === 'cron') {
+    return 'schedule';
+  }
+  if (config.type === 'worker') {
+    return 'queue';
+  }
+  if (config.type !== 'job') {
+    return undefined;
+  }
+  return config.trigger;
+}
+
+function getEntrypointRequiredRuntime(
+  config: ConfiguredServiceConfig
+): ServiceRuntime | undefined {
+  if (config.runtime && config.runtime in RUNTIME_BUILDERS) {
+    return config.runtime as ServiceRuntime;
+  }
+  return inferRuntimeFromFramework(config.framework);
+}
+
+function validateBackendFileEntrypoint(
+  name: string,
+  config: ConfiguredServiceConfig,
+  resolvedEntrypoint: ResolvedEntrypointPath | undefined,
+  options: ResolveAllConfiguredServicesOptions
+): ServiceDetectionError | null {
+  if (
+    !options.requireFileEntrypointForBackendRuntimes ||
+    !resolvedEntrypoint?.isDirectory
+  ) {
+    return null;
+  }
+
+  const runtime = getEntrypointRequiredRuntime(config);
+  if (!runtime || !ENTRYPOINT_REQUIRED_RUNTIMES.has(runtime)) {
+    return null;
+  }
+
+  return {
+    code: 'INVALID_ENTRYPOINT',
+    message: `Service "${name}" must specify a file "entrypoint" when using "${config.runtime ? 'runtime' : 'framework'}" "${config.runtime || config.framework}".`,
+    serviceName: name,
+  };
+}
+
+export async function resolveEntrypointPath({
   fs,
   serviceName,
   entrypoint,
@@ -138,7 +194,7 @@ type RoutePrefixSource = 'configured' | 'generated';
 
 interface ResolveConfiguredServiceOptions {
   name: string;
-  config: ExperimentalServiceConfig;
+  config: ConfiguredServiceConfig;
   /** Filesystem scoped to the service root (via chdir) when root is set, otherwise the project-level fs. */
   serviceFs: DetectorFilesystem;
   root?: string;
@@ -146,6 +202,11 @@ interface ResolveConfiguredServiceOptions {
   resolvedEntrypoint?: ResolvedEntrypointPath;
   routePrefixSource?: RoutePrefixSource;
 }
+
+interface ResolveAllConfiguredServicesOptions {
+  requireFileEntrypointForBackendRuntimes?: boolean;
+}
+
 function toWorkspaceRelativeEntrypoint(
   entrypoint: string,
   workspace: string
@@ -168,7 +229,7 @@ function toWorkspaceRelativeEntrypoint(
   return relativeEntrypoint;
 }
 
-async function inferWorkspaceFromNearestManifest({
+export async function inferWorkspaceFromNearestManifest({
   fs,
   entrypoint,
   runtime,
@@ -214,7 +275,7 @@ async function inferWorkspaceFromNearestManifest({
   return undefined;
 }
 
-async function detectFrameworkFromWorkspace({
+export async function detectFrameworkFromWorkspace({
   fs,
   workspace,
   serviceName,
@@ -237,7 +298,7 @@ async function detectFrameworkFromWorkspace({
     return {
       error: {
         code: 'MULTIPLE_FRAMEWORKS_SERVICE',
-        message: `Multiple frameworks detected in ${workspace === '.' ? 'project root' : `${workspace}/`}: ${frameworkNames}. Specify "framework" explicitly in experimentalServices.`,
+        message: `Multiple frameworks detected in ${workspace === '.' ? 'project root' : `${workspace}/`}: ${frameworkNames}. Specify "framework" explicitly in services.`,
         serviceName,
       },
     };
@@ -268,7 +329,7 @@ interface ResolvedServiceRoutingConfig {
 
 function resolveServiceRoutingConfig(
   name: string,
-  config: ExperimentalServiceConfig
+  config: ConfiguredServiceConfig
 ): {
   routing?: ResolvedServiceRoutingConfig;
   error?: ServiceDetectionError;
@@ -367,11 +428,12 @@ function resolveServiceRoutingConfig(
 }
 
 /**
- * Validate a service configuration from vercel.json experimentalServices.
+ * Validate a service configuration from vercel.json services.
  */
 export function validateServiceConfig(
   name: string,
-  config: ExperimentalServiceConfig
+  config: ConfiguredServiceConfig,
+  options: ResolveAllConfiguredServicesOptions = {}
 ): ServiceDetectionError | null {
   if (!SERVICE_NAME_REGEX.test(name)) {
     return {
@@ -388,13 +450,18 @@ export function validateServiceConfig(
     };
   }
   const serviceType = config.type || 'web';
+  const effectiveTrigger = getEffectiveServiceTrigger(config);
+  const effectiveService = {
+    type: serviceType,
+    trigger: effectiveTrigger,
+  };
+
   const isJobService = serviceType === 'job' || serviceType === 'cron';
-  const isScheduleJobService =
-    serviceType === 'cron' ||
-    (serviceType === 'job' && config.trigger === 'schedule');
-  const isQueueJobService = serviceType === 'job' && config.trigger === 'queue';
+  const isScheduleJobService = isScheduleTriggeredService(effectiveService);
+  const isQueueJobService =
+    serviceType === 'job' && isQueueTriggeredService(effectiveService);
   const isWorkflowService =
-    serviceType === 'job' && config.trigger === 'workflow';
+    serviceType === 'job' && effectiveTrigger === 'workflow';
   const isNonWebService = serviceType === 'worker' || isJobService;
   const serviceTypeLabel = isJobService
     ? 'Job'
@@ -450,7 +517,7 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
-  if (serviceType === 'job' && config.trigger === undefined) {
+  if (serviceType === 'job' && effectiveTrigger === undefined) {
     return {
       code: 'MISSING_JOB_TRIGGER',
       message: `Job service "${name}" is missing required "trigger" field.`,
@@ -459,12 +526,12 @@ export function validateServiceConfig(
   }
   if (
     serviceType === 'job' &&
-    config.trigger &&
-    !JOB_TRIGGERS.includes(config.trigger)
+    effectiveTrigger &&
+    !JOB_TRIGGERS.includes(effectiveTrigger)
   ) {
     return {
       code: 'INVALID_JOB_TRIGGER',
-      message: `Job service "${name}" has invalid trigger "${config.trigger}". Expected ${JOB_TRIGGERS.map((t: JobTrigger) => `"${t}"`).join(', ')}.`,
+      message: `Job service "${name}" has invalid trigger "${effectiveTrigger}". Expected ${JOB_TRIGGERS.map((t: JobTrigger) => `"${t}"`).join(', ')}.`,
       serviceName: name,
     };
   }
@@ -512,13 +579,45 @@ export function validateServiceConfig(
       };
     }
   }
-  if (config.envPrefix !== undefined) {
-    if (!ENV_PREFIX_RE.test(config.envPrefix)) {
+  if (config.env !== undefined) {
+    if (typeof config.env !== 'object' || Array.isArray(config.env)) {
       return {
-        code: 'INVALID_ENV_PREFIX',
-        message: `Service "${name}" has invalid envPrefix "${config.envPrefix}". Must start with an uppercase letter, contain only uppercase letters, digits, and underscores, and end with "_" (e.g., "MY_SERVICE_").`,
+        code: 'INVALID_ENV_VARS',
+        message: `Service "${name}" has invalid "env". Must be an object keyed by environment variable name.`,
         serviceName: name,
       };
+    }
+    for (const [envVarName, envVar] of Object.entries(config.env)) {
+      if (!ENV_VAR_NAME_RE.test(envVarName)) {
+        return {
+          code: 'INVALID_ENV_VAR_NAME',
+          message: `Service "${name}" has invalid env key "${envVarName}". Must match /^[A-Za-z_][A-Za-z0-9_]*$/.`,
+          serviceName: name,
+        };
+      }
+      if (!envVar || typeof envVar !== 'object' || Array.isArray(envVar)) {
+        return {
+          code: 'INVALID_ENV_VAR',
+          message: `Service "${name}" has invalid env["${envVarName}"]. Must be an object with a "type" discriminator.`,
+          serviceName: name,
+        };
+      }
+      const envVarType = (envVar as { type?: unknown }).type;
+      if (envVarType !== 'service-ref') {
+        return {
+          code: 'INVALID_ENV_VAR_TYPE',
+          message: `Service "${name}" env["${envVarName}"] has unknown type "${envVarType}".`,
+          serviceName: name,
+        };
+      }
+      const refService = (envVar as { service?: unknown }).service;
+      if (typeof refService !== 'string' || refService.length === 0) {
+        return {
+          code: 'INVALID_ENV_VAR_REF',
+          message: `Service "${name}" env["${envVarName}"] must specify "service" as a non-empty string.`,
+          serviceName: name,
+        };
+      }
     }
   }
   if (config.runtime && !(config.runtime in RUNTIME_BUILDERS)) {
@@ -549,6 +648,7 @@ export function validateServiceConfig(
   const hasFramework = Boolean(config.framework);
   const hasBuilderOrRuntime = Boolean(config.builder || config.runtime);
   const hasEntrypoint = Boolean(config.entrypoint);
+  const entrypointRequiredRuntime = getEntrypointRequiredRuntime(config);
 
   if (!hasFramework && !hasBuilderOrRuntime && !hasEntrypoint) {
     return {
@@ -557,10 +657,46 @@ export function validateServiceConfig(
       serviceName: name,
     };
   }
+  if (
+    options.requireFileEntrypointForBackendRuntimes &&
+    !hasEntrypoint &&
+    entrypointRequiredRuntime &&
+    ENTRYPOINT_REQUIRED_RUNTIMES.has(entrypointRequiredRuntime)
+  ) {
+    return {
+      code: 'MISSING_ENTRYPOINT',
+      message: `Service "${name}" must specify "entrypoint" when using "${config.runtime ? 'runtime' : 'framework'}" "${config.runtime || config.framework}".`,
+      serviceName: name,
+    };
+  }
   if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
+    // Entrypoint-free builds exist only under `services`: `experimentalServices`
+    // is deprecated, shares one output directory across services, and routes
+    // functions by their Lambda output path, none of which fits a container
+    // image. Point at the migration rather than at a bare missing field.
+    const buildpackRuntime = config.builder
+      ? undefined
+      : toBuildpackRuntime(config.runtime);
+    if (buildpackRuntime) {
+      const markers = BUILDPACK_PROJECT_MARKERS.get(buildpackRuntime) ?? [];
+      return {
+        code: 'BUILDPACK_REQUIRES_SERVICES',
+        message:
+          `Service "${name}" must specify "entrypoint" when using "runtime" with "experimentalServices". ` +
+          `Move it to "services" to build without an "entrypoint" from a ${markers.join(' or ')} at the service root.`,
+        serviceName: name,
+      };
+    }
     return {
       code: 'MISSING_ENTRYPOINT',
       message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,
+      serviceName: name,
+    };
+  }
+  if (config.command !== undefined && !isContainerRuntime(config)) {
+    return {
+      code: 'INVALID_COMMAND',
+      message: `Service "${name}" can only specify "command" when using runtime "container".`,
       serviceName: name,
     };
   }
@@ -569,7 +705,7 @@ export function validateServiceConfig(
 
 export function validateServiceEntrypoint(
   name: string,
-  config: ExperimentalServiceConfig,
+  config: ConfiguredServiceConfig,
   resolvedEntrypoint: ResolvedEntrypointPath
 ): ServiceDetectionError | null {
   // File entrypoints without builder/runtime/framework must have a supported extension.
@@ -582,7 +718,7 @@ export function validateServiceEntrypoint(
     !config.runtime &&
     !config.framework
   ) {
-    const runtime = inferServiceRuntime({
+    const runtime = inferRuntime({
       ...config,
       entrypoint: resolvedEntrypoint.normalized,
     });
@@ -604,7 +740,7 @@ export function validateServiceEntrypoint(
  */
 export async function resolveConfiguredService(
   options: ResolveConfiguredServiceOptions
-): Promise<Service> {
+): Promise<ExperimentalService> {
   const {
     name,
     config,
@@ -615,8 +751,7 @@ export async function resolveConfiguredService(
     routePrefixSource = 'configured',
   } = options;
   const type = config.type || 'web';
-  const trigger =
-    type === 'cron' ? 'schedule' : type === 'job' ? config.trigger : undefined;
+  const trigger = getEffectiveServiceTrigger(config);
   const rawEntrypoint = config.entrypoint;
 
   const moduleAttrParsed =
@@ -632,8 +767,26 @@ export async function resolveConfiguredService(
   const routePrefixWasConfigured =
     routingResult.routing?.routePrefixConfigured ?? false;
 
+  const containerEntrypoint =
+    isContainerRuntime(config) && typeof rawEntrypoint === 'string'
+      ? rawEntrypoint
+      : undefined;
+  // A container entrypoint is either a Dockerfile path to build & push, or a
+  // prebuilt image reference to pass through unchanged.
+  const containerDockerfile =
+    containerEntrypoint && isDockerfileEntrypoint(containerEntrypoint)
+      ? posixPath.normalize(containerEntrypoint)
+      : undefined;
+  const containerImage =
+    containerEntrypoint && !containerDockerfile
+      ? containerEntrypoint
+      : undefined;
   let resolvedEntrypointPath = resolvedEntrypoint;
-  if (!resolvedEntrypointPath && typeof rawEntrypoint === 'string') {
+  if (
+    !containerEntrypoint &&
+    !resolvedEntrypointPath &&
+    typeof rawEntrypoint === 'string'
+  ) {
     const entrypointToResolve = moduleAttrParsed
       ? moduleAttrParsed.filePath
       : rawEntrypoint;
@@ -644,7 +797,11 @@ export async function resolveConfiguredService(
     });
     resolvedEntrypointPath = resolved.entrypoint;
   }
-  if (typeof rawEntrypoint === 'string' && !resolvedEntrypointPath) {
+  if (
+    !containerEntrypoint &&
+    typeof rawEntrypoint === 'string' &&
+    !resolvedEntrypointPath
+  ) {
     throw new Error(
       `Failed to resolve entrypoint "${rawEntrypoint}" for service "${name}".`
     );
@@ -652,7 +809,7 @@ export async function resolveConfiguredService(
   const normalizedEntrypoint = resolvedEntrypointPath?.normalized;
   const entrypointIsDirectory = Boolean(resolvedEntrypointPath?.isDirectory);
 
-  const inferredRuntime = inferServiceRuntime({
+  const inferredRuntime = inferRuntime({
     ...config,
     entrypoint: entrypointIsDirectory ? undefined : normalizedEntrypoint,
   });
@@ -699,7 +856,9 @@ export async function resolveConfiguredService(
       ? getServiceQueueTopics({ type, topics: config.topics })
       : trigger === 'queue'
         ? config.topics
-        : undefined;
+        : trigger === 'workflow'
+          ? ['__wkf_*']
+          : undefined;
 
   let builderUse: string;
   let builderSrc: string;
@@ -715,7 +874,11 @@ export async function resolveConfiguredService(
       frameworkDefinition?.useRuntime?.src ||
       'package.json';
   } else if (config.framework) {
-    if (type === 'web' && isNodeBackendFramework(config.framework)) {
+    const isCronService = isScheduleTriggeredService({ type, trigger });
+    if (
+      isNodeBackendFramework(config.framework) &&
+      (type === 'web' || isCronService)
+    ) {
       builderUse = '@vercel/backends';
     } else {
       builderUse =
@@ -733,11 +896,16 @@ export async function resolveConfiguredService(
       );
     }
     if (inferredRuntime === 'node') {
-      builderUse = type === 'web' ? '@vercel/backends' : '@vercel/node';
+      const isCronService = isScheduleTriggeredService({ type, trigger });
+      builderUse =
+        type === 'web' || isCronService ? '@vercel/backends' : '@vercel/node';
     } else {
       builderUse = getBuilderForRuntime(inferredRuntime);
     }
-    builderSrc = resolvedEntrypointFile!;
+    builderSrc =
+      inferredRuntime === 'container' && typeof containerEntrypoint === 'string'
+        ? containerEntrypoint
+        : resolvedEntrypointFile!;
   }
 
   const normalizedSubdomain =
@@ -798,17 +966,24 @@ export async function resolveConfiguredService(
   if (config.framework) {
     builderConfig.framework = config.framework;
   }
+  if (containerImage) {
+    builderConfig.handler = containerImage;
+  }
+  if (config.command !== undefined) {
+    builderConfig.command = normalizeContainerCommand(config.command);
+  }
   if (moduleAttrParsed) {
     builderConfig.handlerFunction = moduleAttrParsed.attrName;
   }
 
   return {
+    schema: 'experimentalServices',
     name,
     type,
     trigger,
     group,
     workspace,
-    entrypoint: resolvedEntrypointFile,
+    entrypoint: containerImage ?? containerDockerfile ?? resolvedEntrypointFile,
     routePrefix,
     routePrefixSource: resolvedRoutePrefixSource,
     subdomain: normalizedSubdomain,
@@ -821,33 +996,35 @@ export async function resolveConfiguredService(
     runtime,
     buildCommand: config.buildCommand,
     installCommand: config.installCommand,
+    preDeployCommand: config.preDeployCommand,
     schedule: config.schedule,
     handlerFunction: moduleAttrParsed?.attrName,
     topics,
-    envPrefix: config.envPrefix,
+    env: config.env,
   };
 }
 
 /**
- * Resolve all services from vercel.json experimentalServices.
+ * Resolve all services from vercel.json services.
  * Validates each service configuration.
  */
 export async function resolveAllConfiguredServices(
-  services: ExperimentalServices,
+  services: ConfiguredServices,
   fs: DetectorFilesystem,
-  routePrefixSource: RoutePrefixSource = 'configured'
+  routePrefixSource: RoutePrefixSource = 'configured',
+  options: ResolveAllConfiguredServicesOptions = {}
 ): Promise<{
-  services: Service[];
+  services: ExperimentalService[];
   errors: ServiceDetectionError[];
 }> {
-  const resolved: Service[] = [];
+  const resolved: ExperimentalService[] = [];
   const errors: ServiceDetectionError[] = [];
   const webServicesByRoutePrefix = new Map<string, string>();
 
   for (const name of Object.keys(services)) {
-    const serviceConfig = services[name];
+    const serviceConfig = services[name] as ExperimentalServiceConfig;
 
-    const validationError = validateServiceConfig(name, serviceConfig);
+    const validationError = validateServiceConfig(name, serviceConfig, options);
     if (validationError) {
       errors.push(validationError);
       continue;
@@ -863,7 +1040,10 @@ export async function resolveAllConfiguredServices(
     const serviceFs = serviceFsResult.fs;
 
     let resolvedEntrypoint: ResolvedEntrypointPath | undefined;
-    if (typeof serviceConfig.entrypoint === 'string') {
+    if (
+      typeof serviceConfig.entrypoint === 'string' &&
+      !isContainerRuntime(serviceConfig)
+    ) {
       const moduleAttr = parsePyModuleAttrEntrypoint(serviceConfig.entrypoint);
       const entrypointToResolve =
         moduleAttr?.filePath ?? serviceConfig.entrypoint;
@@ -891,10 +1071,21 @@ export async function resolveAllConfiguredServices(
       }
     }
 
+    const explicitBackendEntrypointError = validateBackendFileEntrypoint(
+      name,
+      serviceConfig,
+      resolvedEntrypoint,
+      options
+    );
+    if (explicitBackendEntrypointError) {
+      errors.push(explicitBackendEntrypointError);
+      continue;
+    }
+
     let resolvedConfig = serviceConfig;
     if (!serviceConfig.framework && resolvedEntrypoint) {
       if (resolvedEntrypoint.isDirectory) {
-        const inferredRuntime = inferServiceRuntime({
+        const inferredRuntime = inferRuntime({
           ...serviceConfig,
         });
         const workspace = resolvedEntrypoint.normalized;
@@ -921,7 +1112,7 @@ export async function resolveAllConfiguredServices(
           framework,
         };
       } else {
-        const inferredRuntime = inferServiceRuntime({
+        const inferredRuntime = inferRuntime({
           ...serviceConfig,
           entrypoint: resolvedEntrypoint.normalized,
         });
@@ -949,6 +1140,17 @@ export async function resolveAllConfiguredServices(
           }
         }
       }
+    }
+
+    const backendEntrypointError = validateBackendFileEntrypoint(
+      name,
+      resolvedConfig,
+      resolvedEntrypoint,
+      options
+    );
+    if (backendEntrypointError) {
+      errors.push(backendEntrypointError);
+      continue;
     }
 
     const service = await resolveConfiguredService({
@@ -979,5 +1181,41 @@ export async function resolveAllConfiguredServices(
     resolved.push(service);
   }
 
+  const servicesByName = new Map(resolved.map(s => [s.name, s]));
+  for (const service of resolved) {
+    if (!service.env) continue;
+    validateEnvRefs(service.env, service.name, servicesByName, errors);
+  }
+
   return { services: resolved, errors };
+}
+
+function validateEnvRefs(
+  env: EnvVars,
+  serviceName: string,
+  servicesByName: Map<string, ExperimentalService>,
+  errors: ServiceDetectionError[]
+): void {
+  const pathPrefix = `Service "${serviceName}" env`;
+  for (const [envVarName, envVar] of Object.entries(env)) {
+    if (envVar.type !== 'service-ref') continue;
+
+    const refName = envVar.service;
+    const target = servicesByName.get(refName);
+    if (!target) {
+      errors.push({
+        code: 'UNKNOWN_SERVICE_REF',
+        message: `${pathPrefix}["${envVarName}"] references unknown service "${refName}".`,
+        serviceName,
+      });
+      continue;
+    }
+    if (target.type !== 'web') {
+      errors.push({
+        code: 'INVALID_SERVICE_REF_TYPE',
+        message: `${pathPrefix}["${envVarName}"] references service "${refName}" which is a ${target.type} service and has no URL. Only web services can be referenced.`,
+        serviceName,
+      });
+    }
+  }
 }

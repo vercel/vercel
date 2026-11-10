@@ -439,7 +439,7 @@ describe('blob store add', () => {
         'staging',
       ]);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedOutput.error).toHaveBeenCalledWith(
         expect.stringContaining('Invalid environment value')
       );
@@ -485,7 +485,7 @@ describe('blob store add', () => {
       }));
 
       const exitCode = await addStore(client, ['--invalid-flag']);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when --access flag is missing in non-TTY', async () => {
@@ -494,7 +494,7 @@ describe('blob store add', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
-        "Missing required --access flag. Must be 'public' or 'private'."
+        "Missing required --access option. Must be 'public' or 'private'."
       );
     });
 
@@ -549,20 +549,6 @@ describe('blob store add', () => {
         'Creating new blob store'
       );
       expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
-    });
-
-    it('should handle API errors gracefully', async () => {
-      const apiError = new Error('Network error');
-      client.fetch = vi.fn().mockRejectedValue(apiError);
-
-      const exitCode = await addStore(client, [
-        '--access',
-        'public',
-        'failing-store',
-      ]);
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.success).not.toHaveBeenCalled();
     });
 
     it('should handle linking errors after store creation', async () => {
@@ -636,26 +622,6 @@ describe('blob store add', () => {
   });
 
   describe('API call behavior', () => {
-    it('should include accountId when project is linked', async () => {
-      const exitCode = await addStore(client, [
-        '--access',
-        'public',
-        'linked-store',
-      ]);
-
-      expect(exitCode).toBe(0);
-      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'linked-store',
-          region: 'iad1',
-          access: 'public',
-        }),
-        accountId: 'org_123',
-      });
-    });
-
     it('should not include accountId when project is not linked', async () => {
       mockedGetLinkedProject.mockResolvedValue({
         org: null,
@@ -749,52 +715,135 @@ describe('blob store add', () => {
     });
   });
 
-  describe('spinner and output behavior', () => {
-    it('should show spinner during store creation and stop on success', async () => {
-      const exitCode = await addStore(client, [
+  describe('non-interactive mode (agents)', () => {
+    beforeEach(() => {
+      client.nonInteractive = true;
+      vi.spyOn(process, 'exit').mockImplementation(((_code?: number) => {
+        throw new Error('exit');
+      }) as () => never);
+    });
+
+    it('does not prompt or create a store without --yes when linked, emitting confirmation_required', async () => {
+      client.setArgv(
+        'blob',
+        'create-store',
+        'agent-store',
         '--access',
-        'public',
-        'spinner-test',
+        'private'
+      );
+
+      await expect(
+        addStore(client, ['agent-store', '--access', 'private'])
+      ).rejects.toThrow('exit');
+
+      // Nothing is created on a blocked run, so the --yes retry can't duplicate.
+      expect(client.fetch).not.toHaveBeenCalled();
+      expect(client.input.confirm).not.toHaveBeenCalled();
+
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'confirmation_required',
+        message: expect.stringMatching(/confirmation|--yes/),
+        next: expect.arrayContaining([
+          expect.objectContaining({
+            command: expect.stringContaining('--yes'),
+          }),
+        ]),
+      });
+    });
+
+    it('creates and links to all environments with --yes and never prompts', async () => {
+      const exitCode = await addStore(client, [
+        'agent-store',
+        '--access',
+        'private',
+        '--yes',
       ]);
 
       expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith(
-        'Creating new blob store'
-      );
-      expect(mockedOutput.stopSpinner).toHaveBeenCalled();
-      expect(mockedOutput.success).toHaveBeenCalledWith(
-        'Blob store created: spinner-test (store_test123)'
+      expect(client.input.confirm).not.toHaveBeenCalled();
+      expect(client.input.checkbox).not.toHaveBeenCalled();
+      expect(mockedConnectResourceToProject).toHaveBeenCalledWith(
+        client,
+        'proj_123',
+        'store_test123',
+        ['production', 'preview', 'development'],
+        { accountId: 'org_123' }
       );
     });
 
-    it('should show linking spinner when connecting to project', async () => {
+    it('creates and links to the given --environment list without --yes', async () => {
       const exitCode = await addStore(client, [
+        'agent-store',
         '--access',
-        'public',
-        'link-spinner-test',
+        'private',
+        '--environment',
+        'production',
       ]);
 
       expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith(
-        'Connecting link-spinner-test to my-project...'
+      expect(client.input.confirm).not.toHaveBeenCalled();
+      expect(mockedConnectResourceToProject).toHaveBeenCalledWith(
+        client,
+        'proj_123',
+        'store_test123',
+        ['production'],
+        { accountId: 'org_123' }
       );
     });
 
-    it('should not stop spinner on creation error', async () => {
-      const apiError = new Error('Creation failed');
-      client.fetch = vi.fn().mockRejectedValue(apiError);
+    it('emits missing_arguments when --access is absent', async () => {
+      await expect(addStore(client, ['agent-store'])).rejects.toThrow('exit');
+
+      expect(client.fetch).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: expect.stringContaining('--access'),
+      });
+    });
+
+    it('emits missing_arguments when the name is absent', async () => {
+      await expect(addStore(client, ['--access', 'private'])).rejects.toThrow(
+        'exit'
+      );
+
+      expect(client.fetch).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload).toMatchObject({
+        status: 'error',
+        reason: 'missing_arguments',
+        message: expect.stringContaining('name'),
+      });
+    });
+
+    it('creates the store without a confirmation gate when not linked', async () => {
+      mockedGetLinkedProject.mockResolvedValue({
+        org: null,
+        project: null,
+        status: 'not_linked',
+      });
 
       const exitCode = await addStore(client, [
+        'standalone-store',
         '--access',
-        'public',
-        'error-test',
+        'private',
       ]);
 
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith(
-        'Creating new blob store'
-      );
-      expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
+      expect(exitCode).toBe(0);
+      expect(client.fetch).toHaveBeenCalledWith('/v1/storage/stores/blob', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'standalone-store',
+          region: 'iad1',
+          access: 'private',
+        }),
+        accountId: undefined,
+      });
+      expect(mockedConnectResourceToProject).not.toHaveBeenCalled();
     });
   });
 });

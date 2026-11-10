@@ -637,6 +637,46 @@ packages:
     expect(accepts.resolved).toBe('1.3.8');
   });
 
+  it('uses the final document from multi-document lockfiles', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.18.0' } });
+    const lockPath = writePnpmLock(
+      tempDir,
+      `\
+---
+lockfileVersion: '9.0'
+
+packages:
+  pnpm@11.10.0:
+    resolution: {integrity: sha512-env}
+---
+lockfileVersion: '9.0'
+
+packages:
+  express@4.18.2:
+    resolution: {integrity: sha512-workspace}
+`
+    );
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'pnpm',
+      lockfilePath: lockPath,
+      lockfileVersion: 9,
+    });
+
+    const { dependencies } = readManifest(tempDir);
+    expect(dependencies).toEqual([
+      {
+        name: 'express',
+        type: 'direct',
+        scopes: ['prod'],
+        requested: '^4.18.0',
+        resolved: '4.18.2',
+      },
+    ]);
+  });
+
   it('handles @org/pkg namespaced packages', async () => {
     writePackageJson(tempDir, { dependencies: { '@vercel/node': '^3.0.0' } });
     const lockPath = writePnpmLock(
@@ -1544,5 +1584,64 @@ describe('generateProjectManifest — framework field', () => {
 
     const manifest = readManifest(tempDir);
     expect(manifest.framework).toBeUndefined();
+  });
+});
+
+describe('generateProjectManifest — serviceType field', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = makeTempDir();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('includes serviceType in manifest when provided', async () => {
+    writePackageJson(tempDir, { dependencies: { hono: '^4.0.0' } });
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+      serviceType: 'queue',
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.serviceType).toBe('queue');
+  });
+
+  it('omits serviceType from manifest when not provided', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.0.0' } });
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.serviceType).toBeUndefined();
+  });
+
+  it('omits serviceType from manifest when empty string provided', async () => {
+    writePackageJson(tempDir, { dependencies: { express: '^4.0.0' } });
+
+    await generateProjectManifest({
+      workPath: tempDir,
+      nodeVersion,
+      cliType: 'npm',
+      lockfilePath: undefined,
+      lockfileVersion: undefined,
+      serviceType: '',
+    });
+
+    const manifest = readManifest(tempDir);
+    expect(manifest.serviceType).toBeUndefined();
   });
 });

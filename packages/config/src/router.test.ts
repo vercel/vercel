@@ -90,11 +90,11 @@ describe('Router', () => {
     it('should return Rewrite type when destination has env vars', () => {
       const rewrite = router.rewrite(
         '/api/:path*',
-        `https://${deploymentEnv('API_HOST')}/$path*`
+        `https://${deploymentEnv('API_HOST')}/:path*`
       );
       expect(rewrite).toEqual({
         source: '/api/:path*',
-        destination: 'https://$API_HOST/$path*',
+        destination: 'https://$API_HOST/:path*',
         env: ['API_HOST'],
       });
     });
@@ -134,11 +134,11 @@ describe('Router', () => {
     it('should return Redirect type when destination has env vars', () => {
       const redirect = router.redirect(
         '/old/:path*',
-        `https://${deploymentEnv('NEW_HOST')}/$path*`
+        `https://${deploymentEnv('NEW_HOST')}/:path*`
       );
       expect(redirect).toEqual({
         source: '/old/:path*',
-        destination: 'https://$NEW_HOST/$path*',
+        destination: 'https://$NEW_HOST/:path*',
         env: ['NEW_HOST'],
       });
     });
@@ -477,6 +477,49 @@ describe('Router', () => {
       });
     });
 
+    it('should compile request path parameters', () => {
+      const route = router.rewrite('/api/:path*', '/internal/:path*', {
+        requestPath: '/:path*',
+      });
+
+      expect(route).toMatchObject({
+        src: expect.stringMatching(/^\^/),
+        dest: '/internal/$1',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      });
+    });
+
+    it('should preserve env references while compiling request path params', () => {
+      const route = router.rewrite('/api/:path*', '/internal/:path*', {
+        requestPath: '/$LOCALE/:path*',
+      });
+
+      expect(route).toMatchObject({
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$LOCALE/$1',
+            env: ['LOCALE'],
+          },
+        ],
+      });
+    });
+
+    it('should reject low-level named captures in a high-level request path', () => {
+      expect(() =>
+        router.rewrite('/api/:path*', '/internal/:path*', {
+          requestPath: '/$path',
+        })
+      ).toThrow(/Use `:path` path-to-regexp syntax/);
+    });
+
     it('should not extract path params as env vars', () => {
       const route = router.rewrite(
         '/users/:userId',
@@ -576,6 +619,38 @@ describe('Router', () => {
       router.route(route);
 
       expect(route.transforms[0].env).toEqual(['REGION', 'DATACENTER']);
+    });
+
+    it('should support request.path transforms', () => {
+      router.route({
+        src: '^/api/(.*)$',
+        dest: '/internal/$1',
+        transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
+      });
+
+      const config = router.getConfig();
+      expect(config.routes).toContainEqual({
+        src: '^/api/(.*)$',
+        dest: '/internal/$1',
+        transforms: [{ type: 'request.path', op: 'set', args: '/$1' }],
+      });
+    });
+
+    it('should auto-extract env vars from request.path transform args', () => {
+      const route = {
+        src: '^/api/(.*)$',
+        transforms: [
+          {
+            type: 'request.path' as const,
+            op: 'set' as const,
+            args: '/$LOCALE/$1',
+          },
+        ],
+      };
+
+      router.route(route);
+
+      expect(route.transforms[0].env).toEqual(['LOCALE']);
     });
   });
 

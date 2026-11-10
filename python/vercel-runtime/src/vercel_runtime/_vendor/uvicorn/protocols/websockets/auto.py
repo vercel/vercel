@@ -8,7 +8,7 @@ try:
     import websockets  # noqa
 except ImportError:  # pragma: no cover
     try:
-        import wsproto  # noqa
+        from vercel_runtime._vendor import wsproto  # noqa
     except ImportError:
         AutoWebSocketsProtocol = None
     else:

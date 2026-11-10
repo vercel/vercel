@@ -1,0 +1,40 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Flask web service"
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/enqueue",
+      "method": "POST",
+      "body": { "request_id": "probe-15-jobs" },
+      "status": 200,
+      "mustContain": "probe-15-jobs"
+    },
+    {
+      "path": "/status/jobs/probe-15-jobs",
+      "status": 200,
+      "mustContain": "probe-15-jobs",
+      "retries": 5,
+      "retryDelay": 2000
+    },
+    {
+      "path": "/_svc/worker/index",
+      "method": "POST",
+      "body": {},
+      "status": 404,
+      "mustContain": "404 from Flask web service"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Flask web service"
+    }
+  ]
+}

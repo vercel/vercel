@@ -20,6 +20,7 @@ export const rolldown = async (
     'entrypoint' | 'workPath' | 'repoRootPath' | 'config'
   > & {
     span?: Span;
+    defaultFormat?: 'esm' | 'cjs';
   }
 ) => {
   const files: Files = {};
@@ -202,7 +203,9 @@ export const rolldown = async (
               ? await isCommonJS(id, resolved.id, resolved)
               : false;
 
-            if (isCjs) {
+            if (isCjs && resolved) {
+              localBuildFiles.add(resolved.id);
+
               const importerResolved = await this.resolve(importer);
               const importerPkgJsonPath = importerResolved?.packageJsonPath;
 

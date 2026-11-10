@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -14,13 +15,12 @@ import {
 import { promoteSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
-  validateRequiredArgs,
   confirmAction,
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
   getRedirectPromoteSuggestionFlags,
 } from './shared';
+import { validateRequiredArguments } from '../../util/command-arguments';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import updateRedirectVersion from '../../util/redirects/update-redirect-version';
@@ -31,7 +31,7 @@ export default async function promote(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, promoteSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const error = validateRequiredArgs(parsed.args, ['version-id']);
+  const error = validateRequiredArguments(parsed.args, ['version-id']);
   if (error) {
     if (client.nonInteractive) {
       const afterPromote = getArgsAfterRedirectsSubcommand(
@@ -60,15 +60,19 @@ export default async function promote(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(error);
-    return 1;
+    return 2;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -127,14 +131,14 @@ export default async function promote(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: `Version ${version.name || version.id} is already live. Nothing to promote.`,
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(
       `Version ${chalk.bold(version.name || version.id)} is already live.`
     );
-    return 1;
+    return 2;
   }
 
   if (!version.isStaging) {
@@ -159,9 +163,9 @@ export default async function promote(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(
       `Version ${chalk.bold(
@@ -170,7 +174,7 @@ export default async function promote(client: Client, argv: string[]) {
         'vercel redirects list-versions'
       )} to see which version is currently staged.`
     );
-    return 1;
+    return 2;
   }
 
   const versionName = version.name || version.id;

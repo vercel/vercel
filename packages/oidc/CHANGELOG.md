@@ -1,5 +1,193 @@
 # @vercel/oidc
 
+## 4.0.4
+
+### Patch Changes
+
+- Updated dependencies [bcdc735]
+  - @vercel/cli-config@0.3.4
+
+## 4.0.3
+
+### Patch Changes
+
+- Updated dependencies [b0e01f5]
+  - @vercel/cli-config@0.3.3
+
+## 4.0.2
+
+### Patch Changes
+
+- Updated dependencies [637c7b9]
+  - @vercel/cli-config@0.3.2
+
+## 4.0.1
+
+### Patch Changes
+
+- d032cfb: Add experimental Connect event delivery authentication scoped to project, environment, registered path, preview branch and delivery purpose, with envelope schema validation. Distinguish OIDC identity failures from temporary signing-key outages.
+
+  Preserve optional MCP event metadata and opaque cursors within the total delivery body limit.
+
+## 4.0.0
+
+### Major Changes
+
+- ec76b68: Read the Vercel OIDC token from the file specified by `VERCEL_OIDC_TOKEN_FILE` on each call.
+
+## 3.8.10
+
+### Patch Changes
+
+- Updated dependencies [85cfdc3]
+  - @vercel/cli-config@0.3.1
+
+## 3.8.9
+
+### Patch Changes
+
+- Updated dependencies [c610f14]
+  - @vercel/cli-config@0.3.0
+
+## 3.8.8
+
+### Patch Changes
+
+- Updated dependencies [c4c4f3f]
+  - @vercel/cli-config@0.2.7
+
+## 3.8.7
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/cli-config@0.2.6
+
+## 3.8.6
+
+### Patch Changes
+
+- Updated dependencies [38a4acd]
+  - @vercel/cli-config@0.2.5
+
+## 3.8.5
+
+### Patch Changes
+
+- Updated dependencies [7a3a2ef]
+  - @vercel/cli-config@0.2.4
+
+## 3.8.4
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 3.8.3
+
+### Patch Changes
+
+- Updated dependencies [92dfd87]
+  - @vercel/cli-config@0.2.3
+
+## 3.8.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/cli-config@0.2.2
+  - @vercel/cli-exec@1.0.1
+
+## 3.8.1
+
+### Patch Changes
+
+- Updated dependencies [6e29745]
+  - @vercel/cli-config@0.2.1
+
+## 3.8.0
+
+### Minor Changes
+
+- d29a8f9: Cache exchanged OIDC tokens in memory, keyed by a hash of the source token, audience, and jti, so repeated exchanges reuse the result instead of calling the token-exchange endpoint every time. Cached tokens are evicted when the API-provided expiry passes, and the cache is bounded with least-recently-used eviction to avoid unbounded growth. Add a `skipCache` option (surfaced as `skipTokenCache` on `awsCredentialsProvider`) to bypass the cache. `jti` and the cache-skip flags are now only accepted alongside an `audience`, since they only take effect during a token exchange.
+
+## 3.7.1
+
+### Patch Changes
+
+- fb93ff6: Deprecate `getVercelOidcTokenSync` in favor of `getVercelOidcToken`
+
+## 3.7.0
+
+### Minor Changes
+
+- 415fde0: Add optional `audience` and `jti` parameters to exchange Vercel OIDC tokens for use with AWS STS and other providers.
+
+## 3.6.2
+
+### Patch Changes
+
+- Updated dependencies [3f21605]
+  - @vercel/cli-exec@1.0.0
+
+## 3.6.1
+
+### Patch Changes
+
+- 01cf6c2: Add `verifyVercelOidcToken` for verifying Vercel OIDC tokens against Vercel's remote JWKS.
+
+## 3.6.0
+
+### Minor Changes
+
+- fddeb55: Add configurable credentials storage handling across the CLI auth stack. Storage of credentials can be configured by the new `credStorage` key in global `config.json` or the new `VERCEL_TOKEN_STORAGE` environment variable. The environment variable takes precedence over the configuration key. Accepted values are `file` (store credentials in `auth.json`), `keyring` (store credentials in system keyring, e.g macOS Keychain or Secrets Service on Linux), and `auto` (try storing in keyring if available, fall back to `file` if keyring is not available).
+
+  `@vercel/oidc` supports keyring-stored authentication credentials by delegating the OIDC minting to the CLI executable via `@vercel/cli-exec`.
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/cli-config@0.2.0
+
+## 3.5.0
+
+### Minor Changes
+
+- 5a700dc: Add conditional edge-light export to support Edge Runtime
+
+## 3.4.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+
+## 3.4.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 3.3.1
+
+### Patch Changes
+
+- bf07448: Revert "auth: Make it possible to store CLI credentials in OS keychain (#16083)"
+
+## 3.3.0
+
+### Minor Changes
+
+- 24686d0: Add configurable auth token storage with keyring-backed persistence and file fallback support.
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+- Updated dependencies [24686d0]
+- Updated dependencies [d36ee35]
+- Updated dependencies [56c9f89]
+  - @vercel/cli-auth@0.1.0
+
 ## 3.2.1
 
 ### Patch Changes

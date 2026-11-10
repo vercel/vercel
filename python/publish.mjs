@@ -1,17 +1,19 @@
 /**
- * Publish Python packages on PyPI.
- *
- * This script is used by:
- *   - `pnpm ci:publish` via `utils/publish-runtimes.mjs`
- *   - `.github/workflows/release-python-package.yml`
- *
+ * Build and test planned Python releases with --pack-only, then publish the
+ * saved distributions with --artifacts. These modes cannot be combined.
  * Package discovery is based on `utils/get-python-packages.js`.
  */
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, rmSync, readdirSync } from 'node:fs';
+import {
+  readFileSync,
+  rmSync,
+  readdirSync,
+  mkdirSync,
+  writeFileSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
-import { resolve, dirname, join } from 'node:path';
+import { resolve, dirname, join, relative, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -28,26 +30,19 @@ function toVersionExportName(packageName) {
   return `${normalized}_VERSION`;
 }
 
-const PYTHON_PACKAGES = getPythonPackages(root).map(pkg => ({
-  name: pkg.packageName,
-  projectDir: pkg.projectDir,
-  versionPin: {
-    path: PYTHON_VERSIONS_PATH,
-    exportName: toVersionExportName(pkg.packageName),
-  },
-  pyprojectPath: `${pkg.projectDir}/pyproject.toml`,
-  distDir: `${pkg.projectDir}/dist`,
-  testsPath: `${pkg.projectDir}/tests`,
-}));
-
-if (PYTHON_PACKAGES.length === 0) {
-  throw new Error(
-    'No Python packages discovered under python/*/pyproject.toml'
-  );
+function getPackages() {
+  return getPythonPackages(root).map(pkg => ({
+    name: pkg.packageName,
+    nodePackageName: pkg.nodePackageName,
+    projectDir: pkg.projectDir,
+    versionPin: {
+      path: PYTHON_VERSIONS_PATH,
+      exportName: toVersionExportName(pkg.packageName),
+    },
+    pyprojectPath: `${pkg.projectDir}/pyproject.toml`,
+    testsPath: `${pkg.projectDir}/tests`,
+  }));
 }
-const PYTHON_PACKAGE_NAMES = PYTHON_PACKAGES.map(pkg => pkg.name);
-
-const pythonPackageMap = new Map(PYTHON_PACKAGES.map(pkg => [pkg.name, pkg]));
 
 class UsageError extends Error {}
 
@@ -60,28 +55,23 @@ function parseVersion(tomlContent) {
 }
 
 function parseArgs(argv) {
-  let force = false;
-  const requestedPackages = [];
+  let packOnly = false;
+  const paths = {};
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
 
-    if (arg === '--force') {
-      force = true;
+    if (arg === '--pack-only') {
+      packOnly = true;
       continue;
     }
 
-    if (arg === '--package') {
-      const nextArg = argv[++i];
-      if (!nextArg) {
-        throw new UsageError('Missing value for --package');
+    if (['--plan', '--out', '--artifacts'].includes(arg)) {
+      const value = argv[++i];
+      if (!value || value.startsWith('--')) {
+        throw new UsageError(`missing value for option "${arg}"`);
       }
-      requestedPackages.push(nextArg);
-      continue;
-    }
-
-    if (arg.startsWith('--package=')) {
-      requestedPackages.push(arg.slice('--package='.length));
+      paths[arg.slice(2)] = resolve(value);
       continue;
     }
 
@@ -90,34 +80,36 @@ function parseArgs(argv) {
       process.exit(0);
     }
 
-    throw new UsageError(`Unknown argument: ${arg}`);
+    throw new UsageError(`unrecognized argument: ${arg}`);
   }
 
-  const packageNames =
-    requestedPackages.length === 0 || requestedPackages.includes('all')
-      ? PYTHON_PACKAGE_NAMES
-      : [...new Set(requestedPackages)];
-
-  const unknown = packageNames.filter(name => !pythonPackageMap.has(name));
-  if (unknown.length > 0) {
+  if (packOnly === Boolean(paths.artifacts)) {
     throw new UsageError(
-      `Unknown package(s): ${unknown.join(', ')}. Valid options: all, ${PYTHON_PACKAGE_NAMES.join(', ')}`
+      'invalid publication mode: specify exactly one of --pack-only or --artifacts'
     );
   }
+  if (packOnly && (!paths.plan || !paths.out)) {
+    throw new UsageError(
+      'cannot pack Python releases: --plan and --out are required'
+    );
+  }
+  if (!packOnly && (paths.plan || paths.out)) {
+    throw new UsageError('cannot use --plan or --out: --pack-only is required');
+  }
 
-  return { force, packageNames };
+  return { packOnly, ...paths };
 }
 
 function printUsage() {
-  console.log(`Usage: node python/publish.mjs [--package <name>|all] [--force]
+  console.log(`Usage:
+  node python/publish.mjs --pack-only --plan <path> --out <dir>
+  node python/publish.mjs --artifacts <dir>
 
 Options:
-  --package <name>   Publish only one package (repeatable).
-  --package=all      Publish all configured packages (default).
-  --force            Publish even if already appears to be on PyPI.
-
-Known packages:
-  ${PYTHON_PACKAGE_NAMES.join('\n  ')}
+  --pack-only       Build and wheel-test changed Python packages in the plan.
+  --plan <path>     Changesets release plan with frozen newVersion values.
+  --out <dir>       Write distributions and manifest.json here.
+  --artifacts <dir> Publish only saved manifest files; never build or test.
 `);
 }
 
@@ -133,10 +125,6 @@ function run(cmd, args) {
 }
 
 function assertVersionPin(pkg, currentVersion) {
-  if (!pkg.versionPin) {
-    return;
-  }
-
   const versionPinPath = resolve(root, pkg.versionPin.path);
   const pinnedContent = readFileSync(versionPinPath, 'utf8');
   const versionRegex = new RegExp(
@@ -158,59 +146,25 @@ function assertVersionPin(pkg, currentVersion) {
   }
 }
 
-async function isPublishedOnPyPI(packageName, version) {
-  const url = `https://pypi.org/pypi/${packageName}/${version}/json`;
-  console.log(`Checking PyPI: ${url}`);
-  let res;
-  try {
-    res = await fetch(url, {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch (err) {
-    throw new Error(
-      `could not check whether ${packageName} ${version} has been published on PyPI: ${err.message}`
-    );
-  }
-  if (res.ok) {
-    return true;
-  }
-  if (res.status === 404) {
-    return false;
-  }
-  throw new Error(
-    `could not check whether ${packageName} ${version} has been published on PyPI: HTTP ${res.status}`
-  );
-}
-
-async function publishPackage(pkg, { force }) {
-  const pyprojectFullPath = resolve(root, pkg.pyprojectPath);
-  const currentVersion = parseVersion(readFileSync(pyprojectFullPath, 'utf8'));
-
-  if (!force) {
-    const alreadyPublished = await isPublishedOnPyPI(pkg.name, currentVersion);
-    if (alreadyPublished) {
-      console.log(
-        `Python ${pkg.name} ${currentVersion} already on PyPI, skipping publication.`
-      );
-      return;
-    }
-  }
-
-  console.log(`Publishing ${pkg.name} ${currentVersion} to PyPI...`);
-
+function buildAndTest(pkg, currentVersion, distDir) {
   assertVersionPin(pkg, currentVersion);
 
   // Clean stale artifacts so globs match exactly one wheel.
-  const distDir = resolve(root, pkg.distDir);
   rmSync(distDir, { recursive: true, force: true });
 
-  run('uv', ['build', '--package', pkg.name, '--out-dir', `${pkg.distDir}/`]);
+  run('uv', ['build', '--package', pkg.name, '--out-dir', `${distDir}/`]);
 
-  const wheels = readdirSync(distDir).filter(file => file.endsWith('.whl'));
+  const files = readdirSync(distDir);
+  const wheels = files.filter(file => file.endsWith('.whl'));
   if (wheels.length !== 1) {
     throw new Error(
-      `Expected exactly 1 wheel in ${pkg.projectDir}/dist/, found ${wheels.length}: ${wheels.join(', ')}`
+      `invalid distributions for package "${pkg.name}": expected exactly 1 wheel in "${distDir}", found ${wheels.length}`
+    );
+  }
+  const sdists = files.filter(file => file.endsWith('.tar.gz'));
+  if (sdists.length !== 1) {
+    throw new Error(
+      `invalid distributions for package "${pkg.name}": expected exactly 1 sdist in "${distDir}", found ${sdists.length}`
     );
   }
   const wheelPath = join(distDir, wheels[0]);
@@ -231,32 +185,103 @@ async function publishPackage(pkg, { force }) {
     pkg.testsPath,
   ]);
 
-  // Relies on OIDC trusted publishing env set by release workflows.
-  run('uv', ['publish', '--directory', `${pkg.projectDir}/`]);
+  return [wheelPath, join(distDir, sdists[0])];
+}
 
-  console.log(`Successfully published ${pkg.name} ${currentVersion} on PyPI.`);
+function packPackages(packages, { plan, out }) {
+  const { releases } = JSON.parse(readFileSync(plan, 'utf8'));
+  const manifest = { packages: [] };
+  mkdirSync(out, { recursive: true });
+  const manifestPath = join(out, 'manifest.json');
+  rmSync(manifestPath, { force: true });
+
+  for (const pkg of packages) {
+    const release = releases.find(
+      release => release.name === pkg.nodePackageName
+    );
+    if (!release || release.type === 'none') continue;
+
+    const version = parseVersion(
+      readFileSync(resolve(root, pkg.pyprojectPath), 'utf8')
+    );
+    if (version !== release.newVersion) {
+      throw new Error(
+        `invalid version for package "${pkg.name}": pyproject.toml has ${version}, plan requires ${release.newVersion}`
+      );
+    }
+    const files = buildAndTest(pkg, version, join(out, pkg.name, 'dist'));
+    manifest.packages.push({
+      name: pkg.name,
+      version,
+      files: files.map(file => relative(out, file).replaceAll('\\', '/')),
+    });
+  }
+
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+async function publishedFilesOnPyPI(packageName, version) {
+  const url = `https://pypi.org/pypi/${packageName}/${version}/json`;
+  console.log(`Checking PyPI: ${url}`);
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status === 404) return new Set();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { urls } = await res.json();
+    if (
+      !Array.isArray(urls) ||
+      urls.some(
+        file => typeof file?.filename !== 'string' || file.filename.length === 0
+      )
+    ) {
+      throw new Error(
+        'invalid PyPI response: expected "urls" entries with filenames'
+      );
+    }
+    return new Set(urls.map(file => file.filename));
+  } catch (err) {
+    throw new Error(
+      `could not list published files for package "${packageName}" ${version}: ${err.message}`
+    );
+  }
+}
+
+async function publishArtifacts(directory) {
+  const { packages } = JSON.parse(
+    readFileSync(join(directory, 'manifest.json'), 'utf8')
+  );
+  for (const pkg of packages) {
+    const publishedFiles = await publishedFilesOnPyPI(pkg.name, pkg.version);
+    if (pkg.files.length === 0) {
+      throw new Error(
+        `cannot publish package "${pkg.name}": no saved distributions`
+      );
+    }
+    // A previous attempt may have uploaded only the wheel or only the sdist.
+    const missingFiles = pkg.files.filter(
+      file => !publishedFiles.has(basename(file))
+    );
+    if (missingFiles.length === 0) {
+      console.log(
+        `Python ${pkg.name} ${pkg.version} files already on PyPI, skipping publication.`
+      );
+      continue;
+    }
+    // Relies on OIDC trusted publishing env set by release workflows.
+    run('uv', [
+      'publish',
+      ...missingFiles.map(file => resolve(directory, file)),
+    ]);
+  }
 }
 
 async function main() {
-  const { force, packageNames } = parseArgs(process.argv.slice(2));
-  const selectedPackages = packageNames.map(name => pythonPackageMap.get(name));
-
-  const failures = [];
-  for (const pkg of selectedPackages) {
-    try {
-      await publishPackage(pkg, { force });
-    } catch (err) {
-      console.error(`\nFailed to publish ${pkg.name}: ${err.message}\n`);
-      failures.push(pkg.name);
-    }
-  }
-
-  if (failures.length > 0) {
-    console.error(
-      `Publication failed for: ${failures.join(', ')} (${failures.length}/${selectedPackages.length} packages)`
-    );
-    process.exit(1);
-  }
+  const options = parseArgs(process.argv.slice(2));
+  if (options.artifacts) return publishArtifacts(options.artifacts);
+  return packPackages(getPackages(), options);
 }
 
 main().catch(error => {

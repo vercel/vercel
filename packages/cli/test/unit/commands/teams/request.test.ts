@@ -14,7 +14,7 @@ describe('teams request', () => {
 
       client.setArgv('teams', 'request', '--help');
       const exitCodePromise = teams(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

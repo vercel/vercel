@@ -62,7 +62,7 @@ export async function discover(client: Client, args: string[]) {
     parsedArguments = parseArguments(args, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new IntegrationDiscoverTelemetryClient({
@@ -75,19 +75,21 @@ export async function discover(client: Client, args: string[]) {
     output.error(
       'Invalid number of arguments. Usage: `vercel integration discover [query]`'
     );
-    return 1;
+    return 2;
   }
 
   const query = parsedArguments.args[0] ?? '';
   telemetry.trackCliArgumentQuery(query);
 
+  const categoryFilters = parsedArguments.flags['--category'];
+  telemetry.trackCliOptionCategory(categoryFilters);
+
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
-  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
 
   output.spinner('Fetching marketplace integrations...', 500);
 
@@ -95,7 +97,7 @@ export async function discover(client: Client, args: string[]) {
   let categories: IntegrationCategory[] = [];
   try {
     const [integrationsResult, categoriesResult] = await Promise.allSettled([
-      fetchMarketplaceIntegrationsList(client),
+      fetchMarketplaceIntegrationsList(client, categoryFilters),
       fetchIntegrationCategories(client),
     ]);
 

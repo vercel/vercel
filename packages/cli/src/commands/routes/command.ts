@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import {
+  jsonOption,
+  limitOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -8,21 +13,41 @@ export const listSubcommand = {
     'List all routing rules for the current project. These routes apply to all deployments and environments.',
   arguments: [],
   options: [
+    projectOption,
+    jsonOption,
+    {
+      name: 'query',
+      description: 'Search by name, description, source, or destination',
+      shorthand: 'q',
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+    },
+    // Hidden: `--search` and `-s` are the old names of `--query`.
     {
       name: 'search',
-      description: 'Search by name, description, source, or destination',
+      description: 'Deprecated alias for `--query`',
       shorthand: 's',
       type: String,
       argument: 'QUERY',
-      deprecated: false,
+      deprecated: true,
     },
     {
-      name: 'filter',
+      name: 'type',
       description: 'Filter by type: rewrite, redirect, set_status, transform',
-      shorthand: 'f',
+      shorthand: null,
       type: String,
       argument: 'TYPE',
       deprecated: false,
+    },
+    // Hidden: `--filter` and `-f` are the old names of `--type`.
+    {
+      name: 'filter',
+      description: 'Deprecated alias for `--type`',
+      shorthand: 'f',
+      type: String,
+      argument: 'TYPE',
+      deprecated: true,
     },
     {
       name: 'production',
@@ -32,17 +57,26 @@ export const listSubcommand = {
       deprecated: false,
     },
     {
+      name: 'routes-version',
+      description: 'List routes from a specific version',
+      shorthand: null,
+      type: String,
+      argument: 'VERSION',
+      deprecated: false,
+    },
+    // Hidden: `--version-id` is the old name of `--routes-version`.
+    {
       name: 'version-id',
-      description: 'List routes from a specific version ID',
+      description: 'Deprecated alias for `--routes-version`',
       shorthand: null,
       type: String,
       argument: 'VERSION_ID',
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'diff',
       description:
-        'Compare staged changes against production. Use with --version-id to compare a specific version.',
+        'Compare staged changes against production. Use with --routes-version to compare a specific version.',
       shorthand: null,
       type: Boolean,
       deprecated: false,
@@ -50,7 +84,8 @@ export const listSubcommand = {
     {
       name: 'expand',
       description: 'Show expanded details for each route',
-      shorthand: 'e',
+      shorthand: null,
+      deprecatedShorthand: 'e',
       type: Boolean,
       deprecated: false,
     },
@@ -62,11 +97,11 @@ export const listSubcommand = {
     },
     {
       name: 'Search for routes',
-      value: `${packageName} routes list --search "api"`,
+      value: `${packageName} routes list --query "api"`,
     },
     {
       name: 'Filter by type',
-      value: `${packageName} routes list --filter rewrite`,
+      value: `${packageName} routes list --type rewrite`,
     },
     {
       name: 'Show staged changes',
@@ -89,13 +124,20 @@ export const listVersionsSubcommand = {
   description: 'List all versions of routing rules',
   arguments: [],
   options: [
+    projectOption,
+    jsonOption,
+    {
+      ...limitOption,
+      description: 'Number of versions to fetch (default: 20, max: 100)',
+    },
+    // Hidden: `--count` is the old name of `--limit`.
     {
       name: 'count',
-      description: 'Number of versions to fetch (default: 20, max: 100)',
+      description: 'Deprecated alias for `--limit`',
       shorthand: null,
       type: Number,
       argument: 'NUMBER',
-      deprecated: false,
+      deprecated: true,
     },
   ],
   examples: [
@@ -105,7 +147,7 @@ export const listVersionsSubcommand = {
     },
     {
       name: 'List more versions',
-      value: `${packageName} routes list-versions --count 50`,
+      value: `${packageName} routes list-versions --limit 50`,
     },
   ],
 } as const;
@@ -121,6 +163,8 @@ export const inspectSubcommand = {
     },
   ],
   options: [
+    projectOption,
+    jsonOption,
     {
       name: 'diff',
       description: 'Compare staged changes against production for this route',
@@ -156,6 +200,7 @@ export const addSubcommand = {
     },
   ],
   options: [
+    projectOption,
     // Path & Matching
     {
       name: 'src',
@@ -167,7 +212,8 @@ export const addSubcommand = {
     },
     {
       name: 'src-syntax',
-      description: 'Path syntax: regex (default), path-to-regexp, equals',
+      description:
+        'Path syntax: regex, path-to-regexp, equals (default: regex)',
       shorthand: null,
       type: String,
       argument: 'TYPE',
@@ -304,11 +350,19 @@ export const addSubcommand = {
       deprecated: false,
     },
     {
-      name: 'disabled',
-      description: 'Create route in disabled state',
+      name: 'no-enable',
+      description: 'Add the route turned off (default: on)',
       shorthand: null,
       type: Boolean,
       deprecated: false,
+    },
+    {
+      // Hidden: the old name of `--no-enable`.
+      name: 'disabled',
+      description: 'Deprecated alias for `--no-enable`',
+      shorthand: null,
+      type: Boolean,
+      deprecated: true,
     },
     {
       name: 'ai',
@@ -378,9 +432,10 @@ export const addSubcommand = {
 export const publishSubcommand = {
   name: 'publish',
   aliases: [],
-  description: 'Publish staged routing changes to production',
+  description: 'Publish all staged routing changes to production',
   arguments: [],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when publishing',
@@ -409,6 +464,7 @@ export const restoreSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when restoring',
@@ -417,10 +473,12 @@ export const restoreSubcommand = {
   examples: [
     {
       name: 'Restore a previous version',
+      placeholders: ['<version-id>'],
       value: `${packageName} routes restore <version-id>`,
     },
     {
       name: 'Restore without confirmation',
+      placeholders: ['<version-id>'],
       value: `${packageName} routes restore <version-id> --yes`,
     },
   ],
@@ -432,6 +490,7 @@ export const discardSubcommand = {
   description: 'Discard staged routing changes',
   arguments: [],
   options: [
+    projectOption,
     {
       ...yesOption,
       description: 'Skip the confirmation prompt when discarding',
@@ -450,37 +509,39 @@ export const discardSubcommand = {
 } as const;
 
 export const deleteSubcommand = {
-  name: 'delete',
-  aliases: ['rm'],
-  description: 'Delete one or more routing rules',
+  name: 'remove',
+  aliases: ['rm', 'delete'],
+  description: 'Remove one or more routing rules',
   arguments: [
     {
       name: 'name-or-id',
       required: true,
+      multiple: true,
     },
   ],
   options: [
+    projectOption,
     {
       ...yesOption,
-      description: 'Skip the confirmation prompt when deleting',
+      description: 'Skip the confirmation prompt when removing',
     },
   ],
   examples: [
     {
-      name: 'Delete a route by name',
-      value: `${packageName} routes delete "Old Redirect"`,
+      name: 'Remove a route by name',
+      value: `${packageName} routes remove "Old Redirect"`,
     },
     {
-      name: 'Delete a route by ID',
-      value: `${packageName} routes delete abc123`,
+      name: 'Remove a route by ID',
+      value: `${packageName} routes remove abc123`,
     },
     {
-      name: 'Delete multiple routes',
-      value: `${packageName} routes delete "Route A" "Route B"`,
+      name: 'Remove multiple routes',
+      value: `${packageName} routes remove "Route A" "Route B"`,
     },
     {
-      name: 'Delete without confirmation',
-      value: `${packageName} routes delete "Old Route" --yes`,
+      name: 'Remove without confirmation',
+      value: `${packageName} routes remove "Old Route" --yes`,
     },
   ],
 } as const;
@@ -495,7 +556,7 @@ export const enableSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'Enable a route by name',
@@ -518,7 +579,7 @@ export const disableSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [projectOption],
   examples: [
     {
       name: 'Disable a route by name',
@@ -532,8 +593,8 @@ export const disableSubcommand = {
 } as const;
 
 export const reorderSubcommand = {
-  name: 'reorder',
-  aliases: ['move'],
+  name: 'move',
+  aliases: ['reorder'],
   description: 'Move a routing rule to a different position',
   arguments: [
     {
@@ -542,6 +603,7 @@ export const reorderSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
       name: 'position',
       description:
@@ -567,37 +629,37 @@ export const reorderSubcommand = {
     },
     {
       ...yesOption,
-      description: 'Skip the confirmation prompt when reordering',
+      description: 'Skip the confirmation prompt when moving',
     },
   ],
   examples: [
     {
       name: 'Move to first position',
-      value: `${packageName} routes reorder "Catch All" --first`,
+      value: `${packageName} routes move "Catch All" --first`,
     },
     {
       name: 'Move to last position',
-      value: `${packageName} routes reorder "Catch All" --last`,
+      value: `${packageName} routes move "Catch All" --last`,
     },
     {
       name: 'Move to a specific position',
-      value: `${packageName} routes reorder "API Proxy" --position 3`,
+      value: `${packageName} routes move "API Proxy" --position 3`,
     },
     {
       name: 'Move after another route',
-      value: `${packageName} routes reorder "API Proxy" --position after:route-id-123`,
+      value: `${packageName} routes move "API Proxy" --position after:route-id-123`,
     },
     {
-      name: 'Interactive reorder (prompts for position)',
-      value: `${packageName} routes reorder "API Proxy"`,
+      name: 'Interactive move (prompts for position)',
+      value: `${packageName} routes move "API Proxy"`,
     },
   ],
 } as const;
 
 export const editSubcommand = {
-  name: 'edit',
-  aliases: [],
-  description: 'Edit an existing routing rule',
+  name: 'update',
+  aliases: ['edit'],
+  description: 'Update an existing routing rule',
   arguments: [
     {
       name: 'name-or-id',
@@ -605,6 +667,7 @@ export const editSubcommand = {
     },
   ],
   options: [
+    projectOption,
     // Metadata
     {
       name: 'name',
@@ -811,27 +874,27 @@ export const editSubcommand = {
   examples: [
     {
       name: 'Interactive mode',
-      value: `${packageName} routes edit "API Proxy"`,
+      value: `${packageName} routes update "API Proxy"`,
     },
     {
-      name: 'Edit with AI',
-      value: `${packageName} routes edit "API Proxy" --ai "Add CORS headers and change status to 308"`,
+      name: 'Update with AI',
+      value: `${packageName} routes update "API Proxy" --ai "Add CORS headers and change status to 308"`,
     },
     {
       name: 'Change destination',
-      value: `${packageName} routes edit "API Proxy" --dest "https://new-api.example.com/:path*"`,
+      value: `${packageName} routes update "API Proxy" --dest "https://new-api.example.com/:path*"`,
     },
     {
       name: 'Switch to redirect',
-      value: `${packageName} routes edit "Old Route" --action redirect --dest "/new" --status 301`,
+      value: `${packageName} routes update "Old Route" --action redirect --dest "/new" --status 301`,
     },
     {
       name: 'Add a response header',
-      value: `${packageName} routes edit "My Route" --set-response-header "Cache-Control=public, max-age=3600"`,
+      value: `${packageName} routes update "My Route" --set-response-header "Cache-Control=public, max-age=3600"`,
     },
     {
       name: 'Clear all conditions and add new ones',
-      value: `${packageName} routes edit "My Route" --clear-conditions --has "header:Authorization"`,
+      value: `${packageName} routes update "My Route" --clear-conditions --has "header:Authorization"`,
     },
   ],
 } as const;
@@ -839,7 +902,7 @@ export const editSubcommand = {
 export const exportSubcommand = {
   name: 'export',
   aliases: [],
-  description: 'Export routes in vercel.json or vercel.ts format',
+  description: 'Export routes to a vercel.json or vercel.ts file',
   arguments: [
     {
       name: 'name-or-id',
@@ -847,12 +910,13 @@ export const exportSubcommand = {
     },
   ],
   options: [
+    projectOption,
     {
-      name: 'format',
-      description: 'Output format: json (default) or ts',
-      shorthand: null,
+      name: 'output',
+      description: 'Output file format: .json or .ts (default: .json)',
+      shorthand: 'o',
       type: String,
-      argument: 'FORMAT',
+      argument: 'json|ts',
       deprecated: false,
     },
   ],
@@ -863,7 +927,7 @@ export const exportSubcommand = {
     },
     {
       name: 'Export as vercel.ts format',
-      value: `${packageName} routes export --format ts`,
+      value: `${packageName} routes export --output ts`,
     },
     {
       name: 'Export a specific route',

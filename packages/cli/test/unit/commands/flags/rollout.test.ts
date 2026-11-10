@@ -8,89 +8,7 @@ import { defaultProject, useProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import type { Flag } from '../../../../src/util/flags/types';
-
-function createTestFlags(): Flag[] {
-  return [
-    {
-      id: 'flag_bool123',
-      slug: 'my-feature',
-      description: 'My awesome feature flag',
-      kind: 'boolean',
-      state: 'active',
-      variants: [
-        { id: 'off', value: false, label: 'Off' },
-        { id: 'on', value: true, label: 'On' },
-      ],
-      environments: {
-        production: {
-          active: false,
-          fallthrough: { type: 'variant', variantId: 'off' },
-          pausedOutcome: { type: 'variant', variantId: 'off' },
-          rules: [],
-        },
-        preview: {
-          active: true,
-          fallthrough: { type: 'variant', variantId: 'off' },
-          pausedOutcome: { type: 'variant', variantId: 'off' },
-          rules: [],
-        },
-        development: {
-          active: true,
-          fallthrough: { type: 'variant', variantId: 'on' },
-          pausedOutcome: { type: 'variant', variantId: 'off' },
-          rules: [],
-        },
-      },
-      createdAt: Date.now() - 86400000,
-      updatedAt: Date.now() - 3600000,
-      createdBy: 'user_123',
-      projectId: 'vercel-flags-test',
-      ownerId: 'team_dummy',
-      revision: 1,
-      seed: 12345,
-      typeName: 'flag',
-    },
-    {
-      id: 'flag_string456',
-      slug: 'welcome-message',
-      description: 'A string feature flag',
-      kind: 'string',
-      state: 'active',
-      variants: [
-        { id: 'control', value: 'control', label: 'Control' },
-        { id: 'treatment', value: 'treatment', label: 'Treatment' },
-      ],
-      environments: {
-        production: {
-          active: true,
-          fallthrough: { type: 'variant', variantId: 'control' },
-          pausedOutcome: { type: 'variant', variantId: 'control' },
-          rules: [],
-        },
-        preview: {
-          active: true,
-          fallthrough: { type: 'variant', variantId: 'control' },
-          pausedOutcome: { type: 'variant', variantId: 'control' },
-          rules: [],
-        },
-        development: {
-          active: true,
-          fallthrough: { type: 'variant', variantId: 'control' },
-          pausedOutcome: { type: 'variant', variantId: 'control' },
-          rules: [],
-        },
-      },
-      createdAt: Date.now() - 172800000,
-      updatedAt: Date.now() - 7200000,
-      createdBy: 'user_123',
-      projectId: 'vercel-flags-test',
-      ownerId: 'team_dummy',
-      revision: 2,
-      seed: 67890,
-      typeName: 'flag',
-    },
-  ];
-}
+import { createTestFlags } from './fixtures';
 
 describe('flags rollout', () => {
   let testFlags: Flag[];
@@ -150,7 +68,106 @@ describe('flags rollout', () => {
     ]);
   });
 
-  it('configures a boolean staged rollout with inferred variants', async () => {
+  it.each([
+    '0',
+    '1.001',
+    '50',
+    '100',
+  ])('configures and displays a final percentage of %s', async percentage => {
+    client.setArgv(
+      'flags',
+      'rollout',
+      testFlags[0].slug,
+      '-e',
+      'production',
+      '--by',
+      'user.userId',
+      '--stage',
+      '5,6h',
+      '--final-percentage',
+      percentage
+    );
+    expect(await flags(client)).toBe(0);
+    expect(testFlags[0].environments.production.fallthrough).toMatchObject({
+      finalPromille: Math.round(Number(percentage) * 1000),
+    });
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      `then ${percentage}% indefinitely`
+    );
+    expect(client.telemetryEventStore.readonlyEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'option:final-percentage',
+          value: '[REDACTED]',
+        }),
+      ])
+    );
+  });
+
+  it.each([
+    '',
+    ' ',
+    '-1',
+    '100.001',
+    '50.1234',
+    'NaN',
+    'Infinity',
+  ])('rejects invalid final percentage %j without updating the flag', async percentage => {
+    const before = JSON.parse(JSON.stringify(testFlags[0]));
+    client.setArgv(
+      'flags',
+      'rollout',
+      testFlags[0].slug,
+      '-e',
+      'production',
+      '--by',
+      'user.userId',
+      '--stage',
+      '5,6h',
+      `--final-percentage=${percentage}`
+    );
+    expect(await flags(client)).toBe(1);
+    expect(testFlags[0]).toEqual(before);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Invalid final percentage'
+    );
+  });
+
+  it.each([
+    0, 50_000, 100_000,
+  ])('updates only the final percentage to %s promille', async finalPromille => {
+    const current = {
+      type: 'rollout' as const,
+      base: { type: 'entity' as const, kind: 'user', attribute: 'userId' },
+      startTimestamp: 1_700_000_000_000,
+      rollFromVariantId: 'off',
+      rollToVariantId: 'on',
+      defaultVariantId: 'off',
+      slots: [{ promille: 5000, durationMs: 3_600_000 }],
+      finalPromille: 25_000,
+    };
+    testFlags[0].environments.production.fallthrough = current;
+    client.setArgv(
+      'flags',
+      'rollout',
+      testFlags[0].slug,
+      '-e',
+      'production',
+      '--final-percentage',
+      String(finalPromille / 1000)
+    );
+    expect(await flags(client)).toBe(0);
+    expect(testFlags[0].environments.production.fallthrough).toEqual({
+      ...current,
+      finalPromille,
+    });
+  });
+
+  it.each([
+    'active',
+    'archived',
+  ] as const)('configures a boolean staged rollout with inferred variants (%s)', async state => {
+    testFlags[0].state = state;
     client.setArgv(
       'flags',
       'rollout',
@@ -205,6 +222,7 @@ describe('flags rollout', () => {
     expect(output).toContain(
       'Stages: 5% for 6 hours, 10% for 12 hours, then 100% indefinitely'
     );
+    expect(testFlags[0].state).toBe(state);
   });
 
   it('configures a scheduled rollout for non-boolean flags', async () => {
@@ -255,7 +273,11 @@ describe('flags rollout', () => {
     });
   });
 
-  it('preserves the current rollout start time when updating an existing rollout', async () => {
+  it.each([
+    undefined,
+    0,
+    50_000,
+  ])('preserves the start time and finalPromille %s when editing stages', async finalPromille => {
     testFlags[0].environments.production.fallthrough = {
       type: 'rollout',
       base: {
@@ -264,6 +286,7 @@ describe('flags rollout', () => {
         attribute: 'userId',
       },
       startTimestamp: 1_700_000_000_000,
+      ...(finalPromille !== undefined && { finalPromille }),
       rollFromVariantId: 'off',
       rollToVariantId: 'on',
       defaultVariantId: 'off',
@@ -288,6 +311,10 @@ describe('flags rollout', () => {
     expect(rollout.type).toBe('rollout');
     if (rollout.type === 'rollout') {
       expect(rollout.startTimestamp).toBe(1_700_000_000_000);
+      expect(rollout.finalPromille).toBe(finalPromille);
+      if (finalPromille === undefined) {
+        expect(rollout).not.toHaveProperty('finalPromille');
+      }
       expect(rollout.base).toEqual({
         type: 'entity',
         kind: 'user',
@@ -375,7 +402,7 @@ describe('flags rollout', () => {
 
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --by'
+      'Missing required option --by'
     );
   });
 
@@ -398,7 +425,7 @@ describe('flags rollout', () => {
 
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --to-variant'
+      'Missing required option --to-variant'
     );
   });
 

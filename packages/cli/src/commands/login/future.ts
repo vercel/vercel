@@ -4,10 +4,9 @@ import * as open from 'open';
 import { eraseLines } from 'ansi-escapes';
 import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import type Client from '../../util/client';
-import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 import { printError } from '../../util/error';
+import getTeams from '../../util/teams/get-teams';
 import { updateCurrentTeamAfterLogin } from '../../util/login/update-current-team-after-login';
-import getGlobalPathConfig from '../../util/config/global-path';
 import { getCommandName } from '../../util/pkg-name';
 import { emoji } from '../../util/emoji';
 import hp from '../../util/humanize-path';
@@ -27,6 +26,44 @@ export interface DeviceCodeTokens {
   refresh_token?: string;
 }
 
+interface DeviceCodeFlowOptions {
+  teamId?: string;
+  refreshToken?: string;
+  acrValues?: string;
+  /**
+   * A CLI version before 56.4.1 could persist the rotated access token after
+   * step-up without persisting its matching refresh token. Recover those
+   * sessions, along with authorizations that predate the `offline_access`
+   * requirement, by starting a full device login.
+   */
+  fallbackToLoginOnStepUpFailure?: boolean;
+  /**
+   * When provided, the browser is sent to the signup page with this email
+   * prefilled and `next` pointing at the device authorization page, so
+   * creating the account and approving the CLI happens in one browser flow.
+   */
+  signupEmail?: string;
+}
+
+/**
+ * Builds the signup URL that, once the account is created, redirects
+ * back to the device authorization page for `verificationUriComplete`.
+ */
+export function getSignupVerificationUrl(
+  verificationUriComplete: string,
+  email: string
+): string {
+  const deviceUrl = new URL(verificationUriComplete);
+  const signupUrl = new URL('/signup', deviceUrl.origin);
+  signupUrl.searchParams.set('email', email);
+  signupUrl.searchParams.set('autoSubmit', '1');
+  signupUrl.searchParams.set(
+    'next',
+    `${deviceUrl.pathname}${deviceUrl.search}`
+  );
+  return signupUrl.toString();
+}
+
 /**
  * Core device code flow: initiates the device authorization request,
  * displays the verification URL, opens the browser, and polls for
@@ -39,9 +76,12 @@ export interface DeviceCodeTokens {
  */
 export async function performDeviceCodeFlow(
   client: Client,
-  options?: { teamId?: string }
+  options?: DeviceCodeFlowOptions
 ): Promise<DeviceCodeTokens | null> {
-  const deviceAuthorizationResponse = await deviceAuthorizationRequest();
+  const deviceAuthorizationResponse = await deviceAuthorizationRequest({
+    refresh_token: options?.refreshToken,
+    acr_values: options?.acrValues,
+  });
 
   o.debug(
     `'Device Authorization response:', ${await deviceAuthorizationResponse.clone().text()}`
@@ -51,7 +91,28 @@ export async function performDeviceCodeFlow(
     await processDeviceAuthorizationResponse(deviceAuthorizationResponse);
 
   if (deviceAuthorizationError) {
-    printError(deviceAuthorizationError);
+    if (
+      options?.fallbackToLoginOnStepUpFailure &&
+      options.refreshToken &&
+      isOAuthError(deviceAuthorizationError) &&
+      (deviceAuthorizationError.code === 'invalid_grant' ||
+        deviceAuthorizationError.code === 'invalid_scope')
+    ) {
+      o.debug(
+        `Step-up device authorization failed: ${deviceAuthorizationError.cause.message}`
+      );
+      o.log("Couldn't refresh the saved login. Starting a new login.");
+      return performDeviceCodeFlow(
+        client,
+        options.teamId ? { teamId: options.teamId } : undefined
+      );
+    }
+
+    printError(
+      isOAuthError(deviceAuthorizationError)
+        ? deviceAuthorizationError.cause
+        : deviceAuthorizationError
+    );
     return null;
   }
 
@@ -75,20 +136,37 @@ export async function performDeviceCodeFlow(
     client.agentName === KNOWN_AGENTS.CURSOR_CLI;
   const shouldSkipBrowser = process.env.CI && !isCursorAgent;
 
-  o.log(
-    `\n  Visit ${chalk.bold(
-      o.link(
-        verification_uri.replace('https://', ''),
-        verification_uri_complete,
-        { color: false, fallback: () => verification_uri_complete }
-      )
-    )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}\n`
-  );
+  let browserUrl = verification_uri_complete;
+
+  if (options?.signupEmail) {
+    browserUrl = getSignupVerificationUrl(
+      verification_uri_complete,
+      options.signupEmail
+    );
+    o.log(
+      `\n  Visit ${chalk.bold(
+        o.link(new URL(browserUrl).host + '/signup', browserUrl, {
+          color: false,
+          fallback: () => browserUrl,
+        })
+      )} to create your account with ${chalk.bold(options.signupEmail)} (device code ${chalk.bold(user_code)}).\n`
+    );
+  } else {
+    o.log(
+      `\n  Visit ${chalk.bold(
+        o.link(
+          verification_uri.replace('https://', ''),
+          verification_uri_complete,
+          { color: false, fallback: () => verification_uri_complete }
+        )
+      )}${o.supportsHyperlink ? ` and enter ${chalk.bold(user_code)}` : ''}\n`
+    );
+  }
 
   // Open browser automatically unless we're in CI (excluding Cursor)
   if (!shouldSkipBrowser) {
     try {
-      const browserProcess = await open.default(verification_uri_complete);
+      const browserProcess = await open.default(browserUrl);
       browserProcess.on('error', (error: Error) => {
         // ignore errors if this fails and prompt user to open browser manually
         o.debug(`Failed to open browser: ${error}`);
@@ -198,7 +276,8 @@ export async function performDeviceCodeFlow(
 
 export async function login(
   client: Client,
-  telemetry: LoginTelemetryClient
+  telemetry: LoginTelemetryClient,
+  standalone = true
 ): Promise<number> {
   const tokens = await performDeviceCodeFlow(client);
 
@@ -207,8 +286,42 @@ export async function login(
     return 1;
   }
 
-  // user is not currently authenticated on this machine
-  const isInitialLogin = !client.authConfig.token;
+  await saveDeviceCodeTokens(client, tokens);
+
+  if (standalone) {
+    o.print(`
+  ${chalk.cyan('Congratulations!')} You are now signed in.
+
+  To deploy something, run ${getCommandName()}.
+  To set up the Vercel plugin and connect your coding agents to the AI Gateway, run ${getCommandName('setup')}.
+
+  ${emoji('tip')} To deploy every commit automatically,
+  connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
+  } else {
+    o.success('Logged in.');
+  }
+
+  telemetry.trackState('success');
+
+  return 0;
+}
+
+/**
+ * Persists the tokens from a completed device code flow and resolves the
+ * current team, so the CLI is ready to use.
+ */
+export async function saveDeviceCodeTokens(
+  client: Client,
+  tokens: DeviceCodeTokens
+): Promise<void> {
+  // The selected team (`vc switch`) survives in the global config even when
+  // the auth config was emptied after a failed token refresh, so its presence
+  // — not the presence of a token — is the signal that this login is a
+  // re-authentication on an already-configured machine. A run that ignores
+  // the saved team keeps its own team in `config.currentTeam`, so it reads
+  // the saved one instead, and keeps its own team after logging in.
+  const runTeam = client.config.currentTeam;
+  const previousTeamId = client.ignoresSavedTeam ? client.savedTeam : runTeam;
 
   client.updateAuthConfig({
     token: tokens.access_token,
@@ -217,31 +330,36 @@ export async function login(
     refreshToken: tokens.refresh_token,
   });
 
-  client.updateConfig({ currentTeam: undefined });
+  if (previousTeamId) {
+    let isMember = true;
+    try {
+      const teams = await getTeams(client);
+      isMember = teams.some(team => team.id === previousTeamId);
+    } catch {
+      // Membership could not be verified (e.g. transient API failure). Keep
+      // the selection instead of silently switching scope; a stale team can
+      // be corrected with `vc switch`.
+    }
 
-  // If we have a brand new login, update `currentTeam`
-  if (isInitialLogin) {
+    if (!isMember) {
+      o.warn(
+        'Your previously selected team is no longer accessible; switching to your default scope.'
+      );
+      client.updateConfig({ currentTeam: undefined });
+      await updateCurrentTeamAfterLogin(client);
+    }
+  } else {
+    client.updateConfig({ currentTeam: undefined });
     await updateCurrentTeamAfterLogin(client);
   }
 
-  client.writeToAuthConfigFile();
+  client.persistAuthConfig();
   client.writeToConfigFile();
+  if (client.ignoresSavedTeam) {
+    client.config.currentTeam = runTeam;
+  }
 
-  o.debug(`Saved credentials in "${hp(getGlobalPathConfig())}"`);
-
-  o.print(`
-  ${chalk.cyan('Congratulations!')} You are now signed in.
-
-  To deploy something, run ${getCommandName()}.
-
-  ${emoji('tip')} To deploy every commit automatically,
-  connect a Git Repository (${chalk.bold(o.link('vercel.link/git', 'https://vercel.link/git', { color: false }))}).\n`);
-
-  telemetry.trackState('success');
-
-  await autoInstallVercelPlugin(client);
-
-  return 0;
+  o.debug(`Saved credentials in "${hp(client.getGlobalPathConfig())}"`);
 }
 
 async function wait(intervalMs: number): Promise<void> {

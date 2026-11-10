@@ -3,7 +3,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   buildCommandWithGlobalFlags,
@@ -14,6 +13,7 @@ import { getSdkKeys, deleteSdkKey } from '../../util/flags/sdk-keys';
 import output from '../../output-manager';
 import { FlagsSdkKeysRmTelemetryClient } from '../../util/telemetry/commands/flags/sdk-keys';
 import { sdkKeysRemoveSubcommand } from './command';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function sdkKeysRm(
   client: Client,
@@ -33,17 +33,19 @@ export default async function sdkKeysRm(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
   let [hashKey] = args;
   const skipConfirmation = flags['--yes'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
   telemetryClient.trackCliArgumentKey(hashKey);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliFlagYes(skipConfirmation);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -67,7 +69,7 @@ export default async function sdkKeysRm(
       return 1;
     }
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -92,7 +94,7 @@ export default async function sdkKeysRm(
               {
                 command: buildCommandWithGlobalFlags(
                   client.argv,
-                  'flags sdk-keys rm <hashKey>'
+                  'flags sdk-keys revoke <hashKey>'
                 ),
                 when: 'delete an SDK key by hash',
               },
@@ -105,9 +107,9 @@ export default async function sdkKeysRm(
               },
             ],
           },
-          1
+          2
         );
-        return 1;
+        return 2;
       }
       output.spinner('Fetching SDK keys...');
       const keys = await getSdkKeys(client, project.id);
@@ -135,14 +137,14 @@ export default async function sdkKeysRm(
           {
             status: AGENT_STATUS.ERROR,
             reason: AGENT_REASON.CONFIRMATION_REQUIRED,
-            message: `Confirm deletion of SDK key ${hashKey.slice(0, 12)}... by adding --yes.`,
+            message: `Confirm revoking SDK key ${hashKey.slice(0, 12)}... by adding --yes.`,
             next: [
               {
                 command: buildCommandWithGlobalFlags(
                   client.argv,
-                  `flags sdk-keys rm ${hashKey} --yes`
+                  `flags sdk-keys revoke ${hashKey} --yes`
                 ),
-                when: 'confirm and delete the SDK key',
+                when: 'confirm and revoke the SDK key',
               },
             ],
           },
@@ -151,7 +153,7 @@ export default async function sdkKeysRm(
         return 1;
       }
       const confirmed = await client.input.confirm(
-        `Are you sure you want to delete SDK key ${chalk.bold(hashKey.slice(0, 12) + '...')}?`,
+        `Are you sure you want to revoke SDK key ${chalk.bold(hashKey.slice(0, 12) + '...')}?`,
         false
       );
 
@@ -161,12 +163,12 @@ export default async function sdkKeysRm(
       }
     }
 
-    output.spinner('Deleting SDK key...');
+    output.spinner('Revoking SDK key...');
     await deleteSdkKey(client, project.id, hashKey);
     output.stopSpinner();
 
     output.success(
-      `SDK key ${chalk.bold(hashKey.slice(0, 12) + '...')} has been deleted`
+      `SDK key ${chalk.bold(hashKey.slice(0, 12) + '...')} has been revoked`
     );
   } catch (err) {
     output.stopSpinner();

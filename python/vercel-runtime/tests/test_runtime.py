@@ -11,8 +11,10 @@ import os
 import pathlib
 import shutil
 import socket
+import struct
 import sys
 import tempfile
+import time
 import unittest
 from typing import TYPE_CHECKING, Any
 
@@ -34,8 +36,23 @@ from tests._n1_mock import (
 _VC_INIT = PROJECT_ROOT / "src" / "vercel_runtime" / "vc_init.py"
 _TEST_ROOT = pathlib.Path(__file__).parent
 _COV_WRAPPER = _TEST_ROOT / "_cov_wrapper.py"
+_HIVE_IPC_WRAPPER = _TEST_ROOT / "_hive_ipc_wrapper.py"
 _LAMBDA_INVOKER = _TEST_ROOT / "fixtures" / "lambda_invoke.py"
 _FIXTURES = _TEST_ROOT / "fixtures"
+_DEADLINE_HEADER = "x-vercel-internal-deadline"
+_UNKNOWN_INTERNAL_HEADER = "X-Vercel-Internal-Unknown"
+_TIMING_HEADER = "x-vercel-internal-timing"
+
+
+def _parse_server_timing(header: str) -> dict[str, int]:
+    """Map the ``name;dur=D;...`` entries of a server timing header to D."""
+    timings: dict[str, int] = {}
+    for entry in header.split(","):
+        fields = entry.strip().split(";")
+        for field in fields[1:]:
+            if field.startswith("dur="):
+                timings[fields[0]] = int(field.removeprefix("dur="))
+    return timings
 
 
 def _make_entrypoint(
@@ -75,6 +92,7 @@ async def _run_runtime(
     ipc_socket_path: str,
     variable_name: str = "app",
     extra_env: dict[str, str] | None = None,
+    on_hive: bool = False,
 ) -> AsyncIterator[asyncio.subprocess.Process]:
     env = {
         **_base_env(),
@@ -87,6 +105,8 @@ async def _run_runtime(
     if extra_env:
         env.update(extra_env)
     cmd = [sys.executable]
+    if on_hive:
+        cmd.append(str(_HIVE_IPC_WRAPPER))
     if _coverage_active():
         cmd.append(str(_COV_WRAPPER))
     cmd.append(str(_VC_INIT))
@@ -129,6 +149,14 @@ def _lambda_event(
     return {"body": json.dumps(payload)}
 
 
+def get_body(result: dict[str, Any]) -> str | bytes:
+    body = result.get("body", "")
+    assert isinstance(body, str)
+    if result.get("encoding") == "base64":
+        return base64.b64decode(body)
+    return body
+
+
 async def _invoke_lambda(
     *,
     entrypoint_abs: pathlib.Path,
@@ -136,6 +164,7 @@ async def _invoke_lambda(
     module_name: str,
     event: dict[str, Any],
     variable_name: str = "app",
+    extra_env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Run vc_init.py in legacy mode and call vc_handler.
 
@@ -150,6 +179,8 @@ async def _invoke_lambda(
         "__VC_HANDLER_VARIABLE_NAME": variable_name,
     }
     env.pop("VERCEL_IPC_PATH", None)
+    if extra_env:
+        env.update(extra_env)
 
     result_r, result_w = os.pipe()
     env["_RESULT_FD"] = str(result_w)
@@ -236,6 +267,212 @@ async def _http_post(
     return await asyncio.to_thread(
         _http_request, port, "POST", path, body, headers
     )
+
+
+class _SocketBuffer:
+    def __init__(self, sock: socket.socket) -> None:
+        self._sock = sock
+        self._buffer = bytearray()
+
+    def read_until(self, marker: bytes) -> bytes:
+        while marker not in self._buffer:
+            chunk = self._sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("socket closed before expected data")
+            self._buffer.extend(chunk)
+
+        end = self._buffer.index(marker) + len(marker)
+        data = bytes(self._buffer[:end])
+        del self._buffer[:end]
+        return data
+
+    def read_exact(self, size: int) -> bytes:
+        while len(self._buffer) < size:
+            chunk = self._sock.recv(4096)
+            if not chunk:
+                raise ConnectionError("socket closed before expected data")
+            self._buffer.extend(chunk)
+
+        data = bytes(self._buffer[:size])
+        del self._buffer[:size]
+        return data
+
+
+def _encode_client_ws_frame(opcode: int, payload: bytes = b"") -> bytes:
+    frame = bytearray([0x80 | opcode])
+    payload_length = len(payload)
+
+    if payload_length < 126:
+        frame.append(0x80 | payload_length)
+    elif payload_length < 1 << 16:
+        frame.append(0x80 | 126)
+        frame.extend(struct.pack("!H", payload_length))
+    else:
+        frame.append(0x80 | 127)
+        frame.extend(struct.pack("!Q", payload_length))
+
+    mask = os.urandom(4)
+    frame.extend(mask)
+    frame.extend(byte ^ mask[index % 4] for index, byte in enumerate(payload))
+    return bytes(frame)
+
+
+def _read_ws_frame(reader: _SocketBuffer) -> tuple[int, bytes]:
+    first, second = reader.read_exact(2)
+    opcode = first & 0x0F
+    payload_length = second & 0x7F
+    has_mask = bool(second & 0x80)
+
+    if payload_length == 126:
+        payload_length = struct.unpack("!H", reader.read_exact(2))[0]
+    elif payload_length == 127:
+        payload_length = struct.unpack("!Q", reader.read_exact(8))[0]
+
+    mask = reader.read_exact(4) if has_mask else b""
+    payload = reader.read_exact(payload_length) if payload_length else b""
+
+    if has_mask:
+        payload = bytes(
+            byte ^ mask[index % 4] for index, byte in enumerate(payload)
+        )
+
+    return opcode, payload
+
+
+def _build_websocket_request(
+    port: int,
+    path: str = "/ws",
+    headers: dict[str, str] | None = None,
+) -> bytes:
+    key = base64.b64encode(os.urandom(16)).decode("ascii")
+    request_headers = {
+        "Host": f"127.0.0.1:{port}",
+        "Upgrade": "websocket",
+        "Connection": "Upgrade",
+        "Sec-WebSocket-Key": key,
+        "Sec-WebSocket-Version": "13",
+        **(headers or {}),
+    }
+
+    request_lines = [f"GET {path} HTTP/1.1"]
+    request_lines.extend(
+        f"{name}: {value}" for name, value in request_headers.items()
+    )
+    return ("\r\n".join([*request_lines, "", ""])).encode("ascii")
+
+
+class _WebSocketClient:
+    def __init__(self, sock: socket.socket, reader: _SocketBuffer) -> None:
+        self._sock = sock
+        self._reader = reader
+
+    @classmethod
+    def connect(
+        cls,
+        port: int,
+        path: str = "/ws",
+        headers: dict[str, str] | None = None,
+    ) -> tuple[_WebSocketClient, str]:
+        sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+        sock.settimeout(5)
+        reader = _SocketBuffer(sock)
+
+        try:
+            sock.sendall(_build_websocket_request(port, path, headers))
+
+            response = reader.read_until(b"\r\n\r\n")
+            if b"sec-websocket-accept:" not in response.lower():
+                raise AssertionError(
+                    "websocket upgrade response missing accept header"
+                )
+
+            status_line = response.split(b"\r\n", maxsplit=1)[0].decode("ascii")
+            return cls(sock, reader), status_line
+        except Exception:
+            sock.close()
+            raise
+
+    def read_text(self) -> str:
+        opcode, payload = _read_ws_frame(self._reader)
+        if opcode != 0x1:
+            raise AssertionError(f"expected text frame, got opcode {opcode}")
+        return payload.decode("utf-8")
+
+    def send_text(self, text: str) -> None:
+        self._sock.sendall(_encode_client_ws_frame(0x1, text.encode("utf-8")))
+
+    def close(self) -> None:
+        if self._sock.fileno() == -1:
+            return
+
+        with contextlib.suppress(OSError):
+            self._sock.sendall(
+                _encode_client_ws_frame(0x8, struct.pack("!H", 1000))
+            )
+
+        with contextlib.suppress(ConnectionError, OSError, socket.timeout):
+            _read_ws_frame(self._reader)
+
+        with contextlib.suppress(OSError):
+            self._sock.close()
+
+
+def _dechunk(data: bytes) -> bytes:
+    out = b""
+    while data:
+        size_line, _, rest = data.partition(b"\r\n")
+        size = int(size_line.split(b";")[0], 16)
+        if size == 0:
+            break
+        out += rest[:size]
+        data = rest[size + 2 :]
+    return out
+
+
+def _raw_chunked_post(
+    port: int,
+    path: str,
+    body: bytes,
+    headers: dict[str, str] | None = None,
+) -> tuple[int, bytes]:
+    """Send a POST with a chunked body and NO Content-Length over a raw socket.
+
+    ``http.client`` always adds a Content-Length (or does its own chunking),
+    so to reproduce the proxy behaviour we write the raw HTTP/1.1 request.
+    Returns ``(status_code, response_body)``.
+    """
+    hdrs = {
+        "Host": "lambda",
+        "x-vercel-internal-invocation-id": "test-inv-1",
+        "x-vercel-internal-request-id": "42",
+        "x-vercel-internal-span-id": "span-1",
+        "x-vercel-internal-trace-id": "trace-1",
+        "Content-Type": "application/json",
+        "Transfer-Encoding": "chunked",
+        **(headers or {}),
+    }
+    request_line = f"POST {path} HTTP/1.1\r\n"
+    header_block = "".join(f"{k}: {v}\r\n" for k, v in hdrs.items())
+    chunk = f"{len(body):x}\r\n".encode() + body + b"\r\n0\r\n\r\n"
+    raw = request_line.encode() + header_block.encode() + b"\r\n" + chunk
+
+    with socket.create_connection(("127.0.0.1", port), timeout=10) as sock:
+        sock.sendall(raw)
+        sock.shutdown(socket.SHUT_WR)
+        buf = b""
+        while True:
+            part = sock.recv(65536)
+            if not part:
+                break
+            buf += part
+
+    head, _, resp_body = buf.partition(b"\r\n\r\n")
+    status_line = head.split(b"\r\n", 1)[0]
+    status_code = int(status_line.split(b" ")[1])
+    # If the response itself is chunked, strip framing for the assertion.
+    if b"transfer-encoding: chunked" in head.lower():
+        resp_body = _dechunk(resp_body)
+    return status_code, resp_body
 
 
 async def _read_stderr(
@@ -337,6 +574,55 @@ class TestHTTPHandler(_RuntimeTestCase):
             self.assertEqual(resp.status, 501)
             resp.read()
 
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_deadline_is_available_and_header_is_stripped(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            resp = await _http_get(
+                ss.payload.http_port,
+                "/deadline",
+                headers={
+                    _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                    _UNKNOWN_INTERNAL_HEADER: "secret",
+                },
+            )
+
+            self.assertEqual(
+                json.loads(resp.read()),
+                {
+                    "deadline": "2026-08-18T12:30:45+00:00",
+                    "header": False,
+                    "unknown_header": False,
+                },
+            )
+
     async def test_malformed_request_line(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
         async with _run_runtime(
@@ -358,6 +644,65 @@ class TestHTTPHandler(_RuntimeTestCase):
             data = sock.recv(4096)
             sock.close()
             self.assertIn(b"400", data)
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name="handler",
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Without x-vercel-sc-no-header-leak most headers are passed down
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+            self.assertIn("x-vercel-sc-basepath", seen)
+            self.assertIn("x-vercel-sc-protocol", seen)
+
+            # With x-vercel-sc-no-header-leak every header is stripped
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
 
 
 class TestWSGIApp(_RuntimeTestCase):
@@ -392,6 +737,145 @@ class TestWSGIApp(_RuntimeTestCase):
                 "GET /search?q=test",
             )
 
+    async def test_tcp_nodelay_on_reused_connections(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_socket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            started = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            connection = http.client.HTTPConnection(
+                "127.0.0.1", started.payload.http_port, timeout=5
+            )
+            try:
+                for _ in range(3):
+                    connection.request("GET", "/")
+                    response = connection.getresponse()
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(
+                        json.loads(response.read()), {"nodelay": True}
+                    )
+            finally:
+                connection.close()
+
+    async def test_deadline_is_available_and_header_is_stripped(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            resp = await _http_get(
+                ss.payload.http_port,
+                "/deadline",
+                headers={
+                    _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                    _UNKNOWN_INTERNAL_HEADER: "secret",
+                },
+            )
+
+            self.assertEqual(
+                json.loads(resp.read()),
+                {
+                    "deadline": "2026-08-18T12:30:45+00:00",
+                    "header": False,
+                    "unknown_header": False,
+                },
+            )
+
+    async def test_wait_until_runs_after_response_with_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_wsgi.py",
+            self.tmp_path,
+        )
+        deadline_output = self.tmp_path / "wait-until-deadline.txt"
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "WAIT_UNTIL_DEADLINE_OUTPUT": str(deadline_output),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            first = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "first-request-token",
+                    _DEADLINE_HEADER: "2026-08-18T10:00:00Z",
+                },
+            )
+            self.assertEqual(
+                json.loads(first.read()),
+                [],
+            )
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            second = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "second-request-token",
+                    _DEADLINE_HEADER: "2026-08-18T11:00:00Z",
+                },
+            )
+            self.assertEqual(
+                json.loads(second.read()),
+                ["first-request-token"],
+            )
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            self.assertEqual(
+                deadline_output.read_text().splitlines(),
+                [
+                    "2026-08-18T10:00:00+00:00",
+                    "2026-08-18T11:00:00+00:00",
+                ],
+            )
+
+    async def test_wsgi_chunked_post_without_content_length(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_echo_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            body = json.dumps({"message": "hello"}).encode()
+            status, resp = await asyncio.to_thread(
+                _raw_chunked_post, port, "/api/test", body
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(
+                json.loads(resp.decode()),
+                {"received": body.decode(), "path": "/api/test"},
+            )
+
     async def test_wsgi_closeable_response(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
             "wsgi_closeable_app.py", self.tmp_path
@@ -411,9 +895,237 @@ class TestWSGIApp(_RuntimeTestCase):
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read().decode(), "GET /close-test")
 
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
+
+    async def test_wsgi_websocket_ends_request_after_handshake(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/ws",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-ws",
+                        "x-vercel-internal-request-id": "42",
+                        "x-vercel-internal-span-id": "span-ws",
+                        "x-vercel-internal-trace-id": "trace-ws",
+                        _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                    },
+                )
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                hs = await self.n1.wait_for_message(
+                    HandlerStartedMessage, timeout=5.0
+                )
+                self.assertEqual(
+                    hs.payload.context.invocation_id, "test-inv-ws"
+                )
+                self.assertEqual(hs.payload.context.request_id, 42)
+
+                # The "end" message must arrive right after the 101 handshake,
+                # before the (still open) connection echoes any frames.
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-ws"
+                )
+                self.assertEqual(end.payload.context.request_id, 42)
+
+                # The upgraded socket remains fully usable past the end.
+                await asyncio.to_thread(client.send_text, "ping")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:ping"
+                )
+                await asyncio.to_thread(client.send_text, "again")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:again"
+                )
+                # The deadline stays visible while the handler drives the
+                # socket, even though the request lifecycle ended at the 101.
+                await asyncio.to_thread(client.send_text, "deadline")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text),
+                    "deadline:2026-08-18T12:30:45+00:00",
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_wsgi_websocket_emits_single_end_message(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client, _status_line = await asyncio.to_thread(
+                _WebSocketClient.connect,
+                port,
+                "/ws",
+                {"x-vercel-internal-invocation-id": "test-inv-single"},
+            )
+            try:
+                await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            finally:
+                await asyncio.to_thread(client.close)
+
+            # Closing the connection (WSGI app returns) must not emit a second
+            # "end" message via the handle_one_request finally block.
+            with self.assertRaises(TimeoutError):
+                await self.n1.wait_for_message(EndMessage, timeout=1.0)
+
+    async def test_wsgi_non_upgrade_request_still_works(self) -> None:
+        # A regular request to a WebSocket-capable app must take the normal
+        # WSGI path and emit exactly one "end" message via the finally block.
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wsgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/plain")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "not a websocket")
+
+            await self.n1.wait_for_message(HandlerStartedMessage, timeout=5.0)
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
 
 class TestASGIApp(_RuntimeTestCase):
     """Tests for ASGI app entrypoints."""
+
+    @unittest.skipUnless(sys.platform == "linux", "Linux socket metadata")
+    async def test_tcp_nodelay_on_reused_connections(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_socket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            started = await self.n1.wait_for_message(ServerStartedMessage)
+            connection = http.client.HTTPConnection(
+                "127.0.0.1", started.payload.http_port, timeout=5
+            )
+            try:
+                for _ in range(3):
+                    connection.request("GET", "/")
+                    response = connection.getresponse()
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(
+                        json.loads(response.read()),
+                        {
+                            "family": socket.AF_INET,
+                            "protocol": socket.IPPROTO_TCP,
+                            "nodelay": 1,
+                        },
+                    )
+            finally:
+                connection.close()
 
     async def test_asgi_requests_ping_and_lifecycle(
         self,
@@ -446,6 +1158,132 @@ class TestASGIApp(_RuntimeTestCase):
             resp = conn.getresponse()
             self.assertEqual(resp.status, 200)
 
+    async def test_wait_until_runs_after_response_with_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_asgi.py",
+            self.tmp_path,
+        )
+        deadline_output = self.tmp_path / "wait-until-deadline.txt"
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "WAIT_UNTIL_DEADLINE_OUTPUT": str(deadline_output),
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage,
+                timeout=10.0,
+            )
+            port = ss.payload.http_port
+
+            first = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "first-request-token",
+                    _DEADLINE_HEADER: "2026-08-18T10:00:00Z",
+                },
+            )
+            self.assertEqual(json.loads(first.read()), [])
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+
+            second = await _http_get(
+                port,
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "second-request-token",
+                    _DEADLINE_HEADER: "2026-08-18T11:00:00Z",
+                },
+            )
+            self.assertEqual(
+                json.loads(second.read()),
+                ["first-request-token"],
+            )
+            await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            self.assertEqual(
+                deadline_output.read_text().splitlines(),
+                [
+                    "2026-08-18T10:00:00+00:00",
+                    "2026-08-18T11:00:00+00:00",
+                ],
+            )
+
+    async def test_deadline_semantics_and_concurrency(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            missing = await _http_get(port, "/deadline")
+            malformed = await _http_get(
+                port,
+                "/deadline",
+                headers={_DEADLINE_HEADER: "not-a-date"},
+            )
+            self.assertEqual(
+                json.loads(missing.read()),
+                {
+                    "deadline": None,
+                    "header": False,
+                    "unknown_header": False,
+                },
+            )
+            self.assertEqual(
+                json.loads(malformed.read()),
+                {
+                    "deadline": None,
+                    "header": False,
+                    "unknown_header": False,
+                },
+            )
+
+            first, second = await asyncio.gather(
+                _http_get(
+                    port,
+                    "/deadline",
+                    headers={
+                        _DEADLINE_HEADER: "2026-08-18T10:00:00Z",
+                        _UNKNOWN_INTERNAL_HEADER: "secret",
+                        "x-test-delay": "0.05",
+                    },
+                ),
+                _http_get(
+                    port,
+                    "/deadline",
+                    headers={
+                        _DEADLINE_HEADER: "2026-08-18T11:00:00Z",
+                    },
+                ),
+            )
+            self.assertEqual(
+                json.loads(first.read()),
+                {
+                    "deadline": "2026-08-18T10:00:00+00:00",
+                    "header": False,
+                    "unknown_header": False,
+                },
+            )
+            self.assertEqual(
+                json.loads(second.read()),
+                {
+                    "deadline": "2026-08-18T11:00:00+00:00",
+                    "header": False,
+                    "unknown_header": False,
+                },
+            )
+
     async def test_invalid_utf8_header(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
         async with _run_runtime(
@@ -477,6 +1315,315 @@ class TestASGIApp(_RuntimeTestCase):
             data = sock.recv(4096)
             sock.close()
             self.assertIn(b"200", data)
+
+    async def test_oidc_header_uses_environment_fallback(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={"VERCEL_OIDC_TOKEN": "env-token"},
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(port, "/oidc")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.read().decode(), "env-token")
+
+    async def test_sc_headers_stripped_per_no_leak_flag(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            self.assertNotIn("x-vercel-sc-runtime-cache", seen)
+            self.assertIn("x-vercel-sc-headers", seen)
+            self.assertIn("x-vercel-sc-host", seen)
+
+            resp = await _http_get(
+                port,
+                "/headers",
+                headers={
+                    "x-vercel-sc-headers": '{"authorization": "Bearer x"}',
+                    "x-vercel-sc-host": "cache.example.com",
+                    "x-vercel-sc-basepath": "/iad1",
+                    "x-vercel-sc-protocol": "https",
+                    "x-vercel-sc-no-header-leak": "1",
+                    "x-vercel-sc-runtime-cache": "1",
+                },
+            )
+            self.assertEqual(resp.status, 200)
+            seen = json.loads(resp.read())
+            for sc_header in (
+                "x-vercel-sc-headers",
+                "x-vercel-sc-host",
+                "x-vercel-sc-basepath",
+                "x-vercel-sc-protocol",
+                "x-vercel-sc-no-header-leak",
+                "x-vercel-sc-runtime-cache",
+            ):
+                self.assertNotIn(sc_header, seen)
+
+    async def test_asgi_websocket_ends_request_after_handshake(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "VERCEL_SERVICE_ROUTE_PREFIX_STRIP": "1",
+                "VERCEL_SERVICE_ROUTE_PREFIX": "/_svc/backend",
+            },
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/_svc/backend/ws",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-1",
+                        "x-vercel-internal-request-id": "42",
+                        "x-vercel-internal-span-id": "span-1",
+                        "x-vercel-internal-trace-id": "trace-1",
+                        "x-vercel-internal-oidc-token": "oidc-secret",
+                        _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                    },
+                )
+
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                scope_data = json.loads(
+                    await asyncio.to_thread(client.read_text)
+                )
+                self.assertEqual(scope_data["path"], "/ws")
+                self.assertEqual(scope_data["root_path"], "/_svc/backend")
+                self.assertFalse(scope_data["has_internal_invocation_id"])
+                self.assertFalse(scope_data["has_internal_request_id"])
+                self.assertFalse(scope_data["has_internal_span_id"])
+                self.assertFalse(scope_data["has_internal_trace_id"])
+                self.assertEqual(scope_data["oidc_token"], "oidc-secret")
+                # The fixture reads the deadline after the accept, i.e. after
+                # the request lifecycle ended. It must still be visible.
+                self.assertEqual(
+                    scope_data["deadline"],
+                    "2026-08-18T12:30:45+00:00",
+                )
+
+                hs = await self.n1.wait_for_message(
+                    HandlerStartedMessage, timeout=5.0
+                )
+                self.assertGreater(hs.payload.handler_started_at, 0)
+                self.assertEqual(hs.payload.context.invocation_id, "test-inv-1")
+                self.assertEqual(hs.payload.context.request_id, 42)
+
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-1"
+                )
+                self.assertEqual(end.payload.context.request_id, 42)
+
+                # The request should be complete at the 101 upgrade boundary
+                # while the upgraded socket remains fully usable.
+                await asyncio.to_thread(client.send_text, "ping")
+                self.assertEqual(
+                    await asyncio.to_thread(client.read_text), "echo:ping"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_asgi_websocket_server_close_ends_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    port,
+                    "/server-close",
+                    {
+                        "x-vercel-internal-invocation-id": "test-inv-sc",
+                        "x-vercel-internal-request-id": "99",
+                        "x-vercel-internal-span-id": "span-sc",
+                        "x-vercel-internal-trace-id": "trace-sc",
+                    },
+                )
+                self.assertEqual(
+                    status_line, "HTTP/1.1 101 Switching Protocols"
+                )
+                assert client is not None
+
+                # Server sends close frame immediately after accept.
+                # Read the close frame (opcode 0x8).
+                opcode, _payload = await asyncio.to_thread(
+                    _read_ws_frame, client._reader
+                )
+                self.assertEqual(opcode, 0x8)
+
+                # The IPC end message should still be emitted via the
+                # websocket.close path in send_wrapper.
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id, "test-inv-sc"
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_asgi_websocket_child_task_accept_ends_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            client: _WebSocketClient | None = None
+            try:
+                client, status_line = await asyncio.to_thread(
+                    _WebSocketClient.connect,
+                    ss.payload.http_port,
+                    "/child-task",
+                    {
+                        "x-vercel-internal-invocation-id": "child-task",
+                        _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                    },
+                )
+                self.assertEqual(
+                    status_line,
+                    "HTTP/1.1 101 Switching Protocols",
+                )
+                end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+                self.assertEqual(
+                    end.payload.context.invocation_id,
+                    "child-task",
+                )
+                assert client is not None
+                # finish_request ran in the child task that sent the accept.
+                # The handler task must still see its own deadline afterward.
+                scope_data = json.loads(
+                    await asyncio.to_thread(client.read_text)
+                )
+                self.assertEqual(
+                    scope_data["deadline"],
+                    "2026-08-18T12:30:45+00:00",
+                )
+            finally:
+                if client is not None:
+                    await asyncio.to_thread(client.close)
+
+    async def test_asgi_websocket_reject_ends_request(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_websocket_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            # Attempt a WebSocket upgrade to /reject; the app responds
+            # with an HTTP 403 via websocket.http.response.{start,body}.
+            sock = socket.create_connection(("127.0.0.1", port), timeout=5)
+            try:
+                sock.sendall(
+                    _build_websocket_request(
+                        port,
+                        "/reject",
+                        {
+                            "x-vercel-internal-invocation-id": "test-inv-rej",
+                            "x-vercel-internal-request-id": "77",
+                            "x-vercel-internal-span-id": "span-rej",
+                            "x-vercel-internal-trace-id": "trace-rej",
+                        },
+                    )
+                )
+                sock.settimeout(5)
+                buf = b""
+                status_line = ""
+                body = b""
+                while True:
+                    chunk = await asyncio.to_thread(sock.recv, 4096)
+                    if not chunk:
+                        break
+                    buf += chunk
+                    if b"\r\n\r\n" in buf:
+                        head, _, body = buf.partition(b"\r\n\r\n")
+                        status_line = head.split(b"\r\n", 1)[0].decode()
+                        if b"transfer-encoding: chunked" in head.lower():
+                            body = _dechunk(body)
+                        if body:
+                            break
+
+                self.assertIn("403", status_line)
+                self.assertEqual(body, b"forbidden")
+            finally:
+                sock.close()
+
+            # The IPC end message should be emitted via the
+            # websocket.http.response.body path in send_wrapper.
+            end = await self.n1.wait_for_message(EndMessage, timeout=5.0)
+            self.assertEqual(end.payload.context.invocation_id, "test-inv-rej")
 
 
 class TestCronService(_RuntimeTestCase):
@@ -826,6 +1973,221 @@ class TestLogging(_RuntimeTestCase):
             self.assertIn("with traceback", decoded)
 
 
+class TestColdStartPhases(_RuntimeTestCase):
+    """Tests for the cold start breakdown reported as server timings."""
+
+    async def _cold_start(
+        self,
+        extra_env: dict[str, str] | None = None,
+        fixture: str = "wsgi_app.py",
+        variable_name: str = "app",
+        warmup_path: str | None = None,
+    ) -> tuple[ServerStartedMessage, str, str | None]:
+        """Boot and return ``server-started`` plus the first two timing headers.
+
+        ``warmup_path`` is requested before the measured request, to prove a
+        request does not consume the timings.
+        """
+        ep_abs, ep_rel, mod = _make_entrypoint(fixture, self.tmp_path)
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            variable_name=variable_name,
+            extra_env=extra_env,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=10.0
+            )
+            port = ss.payload.http_port
+
+            if warmup_path is not None:
+                (await _http_get(port, warmup_path)).read()
+
+            first = await _http_get(port, "/")
+            first.read()
+            header = first.headers.get(_TIMING_HEADER)
+            if header is None:
+                self.fail("first response carries no cold start timings")
+
+            second = await _http_get(port, "/")
+            second.read()
+            return ss, header, second.headers.get(_TIMING_HEADER)
+
+    async def test_phases_sum_to_init_duration(self) -> None:
+        ss, header, _ = await self._cold_start()
+        phases = _parse_server_timing(header)
+
+        self.assertEqual(
+            sorted(phases), ["bootstrap", "import-fn", "server-ready"]
+        )
+        for name, duration in phases.items():
+            self.assertGreaterEqual(duration, 0, name)
+        # Contiguous phases, so they sum to initDuration bar truncation
+        self.assertLessEqual(
+            abs(sum(phases.values()) - ss.payload.init_duration),
+            len(phases),
+        )
+
+    async def test_offsets_are_cumulative(self) -> None:
+        _, header, _ = await self._cold_start()
+        phases = _parse_server_timing(header)
+
+        offset = 0
+        for name in ("bootstrap", "import-fn", "server-ready"):
+            duration = phases[name]
+            self.assertIn(
+                f'{name};dur={duration};desc="{name}_{offset}+{duration}"'
+                f";offset={offset}",
+                header,
+            )
+            offset += duration
+
+    async def test_only_the_first_response_is_timed(self) -> None:
+        _, _, second = await self._cold_start()
+        self.assertIsNone(second)
+
+    async def test_readiness_ping_does_not_consume_the_timings(self) -> None:
+        # A ping is not an invocation, so the timings must survive it.
+        _, header, _ = await self._cold_start(warmup_path="/_vercel/ping")
+        self.assertIn("bootstrap", _parse_server_timing(header))
+
+    async def test_user_init_duration_is_the_user_import(self) -> None:
+        ss, header, _ = await self._cold_start()
+        self.assertEqual(
+            ss.payload.user_init_duration,
+            _parse_server_timing(header)["import-fn"],
+        )
+
+    async def test_asgi_reports_the_timings(self) -> None:
+        _, header, _ = await self._cold_start(fixture="asgi_app.py")
+        self.assertEqual(
+            sorted(_parse_server_timing(header)),
+            ["bootstrap", "import-fn", "server-ready"],
+        )
+
+    async def test_http_handler_reports_the_timings(self) -> None:
+        _, header, _ = await self._cold_start(
+            fixture="http_handler.py",
+            variable_name="handler",
+        )
+        self.assertEqual(
+            sorted(_parse_server_timing(header)),
+            ["bootstrap", "import-fn", "server-ready"],
+        )
+
+    async def test_boot_stamp_is_attributed_to_bootstrap(self) -> None:
+        # The trampoline stamps in the process it is read from, but
+        # CLOCK_MONOTONIC is system wide, so stamping from here works too.
+        stamped_ms = int(time.monotonic() * 1000) - 5000
+        ss, header, _ = await self._cold_start(
+            extra_env={"__VC_PY_BOOT_START_MS": str(stamped_ms)},
+        )
+
+        self.assertGreaterEqual(_parse_server_timing(header)["bootstrap"], 5000)
+        self.assertGreaterEqual(ss.payload.init_duration, 5000)
+
+    async def test_invalid_boot_stamp_falls_back_to_module_import(self) -> None:
+        ss, header, _ = await self._cold_start(
+            extra_env={"__VC_PY_BOOT_START_MS": "not-a-number"},
+        )
+
+        self.assertGreaterEqual(_parse_server_timing(header)["bootstrap"], 0)
+        self.assertLess(ss.payload.init_duration, 60_000)
+
+    async def test_boot_stamp_in_the_future_does_not_go_negative(self) -> None:
+        stamped_ms = int(time.monotonic() * 1000) + 60_000
+        ss, header, _ = await self._cold_start(
+            extra_env={"__VC_PY_BOOT_START_MS": str(stamped_ms)},
+        )
+
+        self.assertEqual(_parse_server_timing(header)["bootstrap"], 0)
+        self.assertEqual(ss.payload.init_duration, 0)
+
+
+class TestServerStartedAfterLifespan(_RuntimeTestCase):
+    """Tests for announcing after ASGI lifespan startup on Hive."""
+
+    async def _boot_slow_lifespan(
+        self,
+        *,
+        startup_seconds: float,
+        on_hive: bool,
+    ) -> tuple[ServerStartedMessage, bool, int]:
+        """Boot the slow-lifespan app.
+
+        Returns the ``server-started`` message, whether lifespan startup had
+        finished when it arrived, and the status of a request sent right after
+        it.
+        """
+        marker = self.tmp_path / "lifespan-started"
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_slow_lifespan_app.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            extra_env={
+                "LIFESPAN_MARKER_PATH": str(marker),
+                "LIFESPAN_STARTUP_SECONDS": str(startup_seconds),
+            },
+            on_hive=on_hive,
+        ):
+            ss = await self.n1.wait_for_message(
+                ServerStartedMessage, timeout=15.0
+            )
+            lifespan_done = marker.exists()
+            resp = await _http_get(ss.payload.http_port, "/")
+            resp.read()
+            return ss, lifespan_done, resp.status
+
+    async def test_hive_waits_for_lifespan_startup(self) -> None:
+        ss, lifespan_done, status = await self._boot_slow_lifespan(
+            startup_seconds=0.5, on_hive=True
+        )
+
+        self.assertTrue(lifespan_done)
+        self.assertGreaterEqual(ss.payload.init_duration, 500)
+        self.assertEqual(status, 200)
+
+    async def test_announces_before_lifespan_startup_off_hive(self) -> None:
+        ss, lifespan_done, status = await self._boot_slow_lifespan(
+            startup_seconds=1.5, on_hive=False
+        )
+
+        self.assertFalse(lifespan_done)
+        self.assertLess(ss.payload.init_duration, 1500)
+        self.assertEqual(status, 200)
+
+    async def test_failed_lifespan_startup_is_unrecoverable(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "asgi_lifespan_startup_failed.py", self.tmp_path
+        )
+        async with _run_runtime(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            ipc_socket_path=self.n1.socket_path,
+            on_hive=True,
+        ) as proc:
+            msg = await self.n1.wait_for_message(
+                UnrecoverableErrorMessage, timeout=10.0
+            )
+            self.assertEqual(msg.payload.exit_code, 1)
+            self.assertIn("lifespan startup failed", msg.payload.message)
+            async with asyncio.timeout(10.0):
+                returncode = await proc.wait()
+            self.assertEqual(returncode, 1)
+
+            messages = await self.n1.collect_messages(timeout=1.0)
+            self.assertFalse(
+                any(isinstance(m, ServerStartedMessage) for m in messages)
+            )
+
+
 class TestErrorPaths(_RuntimeTestCase):
     """Tests for error handling in vc_init.py."""
 
@@ -958,7 +2320,32 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
             variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
-        self.assertIn("GET /hello", result["body"])
+        self.assertIn("GET /hello", get_body(result))
+
+    async def test_deadline_is_available_and_header_is_stripped(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/deadline",
+                headers={
+                    _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                    _UNKNOWN_INTERNAL_HEADER: "secret",
+                },
+            ),
+            variable_name="handler",
+        )
+        self.assertEqual(
+            json.loads(get_body(result)),
+            {
+                "deadline": "2026-08-18T12:30:45+00:00",
+                "header": False,
+                "unknown_header": False,
+            },
+        )
 
     async def test_post_with_base64_body(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("http_handler.py", self.tmp_path)
@@ -975,7 +2362,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
             variable_name="handler",
         )
         self.assertEqual(result["statusCode"], 200)
-        self.assertIn("encoded", result["body"])
+        self.assertIn("encoded", get_body(result))
 
     async def test_binary_response_base64_encoded(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(
@@ -990,7 +2377,7 @@ class TestLambdaHTTPHandler(_LambdaTestCase):
         )
         self.assertEqual(result["statusCode"], 200)
         self.assertEqual(result["encoding"], "base64")
-        data = base64.b64decode(result["body"])
+        data = get_body(result)
         self.assertEqual(data, bytes(range(128, 256)))
 
 
@@ -1006,8 +2393,89 @@ class TestLambdaWSGI(_LambdaTestCase):
             event=_lambda_event("GET", "/hello"),
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "GET /hello")
+
+    async def test_deadline_is_available_and_header_is_stripped(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/deadline",
+                headers={
+                    _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                    _UNKNOWN_INTERNAL_HEADER: "secret",
+                },
+            ),
+        )
+        body = get_body(result)
+        self.assertEqual(
+            json.loads(body),
+            {
+                "deadline": "2026-08-18T12:30:45+00:00",
+                "header": False,
+                "unknown_header": False,
+            },
+        )
+
+    async def test_deadline_remains_available_while_streaming(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/deadline-stream",
+                headers={_DEADLINE_HEADER: "2026-08-18T12:30:45Z"},
+            ),
+        )
+        body = get_body(result)
+        self.assertEqual(
+            body.splitlines(),
+            [
+                "2026-08-18T12:30:45+00:00",
+                "2026-08-18T12:30:45+00:00",
+            ],
+        )
+
+    async def test_wait_until_drains_with_request_oidc(
+        self,
+    ) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_wsgi.py",
+            self.tmp_path,
+        )
+        output_path = self.tmp_path / "wait-until-output.txt"
+        deadline_output = self.tmp_path / "wait-until-deadline.txt"
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "request-token",
+                    _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                },
+            ),
+            extra_env={
+                "WAIT_UNTIL_OUTPUT": str(output_path),
+                "WAIT_UNTIL_DEADLINE_OUTPUT": str(deadline_output),
+            },
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = get_body(result)
+        self.assertEqual(json.loads(body), [])
+        self.assertEqual(output_path.read_text(), "request-token\n")
+        self.assertEqual(
+            deadline_output.read_text(),
+            "2026-08-18T12:30:45+00:00\n",
+        )
 
     async def test_query_string(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("wsgi_app.py", self.tmp_path)
@@ -1018,7 +2486,7 @@ class TestLambdaWSGI(_LambdaTestCase):
             event=_lambda_event("GET", "/search?q=test"),
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "GET /search?q=test")
 
     async def test_post_with_base64_body(self) -> None:
@@ -1049,8 +2517,66 @@ class TestLambdaASGI(_LambdaTestCase):
             event=_lambda_event("GET", "/hello"),
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "GET /hello")
+
+    async def test_deadline_is_available_and_header_is_stripped(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/deadline",
+                headers={
+                    _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                    _UNKNOWN_INTERNAL_HEADER: "secret",
+                },
+            ),
+        )
+        body = get_body(result)
+        self.assertEqual(
+            json.loads(body),
+            {
+                "deadline": "2026-08-18T12:30:45+00:00",
+                "header": False,
+                "unknown_header": False,
+            },
+        )
+
+    async def test_wait_until_drains_with_request_oidc(self) -> None:
+        ep_abs, ep_rel, mod = _make_entrypoint(
+            "wait_until_asgi.py",
+            self.tmp_path,
+        )
+        output_path = self.tmp_path / "wait-until-output.txt"
+        deadline_output = self.tmp_path / "wait-until-deadline.txt"
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event(
+                "GET",
+                "/",
+                headers={
+                    "x-vercel-internal-oidc-token": "request-token",
+                    _DEADLINE_HEADER: "2026-08-18T12:30:45Z",
+                },
+            ),
+            extra_env={
+                "WAIT_UNTIL_OUTPUT": str(output_path),
+                "WAIT_UNTIL_DEADLINE_OUTPUT": str(deadline_output),
+            },
+        )
+        self.assertEqual(result["statusCode"], 200)
+        body = get_body(result)
+        self.assertEqual(json.loads(body), [])
+        self.assertEqual(output_path.read_text(), "request-token\n")
+        self.assertEqual(
+            deadline_output.read_text(),
+            "2026-08-18T12:30:45+00:00\n",
+        )
 
     async def test_base64_body(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint("asgi_app.py", self.tmp_path)
@@ -1085,7 +2611,7 @@ class TestLambdaASGI(_LambdaTestCase):
             ),
         )
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "text/html,application/json")
 
 
@@ -1104,7 +2630,7 @@ class TestLambdaASGILifespan(_LambdaTestCase):
         )
         # The app returns 200 only if lifespan startup ran.
         self.assertEqual(result["statusCode"], 200)
-        body = base64.b64decode(result["body"]).decode()
+        body = get_body(result)
         self.assertEqual(body, "started")
 
 
@@ -1138,13 +2664,13 @@ class TestLambdaErrorPaths(_LambdaTestCase):
         ep_abs, ep_rel, mod = _make_entrypoint(
             "asgi_bad_start.py", self.tmp_path
         )
-        with self.assertRaises(RuntimeError):
-            await _invoke_lambda(
-                entrypoint_abs=ep_abs,
-                entrypoint_rel=ep_rel,
-                module_name=mod,
-                event=_lambda_event("GET", "/"),
-            )
+        result = await _invoke_lambda(
+            entrypoint_abs=ep_abs,
+            entrypoint_rel=ep_rel,
+            module_name=mod,
+            event=_lambda_event("GET", "/"),
+        )
+        self.assertEqual(result["statusCode"], 500)
 
     async def test_asgi_bad_body_message(self) -> None:
         ep_abs, ep_rel, mod = _make_entrypoint(

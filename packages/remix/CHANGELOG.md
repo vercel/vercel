@@ -1,5 +1,416 @@
 # @vercel/remix-builder
 
+## 28.0.0
+
+### Patch Changes
+
+- Updated dependencies [5f55ccc]
+- Updated dependencies [d0629bd]
+  - @vercel/build-utils@15.1.0
+
+## 27.0.2
+
+### Patch Changes
+
+- 2f0edaf: Report the runtime preset for services without a framework.
+- Updated dependencies [2f0edaf]
+  - @vercel/build-utils@15.0.2
+
+## 27.0.1
+
+### Patch Changes
+
+- Updated dependencies [1a379a3]
+  - @vercel/build-utils@15.0.1
+
+## 27.0.0
+
+### Patch Changes
+
+- Updated dependencies [9b1b587]
+- Updated dependencies [fec2df1]
+- Updated dependencies [d123652]
+  - @vercel/build-utils@15.0.0
+
+## 26.0.0
+
+### Patch Changes
+
+- Updated dependencies [9abaa6d]
+- Updated dependencies [179d4ab]
+- Updated dependencies [d39dd61]
+- Updated dependencies [5aa1b58]
+  - @vercel/build-utils@14.23.0
+
+## 25.0.0
+
+### Patch Changes
+
+- Updated dependencies [a19979c]
+- Updated dependencies [a2e9f5d]
+  - @vercel/build-utils@14.22.0
+
+## 24.0.3
+
+### Patch Changes
+
+- Updated dependencies [bb42e81]
+  - @vercel/build-utils@14.21.3
+
+## 24.0.2
+
+### Patch Changes
+
+- Updated dependencies [cd68435]
+  - @vercel/build-utils@14.21.2
+
+## 24.0.1
+
+### Patch Changes
+
+- Updated dependencies [1336097]
+  - @vercel/build-utils@14.21.1
+
+## 24.0.0
+
+### Patch Changes
+
+- Updated dependencies [24a7e04]
+- Updated dependencies [7e396f7]
+  - @vercel/build-utils@14.21.0
+
+## 23.0.1
+
+### Patch Changes
+
+- Updated dependencies [42cc083]
+  - @vercel/build-utils@14.20.1
+
+## 23.0.0
+
+### Patch Changes
+
+- Updated dependencies [e041037]
+  - @vercel/build-utils@14.20.0
+
+## 22.0.0
+
+### Patch Changes
+
+- Updated dependencies [e58b37a]
+  - @vercel/build-utils@14.19.0
+
+## 21.0.0
+
+### Patch Changes
+
+- Updated dependencies [94f6cea]
+- Updated dependencies [3eeaad5]
+- Updated dependencies [8ac5320]
+  - @vercel/build-utils@14.18.0
+
+## 20.0.0
+
+### Patch Changes
+
+- Updated dependencies [28a7ab7]
+- Updated dependencies [28a7ab7]
+  - @vercel/build-utils@14.17.0
+
+## 19.0.0
+
+### Patch Changes
+
+- Updated dependencies [20c5940]
+  - @vercel/build-utils@14.16.0
+
+## 18.0.0
+
+### Patch Changes
+
+- Updated dependencies [a7ef28c]
+  - @vercel/build-utils@14.15.0
+
+## 17.0.0
+
+### Patch Changes
+
+- Updated dependencies [deb48cd]
+  - @vercel/build-utils@14.14.0
+
+## 16.0.2
+
+### Patch Changes
+
+- Updated dependencies [5d88f1f]
+- Updated dependencies [ff3d2f7]
+  - @vercel/static-config@3.4.4
+  - @vercel/build-utils@14.13.2
+
+## 16.0.1
+
+### Patch Changes
+
+- Updated dependencies [5082546]
+  - @vercel/build-utils@14.13.1
+
+## 16.0.0
+
+### Patch Changes
+
+- Updated dependencies [34b2c8e]
+  - @vercel/build-utils@14.13.0
+
+## 15.0.0
+
+### Patch Changes
+
+- Updated dependencies [6e68e60]
+  - @vercel/build-utils@14.12.0
+
+## 14.0.0
+
+### Patch Changes
+
+- Updated dependencies [888f59e]
+- Updated dependencies [7eb63c0]
+  - @vercel/build-utils@14.11.0
+
+## 13.0.2
+
+### Patch Changes
+
+- Updated dependencies [53a6086]
+  - @vercel/build-utils@14.10.2
+
+## 13.0.1
+
+### Patch Changes
+
+- Updated dependencies [f9d0e90]
+- Updated dependencies [8a277e4]
+- Updated dependencies [66e443e]
+- Updated dependencies [08b0be2]
+  - @vercel/build-utils@14.10.1
+
+## 13.0.0
+
+### Patch Changes
+
+- Updated dependencies [2a57243]
+- Updated dependencies [54a6d73]
+- Updated dependencies [3d16792]
+  - @vercel/build-utils@14.10.0
+
+## 12.0.3
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/build-utils@14.9.3
+
+## 12.0.2
+
+### Patch Changes
+
+- Updated dependencies [b174f14]
+  - @vercel/build-utils@14.9.2
+
+## 12.0.1
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 12.0.0
+
+### Patch Changes
+
+- Updated dependencies [392c759]
+  - @vercel/build-utils@14.9.0
+
+## 11.0.0
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 10.0.0
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 9.0.1
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 9.0.0
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 8.0.3
+
+### Patch Changes
+
+- Updated dependencies [b9e12f0]
+  - @vercel/static-config@3.4.3
+
+## 8.0.2
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 8.0.1
+
+### Patch Changes
+
+- 2c363fd: Use Oxc as `@vercel/static-config`'s primary parser with a traced ts-morph compatibility fallback.
+- Updated dependencies [2c363fd]
+  - @vercel/static-config@3.4.2
+
+## 8.0.0
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 7.0.1
+
+### Patch Changes
+
+- Updated dependencies [e5b0363]
+  - @vercel/build-utils@14.4.1
+
+## 7.0.0
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 6.0.0
+
+### Patch Changes
+
+- cd6b038: Honor `package.json` pnpm pins without Corepack, and default new projects to pnpm 11.
+
+  When Corepack is off, `devEngines.packageManager` is preferred, then a lockfile-compatible `packageManager` field, then `engines.pnpm` as a selector. Unpinned lockfile `9.0` projects created on or after 2026-08-19 use pnpm 11 (Node 22+) if `/pnpm11` is present in the build image; otherwise they keep pnpm 10.
+
+- 0d71a61: Declare `@vercel/build-utils` as a peer dependency provided by Vercel CLI so builders load correctly with strict dependency isolation, including pnpm global installs.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 5.9.5
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+
+## 5.9.4
+
+### Patch Changes
+
+- 1b62f2c: Set the `__vdpl` Skew Protection cookie for React Router via a routing-layer header rule instead of `Set-Cookie` on the SSR response, so document responses stay cacheable by the CDN.
+
+## 5.9.3
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 5.9.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/error-utils@2.2.1
+  - @vercel/static-config@3.4.1
+
+## 5.9.1
+
+### Patch Changes
+
+- a5034c1: Fix React Router SPA subroute refreshes by routing the catch-all through `index.html` when no index SSR function is emitted.
+
+## 5.9.0
+
+### Minor Changes
+
+- 78e5d4f: Add project manifest to node frontend builders.
+
+## 5.8.6
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/error-utils@2.2.0
+
+## 5.8.5
+
+### Patch Changes
+
+- 2d918b8: Fix React Router `/__manifest` returning prerendered HTML when the root route is statically generated.
+
+  When `prerender()` emitted static HTML for the index route, the SSR function was removed from the catch-all target, so runtime-only paths like `/__manifest` fell through to the prerendered `index.html`. The builder now keeps the index SSR function for the catch-all, adds an explicit `/` → `/index.html` prerender rewrite, and skips overwriting prerendered `.data` artifacts.
+
+## 5.8.4
+
+### Patch Changes
+
+- ab0e5aa: Bump @vercel/nft to 1.10.0 and enable moduleSyncCatchall tracing in node, backends, and next builders.
+
+## 5.8.3
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+
+## 5.8.2
+
+### Patch Changes
+
+- 744e96c: Serve React Router v7 prerendered routes from static HTML/data files instead of the SSR function.
+
+  Previously, when `react-router build` ran with `prerender()` configured, the prerendered HTML and `.data` files were emitted into the build output but the per-route SSR function was still installed at the same logical paths, so the filesystem handle resolved requests to the function instead of the static files.
+
+  The builder now scans the client output for prerender artifacts (`<path>.html` and `index.html` for the root) and, when found, skips the SSR function override and emits a pre-filesystem rewrite from `/<path>` to the prerendered HTML file. Routes that aren't prerendered continue to be served by the SSR function unchanged.
+
+## 5.8.1
+
+### Patch Changes
+
+- 97f87f7: Emit `.data` function entries for React Router single-fetch routes so per-route function config is preserved. Also emits a `_root.data` entry for the root index route, which uses that URL (not `/index.data`) for its single-fetch document loader.
+
+## 5.8.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/static-config@3.3.0
+  - @vercel/error-utils@2.1.0
+
 ## 5.7.2
 
 ### Patch Changes
