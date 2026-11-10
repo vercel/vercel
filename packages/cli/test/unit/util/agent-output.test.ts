@@ -629,6 +629,19 @@ describe('buildIntegrationCommandTailFromArgv', () => {
     ).toBe('install neon --plan free');
   });
 
+  it('does not match an `integration` flag value', () => {
+    expect(
+      buildIntegrationCommandTailFromArgv([
+        'node',
+        'vc.js',
+        'install',
+        'acme',
+        '--name',
+        'integration',
+      ])
+    ).toBe('install acme --name integration');
+  });
+
   it('falls back to `integration` when argv has no command', () => {
     expect(buildIntegrationCommandTailFromArgv(['node', 'vc.js'])).toBe(
       'integration'

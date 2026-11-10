@@ -410,7 +410,7 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should return the terms URL as action_required without opening a browser in non-TTY mode', async () => {
+    it('should print the terms URL without opening a browser in non-TTY mode', async () => {
       client.reset();
       useUser();
       const teams = useTeams('team_dummy');
@@ -436,29 +436,17 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).not.toHaveBeenCalled();
       expect(requestBodies).toHaveLength(0);
 
-      const payload = JSON.parse(client.stdout.getFullOutput().trim());
-      expect(payload.status).toBe('action_required');
-      expect(payload.reason).toBe('integration_terms_acceptance_required');
-      expect(payload.verification_uri).toBe(
-        `https://vercel.com/${encodeURIComponent(t.slug)}/~/integrations/accept-terms/acme?source=cli`
-      );
-      expect(payload.userActionRequired).toBe(true);
-      expect(payload.policy_links?.marketplace_addendum).toMatch(
-        /vercel\.com\/legal\/integration-marketplace-end-users-addendum/
-      );
-      expect(payload.next).toEqual([
-        {
-          command: 'vercel --cwd /tmp/proj integration add acme',
-          when: 'Retry install after terms are accepted (browser or dashboard)',
-        },
-      ]);
-
+      // Human mode: no JSON is inferred from the missing TTY.
+      expect(client.stdout.getFullOutput()).toEqual('');
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain(
-        'Marketplace terms for "Acme Integration" must be accepted in a browser'
+        'Error: Marketplace terms for "Acme Integration" must be accepted in a browser before this install can finish.'
       );
-      expect(stderr).toContain(payload.verification_uri);
+      expect(stderr).toContain(
+        `Accept them at https://vercel.com/${encodeURIComponent(t.slug)}/~/integrations/accept-terms/acme?source=cli, then run \`vercel --cwd /tmp/proj integration add acme\` again.`
+      );
       expect(stderr).not.toContain('Waiting for terms acceptance in browser');
+      expect(stderr).not.toContain('Opening browser');
 
       expect(client.telemetryEventStore.readonlyEvents).toEqual(
         expect.arrayContaining([
@@ -470,7 +458,7 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should return the terms URL as action_required for `vercel install` in non-TTY mode', async () => {
+    it('should suggest retrying `vercel install` in non-TTY mode', async () => {
       client.reset();
       useUser();
       const teams = useTeams('team_dummy');
@@ -490,8 +478,38 @@ describe('integration add (auto-provision)', () => {
       expect(openMock).not.toHaveBeenCalled();
 
       // The retry command repeats `install`, not a bare `vercel integration`.
+      expect(client.stderr.getFullOutput()).toContain(
+        'then run `vercel install acme` again.'
+      );
+    });
+
+    it('should return the terms URL as action_required JSON for `vercel install` in non-interactive mode', async () => {
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+      });
+
+      client.stdin.isTTY = false;
+      client.isAgent = true;
+      client.nonInteractive = true;
+      client.setArgv('install', 'acme');
+
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
+
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('integration_terms_acceptance_required');
+      expect(payload.verification_uri).toBe(
+        `https://vercel.com/${encodeURIComponent(t.slug)}/~/integrations/accept-terms/acme?source=cli`
+      );
       expect(payload.next?.[0]?.command).toBe('vercel install acme');
     });
 
@@ -652,8 +670,10 @@ describe('integration add (auto-provision)', () => {
         installationAppearsAfterPolls: 1,
       });
 
+      // A person in a TTY, no agent detected: the flag alone must stop the
+      // terms prompt and the browser.
       client.stdin.isTTY = true;
-      client.isAgent = true;
+      client.isAgent = false;
       client.setArgv('integration', 'add', 'acme', '--non-interactive');
 
       const exitCode = await integrationCommand(client);
@@ -663,9 +683,9 @@ describe('integration add (auto-provision)', () => {
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('integration_terms_acceptance_required');
-      expect(client.stderr.getFullOutput()).not.toContain(
-        'Waiting for terms acceptance in browser'
-      );
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('Waiting for terms acceptance in browser');
+      expect(stderr).not.toContain('Accept all of the documents listed above?');
     });
 
     it('should exit with code 1 on browser terms timeout', async () => {

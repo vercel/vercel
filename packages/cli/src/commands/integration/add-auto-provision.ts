@@ -23,6 +23,7 @@ import { packageName } from '../../util/pkg-name';
 import {
   buildCommandWithGlobalFlags,
   outputActionRequired,
+  shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import type {
@@ -224,6 +225,8 @@ export async function addAutoProvision(
       client.isAgent ||
       // Non-interactive terminal (CI/scripts) — no TTY for prompts
       !client.stdin.isTTY ||
+      // `--non-interactive` in a TTY — must not prompt either
+      shouldEmitNonInteractiveCommandError(client) ||
       // Server declares browser install required (e.g. needs device fingerprint)
       integration.capabilities?.requiresBrowserInstall
     ) {

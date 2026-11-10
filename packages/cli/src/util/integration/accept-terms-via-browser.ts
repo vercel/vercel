@@ -38,31 +38,38 @@ export async function acceptTermsViaBrowser(
   // Without a TTY (coding agents, CI, scripts) nobody is watching a browser
   // tab, and the caller is blocked until this command exits. Hand back the
   // terms URL right away instead of opening a browser and polling.
-  // `--non-interactive` gets the same result in a TTY.
-  if (!client.stdin.isTTY || shouldEmitNonInteractiveCommandError(client)) {
-    const tail = buildIntegrationCommandTailFromArgv(client.argv);
-    writeActionRequired(client, {
-      status: 'action_required',
-      reason: AGENT_REASON.INTEGRATION_TERMS_ACCEPTANCE_REQUIRED,
-      message: `Accept marketplace terms for "${integration.name}" in your browser before this install can finish. Open verification_uri to start. This command does not wait for acceptance without an interactive terminal.`,
-      verification_uri: url.href,
-      policy_links: getMarketplacePolicyLinks(integration),
-      userActionRequired: true,
-      hint: `Read policy_links, complete verification_uri in the browser, then retry install from next[]. Confirm with ${packageName} integration installations.`,
-      next: [
-        {
-          command: buildCommandWithGlobalFlags(client.argv, tail, packageName, {
-            prependGlobalFlags: true,
-          }),
-          when: 'Retry install after terms are accepted (browser or dashboard)',
-        },
-      ],
-    });
-    if (!shouldEmitNonInteractiveCommandError(client)) {
+  // Non-interactive mode gets the same result in a TTY, as JSON.
+  const machine = shouldEmitNonInteractiveCommandError(client);
+  if (machine || !client.stdin.isTTY) {
+    const retryCommand = buildCommandWithGlobalFlags(
+      client.argv,
+      buildIntegrationCommandTailFromArgv(client.argv),
+      packageName,
+      { prependGlobalFlags: true }
+    );
+    if (machine) {
+      writeActionRequired(client, {
+        status: 'action_required',
+        reason: AGENT_REASON.INTEGRATION_TERMS_ACCEPTANCE_REQUIRED,
+        message: `Accept marketplace terms for "${integration.name}" in your browser before this install can finish. Open verification_uri to start. This command does not wait for acceptance in non-interactive mode.`,
+        verification_uri: url.href,
+        policy_links: getMarketplacePolicyLinks(integration),
+        userActionRequired: true,
+        hint: `Read policy_links, complete verification_uri in the browser, then retry install from next[]. Confirm with ${packageName} integration installations.`,
+        next: [
+          {
+            command: retryCommand,
+            when: 'Retry install after terms are accepted (browser or dashboard)',
+          },
+        ],
+      });
+    } else {
       output.error(
         `Marketplace terms for "${integration.name}" must be accepted in a browser before this install can finish.`
       );
-      output.log(`Accept them here, then run this command again: ${url.href}`);
+      output.log(
+        `Accept them at ${url.href}, then run \`${retryCommand}\` again.`
+      );
     }
     return { status: 'action_required' };
   }
