@@ -86,6 +86,28 @@ describe('tryDetectServices()', () => {
     });
   });
 
+  it('should return services from an already-loaded config', async () => {
+    delete process.env.VERCEL_USE_EXPERIMENTAL_SERVICES;
+    await mkdir(join(tempDir, 'apps/web'), { recursive: true });
+
+    const result = await tryDetectServices(tempDir, {
+      services: {
+        web: {
+          root: 'apps/web',
+          framework: 'nextjs',
+          devCommand: 'next dev',
+        },
+      },
+    });
+    expect(result?.services).toHaveLength(1);
+    expect(result?.services[0]).toMatchObject({
+      name: 'web',
+      root: 'apps/web',
+      framework: 'nextjs',
+      devCommand: 'next dev',
+    });
+  });
+
   it('should return services when configured via vercel.toml', async () => {
     await mkdir(join(tempDir, 'api'), { recursive: true });
     await writeFile(
@@ -205,6 +227,31 @@ mount = "/api"`
         },
       ],
     });
+  });
+
+  it('should preserve authored schedules when writing services config', async () => {
+    const schedules = {
+      nightly: {
+        schedule: '0 0 * * *',
+        path: '/api/nightly',
+        timezone: 'America/New_York',
+        jitter: 5,
+      },
+      hourly: { schedule: '0 * * * *', topic: 'jobs' },
+    };
+    await writeFile(
+      join(tempDir, 'vercel.json'),
+      JSON.stringify({ schedules })
+    );
+
+    await writeServicesConfig(tempDir, {
+      frontend: { root: '.', framework: 'nextjs', mountPath: '/' },
+    });
+
+    const vercelConfig = JSON.parse(
+      await readFile(join(tempDir, 'vercel.json'), 'utf8')
+    );
+    expect(vercelConfig.schedules).toEqual(schedules);
   });
 
   it('should preserve buildCommand in written services config', async () => {

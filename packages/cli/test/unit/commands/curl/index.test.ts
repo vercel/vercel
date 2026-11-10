@@ -4,6 +4,7 @@ import curl from '../../../../src/commands/curl';
 import { getDeploymentUrlById } from '../../../../src/commands/curl/deployment-url';
 import {
   getDeploymentUrlAndToken,
+  getFullUrlAndToken,
   parseCurlLikeArgs,
 } from '../../../../src/commands/curl/shared';
 import { useUser } from '../../../mocks/user';
@@ -11,6 +12,7 @@ import { useProject } from '../../../mocks/project';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import * as linkModule from '../../../../src/util/projects/link';
+import * as ensureLinkModule from '../../../../src/util/link/ensure-link';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -104,7 +106,7 @@ describe('curl', () => {
     it('prints help message', async () => {
       client.setArgv('curl', '--help');
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.getFullOutput()).toContain(
         'Make curl requests to Vercel deployments with automatic protection bypass'
       );
@@ -118,7 +120,7 @@ describe('curl', () => {
     it('should reject when no path is provided', async () => {
       client.setArgv('curl');
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
@@ -130,7 +132,7 @@ describe('curl', () => {
         'Content-Type: application/json'
       );
       const exitCode = await curl(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('requires a URL or API path');
     });
 
@@ -142,9 +144,11 @@ describe('curl', () => {
       const exitCode = await curl(client);
 
       expect(exitCode).toEqual(0);
-      expect(getLinkedProjectSpy).toHaveBeenCalledWith(client, {
-        cwd: client.cwd,
-      });
+      expect(getLinkedProjectSpy).toHaveBeenCalledOnce();
+      expect(getLinkedProjectSpy).toHaveBeenCalledWith(
+        client,
+        expect.objectContaining({ cwd: client.cwd })
+      );
       getLinkedProjectSpy.mockRestore();
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -1016,7 +1020,7 @@ describe('getDeploymentUrlById', () => {
 
     expect(mockClient.fetch).toHaveBeenCalledWith(
       '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
-      { accountId: MOCK_ACCOUNT_ID }
+      { accountId: MOCK_ACCOUNT_ID, useCurrentTeam: false, bailOn429: true }
     );
   });
 
@@ -1035,7 +1039,7 @@ describe('getDeploymentUrlById', () => {
 
     expect(mockClient.fetch).toHaveBeenCalledWith(
       '/v13/deployments/dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
-      { accountId: MOCK_ACCOUNT_ID }
+      { accountId: MOCK_ACCOUNT_ID, useCurrentTeam: false, bailOn429: true }
     );
   });
 
@@ -1069,7 +1073,7 @@ describe('getDeploymentUrlById', () => {
     expect(result).toBe('https://my-app-xyz789.vercel.app');
     expect(mockClient.fetch).toHaveBeenCalledWith(
       '/v13/deployments/dpl_XYZ789ABC123',
-      { accountId: MOCK_ACCOUNT_ID }
+      { accountId: MOCK_ACCOUNT_ID, useCurrentTeam: false, bailOn429: true }
     );
   });
 });
@@ -1140,6 +1144,15 @@ describe('parseCurlLikeArgs', () => {
 });
 
 describe('getDeploymentUrlAndToken target selection', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function projectRequests(calls: unknown[][]) {
+    return calls.filter(([url]) => String(url).startsWith('/v9/projects/'))
+      .length;
+  }
+
   it('uses production target alias when available', async () => {
     const { setupUnitFixture } = await import(
       '../../../helpers/setup-unit-fixture'
@@ -1161,6 +1174,7 @@ describe('getDeploymentUrlAndToken target selection', () => {
         },
       ],
     } as any);
+    const fetch = vi.spyOn(client, 'fetch');
 
     const res = await getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
       protectionBypassFlag: 'test-secret',
@@ -1171,6 +1185,7 @@ describe('getDeploymentUrlAndToken target selection', () => {
       throw new Error('expected object result');
     }
     expect(res.fullUrl).toBe('https://prod-alias.vercel.app/api/hello');
+    expect(projectRequests(fetch.mock.calls)).toBe(1);
   });
 
   it('falls back to latest deployment url when no production alias', async () => {
@@ -1191,6 +1206,7 @@ describe('getDeploymentUrlAndToken target selection', () => {
         },
       ],
     } as any);
+    const fetch = vi.spyOn(client, 'fetch');
 
     const res = await getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
       protectionBypassFlag: 'test-secret',
@@ -1203,6 +1219,126 @@ describe('getDeploymentUrlAndToken target selection', () => {
     expect(res.fullUrl).toBe(
       'https://static-project-abc123.vercel.app/api/hello'
     );
+    expect(projectRequests(fetch.mock.calls)).toBe(1);
+  });
+
+  it('uses the project linked during the run', async () => {
+    const cwd = setupTmpDir('static-project');
+    client.cwd = cwd;
+    client.stdin.isTTY = false;
+
+    // One team and no personal account, so `--yes` can pick the team.
+    useUser({ version: 'northstar' });
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      targets: {
+        production: { alias: ['prod-alias.vercel.app'] },
+      },
+      latestDeployments: [
+        {
+          url: 'static-project-abc123.vercel.app',
+        },
+      ],
+    } as any);
+    const fetch = vi.spyOn(client, 'fetch');
+
+    const res = await getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
+      protectionBypassFlag: 'test-secret',
+      autoConfirm: true,
+    });
+
+    expect(typeof res).toBe('object');
+    if (typeof res === 'number') {
+      throw new Error('expected object result');
+    }
+    expect(res.fullUrl).toBe('https://prod-alias.vercel.app/api/hello');
+    expect(existsSync(join(cwd, '.vercel', 'project.json'))).toBe(true);
+    expect(projectRequests(fetch.mock.calls)).toBe(1);
+  });
+
+  it('re-reads the link when the linked project lacks deployment fields', async () => {
+    const { setupUnitFixture } = await import(
+      '../../../helpers/setup-unit-fixture'
+    );
+    const cwd = setupUnitFixture('commands/deploy/static');
+    client.cwd = cwd;
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      latestDeployments: [
+        {
+          url: 'static-project-abc123.vercel.app',
+        },
+      ],
+    } as any);
+    // A project created while linking comes back without deployment fields.
+    vi.spyOn(ensureLinkModule, 'ensureLink').mockResolvedValue({
+      status: 'linked',
+      org: { type: 'team', id: 'team_dummy', slug: 'dummy' },
+      project: { id: 'static', name: 'static-project' } as any,
+    });
+    const fetch = vi.spyOn(client, 'fetch');
+
+    const res = await getDeploymentUrlAndToken(client, 'curl', '/api/hello', {
+      protectionBypassFlag: 'test-secret',
+    });
+
+    expect(typeof res).toBe('object');
+    if (typeof res === 'number') {
+      throw new Error('expected object result');
+    }
+    expect(res.fullUrl).toBe(
+      'https://static-project-abc123.vercel.app/api/hello'
+    );
+    expect(projectRequests(fetch.mock.calls)).toBe(1);
+  });
+
+  it('targets --deployment and full URLs instead of the linked project', async () => {
+    const { setupUnitFixture } = await import(
+      '../../../helpers/setup-unit-fixture'
+    );
+    client.cwd = setupUnitFixture('commands/deploy/static');
+
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      id: 'static',
+      name: 'static-project',
+      targets: {
+        production: { alias: ['prod-alias.vercel.app'] },
+      },
+    } as any);
+    const fetch = vi.spyOn(client, 'fetch');
+
+    const byDeployment = await getDeploymentUrlAndToken(
+      client,
+      'curl',
+      '/api/hello',
+      {
+        deploymentFlag: 'https://deployment-xyz789.vercel.app',
+        protectionBypassFlag: 'test-secret',
+      }
+    );
+    const byFullUrl = await getFullUrlAndToken(
+      client,
+      'https://example.vercel.app/api/hello',
+      'test-secret'
+    );
+
+    expect(byDeployment).toMatchObject({
+      fullUrl: 'https://deployment-xyz789.vercel.app/api/hello',
+      deploymentProtectionToken: 'test-secret',
+    });
+    expect(byFullUrl).toMatchObject({
+      fullUrl: 'https://example.vercel.app/api/hello',
+      deploymentProtectionToken: 'test-secret',
+    });
+    expect(projectRequests(fetch.mock.calls)).toBe(0);
   });
 
   it('throws when no target or latest deployments exist', async () => {

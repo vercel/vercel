@@ -24,6 +24,8 @@ export interface PrerenderInitialMetadata {
   htmlSize?: number;
 }
 
+export type PrerenderOnMiss = 'sync' | 'dynamic';
+
 interface PrerenderOptions {
   expiration: number | false;
   staleExpiration?: number;
@@ -43,6 +45,7 @@ interface PrerenderOptions {
   exposeErrBody?: boolean;
   partialFallback?: boolean;
   initialMetadata?: PrerenderInitialMetadata;
+  onMiss?: PrerenderOnMiss;
 }
 
 export class Prerender {
@@ -80,6 +83,8 @@ export class Prerender {
    * from frameworks that predate the field carry none.
    */
   public initialMetadata?: PrerenderInitialMetadata;
+  /** Serving mode when no prerendered output exists yet. Absent means `sync`. Interpreted by the proxy; carried unvalidated. */
+  public onMiss?: PrerenderOnMiss;
 
   constructor({
     expiration,
@@ -100,16 +105,14 @@ export class Prerender {
     exposeErrBody,
     partialFallback,
     initialMetadata,
+    onMiss,
   }: PrerenderOptions) {
     this.type = 'Prerender';
     this.expiration = expiration;
     this.staleExpiration = staleExpiration;
     this.sourcePath = sourcePath;
-    // Deliberately unvalidated: producers in this repo are trusted, and a
-    // compute mode added by a future framework release must not hard-fail a
-    // deploy. Untrusted input — a `.prerender-config.json` supplied by
-    // `vercel deploy --prebuilt` — is sanitized by the platform instead.
     this.initialMetadata = initialMetadata;
+    this.onMiss = onMiss;
 
     this.lambda = lambda;
     if (this.lambda) {

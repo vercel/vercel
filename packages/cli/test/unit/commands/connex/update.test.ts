@@ -43,7 +43,7 @@ describe('connex update', () => {
     const exitCode = await connect(client);
 
     await expect(client.stderr).toOutput('Missing connector ID');
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
   });
 
   it('should error when no flags are provided', async () => {
@@ -54,7 +54,7 @@ describe('connex update', () => {
     await expect(client.stderr).toOutput(
       'Specify at least one of: --icon, --background-color, --accent-color'
     );
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
   });
 
   it('should error on invalid hex color before any network call', async () => {

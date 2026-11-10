@@ -92,7 +92,7 @@ describe('comments resolve/reopen', () => {
     client.setArgv('comments', 'resolve', 'id1', 'id2', '-m', 'Fixed!');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('multiple threads');
   });
 

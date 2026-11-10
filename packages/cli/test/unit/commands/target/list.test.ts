@@ -12,10 +12,10 @@ import { useTeams, createTeam } from '../../../mocks/team';
 import createLineIterator from 'line-async-iterator';
 import { parseSpacedTableRow } from '../../../helpers/parse-table';
 
-describe('target ls', () => {
+describe('environments list', () => {
   describe('invalid argument', () => {
     it('errors', async () => {
-      client.setArgv('target', 'ls', 'balderdash');
+      client.setArgv('environments', 'ls', 'balderdash');
       const exitCode = await target(client);
 
       expect(exitCode).toEqual(2);
@@ -25,12 +25,12 @@ describe('target ls', () => {
 
   describe('--help', () => {
     it('tracks telemetry', async () => {
-      const command = 'target';
+      const command = 'environments';
       const subcommand = 'ls';
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = target(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -48,7 +48,7 @@ describe('target ls', () => {
       useTeams('team_dummy');
       createTeam();
       client.cwd = cwd;
-      client.setArgv('target', 'list', '--non-interactive');
+      client.setArgv('environments', 'list', '--non-interactive');
       (client as { nonInteractive: boolean }).nonInteractive = true;
 
       const exitSpy = vi
@@ -91,7 +91,7 @@ describe('target ls', () => {
 
     it('tracks invocation', async () => {
       const subcommandActual = 'list';
-      client.setArgv('target', subcommandActual);
+      client.setArgv('environments', subcommandActual);
       const exitCode = await target(client);
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -104,7 +104,7 @@ describe('target ls', () => {
 
     it('tracks invocation of alias command name', async () => {
       const subcommandActual = 'ls';
-      client.setArgv('target', subcommandActual);
+      client.setArgv('environments', subcommandActual);
       const exitCode = await target(client);
       expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
@@ -116,7 +116,7 @@ describe('target ls', () => {
     });
   });
 
-  it('lists targets for the project selected by --project', async () => {
+  it('lists environments for the project selected by --project', async () => {
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -127,13 +127,13 @@ describe('target ls', () => {
     });
     client.cwd = setupTmpDir();
     client.config.currentTeam = 'team_dummy';
-    client.setArgv('target', 'list', '--project', 'static');
+    client.setArgv('environments', 'list', '--project', 'static');
 
     await expect(target(client)).resolves.toEqual(0);
     await expect(client.stderr).toOutput('Environment');
   });
 
-  it('should show custom environments with `vc target ls`', async () => {
+  it('should show custom environments with `vc environments ls`', async () => {
     useUser();
     const teams = useTeams('team_dummy');
     const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
@@ -170,7 +170,7 @@ describe('target ls', () => {
     });
     client.cwd = setupUnitFixture('commands/deploy/static');
     client.stderr.isTTY = false;
-    client.setArgv('target', 'ls');
+    client.setArgv('environments', 'ls');
     const exitCode = await target(client);
     expect(exitCode).toEqual(0);
 
@@ -256,7 +256,7 @@ describe('target ls', () => {
     });
 
     it('tracks telemetry for --format json', async () => {
-      client.setArgv('target', 'ls', '--format', 'json');
+      client.setArgv('environments', 'ls', '--format', 'json');
       const exitCode = await target(client);
       expect(exitCode).toEqual(0);
 
@@ -273,7 +273,7 @@ describe('target ls', () => {
     });
 
     it('outputs targets as valid JSON that can be piped to jq', async () => {
-      client.setArgv('target', 'ls', '--format', 'json');
+      client.setArgv('environments', 'ls', '--format', 'json');
       const exitCode = await target(client);
       expect(exitCode).toEqual(0);
 
@@ -286,7 +286,7 @@ describe('target ls', () => {
     });
 
     it('outputs correct target structure in JSON', async () => {
-      client.setArgv('target', 'ls', '--format', 'json');
+      client.setArgv('environments', 'ls', '--format', 'json');
       const exitCode = await target(client);
       expect(exitCode).toEqual(0);
 

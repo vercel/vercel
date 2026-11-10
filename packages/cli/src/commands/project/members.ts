@@ -15,9 +15,18 @@ import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-lin
 import { membersRemove } from './members-remove';
 import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
-import cmd from '../../util/output/cmd';
+import {
+  INVALID_NEXT_MESSAGE,
+  parseNumericCursor,
+} from '../../util/get-pagination-opts';
+import { printNextPageCommand } from '../../util/pagination';
 import { quoteArg } from '../../util/flags/quote-arg';
 import { membersAdd } from './members-add';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 
 export interface ProjectMember {
   uid: string;
@@ -63,11 +72,11 @@ export default async function members(
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.args.length > 1) {
@@ -80,19 +89,26 @@ export default async function members(
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
+
+  const search = getRenamedOption(parsedArgs.flags, '--query', '--search', {
+    json: asJson,
+  });
+  if ('error' in search) {
+    return reportRenamedOptionError(client, search.error, { json: asJson });
+  }
 
   const limit = parsedArgs.flags['--limit'];
   if (typeof limit === 'number' && (limit < 1 || limit > 100)) {
     output.error('`--limit` must be a number between 1 and 100.');
-    return 1;
+    return 2;
   }
-  const next = parsedArgs.flags['--next'];
+  const next = parseNumericCursor(parsedArgs.flags['--next']);
   if (typeof next !== 'undefined' && !Number.isInteger(next)) {
-    output.error('`--next` must be a number.');
-    return 1;
+    output.error(INVALID_NEXT_MESSAGE);
+    return 2;
   }
 
   let result: ProjectMembersResponse;
@@ -105,8 +121,8 @@ export default async function members(
     });
 
     const query = new URLSearchParams();
-    if (parsedArgs.flags['--search']) {
-      query.set('search', String(parsedArgs.flags['--search']));
+    if (search.value) {
+      query.set('search', String(search.value));
     }
     if (typeof limit === 'number') {
       query.set('limit', String(limit));
@@ -130,7 +146,14 @@ export default async function members(
 
   if (asJson) {
     client.stdout.write(
-      `${JSON.stringify({ members: projectMembers, pagination: result.pagination }, null, 2)}\n`
+      `${JSON.stringify(
+        withWarnings(
+          { members: projectMembers, pagination: result.pagination },
+          [search.warning]
+        ),
+        null,
+        2
+      )}\n`
     );
     return 0;
   }
@@ -151,15 +174,18 @@ export default async function members(
       '_',
       '--next',
       '-N',
+      '--query',
       '--search',
     ]);
     const projectName = parsedArgs.args[0]
       ? ` ${quoteArg(parsedArgs.args[0])}`
       : '';
-    const search = parsedArgs.flags['--search'];
-    const searchFlag = search ? ` --search ${quoteArg(String(search))}` : '';
+    const searchFlag = search.value
+      ? ` --query ${quoteArg(String(search.value))}`
+      : '';
     const nextCmd = `${packageName} project members${projectName}${flags}${searchFlag} --next ${result.pagination.next}`;
-    output.log(`To display the next page run ${cmd(nextCmd)}`);
+    output.print('\n');
+    printNextPageCommand(nextCmd);
   }
 
   return 0;

@@ -1,92 +1,68 @@
 import type Client from '../client';
-import { getRollupColumnName } from '../../commands/metrics/output';
-import type {
-  Granularity,
-  MetricsQueryRequest,
-  MetricsQueryResponse,
-} from '../../commands/metrics/types';
+import type { Granularity } from '../../commands/metrics/types';
+import { nonEmptyFilter } from './dimensions';
 import {
-  ActivityTimeoutError,
-  FIREWALL_ACTION_METRIC,
-} from './get-firewall-metrics';
+  queryFirewallObservability,
+  rowDimension,
+  rowValue,
+  type CanonicalRow,
+} from './observability-query';
 
-/** Cold ClickHouse queries can be slow; fail instead of hanging forever. */
-const QUERY_TIMEOUT_MS = 45_000;
+export { alignQueryWindow, REQUEST_METRIC } from './observability-query';
 
 /**
  * The rule dimension on `vercel.firewall_action.count`, and the dashboard's
  * exclusion of rows naming neither a rule nor an action. Those rows carry no
  * attribution, and left in they crowd out the rules a top-list is asked for.
  */
-export const RULE_ID_DIMENSION = 'waf_rule_id';
-export const RULE_TRAFFIC_FILTER = `(${RULE_ID_DIMENSION} ne '') and (waf_action ne '')`;
+export const RULE_ID_DIMENSION = 'wafRuleId';
+export const RULE_TRAFFIC_FILTER = `(${nonEmptyFilter(RULE_ID_DIMENSION)}) AND (${nonEmptyFilter('wafAction')})`;
+
+/**
+ * Bucket widths the observability API accepts, coarsest last. A window is
+ * charted at the finest width that keeps it under `MAX_BUCKETS`, roughly
+ * mirroring the dashboard's range presets (1h→1m, 1d→15m, 7d→30m, 14d→1h).
+ */
+const GRANULARITY_LADDER: Array<[number, Granularity]> = [
+  [60_000, { minutes: 1 }],
+  [5 * 60_000, { minutes: 5 }],
+  [15 * 60_000, { minutes: 15 }],
+  [30 * 60_000, { minutes: 30 }],
+  [3_600_000, { hours: 1 }],
+  [2 * 3_600_000, { hours: 2 }],
+  [4 * 3_600_000, { hours: 4 }],
+  [12 * 3_600_000, { hours: 12 }],
+  [24 * 3_600_000, { hours: 24 }],
+];
+
+/**
+ * A sparkline is one character per bucket, so the bucket count is a terminal
+ * width budget, not a resolution choice: the dashboard's own presets (1d →
+ * 15m) are 96 points, which runs a trend column half again past an 80-column
+ * terminal. Callers that know the width pass their own budget.
+ */
+export const DEFAULT_MAX_BUCKETS = 24;
+
+export function pickGranularity(
+  spanMs: number,
+  maxBuckets: number = DEFAULT_MAX_BUCKETS
+): Granularity {
+  for (const [stepMs, granularity] of GRANULARITY_LADDER) {
+    if (spanMs / stepMs <= maxBuckets) return granularity;
+  }
+  return { hours: 24 };
+}
 
 interface BaseQueryOpts {
   ownerId: string;
   projectId: string;
+  /** Defaults to the firewall actions metric. */
+  metric?: string;
+  /** KQL. */
   filter?: string;
   startTime: Date;
   endTime: Date;
   timeoutMs?: number;
-}
-
-async function queryObservability(
-  client: Client,
-  opts: BaseQueryOpts & {
-    groupBy: string[];
-    granularity: Granularity;
-    limit: number;
-  }
-): Promise<{ response: MetricsQueryResponse; rollupColumn: string }> {
-  const rollupColumn = getRollupColumnName(FIREWALL_ACTION_METRIC, 'sum');
-
-  const body: MetricsQueryRequest = {
-    scope: {
-      type: 'project',
-      ownerId: opts.ownerId,
-      projectIds: [opts.projectId],
-    },
-    metric: FIREWALL_ACTION_METRIC,
-    aggregation: 'sum',
-    startTime: opts.startTime.toISOString(),
-    endTime: opts.endTime.toISOString(),
-    granularity: opts.granularity,
-    groupBy: opts.groupBy,
-    filter: opts.filter,
-    limit: opts.limit,
-    orderBy: rollupColumn,
-    orderDirection: 'desc',
-  };
-
-  const timeoutMs = opts.timeoutMs ?? QUERY_TIMEOUT_MS;
-  try {
-    const response = await client.fetch<MetricsQueryResponse>(
-      '/v2/observability/query',
-      {
-        method: 'POST',
-        body: JSON.stringify(body),
-        headers: { 'Content-Type': 'application/json' },
-        accountId: opts.ownerId,
-        signal: AbortSignal.timeout(timeoutMs),
-      }
-    );
-    return { response, rollupColumn };
-  } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      (err.name === 'TimeoutError' || err.name === 'AbortError')
-    ) {
-      throw new ActivityTimeoutError(
-        `Timed out after ${Math.round(timeoutMs / 1000)}s waiting for firewall traffic data.`
-      );
-    }
-    throw err;
-  }
-}
-
-function numericValue(raw: unknown): number {
-  const n = typeof raw === 'number' ? raw : Number(raw);
-  return Number.isFinite(n) ? n : 0;
 }
 
 export interface TopListRow {
@@ -96,30 +72,142 @@ export interface TopListRow {
 }
 
 /**
- * Top-N entities by request count over the window (summary rows only),
- * mirroring the dashboard's top-list panels (`orderBy: 'value'`, limit ≤ 500).
+ * Top-N entities by request count over the window, ordered and capped by the
+ * API — the dashboard's top-list panels.
+ *
+ * Asks for no buckets: a summary covers the window exactly and scans less
+ * than a series nothing would read. It agrees with the chart beside it as
+ * long as both are given the same bucket-aligned window — see
+ * `alignQueryWindow`, which the traffic commands apply once and share.
  */
 export async function getTopList(
   client: Client,
-  opts: BaseQueryOpts & { groupBy: string[]; top: number }
+  opts: BaseQueryOpts & {
+    groupBy: string[];
+    top: number;
+  }
 ): Promise<TopListRow[]> {
-  const spanMs = opts.endTime.getTime() - opts.startTime.getTime();
-  const { response, rollupColumn } = await queryObservability(client, {
+  const { summary } = await queryFirewallObservability(client, {
     ...opts,
-    // Single bucket: we only need the summary, not a timeseries.
-    granularity: { hours: Math.max(1, Math.ceil(spanMs / 3_600_000)) },
+    granularity: undefined,
     limit: Math.min(opts.top, 500),
   });
 
-  const rows: TopListRow[] = [];
-  for (const row of response.summary ?? []) {
-    const record = row as Record<string, unknown>;
-    const values: Record<string, string> = {};
-    for (const field of opts.groupBy) {
-      values[field] = String(record[field] ?? '');
-    }
-    rows.push({ values, total: numericValue(record[rollupColumn]) });
-  }
+  const rows: TopListRow[] = summary.map(row => ({
+    values: Object.fromEntries(
+      opts.groupBy.map(field => [field, rowDimension(row, field)])
+    ),
+    total: rowValue(row),
+  }));
   rows.sort((a, b) => b.total - a.total);
   return rows.slice(0, opts.top);
+}
+
+export interface TrafficSeriesGroup {
+  /** groupBy field → value; empty when the query had no groupBy. */
+  values: Record<string, string>;
+  /** The group's values joined, so two groups cannot collide in a map. */
+  key: string;
+  total: number;
+  /** Aligned to the result's shared `axis`; a missing bucket is a zero. */
+  series: number[];
+}
+
+export interface GroupedTimeseriesResult {
+  startTime: string;
+  endTime: string;
+  granularity: Granularity;
+  /** Sorted ISO timestamps, shared by every group so trends line up. */
+  axis: string[];
+  groups: TrafficSeriesGroup[];
+}
+
+/**
+ * A filtered timeseries, optionally split by one or more dimensions: per-group
+ * totals and per-group series from a single query, which is what lets a
+ * breakdown table carry a trend beside each row rather than a bare count.
+ *
+ * With no `groupBy` this returns one group keyed `''` — the whole filtered
+ * window as a single series.
+ */
+export async function getGroupedTimeseries(
+  client: Client,
+  opts: BaseQueryOpts & {
+    groupBy?: string[];
+    granularity?: Granularity;
+    /** Max groups returned; the API keeps the largest by request count. */
+    limit?: number;
+    /** See `approximateSelection` on the query: a real top-N, not a cap. */
+    approximateSelection?: boolean;
+  }
+): Promise<GroupedTimeseriesResult> {
+  const spanMs = opts.endTime.getTime() - opts.startTime.getTime();
+  const granularity = opts.granularity ?? pickGranularity(spanMs);
+  const groupBy = opts.groupBy ?? [];
+  const result = await queryFirewallObservability(client, {
+    ...opts,
+    granularity,
+    groupBy,
+  });
+
+  const keyOf = (row: CanonicalRow): string =>
+    groupBy.map(f => rowDimension(row, f)).join(' · ');
+
+  const groups = new Map<string, TrafficSeriesGroup>();
+  const pointsByGroup = new Map<string, Map<string, number>>();
+  const axisSet = new Set<string>();
+  // The API returns per-group totals of its own for a grouped query. Summing
+  // the buckets instead would disagree with them whenever a group's series is
+  // truncated, so only fall back to summing when there is no summary.
+  const hasSummary = result.summary.length > 0;
+
+  const getOrCreate = (row: CanonicalRow) => {
+    const key = keyOf(row);
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        values: Object.fromEntries(
+          groupBy.map(field => [field, rowDimension(row, field)])
+        ),
+        key,
+        total: 0,
+        series: [],
+      };
+      groups.set(key, group);
+    }
+    return group;
+  };
+
+  for (const row of result.summary) {
+    getOrCreate(row).total = rowValue(row);
+  }
+
+  for (const row of result.series) {
+    const timestamp = row.timestamp;
+    if (!timestamp) continue;
+    axisSet.add(timestamp);
+    const group = getOrCreate(row);
+    let points = pointsByGroup.get(group.key);
+    if (!points) {
+      points = new Map();
+      pointsByGroup.set(group.key, points);
+    }
+    const value = rowValue(row);
+    points.set(timestamp, (points.get(timestamp) ?? 0) + value);
+    if (!hasSummary) group.total += value;
+  }
+
+  const axis = [...axisSet].sort();
+  for (const group of groups.values()) {
+    const points = pointsByGroup.get(group.key);
+    group.series = axis.map(t => points?.get(t) ?? 0);
+  }
+
+  return {
+    startTime: result.startTime.toISOString(),
+    endTime: result.endTime.toISOString(),
+    granularity,
+    axis,
+    groups: [...groups.values()].sort((a, b) => b.total - a.total),
+  };
 }

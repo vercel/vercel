@@ -12,6 +12,16 @@ import { accessGroupsSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import {
+  getNextPageCommand,
+  printNextPageCommand,
+} from '../../util/pagination';
+import {
+  getRenamedOption,
+  renameOptionInArgs,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 
 interface AccessGroup {
   id: string;
@@ -47,11 +57,11 @@ export default async function accessGroups(
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.args.length > 1) {
@@ -64,14 +74,21 @@ export default async function accessGroups(
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
+
+  const search = getRenamedOption(parsedArgs.flags, '--query', '--search', {
+    json: asJson,
+  });
+  if ('error' in search) {
+    return reportRenamedOptionError(client, search.error, { json: asJson });
+  }
 
   const limit = parsedArgs.flags['--limit'];
   if (typeof limit === 'number' && (limit < 1 || limit > 100)) {
     output.error('`--limit` must be a number between 1 and 100.');
-    return 1;
+    return 2;
   }
 
   let result: AccessGroupsResponse;
@@ -85,14 +102,14 @@ export default async function accessGroups(
 
     const query = new URLSearchParams();
     query.set('projectId', project.id);
-    if (parsedArgs.flags['--search']) {
-      query.set('search', String(parsedArgs.flags['--search']));
+    if (search.value) {
+      query.set('search', String(search.value));
     }
     if (typeof limit === 'number') {
       query.set('limit', String(limit));
     }
-    if (typeof parsedArgs.flags['--next'] === 'number') {
-      query.set('next', String(parsedArgs.flags['--next']));
+    if (parsedArgs.flags['--next'] !== undefined) {
+      query.set('next', parsedArgs.flags['--next']);
     }
 
     result = await client.fetch<AccessGroupsResponse>(
@@ -105,7 +122,9 @@ export default async function accessGroups(
   }
 
   if (asJson) {
-    client.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    client.stdout.write(
+      `${JSON.stringify(withWarnings(result, [search.warning]), null, 2)}\n`
+    );
     return 0;
   }
 
@@ -118,5 +137,18 @@ export default async function accessGroups(
     ]),
   ];
   client.stderr.write(`${table(rows, { hsep: 3 })}\n`);
+
+  if (result.pagination?.next) {
+    // Built from argv: the router reads --scope and --cwd before this
+    // subcommand runs, so its own flags don't have them.
+    output.print('\n');
+    printNextPageCommand(
+      getNextPageCommand(
+        renameOptionInArgs(client.argv, '--search', '--query'),
+        result.pagination.next
+      )
+    );
+  }
+
   return 0;
 }

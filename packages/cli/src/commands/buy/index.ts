@@ -17,6 +17,7 @@ import { type Command, help } from '../help';
 import { getCommandAliases } from '..';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { BuyTelemetryClient } from '../../util/telemetry/commands/buy';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 import output from '../../output-manager';
 
 const COMMAND_CONFIG = {
@@ -35,7 +36,7 @@ export default async function main(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new BuyTelemetryClient({
@@ -53,20 +54,34 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('buy');
-    output.print(help(buyCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(buyCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: buyCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: buyCommand,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   // If no subcommand provided, show help
   if (!subcommand) {
-    output.print(help(buyCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(buyCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 2;
   }
 
@@ -84,6 +99,13 @@ export default async function main(client: Client) {
         return printHelp(addonSubcommand);
       }
       telemetry.trackCliSubcommandAddon(subcommandOriginal);
+      if (subcommandOriginal !== 'addon') {
+        warnDeprecatedSubcommand(
+          client,
+          `buy ${subcommandOriginal}`,
+          'buy addon'
+        );
+      }
       return addon(client, args);
     case 'pro':
       if (needHelp) {
@@ -101,7 +123,12 @@ export default async function main(client: Client) {
       return domain(client, args);
     default:
       output.error(`Unknown subcommand: ${subcommand}`);
-      output.print(help(buyCommand, { columns: client.stderr.columns }));
-      return 1;
+      output.print(
+        help(buyCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
+      return 2;
   }
 }

@@ -19,11 +19,13 @@ import {
   getFirewallAlertsDetailed,
 } from '../../util/firewall/get-firewall-alerts';
 import {
+  alignQueryWindow,
   getTopList,
   RULE_ID_DIMENSION,
   RULE_TRAFFIC_FILTER,
 } from '../../util/firewall/get-firewall-traffic';
 import { resolveRuleDisplayName } from '../../util/firewall/rule-names';
+import { topListFetchCount } from '../../util/firewall/format-traffic';
 import {
   formatOverviewOutput,
   OVERVIEW_TOP_RULES,
@@ -105,8 +107,17 @@ async function fetchActivity(
   teamId: string,
   active: FirewallConfigResponse | null
 ) {
-  const endTime = new Date();
-  const startTime = new Date(endTime.getTime() - ACTIVITY_WINDOW_MS);
+  const granularity = { hours: 1 } as const;
+  // Aligned to the buckets the chart is drawn on, which is the window the API
+  // charts a bucketed query over whether or not it is asked to. The top-rules
+  // query carries no buckets to be rounded by, so leaving the rounding to the
+  // API had the two panels cover different ranges.
+  const now = new Date();
+  const { startTime, endTime } = alignQueryWindow(
+    new Date(now.getTime() - ACTIVITY_WINDOW_MS),
+    now,
+    granularity
+  );
 
   output.spinner('Fetching firewall activity');
   const [metrics, alertsResult, topRules] = await Promise.all([
@@ -115,6 +126,7 @@ async function fetchActivity(
       ownerId: teamId,
       startTime,
       endTime,
+      granularity,
     }),
     getFirewallAlertsDetailed(client, { projectId, teamId, sinceDays: 1 }),
     getTopList(client, {
@@ -124,14 +136,22 @@ async function fetchActivity(
       filter: RULE_TRAFFIC_FILTER,
       startTime,
       endTime,
-      top: OVERVIEW_TOP_RULES,
+      // One spare, since the unattributed row below is dropped after the
+      // API has already capped the result.
+      top: topListFetchCount(OVERVIEW_TOP_RULES),
     }),
   ]);
 
-  const rules: OverviewRuleRow[] = topRules.map(row => {
-    const id = row.values[RULE_ID_DIMENSION] || '';
-    return { id, name: resolveRuleDisplayName(id, active), total: row.total };
-  });
+  // Requests no rule matched carry no attribution and outweigh every attributed
+  // rule put together, so they would take the top row and leave it blank. The
+  // `waf_rule_id ne ''` filter above is meant to exclude them and does not.
+  const rules: OverviewRuleRow[] = topRules
+    .filter(row => row.values[RULE_ID_DIMENSION])
+    .slice(0, OVERVIEW_TOP_RULES)
+    .map(row => {
+      const id = row.values[RULE_ID_DIMENSION];
+      return { id, name: resolveRuleDisplayName(id, active), total: row.total };
+    });
 
   // Alerts open at any point in the window, by the same rule the attack count
   // uses. Listing only the ones raised inside it would drop an attack that

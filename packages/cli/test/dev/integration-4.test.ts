@@ -23,7 +23,7 @@ test(
 );
 
 test(
-  '[vercel dev] Next.js experimental_upgradeWebSocket',
+  '[vercel dev] Next.js upgradeWebSocket',
   withLocalDev('nextjs-websocket', async port => {
     await expect(webSocketEcho(port, '/api/ws', 'hello')).resolves.toBe(
       'echo:hello'

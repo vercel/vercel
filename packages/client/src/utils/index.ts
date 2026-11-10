@@ -1,4 +1,5 @@
 import { FilesMap } from './hashes';
+import { formatNetworkError } from './network-error';
 import { join, sep, relative, basename, isAbsolute } from 'path';
 import { Readable } from 'stream';
 import { URL } from 'url';
@@ -9,10 +10,6 @@ import { FetchDispatcher, VercelClientOptions, VercelConfig } from '../types';
 import { Sema } from 'async-sema';
 import { pathExists, readFile, stat } from 'fs-extra';
 import readdir from './readdir-recursive';
-import {
-  findConfig as findMicrofrontendsConfig,
-  inferMicrofrontendsLocation,
-} from '@vercel/microfrontends/microfrontends/utils';
 
 type Ignore = ReturnType<typeof ignore>;
 
@@ -81,12 +78,18 @@ const maybeRead = async function <T>(path: string, default_: T) {
   }
 };
 
+type UserIgnore = {
+  ig: Ignore;
+  ignoreFile: string;
+  ignoreFileName: '.vercelignore' | '.nowignore';
+};
+
 /**
  * Reads the project's `.vercelignore` / `.nowignore` file (if any) and
  * returns an `Ignore` instance containing only the user-provided rules.
  * Returns `null` when no ignore file is present.
  */
-async function getUserIgnore(cwd: string): Promise<Ignore | null> {
+async function getUserIgnore(cwd: string): Promise<UserIgnore | null> {
   const [vercelignore, nowignore] = await Promise.all([
     maybeRead(join(cwd, '.vercelignore'), ''),
     maybeRead(join(cwd, '.nowignore'), ''),
@@ -103,15 +106,25 @@ async function getUserIgnore(cwd: string): Promise<Ignore | null> {
   if (!ignoreFile) {
     return null;
   }
-  return ignore().add(clearRelative(ignoreFile));
+  return {
+    ig: ignore().add(clearRelative(ignoreFile)),
+    ignoreFile,
+    ignoreFileName: vercelignore ? '.vercelignore' : '.nowignore',
+  };
 }
+
+// VCS source-upload defaults cannot be overridden by user negations
+// or dependency/output exceptions when collecting prebuilt references.
+const VCS_DEFAULTS = ['.hg', '.git', '.gitmodules', '.svn', 'CVS'];
+const filePathMapVcsDefaults = ignore().add(VCS_DEFAULTS);
 
 /**
  * Source-upload defaults that `--prebuilt` `filePathMap` may re-add even when
  * the user also listed them in `.vercelignore`. These are dependency / framework
  * output trees the CLI already skips on a normal deploy; NFT traces files inside
  * them that hydrate still needs. Secrets (`.env*`), VCS, and `.vercel` are
- * intentionally not in this list — see `getVercelIgnore`.
+ * intentionally not in this list. VCS references are rejected independently
+ * by `filePathMapVcsDefaults`; other paths still respect user ignore rules.
  */
 const FILEPATHMAP_VERCELIGNORE_EXCEPTIONS = [
   'node_modules',
@@ -130,6 +143,70 @@ const filePathMapVercelignoreExceptions = ignore().add(
 
 function isFilePathMapIgnoreException(posixRel: string): boolean {
   return filePathMapVercelignoreExceptions.ignores(posixRel);
+}
+
+const FILEPATHMAP_IGNORE_WARNING_LIST_LIMIT = 100;
+
+type FilePathMapIgnoreViolation = {
+  path: string;
+  rule?: string;
+  line?: number;
+};
+
+/**
+ * Replay the ignore file in order and return the rule that transitions the
+ * path into its final ignored state. Checking the state after every rule keeps
+ * negations and re-ignores consistent with the full `ignore` matcher.
+ */
+function findMatchingIgnoreRule(
+  ignoreFile: string,
+  posixRel: string
+): Omit<FilePathMapIgnoreViolation, 'path'> {
+  const matcher = ignore();
+  let wasIgnored = false;
+  let match: Omit<FilePathMapIgnoreViolation, 'path'> = {};
+
+  for (const [index, rule] of ignoreFile.split(/\r?\n/).entries()) {
+    matcher.add(clearRelative(rule));
+    const isIgnored = matcher.ignores(posixRel);
+    if (!wasIgnored && isIgnored) {
+      match = { rule, line: index + 1 };
+    } else if (wasIgnored && !isIgnored) {
+      match = {};
+    }
+    wasIgnored = isIgnored;
+  }
+
+  return match;
+}
+
+function formatFilePathMapIgnoreWarning(
+  entries: FilePathMapIgnoreViolation[],
+  ignoreFileName: string,
+  truncated = false
+): string {
+  const shown = entries.slice(0, FILEPATHMAP_IGNORE_WARNING_LIST_LIMIT);
+  const lines = shown.map(({ path, rule, line }) =>
+    rule && line
+      ? `  ${path} (matched \`${ignoreFileName}:${line}\`: \`${rule}\`)`
+      : `  ${path}`
+  );
+  if (truncated) {
+    lines.push('  …and more');
+  }
+  const count = truncated ? `at least ${shown.length}` : String(entries.length);
+  const fileWord = !truncated && entries.length === 1 ? 'file' : 'files';
+  const ignoreFileLabel =
+    ignoreFileName === '.nowignore'
+      ? `\`${ignoreFileName}\` (deprecated)`
+      : `\`${ignoreFileName}\``;
+  return [
+    `${ignoreFileLabel} excludes ${count} ${fileWord} the prebuilt functions need. Uploading without them may fail with ENOENT.`,
+    '',
+    ...lines,
+    '',
+    `Remove the colliding rules from \`${ignoreFileName}\`, or exclude those paths from tracing with \`outputFileTracingExcludes\`.`,
+  ].join('\n');
 }
 
 export async function buildFileTree(
@@ -151,9 +228,10 @@ export async function buildFileTree(
     | 'bulkRedirectsPath'
   >,
   debug: Debug
-): Promise<{ fileList: string[]; ignoreList: string[] }> {
+): Promise<{ fileList: string[]; ignoreList: string[]; warning?: string }> {
   const ignoreList: string[] = [];
   let fileList: string[];
+  let warning: string | undefined;
   let { ig, ignores } = await getVercelIgnore(path, prebuilt, vercelOutputDir);
 
   debug(`Found ${ignores.length} rules in .vercelignore`);
@@ -190,51 +268,106 @@ export async function buildFileTree(
       // Exception: paths under source-upload defaults like `node_modules/`
       // and `.next/` — users often copy those into `.vercelignore`, but
       // they are already ignored on a normal deploy, and `--prebuilt`
-      // must still upload the NFT-traced subset. See
-      // https://github.com/vercel/vercel/issues/17386.
+      // must still upload the NFT-traced subset.
+      //
+      // Other ignored `filePathMap` entries are dropped, leaving dangling
+      // references in `.vc-config.json` that can crash remotely with ENOENT.
+      // Warn with a bounded list of colliding paths so the user can fix them.
+      // See https://github.com/vercel/vercel/issues/17386.
       const userIg = await getUserIgnore(path);
-      await Promise.all(
+      const ignoredFilePathMap = new Map<
+        string,
+        Omit<FilePathMapIgnoreViolation, 'path'>
+      >();
+      let ignoredFilePathMapTruncated = false;
+      const vcConfigs = await Promise.all(
         vcConfigFilePaths.map(async p => {
           const configJson = await readFile(p, 'utf8');
-          const config = JSON.parse(configJson);
-          if (!config.filePathMap) return;
-          for (const v of Object.values(config.filePathMap) as string[]) {
-            const absPath = join(path, v);
-            const rel = relative(path, absPath);
-            const posixRel = rel.split(sep).join('/');
-            if (rel.startsWith('..') || isAbsolute(rel)) {
+          return JSON.parse(configJson);
+        })
+      );
+      for (const config of vcConfigs) {
+        if (!config.filePathMap) continue;
+        for (const v of Object.values(config.filePathMap) as string[]) {
+          const absPath = join(path, v);
+          const rel = relative(path, absPath);
+          const posixRel = rel.split(sep).join('/');
+          if (rel.startsWith('..') || isAbsolute(rel)) {
+            debug(
+              `Ignoring "filePathMap" entry "${v}": resolves outside the deployment root`
+            );
+            continue;
+          }
+          if (filePathMapVcsDefaults.ignores(posixRel)) {
+            // Reject before hashing or archiving, rather than leave dangling
+            // references that fail during remote hydration. Do not echo
+            // artifact-controlled paths or file contents in the error.
+            throw new NowBuildError({
+              code: 'PREBUILT_FILEPATHMAP_VCS',
+              message:
+                'Prebuilt functions reference version-control files that cannot be uploaded. Exclude version-control files from tracing and rebuild the prebuilt output.',
+            });
+          }
+          if (userIg && userIg.ig.ignores(posixRel)) {
+            if (isFilePathMapIgnoreException(posixRel)) {
               debug(
-                `Ignoring "filePathMap" entry "${v}": resolves outside the deployment root`
+                `Keeping "filePathMap" entry "${v}": matches a default-ignored dependency/output path`
+              );
+            } else if (ignoredFilePathMap.has(posixRel)) {
+              continue;
+            } else if (fileList.includes(absPath)) {
+              debug(
+                `Skipping "filePathMap" entry "${v}": already in the upload set`
+              );
+              continue;
+            } else if (
+              ignoredFilePathMap.size >= FILEPATHMAP_IGNORE_WARNING_LIST_LIMIT
+            ) {
+              // Cap the warning list; keep scanning so later non-ignored
+              // entries are still added to the upload set.
+              ignoredFilePathMapTruncated = true;
+              continue;
+            } else {
+              ignoredFilePathMap.set(
+                posixRel,
+                findMatchingIgnoreRule(userIg.ignoreFile, posixRel)
               );
               continue;
             }
-            if (userIg && userIg.ignores(posixRel)) {
-              if (isFilePathMapIgnoreException(posixRel)) {
-                debug(
-                  `Keeping "filePathMap" entry "${v}": matches a default-ignored dependency/output path`
-                );
-              } else {
-                debug(
-                  `Ignoring "filePathMap" entry "${v}": matched by a rule in .vercelignore/.nowignore`
-                );
-                continue;
-              }
-            }
-            refs.add(absPath);
           }
-        })
-      );
+          refs.add(absPath);
+        }
+      }
+      if (ignoredFilePathMap.size > 0) {
+        const violations = [...ignoredFilePathMap.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([ignoredPath, match]) => ({ path: ignoredPath, ...match }));
+        warning = formatFilePathMapIgnoreWarning(
+          violations,
+          userIg?.ignoreFileName || '.vercelignore',
+          ignoredFilePathMapTruncated
+        );
+      }
 
       try {
+        const {
+          findConfig: findMicrofrontendsConfig,
+          inferMicrofrontendsLocation,
+        } = await import('@vercel/microfrontends/microfrontends/utils');
+        // 2.x: pass undefined so we still only look for microfrontends.json{,c}.
+        const customConfigFilename = undefined;
         let microfrontendConfigPath = findMicrofrontendsConfig({
           dir: join(path, rootDirectory || ''),
+          customConfigFilename,
         });
         if (!microfrontendConfigPath && !rootDirectory && projectName) {
           microfrontendConfigPath = findMicrofrontendsConfig({
             dir: inferMicrofrontendsLocation({
               repositoryRoot: path,
-              applicationName: projectName,
+              applicationContext: { name: projectName },
+              customConfigFilename,
             }),
+            customConfigFilename,
           });
         }
         if (microfrontendConfigPath) {
@@ -316,7 +449,7 @@ export async function buildFileTree(
     debug(`Deploying the provided path as single file`);
   }
 
-  return { fileList, ignoreList };
+  return { fileList, ignoreList, warning };
 }
 
 export async function getVercelIgnore(
@@ -350,10 +483,7 @@ export async function getVercelIgnore(
     ig.add(ignores.join('\n'));
   } else {
     ignores = [
-      '.hg',
-      '.git',
-      '.gitmodules',
-      '.svn',
+      ...VCS_DEFAULTS,
       '.cache',
       '.next',
       '.now',
@@ -375,7 +505,6 @@ export async function getVercelIgnore(
       'node_modules',
       '__pycache__',
       'venv',
-      'CVS',
     ];
 
     const cwds = Array.isArray(cwd) ? cwd : [cwd];
@@ -477,12 +606,26 @@ export const fetchApi = async (
     (opts as { duplex?: 'half' }).duplex = 'half';
   }
 
-  debug(`${opts.method || 'GET'} ${url}`);
+  const parsedUrl = new URL(url);
+  const request = `${opts.method || 'GET'} ${parsedUrl.origin}${parsedUrl.pathname}`;
+  debug(request);
   time = Date.now();
   try {
     const res = await fetch(url, opts as unknown as NativeRequestInit);
-    debug(`DONE in ${Date.now() - time}ms: ${opts.method || 'GET'} ${url}`);
+    const requestId = res.headers.get('x-vercel-id');
+    const id =
+      requestId && /^[a-zA-Z0-9:_.-]{1,200}$/.test(requestId)
+        ? ` requestId=${requestId}`
+        : '';
+    debug(
+      `DONE in ${Date.now() - time}ms: ${request} status=${res.status}${id}`
+    );
     return res;
+  } catch (error) {
+    debug(
+      `FAILED in ${Date.now() - time}ms: ${request} ${formatNetworkError(error)}`
+    );
+    throw error;
   } finally {
     semaphore.release();
   }

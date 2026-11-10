@@ -4,7 +4,8 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
 import getCommandFlags from '../../util/get-command-flags';
 import formatTable from '../../util/format-table';
 import stamp from '../../util/output/stamp';
@@ -39,7 +40,7 @@ export default async function stale(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { flags } = parsedArgs;
@@ -61,7 +62,7 @@ export default async function stale(
     output.error(
       `The --limit option must be an integer between 1 and ${MAX_STALE_FLAGS_LIMIT}.`
     );
-    return 1;
+    return 2;
   }
 
   const staleAfterValidationError = getStaleAfterValidationError(staleAfter);
@@ -115,7 +116,8 @@ export default async function stale(
       printStaleFlagsTable(staleFlags);
       if (nextCursor) {
         const nextCmd = buildNextPageCommand(flags, nextCursor);
-        output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
+        output.print('\n');
+        printNextPageCommand(getCommandNamePlain(nextCmd));
       }
     }
   } catch (err) {

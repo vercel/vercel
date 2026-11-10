@@ -1,15 +1,18 @@
-import { join } from 'path';
+import { dirname, join, resolve } from 'path';
 import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
 import {
   sleep,
   fixture,
+  getDevResourcePorts,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
 import assert from 'assert';
+import _execa, { type ExecaChildProcess } from 'execa';
 import nodeFetch from '../../src/util/fetch';
+import { prepareFixtureCopy, waitForDevReady } from './e2e-fixture-utils';
 
 test(
   '[vercel dev] temporary directory listing',
@@ -1040,23 +1043,41 @@ describe('[vercel dev] Worker service', () => {
 });
 
 describe('[vercel dev] Queues + Runtime Cache across services', () => {
-  test('[vercel dev] Next.js enqueues, Python completes via the shared Runtime Cache', async () => {
-    const dir = fixture('services-queue-cache');
-    const { dev, port, readyResolver } = await testFixture(
-      dir,
-      {
-        skipNpmInstall: true,
-        env: {
-          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
-        },
-      },
-      ['--local']
+  test('[vercel dev] external Python worker polls and uses the shared Runtime Cache', async () => {
+    const dir = await prepareFixtureCopy(
+      join(__dirname, 'fixtures', 'services-queue-cache')
     );
+    const { queuePort, runtimeCachePort } = getDevResourcePorts();
+    let dev: Awaited<ReturnType<typeof testFixture>>['dev'] | undefined;
+    let worker: ExecaChildProcess | undefined;
 
     try {
-      await readyResolver;
+      const fixtureRun = await testFixture(
+        dir,
+        {
+          skipNpmInstall: true,
+          env: {
+            VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          },
+        },
+        [
+          '--local',
+          `--queue-port=${queuePort}`,
+          `--runtime-cache-port=${runtimeCachePort}`,
+        ]
+      );
+      dev = fixtureRun.dev;
+      const { port, readyResolver } = fixtureRun;
 
-      // Next.js publishes a message for the Python subscriber.
+      await readyResolver;
+      await waitForDevReady(
+        dev,
+        `http://localhost:${port}`,
+        '/api/status?taskId=ready'
+      );
+
+      // Publish before the external consumer group exists to verify that a
+      // poll-mode group starts at the beginning of the retained topic.
       const enqueueRes = await nodeFetch(
         `http://localhost:${port}/api/enqueue`,
         {
@@ -1068,8 +1089,52 @@ describe('[vercel dev] Queues + Runtime Cache across services', () => {
       expect(taskId).toBeTruthy();
       expect(messageId).toBeTruthy();
 
-      // The Python subscriber writes the completion into the Runtime Cache;
-      // Next.js reads it back from the store shared by both processes.
+      const backendDir = resolve(dir, 'backend');
+      const pythonBin = join(
+        backendDir,
+        '.venv',
+        process.platform === 'win32' ? 'Scripts' : 'bin',
+        process.platform === 'win32' ? 'python.exe' : 'python'
+      );
+      let pythonReady = false;
+      for (let i = 0; i < 150; i++) {
+        if (await fs.pathExists(pythonBin)) {
+          const importCheck = await _execa(
+            pythonBin,
+            ['-c', 'import vercel.cache; import vercel.queue'],
+            { cwd: backendDir, reject: false }
+          );
+          if (importCheck.exitCode === 0) {
+            pythonReady = true;
+            break;
+          }
+        }
+        await sleep(2_000);
+      }
+      expect(pythonReady).toBe(true);
+
+      worker = _execa(pythonBin, ['poll_worker.py'], {
+        cwd: backendDir,
+        reject: false,
+        timeout: 30_000,
+        env: {
+          ...process.env,
+          VERCEL_QUEUE_BASE_URL: `http://127.0.0.1:${queuePort}`,
+          VERCEL_QUEUE_TOKEN: 'vc-dev-token',
+          VERCEL_REGION: 'dev1',
+          RUNTIME_CACHE_ENDPOINT: `http://127.0.0.1:${runtimeCachePort}/v1/suspense-cache/`,
+          RUNTIME_CACHE_HEADERS: JSON.stringify({
+            authorization: 'Bearer vc-dev-token',
+          }),
+        },
+      });
+      const workerResult = await worker;
+      expect(
+        workerResult.exitCode,
+        `Python worker failed:\n${workerResult.stdout}\n${workerResult.stderr}`
+      ).toBe(0);
+
+      // Next.js reads the external worker's completion from the shared store.
       let status: any = null;
       for (let i = 0; i < 60; i++) {
         await sleep(500);
@@ -1090,7 +1155,15 @@ describe('[vercel dev] Queues + Runtime Cache across services', () => {
         messageId,
       });
     } finally {
-      await dev.kill();
+      if (worker?.exitCode === null) {
+        worker.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
+        await worker.catch(() => null);
+      }
+      try {
+        await dev?.kill();
+      } finally {
+        await fs.remove(dirname(dir));
+      }
     }
   });
 });

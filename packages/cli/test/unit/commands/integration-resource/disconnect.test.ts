@@ -1,3 +1,4 @@
+import stripAnsi from 'strip-ansi';
 import { beforeEach, describe, expect, it } from 'vitest';
 import integrationResourceCommand from '../../../../src/commands/integration-resource';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
@@ -6,6 +7,10 @@ import { useResources } from '../../../mocks/integration';
 import { defaultProject, useProject } from '../../../mocks/project';
 import { type Team, useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+import type {
+  Resource,
+  ResourceConnection,
+} from '../../../../src/util/integration-resource/types';
 
 describe('integration-resource', () => {
   describe('disconnect', () => {
@@ -19,7 +24,6 @@ describe('integration-resource', () => {
         const teams = useTeams('team_dummy');
         team = Array.isArray(teams) ? teams[0] : teams.teams[0];
         client.config.currentTeam = team.id;
-        useResources();
       });
 
       it('disconnects a project from a resource', async () => {
@@ -44,6 +48,37 @@ describe('integration-resource', () => {
         );
 
         await expect(exitCodePromise).resolves.toEqual(0);
+      });
+
+      it('disconnects a resource selected by its stable ID while retaining confirmation', async () => {
+        const resourceId = 'store_1';
+        const resourceName = 'store-acme-connected-project';
+        const project = 'connected-project';
+        const deletedConnections: [string, string][] = [];
+        useResources();
+        mockDisconnectResourceFromProject({
+          onDeleteRequest(resourceId, connectionId) {
+            deletedConnections.push([resourceId, connectionId]);
+          },
+        });
+
+        client.setArgv(
+          'integration-resource',
+          'disconnect',
+          resourceId,
+          project
+        );
+        const exitCodePromise = integrationResourceCommand(client);
+
+        await expect(client.stderr).toOutput(
+          `> The resource ${resourceName} will be disconnected from project ${project}.`
+        );
+        await expect(client.stderr).toOutput('? Are you sure? (y/N)');
+        expect(deletedConnections).toEqual([]);
+        client.stdin.write('y\n');
+
+        await expect(exitCodePromise).resolves.toEqual(0);
+        expect(deletedConnections).toEqual([[resourceId, 'spc_1']]);
       });
 
       it('skips confirmation when disconnecting a project from a resource with the `--yes` flag', async () => {
@@ -143,6 +178,79 @@ describe('integration-resource', () => {
         await expect(exitCodePromise).resolves.toEqual(0);
       });
 
+      it('disconnects every connection for one project and preserves other projects', async () => {
+        const resource = resourceWithMultipleProjectConnections();
+        const remainingConnections = [...resource.projectsMetadata!];
+        const deletedConnectionIds: string[] = [];
+        mockResources([resource]);
+        mockDisconnectResourceFromProject({
+          onDelete(connectionId) {
+            deletedConnectionIds.push(connectionId);
+            const index = remainingConnections.findIndex(
+              connection => connection.id === connectionId
+            );
+            if (index !== -1) {
+              remainingConnections.splice(index, 1);
+            }
+          },
+        });
+
+        client.setArgv(
+          'integration-resource',
+          'disconnect',
+          resource.name,
+          'connected-project'
+        );
+        const exitCodePromise = integrationResourceCommand(client);
+
+        await expect(client.stderr).toOutput(
+          `> All 2 connections between resource ${resource.name} and project connected-project will be disconnected.`
+        );
+        await expect(client.stderr).toOutput('? Are you sure? (y/N)');
+        client.stdin.write('y\n');
+        const exitCode = await exitCodePromise;
+
+        expect(exitCode).toEqual(0);
+        expect(deletedConnectionIds).toEqual(['spc_qa', 'spc_staging']);
+        expect(remainingConnections).toEqual([
+          expect.objectContaining({
+            id: 'spc_other',
+            projectId: 'prj_other',
+          }),
+        ]);
+        await expect(client.stderr).toOutput(
+          `> Success! Disconnected all 2 connections for connected-project from ${resource.name}`
+        );
+      });
+
+      it('does not report complete success when only one project connection is deleted', async () => {
+        const resource = resourceWithMultipleProjectConnections();
+        const deletedConnectionIds: string[] = [];
+        mockResources([resource]);
+        mockDisconnectResourceFromProject({
+          errorForConnectionId: 'spc_staging',
+          onDelete(connectionId) {
+            deletedConnectionIds.push(connectionId);
+          },
+        });
+
+        client.setArgv(
+          'integration-resource',
+          'disconnect',
+          resource.name,
+          'connected-project',
+          '--yes'
+        );
+        const exitCode = await integrationResourceCommand(client);
+
+        expect(exitCode).toEqual(1);
+        expect(deletedConnectionIds).toEqual(['spc_qa']);
+        await expect(client.stderr).toOutput(
+          'Error: A problem occurred while disconnecting: Response Error (500)'
+        );
+        expect(client.stderr.getFullOutput()).not.toContain('Success!');
+      });
+
       it('disconnects all projects from a resource using the `--all` flag', async () => {
         useResources();
         const resource = 'store-foo-bar-both-projects';
@@ -153,7 +261,15 @@ describe('integration-resource', () => {
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput(
-          '> The following projects will be disconnected:\n  connected-project\n  other-project'
+          '> The following projects will be disconnected:'
+        );
+        expect(
+          stripAnsi(client.stderr.getFullOutput())
+            .split(/\r?\n/)
+            .map(line => line.trimStart())
+            .join('\n')
+        ).toContain(
+          '> The following projects will be disconnected:\nconnected-project\nother-project'
         );
         await expect(client.stderr).toOutput('? Are you sure? (y/N)');
         client.stdin.write('y\n');
@@ -193,7 +309,15 @@ describe('integration-resource', () => {
 
         await expect(client.stderr).toOutput('Retrieving resource…');
         await expect(client.stderr).toOutput(
-          '> The following projects will be disconnected:\n  connected-project\n  other-project'
+          '> The following projects will be disconnected:'
+        );
+        expect(
+          stripAnsi(client.stderr.getFullOutput())
+            .split(/\r?\n/)
+            .map(line => line.trimStart())
+            .join('\n')
+        ).toContain(
+          '> The following projects will be disconnected:\nconnected-project\nother-project'
         );
         await expect(client.stderr).toOutput('? Are you sure? (y/N)');
         client.stdin.write('n\n');
@@ -272,7 +396,7 @@ describe('integration-resource', () => {
           '--format=json'
         );
         const exitCode = await integrationResourceCommand(client);
-        expect(exitCode).toEqual(1);
+        expect(exitCode).toEqual(2);
         await expect(client.stderr).toOutput(
           'Error: --json requires --yes to skip confirmation prompts'
         );
@@ -329,7 +453,7 @@ describe('integration-resource', () => {
           '--format=xml'
         );
         const exitCode = await integrationResourceCommand(client);
-        expect(exitCode).toEqual(1);
+        expect(exitCode).toEqual(2);
         await expect(client.stderr).toOutput(
           'Error: Invalid output format: "xml"'
         );
@@ -364,7 +488,7 @@ describe('integration-resource', () => {
           await expect(client.stderr).toOutput(
             'You must specify a resource. See `--help` for details.'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('should error when more arguments than a resource and project are passed', async () => {
@@ -386,29 +510,79 @@ describe('integration-resource', () => {
           );
           const exitCodePromise = integrationResourceCommand(client);
           await expect(client.stderr).toOutput(
-            'Error: Cannot specify a project while using the `--all` flag.'
+            'Error: Cannot specify a project while using the `--all` option.'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
       });
     });
   });
 });
 
-function mockDisconnectResourceFromProject(options?: { error?: number }): void {
+function mockDisconnectResourceFromProject(options?: {
+  error?: number;
+  errorForConnectionId?: string;
+  onDelete?: (connectionId: string) => void;
+  onDeleteRequest?: (resourceId: string, connectionId: string) => void;
+}): void {
   client.scenario.delete(
     '/:version/storage/stores/:resourceId/connections/:connectionId',
     (req, res) => {
-      if (options?.error) {
-        res.status(options.error);
+      if (
+        options?.error ||
+        options?.errorForConnectionId === req.params.connectionId
+      ) {
+        res.status(options?.error ?? 500);
         res.end();
         return;
       }
 
+      options?.onDeleteRequest?.(
+        req.params.resourceId,
+        req.params.connectionId
+      );
+      options?.onDelete?.(req.params.connectionId);
       res.status(200);
       res.end();
     }
   );
+}
+
+function mockResources(stores: Resource[]): void {
+  client.scenario.get('/:version/storage/stores', (_req, res) => {
+    res.json({ stores });
+  });
+}
+
+function resourceWithMultipleProjectConnections(): Resource {
+  const projectsMetadata: ResourceConnection[] = [
+    {
+      id: 'spc_qa',
+      projectId: 'prj_connected',
+      name: 'connected-project',
+      environments: ['env_qa123'],
+    },
+    {
+      id: 'spc_staging',
+      projectId: 'prj_connected',
+      name: 'connected-project',
+      environments: ['env_staging456'],
+    },
+    {
+      id: 'spc_other',
+      projectId: 'prj_other',
+      name: 'other-project',
+      environments: ['production'],
+    },
+  ];
+  return {
+    id: 'store_multi_connection',
+    externalResourceId: 'external_multi_connection',
+    type: 'integration',
+    name: 'store-multi-connection',
+    status: 'available',
+    projectsMetadata,
+  };
 }
 
 function mockDisconnectResourceFromAllProjects(options?: {

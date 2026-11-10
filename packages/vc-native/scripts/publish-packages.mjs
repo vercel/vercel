@@ -9,6 +9,10 @@ const packageRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outputRoot = join(packageRoot, 'dist-native');
 const dryRun = process.argv.includes('--dry-run');
 const tag = getArgValue('--tag') ?? process.env.VERCEL_VC_NATIVE_NPM_TAG;
+// @vercel/vc-native trusts realease-binary.yml on npm, the platform packages
+// trust release.yml, so each workflow publishes only its own side.
+const skipWrapper = process.argv.includes('--skip-wrapper');
+const wrapperOnly = process.argv.includes('--wrapper-only');
 
 await execFileAsync(process.execPath, [
   join(packageRoot, 'scripts', 'stage-packages.mjs'),
@@ -18,6 +22,11 @@ await execFileAsync(process.execPath, [
 const entries = await readdir(outputRoot, { withFileTypes: true });
 const packageDirs = entries
   .filter(entry => entry.isDirectory())
+  .filter(entry => {
+    if (skipWrapper) return entry.name !== 'vc-native';
+    if (wrapperOnly) return entry.name === 'vc-native';
+    return true;
+  })
   .map(entry => join(outputRoot, entry.name))
   .sort((left, right) => {
     if (left.endsWith('/vc-native')) return 1;
@@ -34,6 +43,18 @@ for (const packageDir of packageDirs) {
   if (await isPublished(spec)) {
     console.log(`skip: ${spec} already published`);
     continue;
+  }
+
+  if (wrapperOnly && !dryRun) {
+    for (const [name, version] of Object.entries(
+      manifest.optionalDependencies ?? {}
+    )) {
+      if (!(await isPublished(`${name}@${version}`))) {
+        throw new Error(
+          `${name}@${version} is not on npm yet; publish it before ${spec}`
+        );
+      }
+    }
   }
 
   // No --provenance: npm provenance requires a public source repo; publishes

@@ -1,0 +1,23 @@
+export const SUBCOMMANDS_WITHOUT_TOKEN = [
+  'login',
+  'logout',
+  'signup',
+  'help',
+  'init',
+  'build',
+  'builders',
+  'changelog',
+  'pricing',
+  'feedback',
+  'deploy',
+  'sandbox',
+  'telemetry',
+  'upgrade',
+  'version',
+  'skills',
+  'health',
+  // Kept for the `status-page` alias, which is matched before alias resolution.
+  'status-page',
+  'agent',
+  'whoami',
+] as const;

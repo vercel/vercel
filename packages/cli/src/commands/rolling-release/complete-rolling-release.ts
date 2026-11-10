@@ -33,9 +33,7 @@ export default async function completeRollingRelease({
       method: 'POST',
     }
   );
-  output.log(
-    'Successfully requested completion of the active rolling release.'
-  );
+  output.log(`Requested rolling release completion for ${deployment.id}`);
 
   return 0;
 }

@@ -1,6 +1,6 @@
 {
   "name": "@vercel/node",
-  "version": "12.0.1",
+  "version": "28.0.0",
   "license": "Apache-2.0",
   "main": "./dist/index",
   "homepage": "https://vercel.com/docs/runtimes#official-runtimes/node-js",

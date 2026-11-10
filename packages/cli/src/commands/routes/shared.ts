@@ -77,7 +77,7 @@ export async function parseSubcommandArgs(
           command: getCommandNamePlain(
             `routes ${command.name} ${flags.join(' ')}`.trim()
           ),
-          when: 'fix flags and retry',
+          when: 'fix options and retry',
         },
       ];
 
@@ -94,18 +94,21 @@ export async function parseSubcommandArgs(
           rawMessage
         );
 
-      if (isAiArgError && (command.name === 'add' || command.name === 'edit')) {
+      if (
+        isAiArgError &&
+        (command.name === 'add' || command.name === 'update')
+      ) {
         message =
           command.name === 'add'
             ? '--ai requires a description. Example: routes add --ai <description> --yes --non-interactive. Replace <description> with your text; use shell quotes if it contains spaces (e.g. --ai "Redirect /old to /new").'
-            : '--ai requires a description. Example: routes edit <name-or-id> --ai <description> --yes --non-interactive. Replace placeholders; use shell quotes for <description> if it contains spaces.';
+            : '--ai requires a description. Example: routes update <name-or-id> --ai <description> --yes --non-interactive. Replace placeholders; use shell quotes for <description> if it contains spaces.';
         next = [
           {
             command: withGlobalFlags(
               client,
               command.name === 'add'
                 ? `routes add --ai <description> --yes`
-                : `routes edit <name-or-id> --ai <description> --yes`
+                : `routes update <name-or-id> --ai <description> --yes`
             ),
             when: 'replace <description> with your text (quote it in the shell if it contains spaces), then run',
           },
@@ -113,7 +116,7 @@ export async function parseSubcommandArgs(
             command: getCommandNamePlain(
               `routes ${command.name} --help ${flags.join(' ')}`.trim()
             ),
-            when: 'see all flags',
+            when: 'see all options',
           },
         ];
       }
@@ -126,13 +129,13 @@ export async function parseSubcommandArgs(
           message,
           next,
         },
-        1
+        2
       );
       // Avoid printError if process.exit was mocked (tests).
-      return 1;
+      return 2;
     }
     printError(err);
-    return 1;
+    return 2;
   }
 
   return parsedArgs;

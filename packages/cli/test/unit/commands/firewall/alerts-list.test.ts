@@ -28,7 +28,7 @@ describe('firewall alerts list', () => {
   describe('--help', () => {
     it('tracks telemetry', async () => {
       client.setArgv('firewall', 'alerts', 'list', '--help');
-      expect(await firewall(client)).toEqual(2);
+      expect(await firewall(client)).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:alerts', value: 'alerts' },
         { key: 'flag:help', value: 'firewall:alerts:list' },
@@ -170,7 +170,7 @@ describe('firewall alerts list', () => {
       '--until',
       '2026-09-01T00:00:00.000Z'
     );
-    expect(await firewall(client)).toEqual(1);
+    expect(await firewall(client)).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
       '`--since` must be earlier than `--until`'
     );

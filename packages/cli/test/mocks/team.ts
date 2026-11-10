@@ -11,6 +11,8 @@ export type Team = {
   creatorId: string;
   created: string;
   avatar: null;
+  /** Only set when a test asks for one; the API always sends it. */
+  billing?: { plan: string };
 };
 
 let teams: Team[] = [];
@@ -23,6 +25,8 @@ export function useTeams(
     failNoAccess?: boolean;
     failWithCustom403Code?: boolean;
     apiVersion?: number;
+    /** Billing plan on the team, for the code paths gated on it. */
+    billingPlan?: string;
   } = {
     failMissingToken: false,
     failInvalidToken: false,
@@ -35,6 +39,9 @@ export function useTeams(
   teams = [];
 
   createTeam(teamId);
+  if (options.billingPlan) {
+    setTeamBillingPlan(options.billingPlan);
+  }
 
   for (const team of teams) {
     client.scenario.get(`/teams/${team.id}`, (_req, res) => {
@@ -86,6 +93,19 @@ export function useTeams(
   });
 
   return options.apiVersion === 2 ? { teams } : teams;
+}
+
+/**
+ * Set the billing plan on the teams already mocked.
+ *
+ * `client.scenario` is an express Router, so re-registering `/teams/:id` adds
+ * a second handler the first one shadows: a test cannot swap the team after
+ * `useTeams` has run, only mutate the object the handler closed over.
+ */
+export function setTeamBillingPlan(plan: string) {
+  for (const team of teams) {
+    team.billing = { plan };
+  }
 }
 
 export function useTeam(teamId?: string) {

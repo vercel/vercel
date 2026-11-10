@@ -1,7 +1,10 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import type { ConnectAuthorizationDetail } from './authorization-details.js';
 import { resolveBaseUrl } from './internal/base-url.js';
-import { withDefaultScopes } from './internal/default-scopes.js';
+import {
+  normalizeTokenParams,
+  normalizeTokenSubject,
+} from './internal/normalize-token-params.js';
 
 export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer' | 'token';
 
@@ -19,6 +22,15 @@ export interface ConnectUserTokenSubject {
   type: 'user';
   id: string;
   issuer?: string;
+  /**
+   * When specified, `id` and `issuer` identify the user in the namespace of
+   * this IDP connector. The connector must be configured as an IDP.
+   * The XAA/ID-JAG protocol is used to resolve the target access token when
+   * configured by the target connector.
+   *
+   * @experimental Subject to change.
+   */
+  experimental_idp?: string;
 }
 
 export interface ConnectJwtBearerTokenSubject {
@@ -32,7 +44,8 @@ export interface ConnectJwtBearerTokenSubject {
 }
 
 export interface ConnectTokenExchangeSubject {
-  type: 'token';
+  /** Inferred as `'token'` when omitted. */
+  type?: 'token';
   token: string;
 }
 
@@ -167,7 +180,7 @@ export async function getTokenResponse(
   params: ConnectTokenParams,
   options?: ConnectOptions
 ): Promise<ConnectTokenResponse> {
-  const requestParams = withDefaultScopes(params);
+  const requestParams = normalizeTokenParams(params);
   const bufferMs = requestParams.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
   const cacheKey = tokenCacheKey(connector, requestParams);
 
@@ -233,7 +246,10 @@ export async function revokeToken(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${vercelToken}`,
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify({
+      ...params,
+      subject: normalizeTokenSubject(params.subject),
+    }),
   });
 
   if (!response.ok) {
@@ -267,7 +283,7 @@ export function deleteTokenCacheEntry(
   connector: string,
   params: ConnectTokenParams
 ): void {
-  cache.delete(tokenCacheKey(connector, withDefaultScopes(params)));
+  cache.delete(tokenCacheKey(connector, normalizeTokenParams(params)));
 }
 
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;

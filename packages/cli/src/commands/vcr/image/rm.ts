@@ -34,10 +34,10 @@ export default async function rm(
     emitVcrArgParseError(
       client,
       err,
-      'vcr image rm <repository> <imageId> --project <name-or-id>'
+      'vcr image delete <repository> <imageId> --project <name-or-id>'
     );
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -58,7 +58,7 @@ export default async function rm(
     repository,
     imageId,
     fr.jsonOutput,
-    'vcr image rm <repository> <imageId>'
+    'vcr image delete <repository> <imageId>'
   );
   if (typeof missingArgs === 'number') {
     return missingArgs;

@@ -38,7 +38,7 @@ export default async function rulesRemove(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -57,9 +57,9 @@ export default async function rulesRemove(
   if (!flagArg || !ruleId) {
     output.error('Please provide a flag slug or ID and rule ID to remove');
     output.log(
-      `Example: ${getCommandName('flags rules rm my-feature rule_123 --environment production')}`
+      `Example: ${getCommandName('flags rules remove my-feature rule_123 --environment production')}`
     );
-    return 1;
+    return 2;
   }
 
   try {
@@ -68,7 +68,6 @@ export default async function rulesRemove(
       flagArg,
       environment,
       promptMessage: 'Select an environment containing the rule:',
-      requireActiveFlag: true,
     });
     if (isExitCodeResult(context)) {
       return context.exitCode;

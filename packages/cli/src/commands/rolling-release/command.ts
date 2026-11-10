@@ -1,27 +1,40 @@
-import { projectOption, yesOption } from '../../util/arg-common';
+import {
+  deploymentOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
+// `--dpl` is the deprecated name of `--deployment`.
+const dplOption = {
+  name: 'dpl',
+  shorthand: null,
+  deprecated: true,
+  type: String,
+} as const;
+
 export const configureSubcommand = {
-  name: 'configure',
-  description: 'Configure rolling release settings for a project',
-  aliases: [],
+  name: 'update',
+  description: 'Update rolling release settings for a project',
+  aliases: ['configure'],
   arguments: [],
   examples: [
     {
       name: 'Enable automatic rolling release: 10% for 5 minutes, then 50% for 10 minutes, then 100%',
-      value: `${packageName} rolling-release configure --enable --advancement-type=automatic --stage=10,5m --stage=50,10m`,
+      value: `${packageName} rolling-release update --enable --advancement-type=automatic --stage=10,5m --stage=50,10m`,
     },
     {
       name: 'Enable manual-approval rolling release: 10%, then 50%, then 100% (each stage requires approval)',
-      value: `${packageName} rolling-release configure --enable --advancement-type=manual-approval --stage=10 --stage=50`,
+      value: `${packageName} rolling-release update --enable --advancement-type=manual-approval --stage=10 --stage=50`,
     },
     {
       name: 'Disable rolling releases',
-      value: `${packageName} rolling-release configure --disable`,
+      value: `${packageName} rolling-release update --no-enable`,
     },
     {
-      name: 'Configure with raw JSON (advanced)',
-      value: `${packageName} rolling-release configure --cfg='{"enabled":true, "advancementType":"automatic", "stages":[{"targetPercentage":10,"duration":5},{"targetPercentage":100}]}'`,
+      name: 'Update with raw JSON (advanced)',
+      value: `${packageName} rolling-release update --cfg='{"enabled":true, "advancementType":"automatic", "stages":[{"targetPercentage":10,"duration":5},{"targetPercentage":100}]}'`,
     },
   ],
   options: [
@@ -31,21 +44,30 @@ export const configureSubcommand = {
       shorthand: null,
       deprecated: false,
       type: String,
-      description: 'Raw JSON configuration (advanced). Overrides other flags.',
+      description:
+        'Raw JSON configuration (advanced). Overrides other options.',
     },
     {
       name: 'enable',
       shorthand: null,
       deprecated: false,
       type: Boolean,
-      description: 'Enable rolling releases for this project',
+      description: 'Turn on rolling releases for this project',
     },
     {
-      name: 'disable',
+      name: 'no-enable',
       shorthand: null,
       deprecated: false,
       type: Boolean,
-      description: 'Disable rolling releases for this project',
+      description: 'Turn off rolling releases for this project',
+    },
+    {
+      // Hidden: the old name of `--no-enable`.
+      name: 'disable',
+      shorthand: null,
+      deprecated: true,
+      type: Boolean,
+      description: 'Deprecated alias for `--no-enable`',
     },
     {
       name: 'advancement-type',
@@ -64,6 +86,7 @@ export const configureSubcommand = {
       description:
         'Add a rollout stage. Percentage (1-99) with optional duration for automatic advancement (e.g. "10,5m"). Can be specified multiple times. A final 100% stage is added automatically.',
     },
+    jsonOption,
   ],
 } as const;
 
@@ -75,26 +98,24 @@ export const startSubcommand = {
   examples: [
     {
       name: 'Start a rolling release',
-      value: `${packageName} rr start --dpl=dpl_123`,
+      value: `${packageName} rolling-release start --deployment=dpl_123`,
     },
     {
       name: 'Start a rolling release using URL',
-      value: `${packageName} rr start --dpl=https://example.vercel.app`,
+      value: `${packageName} rolling-release start --deployment=https://example.vercel.app`,
     },
     {
       name: 'Non-interactive (e.g. preview deployment): use --yes to promote',
-      value: `${packageName} rr start --dpl=dpl_123 --yes`,
+      value: `${packageName} rolling-release start --deployment=dpl_123 --yes`,
     },
   ],
   options: [
     {
-      name: 'dpl',
-      shorthand: null,
-      deprecated: false,
-      type: String,
-      description: 'The deploymentId or URL to target for the rolling release',
+      ...deploymentOption,
+      description: 'The deployment ID or URL to target for the rolling release',
       required: true,
     },
+    dplOption,
     projectOption,
     yesOption,
   ],
@@ -108,18 +129,16 @@ export const approveSubcommand = {
   examples: [
     {
       name: 'Approve the current stage of an active rolling release',
-      value: `${packageName} rolling-release approve --currentStageIndex=0 --dpl=dpl_123`,
+      value: `${packageName} rolling-release approve --currentStageIndex=0 --deployment=dpl_123`,
     },
   ],
   options: [
     projectOption,
     {
-      name: 'dpl',
-      shorthand: null,
-      deprecated: false,
-      type: String,
-      description: 'The deploymentId of the rolling release',
+      ...deploymentOption,
+      description: 'The deployment ID or URL of the rolling release',
     },
+    dplOption,
     {
       name: 'currentStageIndex',
       shorthand: null,
@@ -138,18 +157,16 @@ export const abortSubcommand = {
   examples: [
     {
       name: 'Abort an active rolling release',
-      value: `${packageName} rolling-release abort --dpl=dpl_123`,
+      value: `${packageName} rolling-release abort --deployment=dpl_123`,
     },
   ],
   options: [
     projectOption,
     {
-      name: 'dpl',
-      shorthand: null,
-      deprecated: false,
-      type: String,
-      description: 'The deploymentId of the rolling release to abort',
+      ...deploymentOption,
+      description: 'The deployment ID or URL of the rolling release to abort',
     },
+    dplOption,
   ],
 } as const;
 
@@ -161,38 +178,38 @@ export const completeSubcommand = {
   examples: [
     {
       name: 'Complete an active rolling release',
-      value: `${packageName} rolling-release complete --dpl=dpl_123`,
+      value: `${packageName} rolling-release complete --deployment=dpl_123`,
     },
   ],
   options: [
     projectOption,
     {
-      name: 'dpl',
-      shorthand: null,
-      deprecated: false,
-      type: String,
-      description: 'The deploymentId of the rolling release to complete',
+      ...deploymentOption,
+      description:
+        'The deployment ID or URL of the rolling release to complete',
     },
+    dplOption,
   ],
 } as const;
 
 export const fetchSubcommand = {
-  name: 'fetch',
-  description: 'Fetch details about a rolling release',
-  aliases: [],
+  name: 'inspect',
+  description: 'Show details about a rolling release',
+  aliases: ['fetch'],
   arguments: [],
   examples: [
     {
-      name: 'Fetch details about a rolling release',
-      value: `${packageName} rolling-release fetch`,
+      name: 'Show details about a rolling release',
+      value: `${packageName} rolling-release inspect`,
     },
   ],
-  options: [projectOption],
+  options: [projectOption, jsonOption],
 } as const;
 
 export const rollingReleaseCommand = {
   name: 'rolling-release',
   aliases: ['rr'],
+  summary: 'Shift deployment traffic in stages',
   description:
     'Rolling releases gradually shift traffic to a new deployment in stages, allowing you to monitor for errors before serving all traffic. Learn more: https://vercel.com/docs/rolling-releases',
   arguments: [],
@@ -208,31 +225,31 @@ export const rollingReleaseCommand = {
   examples: [
     {
       name: 'Enable automatic rolling release with two stages',
-      value: `${packageName} rr configure --enable --advancement-type=automatic --stage=10,5m --stage=50,10m`,
+      value: `${packageName} rolling-release update --enable --advancement-type=automatic --stage=10,5m --stage=50,10m`,
     },
     {
       name: 'Enable manual-approval rolling release',
-      value: `${packageName} rr configure --enable --advancement-type=manual-approval --stage=10 --stage=50`,
+      value: `${packageName} rolling-release update --enable --advancement-type=manual-approval --stage=10 --stage=50`,
     },
     {
       name: 'Disable rolling releases',
-      value: `${packageName} rr configure --disable`,
+      value: `${packageName} rolling-release update --no-enable`,
     },
     {
       name: 'Start a rolling release',
-      value: `${packageName} rr start --dpl=dpl_123`,
+      value: `${packageName} rolling-release start --deployment=dpl_123`,
     },
     {
       name: 'Approve an active rolling release stage',
-      value: `${packageName} rr approve --currentStageIndex=0 --dpl=dpl_123`,
+      value: `${packageName} rolling-release approve --currentStageIndex=0 --deployment=dpl_123`,
     },
     {
       name: 'Abort an active rolling release',
-      value: `${packageName} rr abort --dpl=dpl_123`,
+      value: `${packageName} rolling-release abort --deployment=dpl_123`,
     },
     {
       name: 'Complete an active rolling release',
-      value: `${packageName} rr complete --dpl=dpl_123`,
+      value: `${packageName} rolling-release complete --deployment=dpl_123`,
     },
   ],
 } as const;

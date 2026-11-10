@@ -2,7 +2,7 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import removeAliasById from '../../util/alias/remove-alias-by-id';
 import stamp from '../../util/output/stamp';
 import findAliasByAliasOrId from '../../util/alias/find-alias-by-alias-or-id';
@@ -25,12 +25,12 @@ export default async function rm(client: Client, argv: string[]) {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags: opts } = parsedArguments;
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   const telemetryClient = new AliasRemoveTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -44,21 +44,23 @@ export default async function rm(client: Client, argv: string[]) {
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('alias rm <alias>')}`
+        `${getCommandName('alias remove <alias>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   if (!aliasOrId) {
-    output.error(`${getCommandName('alias rm <alias>')} expects one argument`);
-    return 1;
+    output.error(
+      `${getCommandName('alias remove <alias>')} expects one argument`
+    );
+    return 2;
   }
 
   // E.g. "/" would not be a valid alias or id
   if (!isValidName(aliasOrId)) {
     output.error(`The provided argument "${aliasOrId}" is not a valid alias`);
-    return 1;
+    return 2;
   }
 
   const alias = await findAliasByAliasOrId(client, aliasOrId);

@@ -19,6 +19,7 @@ import formatTable from '../../util/format-table';
 import indent from '../../util/output/indent';
 import type { MetricsTelemetryClient } from '../../util/telemetry/commands/metrics';
 import getScope from '../../util/get-scope';
+import { warnIfFidMetric } from '../../util/metrics/fid-deprecation';
 import type { MetricDetail, MetricListItem } from './types';
 
 export default async function schema(
@@ -30,8 +31,8 @@ export default async function schema(
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    printError(err);
-    return 1;
+    printError(err, client);
+    return 2;
   }
 
   const flags = parsedArgs.flags;
@@ -43,11 +44,12 @@ export default async function schema(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
 
   const metric = positionalMetric;
+  warnIfFidMetric(metric);
   telemetry.trackCliArgumentMetricId(metric);
   telemetry.trackCliOptionFormat(flags['--format']);
 

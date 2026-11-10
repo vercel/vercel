@@ -36,7 +36,7 @@ export default async function createGroup(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { team } = await getScope(client);
@@ -117,23 +117,23 @@ export default async function createGroup(client: Client): Promise<number> {
   if (isNonInteractive) {
     if (!nameFlag) {
       output.error(
-        'Missing required flag --name. Use --name in non-interactive mode.'
+        'Missing required option --name. Use --name in non-interactive mode.'
       );
-      return 1;
+      return 2;
     }
 
     if (!projectFlags || projectFlags.length === 0) {
       output.error(
-        'Missing required flag --project. Use --project in non-interactive mode.'
+        'Missing required option --project. Use --project in non-interactive mode.'
       );
-      return 1;
+      return 2;
     }
 
     if (projectFlags.length > 1 && !defaultAppFlag) {
       output.error(
-        'Missing required flag --default-app when using multiple --project values in non-interactive mode.'
+        'Missing required option --default-app when using multiple --project values in non-interactive mode.'
       );
-      return 1;
+      return 2;
     }
   }
 
@@ -306,7 +306,7 @@ export default async function createGroup(client: Client): Promise<number> {
       output.error(
         `Default app "${defaultAppFlag}" must be one of the selected projects.`
       );
-      return 1;
+      return 2;
     }
     defaultApp = found;
   } else if (selectedProjects.length === 1) {
@@ -350,9 +350,9 @@ export default async function createGroup(client: Client): Promise<number> {
       route = routeFromFlag;
     } else if (isNonInteractive) {
       output.error(
-        `Missing required flag --project-default-route for "${project.name}". Use --project-default-route=${project.name}=/<path> in non-interactive mode.`
+        `Missing required option --project-default-route for "${project.name}". Use --project-default-route=${project.name}=/<path> in non-interactive mode.`
       );
-      return 1;
+      return 2;
     } else {
       route = await client.input.text({
         message: `Default route for "${project.name}":`,

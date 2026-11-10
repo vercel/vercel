@@ -6,6 +6,7 @@ import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { getCommandAliases } from '..';
 import output from '../../output-manager';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 import { CommentsTelemetryClient } from '../../util/telemetry/commands/comments';
 import {
   commentsCommand,
@@ -26,7 +27,7 @@ const COMMAND_CONFIG = {
   reply: getCommandAliases(replySubcommand),
   resolve: getCommandAliases(resolveSubcommand),
   reopen: getCommandAliases(reopenSubcommand),
-  edit: getCommandAliases(editSubcommand),
+  update: getCommandAliases(editSubcommand),
   delete: getCommandAliases(deleteSubcommand),
 };
 
@@ -45,7 +46,7 @@ export default async function comments(client: Client): Promise<number> {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { subcommand, subcommandOriginal } = getSubcommand(
@@ -57,13 +58,22 @@ export default async function comments(client: Client): Promise<number> {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('comments', subcommand);
-    output.print(help(commentsCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(commentsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 
   function printSubcommandHelp(command: Command) {
     output.print(
-      help(command, { parent: commentsCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: commentsCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -80,6 +90,9 @@ export default async function comments(client: Client): Promise<number> {
     case 'inspect': {
       if (handleHelp(inspectSubcommand)) return 0;
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      if (subcommandOriginal === 'get') {
+        warnDeprecatedSubcommand(client, 'comments get', 'comments inspect');
+      }
       return (await import('./inspect')).default(client, telemetry);
     }
     case 'open': {
@@ -102,9 +115,12 @@ export default async function comments(client: Client): Promise<number> {
       telemetry.trackCliSubcommandReopen(subcommandOriginal);
       return (await import('./resolve')).default(client, telemetry, false);
     }
-    case 'edit': {
+    case 'update': {
       if (handleHelp(editSubcommand)) return 0;
-      telemetry.trackCliSubcommandEdit(subcommandOriginal);
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      if (subcommandOriginal === 'edit') {
+        warnDeprecatedSubcommand(client, 'comments edit', 'comments update');
+      }
       return (await import('./edit')).default(client, telemetry);
     }
     case 'delete': {
@@ -121,7 +137,10 @@ export default async function comments(client: Client): Promise<number> {
           printSubcommandHelp(listSubcommand);
         } else {
           output.print(
-            help(commentsCommand, { columns: client.stderr.columns })
+            help(commentsCommand, {
+              stream: client.stderr,
+              columns: client.stderr.columns,
+            })
           );
         }
         return 0;

@@ -22,13 +22,6 @@ export class AlertsTelemetryClient
     });
   }
 
-  trackCliSubcommandRules(actual: string) {
-    this.trackCliSubcommand({
-      subcommand: 'rules',
-      value: actual,
-    });
-  }
-
   trackCliOptionType(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({

@@ -36,7 +36,7 @@ describe('firewall status', () => {
     it('tracks telemetry', async () => {
       client.setArgv('firewall', 'status', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'firewall:status' },
@@ -94,7 +94,7 @@ describe('firewall status', () => {
     expect(output).not.toContain('requires Security+');
   });
 
-  it('notes the upgrade needed when OWASP is unavailable', async () => {
+  it('reports an inactive OWASP ruleset as off', async () => {
     useListFirewallConfigs(createConfig({ firewallEnabled: true }), null);
     useGetBypass([]);
 
@@ -103,9 +103,9 @@ describe('firewall status', () => {
     await expect(client.stderr).toOutput('OWASP');
     expect(await exitCodePromise).toEqual(0);
 
-    expect(client.stderr.getFullOutput()).toMatch(
-      /OWASP\s+Off\s+· requires Security\+/
-    );
+    const output = client.stderr.getFullOutput();
+    expect(output).toMatch(/OWASP\s+Off/);
+    expect(output).not.toContain('requires Security+');
   });
 
   it('does not ask for Security+ when the project already has it', async () => {

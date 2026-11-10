@@ -2,6 +2,454 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { validateConfig } from '../../../../src/util/validate-config';
 
 describe('validateConfig', () => {
+  it.each([
+    { jitter: 1, valid: true },
+    { jitter: 15, valid: true },
+    { jitter: 0, valid: false },
+    { jitter: 16, valid: false },
+    { jitter: 1440, valid: false },
+    { jitter: 1.5, valid: false },
+    { jitter: '5m', valid: false },
+    { jitter: '60s', valid: false },
+    { jitter: '0.25h', valid: false },
+    { jitter: '15', valid: false },
+    { jitter: null, valid: false },
+  ])('validates schedule jitter $jitter', ({ jitter, valid }) => {
+    const error = validateConfig({
+      schedules: {
+        'hourly-jobs': {
+          schedule: '0 * * * *',
+          jitter,
+          topic: 'hourly-jobs',
+        },
+      },
+    } as unknown as Parameters<typeof validateConfig>[0]);
+    expect(error === null).toBe(valid);
+  });
+
+  describe('schedules', () => {
+    it('accepts schedules without changing the config', () => {
+      const schedule = {
+        schedule: '0 9 * * *',
+        topic: 'reports',
+        timezone: 'America/New_York',
+        jitter: 5,
+      };
+      const config = { schedules: { 'daily-report': schedule } };
+      const original = structuredClone(config);
+      expect(validateConfig(config)).toBeNull();
+      expect(config).toEqual(original);
+      expect(config.schedules['daily-report']).toBe(schedule);
+    });
+
+    it('rejects a name inside a schedule', () => {
+      expect(
+        validateConfig({
+          schedules: {
+            cron: { name: 'cron', schedule: '0 9 * * *', path: '/api/cron' },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it('rejects more than 100 schedules', () => {
+      expect(
+        validateConfig({
+          schedules: Object.fromEntries(
+            Array.from({ length: 101 }, (_, i) => [
+              `job-${i}`,
+              { schedule: '0 9 * * *', topic: 'jobs' },
+            ])
+          ),
+        })
+      ).not.toBeNull();
+    });
+
+    it.each([
+      'nightly',
+      { nightly: 'nope' },
+    ])('rejects malformed schedules %j', schedules => {
+      expect(
+        validateConfig({ schedules } as unknown as Parameters<
+          typeof validateConfig
+        >[0])
+      ).not.toBeNull();
+    });
+
+    it.each([
+      'GET',
+      'POST',
+    ] as const)('accepts requestMethod %s on path schedules', requestMethod => {
+      expect(
+        validateConfig({
+          schedules: {
+            cron: {
+              schedule: '0 9 * * *',
+              path: '/api/cron',
+              requestMethod,
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('accepts a service on function schedules', () => {
+      expect(
+        validateConfig({
+          schedules: {
+            job: {
+              schedule: '0 9 * * *',
+              function: 'index',
+              service: 'worker',
+            },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      [{ schedule: '0 9 * * *' }],
+      [
+        {
+          schedule: '0 9 * * *',
+          path: '/api/cron',
+          service: 'worker',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          topic: 'jobs',
+          service: 'worker',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          entrypoint: 'jobs/nightly.ts',
+          service: 'worker',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          function: 'index',
+          service: 'Worker',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          path: '/api/cron',
+          topic: 'jobs',
+        },
+      ],
+      [{ topic: 'jobs' }],
+      [
+        {
+          schedule: '0 9 * * *',
+          topic: 'jobs',
+          requestMethod: 'GET',
+        },
+      ],
+      [
+        {
+          schedule: '0 9 * * *',
+          path: '/api/cron',
+          requestMethod: 'PUT',
+        },
+      ],
+      [
+        {
+          expression: { cron: '0 9 * * *' },
+          target: { topic: 'reports' },
+        },
+      ],
+    ])('rejects %j', schedule => {
+      expect(
+        validateConfig({
+          schedules: { job: schedule },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it.each(['bad name', '-leading', ''])('rejects invalid name %j', name => {
+      expect(
+        validateConfig({
+          schedules: { [name]: { schedule: '0 9 * * *', topic: 'reports' } },
+        })
+      ).not.toBeNull();
+    });
+  });
+
+  it('rejects the array format', () => {
+    expect(
+      validateConfig({
+        schedules: [
+          { name: 'daily-report', schedule: '0 9 * * *', topic: 'reports' },
+        ],
+      } as unknown as Parameters<typeof validateConfig>[0])
+    ).not.toBeNull();
+  });
+
+  describe('schedules timezone', () => {
+    it.each([
+      undefined,
+      'UTC',
+      'America/New_York',
+      'Asia/Kathmandu',
+      'Etc/GMT+5',
+    ])('accepts %s without changing the config', timezone => {
+      const schedule = {
+        schedule: '0 9 * * *',
+        topic: 'reports',
+        ...(timezone !== undefined ? { timezone } : {}),
+      };
+      const original = structuredClone(schedule);
+      expect(
+        validateConfig({ schedules: { 'daily-report': schedule } })
+      ).toBeNull();
+      expect(schedule).toEqual(original);
+    });
+
+    it.each([
+      'Not/A_Timezone',
+      ' ',
+      ' UTC',
+      '+01:00',
+      '-0800',
+    ])('rejects invalid IANA timezone %j', timezone => {
+      const error = validateConfig({
+        schedules: {
+          'daily-report': {
+            schedule: '0 9 * * *',
+            topic: 'reports',
+            timezone,
+          },
+        },
+      });
+      expect(error?.code).toBe('INVALID_SCHEDULE_TIMEZONE');
+      expect(error?.message).toBe(
+        'Invalid vercel.json - `schedules.daily-report.timezone` must be a valid IANA timezone, such as "America/New_York". Omit it to use UTC.'
+      );
+    });
+
+    it.each([
+      '',
+      'a'.repeat(51),
+      null,
+      123,
+    ])('rejects malformed timezone %j', timezone => {
+      expect(
+        validateConfig({
+          schedules: {
+            'daily-report': {
+              schedule: '0 9 * * *',
+              topic: 'reports',
+              timezone,
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+  });
+
+  describe('schedule entrypoints', () => {
+    it.each([
+      'jobs/nightly.ts',
+      'jobs/nightly.py',
+    ])('accepts runtime-specific entrypoint %j', entrypoint => {
+      expect(
+        validateConfig({
+          schedules: { nightly: { schedule: '0 0 * * *', entrypoint } },
+        })
+      ).toBeNull();
+    });
+
+    // Like a daemon `root`, it may point above the project.
+    it.each([
+      ['.', 'Dockerfile'],
+      ['.', 'jobs/Containerfile.prod'],
+      ['../../jobs', 'Dockerfile'],
+    ])('accepts a command with root %s and %s', (root, entrypoint) => {
+      const config = {
+        schedules: {
+          nightly: {
+            schedule: '0 0 * * *',
+            root,
+            entrypoint,
+            command: ['python', 'jobs/nightly.py', ''],
+          },
+        },
+      };
+      const original = structuredClone(config);
+      expect(validateConfig(config)).toBeNull();
+      expect(config).toEqual(original);
+    });
+
+    it.each([
+      [],
+      ['  '],
+      'python jobs/nightly.py',
+      [123],
+      ['python', 123],
+    ])('rejects an invalid command %j', command => {
+      expect(
+        validateConfig({
+          schedules: {
+            nightly: {
+              schedule: '0 0 * * *',
+              root: '.',
+              entrypoint: 'Dockerfile',
+              command,
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it.each([
+      { entrypoint: 'jobs/nightly.py' },
+      { entrypoint: 'Dockerfile/' },
+      { function: 'api/nightly' },
+    ])('rejects commands for a non-container target %j', target => {
+      expect(
+        validateConfig({
+          schedules: {
+            nightly: {
+              schedule: '0 0 * * *',
+              ...target,
+              root: '.',
+              command: ['python', 'job.py'],
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    // A command schedule is built as a service named after the schedule.
+    const job = {
+      schedule: '0 0 * * *',
+      root: 'jobs',
+      entrypoint: 'Dockerfile',
+      command: ['job'],
+    };
+    it.each([
+      [{ schedules: { 'nightly-2': job } }, 'must be a valid service name'],
+      [{ schedules: { Nightly: job } }, 'must be a valid service name'],
+      [
+        { schedules: { web: job }, services: { web: { root: 'web' } } },
+        'already the name of a service or daemon',
+      ],
+      [
+        {
+          schedules: { worker: job },
+          daemons: {
+            worker: {
+              root: 'worker',
+              entrypoint: 'Dockerfile',
+              command: ['work'],
+              instances: { sfo1: 1 },
+            },
+          },
+        },
+        'already the name of a service or daemon',
+      ],
+    ])('rejects a command schedule that cannot be its service name %j', (config, error) => {
+      expect(
+        validateConfig(config as Parameters<typeof validateConfig>[0])?.message
+      ).toContain(error);
+    });
+
+    const { root, ...withoutRoot } = job;
+    const { command, ...withoutCommand } = job;
+    it.each([
+      ['no root', withoutRoot, 'missing required property `root`'],
+      [
+        'root without command',
+        withoutCommand,
+        'missing required property `command`',
+      ],
+    ])('rejects a command schedule with %s', (_, nightly, error) => {
+      expect(
+        validateConfig({
+          schedules: { nightly },
+        } as unknown as Parameters<typeof validateConfig>[0])?.message
+      ).toContain(error);
+    });
+
+    it.each([
+      { function: 'api/nightly' },
+      { topic: 'nightly' },
+      { entrypoint: 'jobs/nightly.ts' },
+    ])('rejects a static payload for schedule target %j', target => {
+      expect(
+        validateConfig({
+          schedules: {
+            nightly: {
+              schedule: '0 0 * * *',
+              ...target,
+              payload: { mode: 'full' },
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it.each([
+      '',
+      'a'.repeat(513),
+      null,
+      123,
+    ])('rejects malformed entrypoint %j', entrypoint => {
+      expect(
+        validateConfig({
+          schedules: { nightly: { schedule: '0 0 * * *', entrypoint } },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+
+    it('rejects a schedule with both entrypoint and function', () => {
+      expect(
+        validateConfig({
+          schedules: {
+            nightly: {
+              schedule: '0 0 * * *',
+              entrypoint: 'jobs/nightly.py',
+              function: 'jobs/nightly',
+            },
+          },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+  });
+
+  describe('schedule path targets', () => {
+    it.each([
+      '/',
+      '/api/cron',
+      '/api/cron?task=cleanup',
+    ])('accepts path target %j', path => {
+      expect(
+        validateConfig({
+          schedules: { cleanup: { schedule: '0 0 * * *', path } },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      '',
+      'api/cron',
+      `/${'a'.repeat(512)}`,
+    ])('rejects invalid path target %j', path => {
+      expect(
+        validateConfig({
+          schedules: { cleanup: { schedule: '0 0 * * *', path } },
+        } as unknown as Parameters<typeof validateConfig>[0])
+      ).not.toBeNull();
+    });
+  });
+
   describe('proxy', () => {
     it.each([
       'proxy.js',
@@ -67,7 +515,7 @@ describe('validateConfig', () => {
 
       expect(error?.code).toBe('INVALID_PROXY_ENTRYPOINT');
       expect(error?.message).toBe(
-        'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.'
+        'The `proxy.entrypoint` must be a `.js` or `.ts` file path, or a Python `module:attr`.'
       );
     });
 
@@ -449,6 +897,368 @@ describe('validateConfig', () => {
     expect(error?.message).toContain('maxConcurrency');
   });
 
+  describe('daemons', () => {
+    const daemon = {
+      root: 'daemon',
+      entrypoint: 'Dockerfile',
+      command: ['python', 'daemon.py'],
+      instances: { sfo1: 1 },
+      resources: { requests: { memory: '1Gi' } },
+      terminationGracePeriodSeconds: 60,
+      livenessProbe: { httpGet: { path: '/healthz', port: 8080 } },
+    };
+    const validate = (config: Record<string, unknown>) =>
+      validateConfig(config as Parameters<typeof validateConfig>[0]);
+
+    it('accepts daemons alongside a regular app', () => {
+      expect(
+        validate({ framework: 'nextjs', daemons: { heartbeat: daemon } })
+      ).toBeNull();
+    });
+
+    it('accepts daemons alongside services', () => {
+      expect(
+        validate({
+          services: { web: { root: 'web' } },
+          daemons: { heartbeat: daemon },
+        })
+      ).toBeNull();
+    });
+
+    it('accepts nested Dockerfile entrypoints', () => {
+      expect(
+        validate({
+          daemons: {
+            heartbeat: { ...daemon, entrypoint: 'docker/Dockerfile.vercel' },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it.each([
+      'Dockerfile.worker',
+      'Containerfile.scheduler',
+      'docker/Dockerfile.worker',
+      'Dockerfile.worker.test',
+      'DOCKERFILE.worker',
+      'worker_Dockerfile',
+      'worker.Containerfile',
+      'myDockerfile.worker',
+    ])('accepts the explicit daemon entrypoint %s', entrypoint => {
+      expect(
+        validate({ daemons: { heartbeat: { ...daemon, entrypoint } } })
+      ).toBeNull();
+    });
+
+    it('accepts any region key with a non-negative count', () => {
+      expect(
+        validate({
+          daemons: {
+            heartbeat: { ...daemon, instances: { fra1: 10, iad1: 0 } },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('accepts the deprecated replicas field', () => {
+      const { instances, ...legacy } = daemon;
+      expect(
+        validate({ daemons: { heartbeat: { ...legacy, replicas: instances } } })
+      ).toBeNull();
+    });
+
+    it.each([
+      [
+        { instances: { sfo1: -1 } },
+        "`daemons['heartbeat'].instances['sfo1']` should be >= 0.",
+      ],
+      [
+        { resources: { requests: { memory: '3Gi' } } },
+        "`daemons['heartbeat'].resources.requests.memory` should be equal to one of the allowed values.",
+      ],
+      [
+        { terminationGracePeriodSeconds: -1 },
+        "`daemons['heartbeat'].terminationGracePeriodSeconds` should be >= 0.",
+      ],
+      [
+        { livenessProbe: { httpGet: { port: 0 } } },
+        "`daemons['heartbeat'].livenessProbe.httpGet.port` should be >= 1.",
+      ],
+      [
+        { framework: 'nextjs' },
+        "`daemons['heartbeat']` should NOT have additional property `framework`. Please remove it.",
+      ],
+      [
+        { runtime: 'container' },
+        "`daemons['heartbeat']` should NOT have additional property `runtime`. Please remove it.",
+      ],
+      [
+        { type: 'daemon' },
+        "`daemons['heartbeat']` should NOT have additional property `type`. Please remove it.",
+      ],
+      [
+        { command: 'python daemon.py' },
+        "`daemons['heartbeat'].command` should be array.",
+      ],
+      [
+        { command: [] },
+        "`daemons['heartbeat'].command` should NOT have fewer than 1 items.",
+      ],
+      [
+        { instances: undefined },
+        "`daemons['heartbeat']` missing required property `instances`.",
+      ],
+      [
+        { entrypoint: undefined },
+        "`daemons['heartbeat']` missing required property `entrypoint`.",
+      ],
+    ])('rejects invalid daemon config: %j', (override, message) => {
+      const error = validate({
+        daemons: { heartbeat: { ...daemon, ...override } },
+      });
+      expect(error?.code).toBe('INVALID_VERCEL_CONFIG');
+      expect(error?.message).toBe(`Invalid vercel.json - ${message}`);
+    });
+
+    it.each([
+      'Heartbeat',
+      'worker1',
+      'a___b',
+      'a_-b',
+      'a-_b',
+      'a__-b',
+    ])('rejects the daemon name %s', name => {
+      expect(validate({ daemons: { [name]: daemon } })?.code).toBe(
+        'INVALID_VERCEL_CONFIG'
+      );
+    });
+
+    it.each([
+      'a',
+      'a_b',
+      'a__b',
+      'a-b',
+      'a--b',
+      'celery_beat-worker',
+    ])('accepts the daemon name %s', name => {
+      expect(validate({ daemons: { [name]: daemon } })).toBeNull();
+    });
+
+    it('treats backslash entrypoints the same on every OS', () => {
+      expect(
+        validate({
+          daemons: {
+            heartbeat: { ...daemon, entrypoint: 'docker\\Dockerfile' },
+          },
+        })
+      ).toBeNull();
+    });
+
+    it('caps the number of daemons', () => {
+      const letter = (n: number) => String.fromCharCode(97 + n);
+      const daemons = Object.fromEntries(
+        Array.from({ length: 101 }, (_, i) => [
+          letter(Math.floor(i / 26)) + letter(i % 26),
+          daemon,
+        ])
+      );
+      expect(validate({ daemons })?.message).toBe(
+        'Invalid vercel.json - `daemons` should NOT have more than 100 properties.'
+      );
+      delete daemons.dw;
+      expect(validate({ daemons })).toBeNull();
+    });
+
+    it.each([
+      'services',
+      'experimentalServicesV2',
+    ])('rejects daemons declared under %s', key => {
+      const error = validate({
+        [key]: { heartbeat: { type: 'daemon', ...daemon } },
+      });
+      expect(error?.code).toBe('INVALID_VERCEL_CONFIG');
+      expect(error?.message).toBe(
+        `Invalid vercel.json - \`${key}['heartbeat']\` should NOT have additional property \`type\`. Please remove it.`
+      );
+    });
+
+    it('keeps daemon-only fields off regular services', () => {
+      expect(
+        validate({ services: { web: { root: 'web', replicas: { sfo1: 1 } } } })
+          ?.message
+      ).toBe(
+        "Invalid vercel.json - `services['web']` should NOT have additional property `replicas`. Please remove it."
+      );
+    });
+
+    it.each([
+      'main.py',
+      'docker/main.py',
+      'Dockerfile/hello.txt',
+    ])('rejects the non-Dockerfile entrypoint %s', entrypoint => {
+      const error = validate({
+        daemons: { heartbeat: { ...daemon, entrypoint } },
+      });
+      expect(error?.code).toBe('INVALID_DAEMON');
+      expect(error?.message).toBe(
+        'Daemon "heartbeat" must set `entrypoint` to a Dockerfile or Containerfile.'
+      );
+    });
+
+    it('allows a daemon and a service with the same name', () => {
+      expect(
+        validate({
+          services: {
+            heartbeat: { root: 'heartbeat' },
+            web: {
+              root: 'web',
+              bindings: [{ service: 'heartbeat', format: 'url', env: 'URL' }],
+              rewrites: [
+                { source: '/(.*)', destination: { service: 'heartbeat' } },
+              ],
+            },
+          },
+          daemons: { heartbeat: daemon },
+        })
+      ).toBeNull();
+    });
+
+    describe('daemon bindings', () => {
+      const apiBinding = {
+        type: 'service',
+        service: 'api',
+        format: 'url',
+        env: 'API_URL',
+      };
+
+      it('accepts a binding to a service', () => {
+        expect(
+          validate({
+            services: { api: { root: 'api' } },
+            daemons: { heartbeat: { ...daemon, bindings: [apiBinding] } },
+          })
+        ).toBeNull();
+      });
+
+      it('requires the binding type, like the API does', () => {
+        const { type: _type, ...untyped } = apiBinding;
+        const error = validate({
+          services: { api: { root: 'api' } },
+          daemons: { heartbeat: { ...daemon, bindings: [untyped] } },
+        });
+        expect(error?.code).toBe('INVALID_VERCEL_CONFIG');
+        expect(error?.message).toContain(
+          "`daemons['heartbeat'].bindings[0]` missing required property `type`"
+        );
+      });
+
+      it('accepts a binding to a service under experimentalServicesV2', () => {
+        expect(
+          validate({
+            experimentalServicesV2: { api: { root: 'api' } },
+            daemons: { heartbeat: { ...daemon, bindings: [apiBinding] } },
+          })
+        ).toBeNull();
+      });
+
+      it('rejects a binding to an unknown service', () => {
+        const error = validate({
+          services: { web: { root: 'web' } },
+          daemons: { heartbeat: { ...daemon, bindings: [apiBinding] } },
+        });
+        expect(error?.code).toBe('INVALID_DAEMON');
+        expect(error?.message).toBe(
+          'Daemon "heartbeat" declares a binding to unknown service "api". Add "api" to `services` or fix the binding.'
+        );
+      });
+
+      it('rejects a binding to another daemon', () => {
+        const error = validate({
+          daemons: {
+            api: daemon,
+            heartbeat: { ...daemon, bindings: [apiBinding] },
+          },
+        });
+        expect(error?.code).toBe('INVALID_DAEMON');
+      });
+
+      it('rejects two bindings that write the same environment variable', () => {
+        const error = validate({
+          services: { api: { root: 'api' }, web: { root: 'web' } },
+          daemons: {
+            heartbeat: {
+              ...daemon,
+              bindings: [apiBinding, { ...apiBinding, service: 'web' }],
+            },
+          },
+        });
+        expect(error?.message).toBe(
+          'Daemon "heartbeat" declares more than one binding for the environment variable "API_URL".'
+        );
+      });
+
+      it('rejects a binding with an unsupported format', () => {
+        const error = validate({
+          services: { api: { root: 'api' } },
+          daemons: {
+            heartbeat: {
+              ...daemon,
+              bindings: [{ ...apiBinding, format: 'host' }],
+            },
+          },
+        });
+        expect(error?.code).toBe('INVALID_VERCEL_CONFIG');
+      });
+    });
+
+    it('rejects bindings to daemons', () => {
+      expect(
+        validate({
+          daemons: { heartbeat: daemon },
+          services: {
+            web: {
+              root: 'web',
+              bindings: [{ service: 'heartbeat', format: 'url', env: 'URL' }],
+            },
+          },
+        })?.message
+      ).toBe(
+        'Service "web" cannot bind to daemon "heartbeat" because daemons do not receive traffic.'
+      );
+    });
+
+    it.each([
+      {
+        rewrites: [{ source: '/(.*)', destination: { service: 'heartbeat' } }],
+      },
+      { routes: [{ src: '/(.*)', destination: { service: 'heartbeat' } }] },
+      {
+        services: {
+          web: {
+            root: 'web',
+            routes: [{ src: '/(.*)', destination: { service: 'heartbeat' } }],
+          },
+        },
+      },
+      {
+        services: {
+          web: {
+            root: 'web',
+            rewrites: [
+              { source: '/(.*)', destination: { service: 'heartbeat' } },
+            ],
+          },
+        },
+      },
+    ])('rejects traffic routed to daemons: %j', extra => {
+      const error = validate({ daemons: { heartbeat: daemon }, ...extra });
+      expect(error?.code).toBe('INVALID_DAEMON');
+      expect(error?.message).toBe(
+        'Rewrites and routes cannot target daemon "heartbeat" because daemons do not receive traffic.'
+      );
+    });
+  });
+
   // Regression test for honoring the env var when it is set *after* this module
   // is imported: `validateConfig` (and therefore `@vercel/build-utils`' functions
   // schema) is imported at the top of this file, before the env var below is ever
@@ -530,7 +1340,7 @@ describe('validateConfig', () => {
     expect(error).not.toBeNull();
   });
 
-  it('should reject strict affinity outside a service', () => {
+  it('should allow strict affinity outside a service', () => {
     const error = validateConfig({
       functions: {
         'api/test.js': {
@@ -538,20 +1348,27 @@ describe('validateConfig', () => {
         },
       },
     });
-    expect(error?.code).toBe('FUNCTION_AFFINITY_REQUIRES_SERVICE');
+    expect(error).toBeNull();
   });
 
   it('should reject strict affinity with the all function region', () => {
     const error = validateConfig({
-      services: {
-        api: {
-          root: 'api',
-          functions: {
-            'test.js': {
-              affinity: { mode: 'strict' },
-              regions: ['all'],
-            },
-          },
+      functions: {
+        'api/test.js': {
+          affinity: { mode: 'strict' },
+          regions: ['all'],
+        },
+      },
+    });
+    expect(error?.code).toBe('INVALID_FUNCTION_AFFINITY_REGIONS');
+  });
+
+  it('should reject strict affinity with multiple project function regions', () => {
+    const error = validateConfig({
+      functions: {
+        'api/test.js': {
+          affinity: { mode: 'strict' },
+          regions: ['iad1', 'sfo1'],
         },
       },
     });
@@ -581,14 +1398,9 @@ describe('validateConfig', () => {
   it('should allow strict affinity to inherit multiple project regions', () => {
     const error = validateConfig({
       regions: ['iad1', 'sfo1'],
-      services: {
-        api: {
-          root: 'api',
-          functions: {
-            'test.js': {
-              affinity: { mode: 'strict' },
-            },
-          },
+      functions: {
+        'api/test.js': {
+          affinity: { mode: 'strict' },
         },
       },
     });

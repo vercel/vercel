@@ -1,6 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import api from '../../../../src/commands/api';
+import { runTagOperation } from '../../../../src/commands/api/index';
+import type { ParsedFlags } from '../../../../src/commands/api/types';
+import { takeCliError } from '../../../../src/util/telemetry/cli-error';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -11,7 +14,7 @@ describe('api', () => {
     it('prints help message', async () => {
       client.setArgv('api', '--help');
       const exitCode = await api(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.getFullOutput()).toContain(
         'Make authenticated HTTP requests to the Vercel API'
       );
@@ -22,7 +25,7 @@ describe('api', () => {
     it('should reject endpoint without leading slash', async () => {
       client.setArgv('api', 'v2/user');
       const exitCode = await api(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       expect(client.getFullOutput()).toContain(
         'Use an API path starting with /'
       );
@@ -31,7 +34,7 @@ describe('api', () => {
     it('should reject protocol-relative URLs to prevent SSRF', async () => {
       client.setArgv('api', '//evil.com/steal-token');
       const exitCode = await api(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       expect(client.getFullOutput()).toContain(
         'must be a Vercel API path, not an external URL'
       );
@@ -40,7 +43,7 @@ describe('api', () => {
     it('should reject URLs that resolve to external hosts', async () => {
       client.setArgv('api', '//attacker.com');
       const exitCode = await api(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       expect(client.getFullOutput()).toContain(
         'must be a Vercel API path, not an external URL'
       );
@@ -199,6 +202,204 @@ describe('api', () => {
     });
   });
 
+  describe('response content types', () => {
+    const jsonl = '{"id":"line_1"}\n{"id":"line_2"}\n';
+
+    it('prints a JSON Lines body as text by default', async () => {
+      client.scenario.get('/v1/test-jsonl', (_req, res) => {
+        res.type('application/jsonl').send(jsonl);
+      });
+
+      client.setArgv('api', '/v1/test-jsonl');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toBe(jsonl);
+    });
+
+    it('prints a JSON Lines body as text with --raw', async () => {
+      client.scenario.get('/v1/test-jsonl-raw', (_req, res) => {
+        res.type('application/jsonl; charset=utf-8').send(jsonl);
+      });
+
+      client.setArgv('api', '/v1/test-jsonl-raw', '--raw');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toBe(jsonl);
+    });
+
+    it('parses JSON with a charset parameter', async () => {
+      client.scenario.get('/v1/test-json-charset', (_req, res) => {
+        res
+          .type('application/json; charset=utf-8')
+          .send(JSON.stringify({ id: 'charset_123' }));
+      });
+
+      client.setArgv('api', '/v1/test-json-charset', '--raw');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toBe('{"id":"charset_123"}\n');
+    });
+
+    it('parses an application/json-*+json media type', async () => {
+      client.scenario.get('/v1/test-json-patch', (_req, res) => {
+        res
+          .type('application/json-patch+json')
+          .send(JSON.stringify([{ op: 'add', path: '/a', value: 1 }]));
+      });
+
+      client.setArgv('api', '/v1/test-json-patch', '--raw');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toBe(
+        '[{"op":"add","path":"/a","value":1}]\n'
+      );
+    });
+
+    it('prints an application/stream+json body as text', async () => {
+      client.scenario.get('/v1/test-stream-json', (_req, res) => {
+        res.type('application/stream+json').send(jsonl);
+      });
+
+      client.setArgv('api', '/v1/test-stream-json', '--raw');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toBe(jsonl);
+    });
+  });
+
+  describe('output without a terminal', () => {
+    const specUrl = 'https://api.vercel.tools/openapi.json';
+
+    // Serves a spec with a table view and a PATCH operation; every other
+    // request goes through to the mock API.
+    function useSpecWithTableAndMutation() {
+      const realFetch = globalThis.fetch;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+          if (String(input) !== specUrl) {
+            return realFetch(input, init);
+          }
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                openapi: '3.0.3',
+                info: { title: 'Custom API', version: '1.0.0' },
+                paths: {
+                  '/v1/things': {
+                    get: {
+                      operationId: 'listThings',
+                      tags: ['things'],
+                      responses: {
+                        '200': {
+                          content: {
+                            'application/json': {
+                              schema: {
+                                type: 'object',
+                                'x-vercel-cli': {
+                                  displayColumns: { name: 'things[].name' },
+                                },
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                    patch: {
+                      operationId: 'updateThings',
+                      tags: ['things'],
+                    },
+                  },
+                },
+              }),
+              {
+                status: 200,
+                headers: { 'content-type': 'application/json' },
+              }
+            )
+          );
+        })
+      );
+    }
+
+    beforeEach(() => {
+      (client.stdout as any).isTTY = false;
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('prints single-line JSON for an endpoint path', async () => {
+      client.scenario.get('/v5/test-piped', (_req, res) => {
+        res.json({ data: { id: 'piped_123' } });
+      });
+
+      client.setArgv('api', '/v5/test-piped');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toBe(
+        '{"data":{"id":"piped_123"}}\n'
+      );
+    });
+
+    it('prints JSON instead of a table for an OpenAPI operation', async () => {
+      useSpecWithTableAndMutation();
+      client.scenario.get('/v1/things', (_req, res) => {
+        res.json({ things: [{ name: 'first' }] });
+      });
+
+      const exitCode = await runTagOperation(client, {
+        tag: 'things',
+        operationId: 'listThings',
+        flags: { '--spec-url': specUrl } as ParsedFlags,
+        positionalOperationFields: [],
+      });
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toBe(
+        '{"things":[{"name":"first"}]}\n'
+      );
+    });
+
+    it('prints the response body instead of "Success" for a change', async () => {
+      useSpecWithTableAndMutation();
+      client.scenario.patch('/v1/things', (_req, res) => {
+        res.json({ updated: true });
+      });
+
+      const exitCode = await runTagOperation(client, {
+        tag: 'things',
+        operationId: 'updateThings',
+        flags: { '--spec-url': specUrl } as ParsedFlags,
+        positionalOperationFields: [],
+      });
+
+      expect(exitCode).toEqual(0);
+      const output = client.stdout.getFullOutput();
+      expect(output).toBe('{"updated":true}\n');
+      expect(output).not.toContain('Success');
+    });
+
+    it('still honors --silent', async () => {
+      client.scenario.get('/v5/test-piped-silent', (_req, res) => {
+        res.json({ data: { id: 'silent_123' } });
+      });
+
+      client.setArgv('api', '/v5/test-piped-silent', '--silent');
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stdout.getFullOutput()).toBe('');
+    });
+  });
+
   describe('--include flag', () => {
     it('includes response headers when --include is used', async () => {
       client.scenario.get('/v5/test-include', (_req, res) => {
@@ -240,13 +441,57 @@ describe('api', () => {
       });
 
       client.setArgv('api', '/v2/nonexistent');
+      takeCliError();
       const exitCode = await api(client);
 
       expect(exitCode).toEqual(1);
+      expect(takeCliError()).toMatchObject({ code: 'not_found', status: 404 });
+    });
+
+    it('keeps a malformed field out of error telemetry', async () => {
+      client.setArgv('api', '/v2/user', '-X', 'POST', '-F', 'vca_secret');
+      takeCliError();
+      const exitCode = await api(client);
+
+      expect(exitCode).toEqual(1);
+      expect(client.getFullOutput()).toContain('Invalid field format');
+      expect(JSON.stringify(takeCliError() ?? {})).not.toContain('vca_secret');
     });
   });
 
   describe('--spec-url', () => {
+    it('writes the text endpoint listing to stdout, not stderr', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              openapi: '3.0.3',
+              info: { title: 'Custom API', version: '1.0.0' },
+              paths: {
+                '/deployment-files': {
+                  get: { summary: 'List retained files' },
+                },
+              },
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } }
+          )
+        )
+      );
+      client.setArgv(
+        'api',
+        'list',
+        '--spec-url',
+        'https://api.vercel.tools/openapi.json'
+      );
+      expect(await api(client)).toBe(0);
+      expect(client.stdout.getFullOutput()).toContain('/deployment-files');
+      expect(client.stdout.getFullOutput()).toContain('List retained files');
+      expect(client.stderr.getFullOutput()).not.toContain('/deployment-files');
+      expect(client.stdout.getFullOutput()).not.toContain('endpoints');
+      expect(client.stderr.getFullOutput()).toContain('1 routes, 1 endpoints');
+    });
+
     it.each([
       { label: '--format json', outputArgs: ['--format', 'json'] },
       { label: '--json', outputArgs: ['--json'] },

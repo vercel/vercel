@@ -27,9 +27,9 @@ export class AiGatewayApiKeysTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandRevoke(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'remove',
+      subcommand: 'revoke',
       value: actual,
     });
   }

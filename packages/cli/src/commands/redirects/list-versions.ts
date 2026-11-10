@@ -27,9 +27,19 @@ export default async function listVersions(client: Client, argv: string[]) {
 
   const lsStamp = stamp();
 
-  output.spinner(`Fetching redirect versions for ${chalk.bold(project.name)}`);
+  const asJson = Boolean(parsed.flags['--json']);
+  if (!asJson) {
+    output.spinner(
+      `Fetching redirect versions for ${chalk.bold(project.name)}`
+    );
+  }
 
   const { versions } = await getRedirectVersions(client, project.id, teamId);
+
+  if (asJson) {
+    client.stdout.write(`${JSON.stringify({ versions }, null, 2)}\n`);
+    return 0;
+  }
 
   const sortedVersions = sortVersions(versions).slice(0, 20);
 
