@@ -1,5 +1,72 @@
 # @vercel/react-router
 
+## 1.3.7
+
+### Patch Changes
+
+- Updated dependencies [5d88f1f]
+  - @vercel/static-config@3.4.4
+
+## 1.3.6
+
+### Patch Changes
+
+- Updated dependencies [b9e12f0]
+  - @vercel/static-config@3.4.3
+
+## 1.3.5
+
+### Patch Changes
+
+- 2c363fd: Use Oxc as `@vercel/static-config`'s primary parser with a traced ts-morph compatibility fallback.
+- Updated dependencies [2c363fd]
+  - @vercel/static-config@3.4.2
+
+## 1.3.4
+
+### Patch Changes
+
+- 9a9a6f8: Restrict KV session operations to adapter-generated session keys.
+
+## 1.3.3
+
+### Patch Changes
+
+- 1b62f2c: Set the `__vdpl` Skew Protection cookie for React Router via a routing-layer header rule instead of `Set-Cookie` on the SSR response, so document responses stay cacheable by the CDN.
+
+## 1.3.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/static-config@3.4.1
+
+## 1.3.1
+
+### Patch Changes
+
+- Updated dependencies [eecd10d]
+  - @vercel/static-config@3.4.0
+
+## 1.3.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/static-config@3.3.0
+
+## 1.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`8a3558f680d592b4ea47ac7e48c99145d6368941`](https://github.com/vercel/vercel/commit/8a3558f680d592b4ea47ac7e48c99145d6368941)]:
+  - @vercel/static-config@3.2.0
+
 ## 1.2.5
 
 ### Patch Changes

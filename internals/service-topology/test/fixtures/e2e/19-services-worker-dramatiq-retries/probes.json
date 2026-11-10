@@ -1,0 +1,33 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Flask web service"
+    },
+    {
+      "path": "/health",
+      "status": 200,
+      "mustContain": "ok"
+    },
+    {
+      "path": "/enqueue",
+      "method": "POST",
+      "body": { "request_id": "probe-19-retries" },
+      "status": 200,
+      "mustContain": "probe-19-retries"
+    },
+    {
+      "path": "/status/jobs/probe-19-retries",
+      "status": 200,
+      "mustContain": "probe-19-retries",
+      "retries": 10,
+      "retryDelay": 2000
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Flask web service"
+    }
+  ]
+}

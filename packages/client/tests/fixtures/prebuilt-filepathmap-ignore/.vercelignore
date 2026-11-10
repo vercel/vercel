@@ -1,0 +1,12 @@
+.env*
+node_modules/
+.next/
+.yarn/cache
+.pnp*
+.venv/
+venv/
+__pycache__/
+/target
+supabase/
+*.md
+wrangler.toml

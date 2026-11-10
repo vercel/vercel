@@ -29,6 +29,7 @@ class ServerStartedPayload:
 
     init_duration: int
     http_port: int
+    user_init_duration: int | None = attrs.field(default=None)
 
 
 @attrs.frozen
@@ -55,6 +56,14 @@ class EndPayload:
 
     context: Context
     error: str | None = attrs.field(default=None)
+
+
+@attrs.frozen
+class UnrecoverableErrorPayload:
+    """Payload for ``unrecoverable-error``."""
+
+    exit_code: int
+    message: str
 
 
 @attrs.frozen
@@ -104,6 +113,14 @@ class EndMessage:
 
 
 @attrs.frozen
+class UnrecoverableErrorMessage:
+    """``unrecoverable-error`` message."""
+
+    type: Literal["unrecoverable-error"]
+    payload: UnrecoverableErrorPayload
+
+
+@attrs.frozen
 class MetricMessage:
     """``metric`` message."""
 
@@ -137,6 +154,7 @@ def _parse_message(raw: dict[str, Any]) -> N1Message:
             payload=ServerStartedPayload(
                 init_duration=payload["initDuration"],
                 http_port=payload["httpPort"],
+                user_init_duration=payload.get("userInitDuration"),
             ),
         )
 
@@ -169,6 +187,15 @@ def _parse_message(raw: dict[str, Any]) -> N1Message:
             ),
         )
 
+    if msg_type == "unrecoverable-error":
+        return UnrecoverableErrorMessage(
+            type="unrecoverable-error",
+            payload=UnrecoverableErrorPayload(
+                exit_code=payload.get("exitCode", 0),
+                message=payload.get("message", ""),
+            ),
+        )
+
     if msg_type == "metric":
         return MetricMessage(
             type="metric",
@@ -187,6 +214,7 @@ N1Message = (
     | HandlerStartedMessage
     | LogMessage
     | EndMessage
+    | UnrecoverableErrorMessage
     | MetricMessage
     | UnknownMessage
 )

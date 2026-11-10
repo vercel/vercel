@@ -1,0 +1,23 @@
+[package]
+name = "idna"
+version = "1.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+host-bridge = { path = "../host-bridge" }
+idna-upstream = { package = "idna", git = "https://github.com/servo/rust-url", tag = "v2.5.8", optional = true }
+
+[[test]]
+name = "unit"
+harness = false
+
+[dev-dependencies]
+wasm-test-support = { path = "../wasm-test-support" }
+
+[features]
+default = []
+alloc = []           # no-op, required by url crate
+compiled_data = []   # no-op, required by url crate
+std = []
+upstream = ["dep:idna-upstream"]

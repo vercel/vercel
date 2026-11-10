@@ -1,6 +1,7 @@
 import { parse as parseUrl } from 'url';
 import {
   collectHasSegments,
+  compilePathToRegexpTemplate,
   convertCleanUrls,
   convertHeaders,
   convertRedirects,
@@ -15,7 +16,11 @@ import {
   Redirect,
   Route,
   RouteApiError,
+  RouteInput,
   RouteWithHandle,
+  RouteWithSrc,
+  ServiceDestination,
+  Transform,
 } from './types';
 export { appendRoutesToPhase } from './append';
 export { mergeRoutes } from './merge';
@@ -25,7 +30,13 @@ export {
   scopeRouteSourceToOwnership,
 } from './service-route-ownership';
 export * from './schemas';
-export { getCleanUrls, sourceToRegex } from './superstatic';
+export {
+  compilePathToRegexpTemplate,
+  convertRewrites,
+  getCleanUrls,
+  pathToRegexp,
+  sourceToRegex,
+} from './superstatic';
 export * from './types';
 
 const VALID_HANDLE_VALUES = [
@@ -47,9 +58,55 @@ export function isValidHandleValue(handle: string): handle is HandleValue {
   return validHandleValues.has(handle);
 }
 
-export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
+/**
+ * Folds input-only aliases into their canonical fields: `source` -> `src` and
+ * `statusCode` -> `status`. `destination` is an alias for `dest` ONLY when it is a
+ * string; a service-targeted `destination` object (`{ service, path? }`) has no
+ * `dest` equivalent and is intentionally left in place. A route may not set both
+ * a canonical field and its alias.
+ */
+function convertRouteAliases(route: RouteWithSrc, index: number): void {
+  if (route.source !== undefined) {
+    if (route.src !== undefined) {
+      throw new Error(
+        `Route at index ${index} cannot define both \`src\` and \`source\`. Please use only one.`
+      );
+    }
+    route.src = route.source;
+    delete route.source;
+  }
+
+  if (route.destination !== undefined) {
+    if (route.dest !== undefined) {
+      throw new Error(
+        `Route at index ${index} cannot define both \`dest\` and \`destination\`. Please use only one.`
+      );
+    }
+    // `destination` aliases `dest` only in its string form
+    if (typeof route.destination === 'string') {
+      route.dest = route.destination;
+      delete route.destination;
+    } else if (typeof route.destination.service === 'string') {
+      route.destination = { ...route.destination, type: 'service' };
+    }
+  }
+
+  if (route.statusCode !== undefined) {
+    if (route.status !== undefined) {
+      throw new Error(
+        `Route at index ${index} cannot define both \`status\` and \`statusCode\`. Please use only one.`
+      );
+    }
+    route.status = route.statusCode;
+    delete route.statusCode;
+  }
+}
+
+export function normalizeRoutes(
+  inputRoutes: RouteInput[] | null
+): NormalizedRoutes {
   if (!inputRoutes || inputRoutes.length === 0) {
-    return { routes: inputRoutes, error: null };
+    return { routes: inputRoutes as Route[] | null, error: null };
   }
 
   const routes: Route[] = [];
@@ -57,8 +114,18 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
   const errors: string[] = [];
 
   inputRoutes.forEach((r, i) => {
-    const route = { ...r };
+    const route = { ...r } as Route;
     routes.push(route);
+
+    // Convert aliases (source -> src, destination -> dest, statusCode -> status)
+    if (!isHandler(route)) {
+      try {
+        convertRouteAliases(route as RouteWithSrc, i);
+      } catch (err: any) {
+        errors.push(err.message);
+      }
+    }
+
     const keys = Object.keys(route);
     if (isHandler(route)) {
       const { handle } = route;
@@ -97,17 +164,29 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
         errors.push(regError);
       }
 
+      // A service-targeted `destination` is a terminal handoff into the target
+      // service's route table; routing does not continue in the current table.
+      if (
+        route.destination &&
+        typeof route.destination === 'object' &&
+        route.continue
+      ) {
+        errors.push(
+          `Route at index ${i} cannot define \`continue: true\` with a service \`destination\`. The service handoff is terminal.`
+        );
+      }
+
       // The last seen handling is the current handler
       const handleValue = handling[handling.length - 1];
       if (handleValue === 'hit') {
         if (route.dest) {
           errors.push(
-            `Route at index ${i} cannot define \`dest\` after \`handle: hit\`.`
+            `Route at index ${i} cannot define \`dest\`/\`destination\` after \`handle: hit\`.`
           );
         }
         if (route.status) {
           errors.push(
-            `Route at index ${i} cannot define \`status\` after \`handle: hit\`.`
+            `Route at index ${i} cannot define \`status\`/\`statusCode\` after \`handle: hit\`.`
           );
         }
         if (!route.continue) {
@@ -128,7 +207,7 @@ export function normalizeRoutes(inputRoutes: Route[] | null): NormalizedRoutes {
       }
     } else {
       errors.push(
-        `Route at index ${i} must define either \`handle\` or \`src\` property.`
+        `Route at index ${i} must define either \`src\` or \`source\` property.`
       );
     }
   });
@@ -154,8 +233,8 @@ function checkRegexSyntax(
 ): string | null {
   try {
     new RegExp(src);
-  } catch (err) {
-    const prop = type === 'Route' ? 'src' : 'source';
+  } catch (_err) {
+    const prop = type === 'Route' ? 'src`/`source' : 'source';
     return `${type} at index ${index} has invalid \`${prop}\` regular expression "${src}".`;
   }
   return null;
@@ -168,26 +247,36 @@ function checkPatternSyntax(
     source,
     destination,
     has,
+    transforms,
   }: {
     source: string;
     has?: HasField;
-    destination?: string;
+    destination?: string | ServiceDestination;
+    transforms?: Transform[];
   }
 ): { message: string; link: string } | null {
   let sourceSegments = new Set<string>();
   const destinationSegments = new Set<string>();
   try {
     sourceSegments = new Set(sourceToRegex(source).segments);
-  } catch (err) {
+  } catch (_err) {
     return {
       message: `${type} at index ${index} has invalid \`source\` pattern "${source}".`,
       link: 'https://vercel.link/invalid-route-source-pattern',
     };
   }
 
-  if (destination) {
+  // For a service destination, validate `path` the same way as a plain string destination.
+  const destinationString =
+    typeof destination === 'string'
+      ? destination
+      : typeof destination?.path === 'string'
+        ? destination.path
+        : undefined;
+
+  if (destinationString !== undefined) {
     try {
-      const { hostname, pathname, query } = parseUrl(destination, true);
+      const { hostname, pathname, query } = parseUrl(destinationString, true);
       sourceToRegex(hostname || '').segments.forEach(name =>
         destinationSegments.add(name)
       );
@@ -200,7 +289,7 @@ function checkPatternSyntax(
           destinationSegments.add(name)
         );
       }
-    } catch (err) {
+    } catch (_err) {
       // Since checkPatternSyntax() is a validation helper, we don't want to
       // replicate all possible URL parsing here so we consume the error.
       // If this really is an error, we'll throw later in convertRedirects().
@@ -214,6 +303,21 @@ function checkPatternSyntax(
           link: 'https://vercel.link/invalid-route-destination-segment',
         };
       }
+    }
+  }
+
+  for (const transform of transforms || []) {
+    if (transform.type !== 'request.path') {
+      continue;
+    }
+
+    try {
+      compilePathToRegexpTemplate(source, transform.args, has, transform.env);
+    } catch (error) {
+      return {
+        message: `${type} at index ${index} has an invalid \`request.path\` transform: ${error instanceof Error ? error.message : String(error)}`,
+        link: 'https://vercel.link/invalid-route-destination-segment',
+      };
     }
   }
 
@@ -258,26 +362,8 @@ export function getTransformedRoutes(
 ): NormalizedRoutes {
   const { cleanUrls, rewrites, redirects, headers, trailingSlash } =
     vercelConfig;
-  let { routes = null } = vercelConfig;
-  if (routes) {
-    const hasNewProperties =
-      typeof cleanUrls !== 'undefined' ||
-      typeof trailingSlash !== 'undefined' ||
-      typeof redirects !== 'undefined' ||
-      typeof headers !== 'undefined' ||
-      typeof rewrites !== 'undefined';
-
-    if (hasNewProperties) {
-      const error = createError(
-        'invalid_mixed_routes',
-        'If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present.',
-        'https://vercel.link/mix-routing-props',
-        'Learn More'
-      );
-      return { routes, error };
-    }
-    return normalizeRoutes(routes);
-  }
+  const { routes: userRoutes = null } = vercelConfig;
+  let routes: Route[] | null = null;
 
   if (typeof cleanUrls !== 'undefined') {
     const normalized = normalizeRoutes(
@@ -295,6 +381,15 @@ export function getTransformedRoutes(
     const normalized = normalizeRoutes(convertTrailingSlash(trailingSlash));
     if (normalized.error) {
       normalized.error.code = 'invalid_trailing_slash';
+      return { routes, error: normalized.error };
+    }
+    routes = routes || [];
+    routes.push(...(normalized.routes || []));
+  }
+
+  if (userRoutes) {
+    const normalized = normalizeRoutes(userRoutes);
+    if (normalized.error) {
       return { routes, error: normalized.error };
     }
     routes = routes || [];

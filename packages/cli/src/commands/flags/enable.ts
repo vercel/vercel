@@ -1,19 +1,31 @@
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 import { getFlag } from '../../util/flags/get-flags';
+import { formatVariantForDisplay } from '../../util/flags/resolve-variant';
 import { updateFlag } from '../../util/flags/update-flag';
-import { getFlagDashboardUrl } from '../../util/flags/dashboard-url';
+import { logNonBooleanFlagGuidance } from '../../util/flags/log-non-boolean-guidance';
+import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
+import {
+  buildPausedEnvironmentConfig,
+  getBooleanVariant,
+  isPausingEnvironmentToVariant,
+  resolveFlagEnvironment,
+  resolveFlagUpdateMessage,
+} from '../../util/flags/environment-variant';
 import output from '../../output-manager';
 import { FlagsEnableTelemetryClient } from '../../util/telemetry/commands/flags/enable';
 import { enableSubcommand } from './command';
-import type { FlagEnvironmentConfig } from '../../util/flags/types';
-
-const VALID_ENVIRONMENTS = ['production', 'preview', 'development'];
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function enable(
   client: Client,
@@ -31,30 +43,36 @@ export default async function enable(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
   const [flagArg] = args;
   let environment = flags['--environment'] as string | undefined;
+  const message = normalizeOptionalInput(
+    flags['--message'] as string | undefined
+  );
+  const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
     output.error('Please provide a flag slug or ID to enable');
     output.log(
       `Example: ${getCommandName('flags enable my-feature --environment production')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionEnvironment(environment);
+  telemetryClient.trackCliOptionMessage(message);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -70,102 +88,112 @@ export default async function enable(
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
-    if (flag.state === 'archived') {
-      output.error(
-        `Flag ${chalk.bold(flag.slug)} is archived and cannot be enabled`
-      );
-      return 1;
-    }
+    logArchivedFlagNotice(flag);
 
     // Only boolean flags can be enabled/disabled via CLI
     if (flag.kind !== 'boolean') {
-      const dashboardUrl = getFlagDashboardUrl(
-        link.org.slug,
-        project.name,
-        flag.slug
-      );
-      output.warn(
-        `The ${getCommandName('flags enable')} command only works with boolean flags.`
-      );
-      output.log(
-        `Flag ${chalk.bold(flag.slug)} is a ${chalk.cyan(flag.kind)} flag. You can update it on the dashboard:`
-      );
-      output.log(`  ${chalk.cyan(dashboardUrl)}`);
+      logNonBooleanFlagGuidance(flag, {
+        attemptedSubcommand: 'enable',
+        environment,
+        isInteractive: Boolean(client.stdin.isTTY),
+        teamSlug: link.org.slug,
+        projectName: project.name,
+      });
       return 0;
     }
 
-    // If environment not specified, prompt for it
-    if (!environment) {
-      const availableEnvs = Object.keys(flag.environments).filter(env =>
-        VALID_ENVIRONMENTS.includes(env)
+    if (!environment && client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'Please provide --environment (production, preview, or development) to enable the flag in.',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags enable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'enable the flag in a specific environment',
+            },
+          ],
+        },
+        2
       );
-
-      if (availableEnvs.length === 0) {
-        output.error('No valid environments found for this flag');
-        return 1;
-      }
-
-      environment = await client.input.select({
-        message: 'Select an environment to enable the flag in:',
-        choices: availableEnvs.map(env => {
-          const config = flag.environments[env];
-          const status = config?.active
-            ? chalk.green('active')
-            : chalk.yellow('paused');
-          return {
-            name: `${env} (${status})`,
-            value: env,
-          };
-        }),
-      });
+      return 2;
     }
 
-    if (!VALID_ENVIRONMENTS.includes(environment)) {
-      output.error(
-        `Invalid environment: ${environment}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
-      );
-      return 1;
-    }
+    environment = await resolveFlagEnvironment(
+      client,
+      flag,
+      environment,
+      'Select an environment to enable the flag in:'
+    );
 
     const envConfig = flag.environments[environment];
-    if (!envConfig) {
-      output.error(`Environment ${environment} not found for this flag`);
-      return 1;
-    }
+    const onVariant = getBooleanVariant(flag, true);
 
-    if (envConfig.active) {
+    if (isPausingEnvironmentToVariant(envConfig, onVariant.id)) {
       output.warn(
         `Flag ${chalk.bold(flag.slug)} is already enabled in ${environment}`
       );
       return 0;
     }
 
-    // Build the update request - merge with existing config to preserve required fields
-    const updatedEnvConfig: FlagEnvironmentConfig = {
-      ...envConfig,
-      active: true,
-    };
+    const updateMessage = await resolveFlagUpdateMessage(
+      client,
+      message,
+      getDefaultEnableMessage(environment)
+    );
 
     output.spinner(`Enabling flag in ${environment}...`);
     await updateFlag(client, project.id, flagArg, {
       environments: {
-        [environment]: updatedEnvConfig,
+        [environment]: buildPausedEnvironmentConfig(envConfig, onVariant.id),
       },
-      message: `Enabled in ${environment} via CLI`,
+      message: updateMessage,
     });
     output.stopSpinner();
 
     output.success(
-      `Feature flag ${chalk.bold(flag.slug)} has been enabled in ${chalk.bold(environment)}`
+      `Feature flag ${chalk.bold(flag.slug)} ${flag.state === 'archived' ? 'configuration has been updated' : 'has been enabled'} in ${chalk.bold(environment)}`
     );
     output.log(
-      `  ${chalk.dim('The flag will now evaluate rules and serve variants based on its configuration.')}`
+      `  ${chalk.dim(flag.state === 'archived' ? 'Configured variant:' : 'Serving variant:')} ${formatVariantForDisplay(onVariant)}`
     );
   } catch (err) {
     output.stopSpinner();
+    const message = err instanceof Error ? err.message : String(err);
+    if (client.nonInteractive && message.startsWith('Invalid environment:')) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `flags enable ${flagArg} --environment <production|preview|development>`
+              ),
+              when: 'use a valid environment (production, preview, or development)',
+            },
+          ],
+        },
+        2
+      );
+      return 2;
+    }
     printError(err);
-    return 1;
+    return 2;
   }
 
   return 0;
+}
+
+function getDefaultEnableMessage(environment: string): string {
+  return `Enabled for ${environment} via CLI`;
 }

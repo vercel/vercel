@@ -1,0 +1,16 @@
+{
+  "experimentalServices": {
+    "cleanup": {
+      "type": "job",
+      "trigger": "schedule",
+      "entrypoint": "jobs/cleanup.js",
+      "schedule": "0 0 * * *"
+    },
+    "report": {
+      "type": "job",
+      "trigger": "schedule",
+      "entrypoint": "jobs/report.js",
+      "schedule": "0 6 * * *"
+    }
+  }
+}

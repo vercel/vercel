@@ -20,7 +20,7 @@ export default async function disconnect(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -31,6 +31,7 @@ export default async function disconnect(client: Client, argv: string[]) {
   });
   telemetry.trackCliFlagConfirm(opts['--confirm']);
   telemetry.trackCliFlagYes(opts['--yes']);
+  telemetry.trackCliOptionProject(opts['--project']);
 
   if ('--confirm' in opts) {
     output.warn('`--confirm` is deprecated, please use `--yes` instead');
@@ -47,8 +48,11 @@ export default async function disconnect(client: Client, argv: string[]) {
   }
 
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
+  const projectName = opts['--project'];
   const linkedProject = await ensureLink('git', client, client.cwd, {
     autoConfirm,
+    projectName,
+    failIfNotFound: Boolean(projectName),
   });
   if (typeof linkedProject === 'number') {
     return linkedProject;

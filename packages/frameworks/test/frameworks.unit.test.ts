@@ -2,15 +2,15 @@ import Ajv from 'ajv';
 import assert from 'assert';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { isString } from 'util';
-import fetch from 'node-fetch';
-import { URL, URLSearchParams } from 'url';
+import nodeFetch from 'node-fetch';
+import { URL } from 'url';
 import frameworkList from '../src/frameworks';
 
 // bump timeout for Windows as network can be slower
-jest.setTimeout(15 * 1000);
+vi.setConfig({ testTimeout: 15 * 1000, hookTimeout: 15 * 1000 });
 
 const logoPrefix = 'https://api-frameworks.vercel.sh/framework-logos/';
+const isString = (value: unknown): value is string => typeof value === 'string';
 
 const SchemaFrameworkDetectionItem = {
   type: 'array',
@@ -28,6 +28,9 @@ const SchemaFrameworkDetectionItem = {
         },
         matchPackage: {
           type: 'string',
+        },
+        fallback: {
+          type: 'boolean',
         },
       },
     },
@@ -202,31 +205,71 @@ const Schema = {
       supersedes: { type: 'array', items: { type: 'string' } },
       experimental: { type: 'boolean' },
       runtimeFramework: { type: 'boolean' },
+      detectionConfidence: { type: 'string', enum: ['weak', 'strong'] },
+      platform: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['name', 'logo'],
+        properties: {
+          name: { type: 'string' },
+          logo: { type: 'string' },
+        },
+      },
     },
   },
 };
 
-async function getDeployment(host: string) {
-  const query = new URLSearchParams();
-  query.set('url', host);
-  const res = await fetch(
-    `https://api.vercel.com/v11/deployments/get?${query}`
+async function isDemoPublic(demoUrl: string) {
+  const logsUrl = new URL('/_logs', demoUrl);
+  const res = await nodeFetch(logsUrl.toString(), {
+    redirect: 'manual',
+  });
+  const location = res.headers.get('location');
+
+  return (
+    res.status >= 300 &&
+    res.status < 400 &&
+    location === `https://vercel.com/deployments/${logsUrl.host}/logs`
   );
-  const body = await res.json();
-  return body;
 }
 
 describe('frameworks', () => {
   const skipExamples = [
+    'blitzjs', // legacy preset; example removed due to vulnerable Next.js deps (VULN-5903)
     'dojo',
     'saber',
     'gridsome',
-    'sanity-v3',
+    'sanity',
     'scully',
     'solidstart',
-    'sanity', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+    'sanity-v2', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
     'vuepress', // https://linear.app/vercel/issue/ZERO-3238/unskip-tests-failing-due-to-node-16-removal
+    'hydrogen',
+    'storybook',
+    'eve', // examples/fixtures live in github.com/vercel/ash
+    'factory-eve', // Factory variant, no dedicated example
+    'tanstack-start-lovable', // platform variant, no dedicated example
+    'services', // project-level preset, no dedicated framework example
   ];
+
+  it('detects standard and Vercel container filenames', () => {
+    const container = frameworkList.find(f => f.slug === 'container');
+
+    expect(container?.detectors?.some).toEqual([
+      { path: 'Dockerfile.vercel' },
+      { path: 'Containerfile.vercel' },
+      { path: 'Dockerfile', fallback: true },
+      { path: 'Containerfile', fallback: true },
+    ]);
+    expect(frameworkList[0]?.slug).toBe('container');
+  });
+
+  it('marks Services as stable', () => {
+    const services = frameworkList.find(f => f.slug === 'services');
+
+    expect(services).toBeDefined();
+    expect(services?.experimental).toBeUndefined();
+  });
 
   it('ensure there is an example for every framework', async () => {
     const root = join(__dirname, '..', '..', '..');
@@ -275,9 +318,24 @@ describe('frameworks', () => {
     expect(invalid).toEqual([]);
   });
 
+  it('ensure platform logo starts with url prefix', async () => {
+    const invalid = frameworkList
+      .map(f => (f as { platform?: { logo: string } }).platform?.logo)
+      .filter(logo => {
+        return logo && !logo.startsWith(logoPrefix);
+      });
+
+    expect(invalid).toEqual([]);
+  });
+
   it('ensure logo file exists in ./packages/frameworks/logos/', async () => {
     const missing = frameworkList
-      .map(f => f.logo)
+      .flatMap(f => [
+        f.logo,
+        f.darkModeLogo,
+        (f as { platform?: { logo: string } }).platform?.logo,
+      ])
+      .filter(isString)
       .filter(logo => {
         const filename = logo.slice(logoPrefix.length);
         const filepath = join(__dirname, '..', 'logos', filename);
@@ -313,10 +371,8 @@ describe('frameworks', () => {
       frameworkList
         .filter(f => typeof f.demo === 'string')
         .map(async f => {
-          const url = new URL(f.demo!);
-          const deployment = await getDeployment(url.hostname);
           assert.equal(
-            deployment.public,
+            await isDemoPublic(f.demo!),
             true,
             `Demo URL ${f.demo} is not "public". Disable "build logs and source protection" in project settings.`
           );

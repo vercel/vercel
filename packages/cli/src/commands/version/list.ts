@@ -1,0 +1,66 @@
+import chalk from 'chalk';
+import output from '../../output-manager';
+import type Client from '../../util/client';
+import { packageName } from '../../util/pkg-name';
+import { listAvailableVersions } from '../../util/native-self-update';
+import { getVersionContext } from '../../util/version-context';
+
+const DEFAULT_COUNT = 20;
+
+/**
+ * `vc version list`: versions available to install. For now this mirrors the
+ * published `vercel` npm versions.
+ */
+export default async function list(
+  client: Client,
+  asJson = false
+): Promise<number> {
+  if (!asJson) {
+    output.spinner('Fetching available versions…', 0);
+  }
+
+  let versions: string[];
+  let currentVersion: string;
+  try {
+    [versions, { version: currentVersion }] = await Promise.all([
+      listAvailableVersions(packageName),
+      getVersionContext(),
+    ]);
+  } catch (error) {
+    output.stopSpinner();
+    output.error(
+      `Failed to list versions: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return 1;
+  }
+
+  output.stopSpinner();
+
+  if (asJson) {
+    client.stdout.write(
+      `${JSON.stringify({ versions, currentVersion }, null, 2)}\n`
+    );
+    return 0;
+  }
+
+  if (versions.length === 0) {
+    output.log('No versions found');
+    return 0;
+  }
+
+  const shown = versions.slice(0, DEFAULT_COUNT);
+  for (const version of shown) {
+    const current = version === currentVersion;
+    output.print(
+      current
+        ? `${chalk.cyan(version)} ${chalk.dim('(current)')}\n`
+        : `${version}\n`
+    );
+  }
+
+  if (versions.length > shown.length) {
+    output.print(chalk.dim(`… and ${versions.length - shown.length} more\n`));
+  }
+
+  return 0;
+}

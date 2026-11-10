@@ -1,0 +1,10 @@
+{
+  "projectSettings": {
+    "framework": "go"
+  },
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_BUILDPACK_GO": "1"
+    }
+  }
+}

@@ -8,34 +8,50 @@ _Live Example: https://vercel-plus-fastapi.vercel.app/_
 
 Visit the [FastAPI documentation](https://fastapi.tiangolo.com/) to learn more.
 
-## Getting Started
+## Project Structure
 
-Install the required dependencies:
+This example follows the [larger applications](https://fastapi.tiangolo.com/tutorial/bigger-applications/) pattern from the FastAPI docs:
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install .
+```
+app/
+├── __init__.py
+├── main.py              # FastAPI application entry point
+├── templates/
+│   └── index.html       # Landing page template
+├── api/
+│   ├── __init__.py
+│   ├── main.py          # API router assembly
+│   ├── deps.py          # Shared dependencies
+│   └── routes/
+│       ├── __init__.py
+│       └── items.py     # Item endpoints
+└── core/
+    ├── __init__.py
+    └── config.py        # Application settings
 ```
 
-Or, if using [uv](https://docs.astral.sh/uv/):
+## Getting Started
+
+Install the required dependencies using [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync
 ```
 
-
 ## Running Locally
 
-Start the development server on http://0.0.0.0:5001
-
 ```bash
-python main.py
-# using uv:
-uv run main.py
+vercel dev
 ```
 
-When you make changes to your project, the server will automatically reload.
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/` | Landing page |
+| `GET` | `/api/v1/items/` | List sample items |
+| `GET` | `/api/v1/items/{item_id}` | Get item by ID |
+| `GET` | `/docs` | Interactive API docs (Swagger UI) |
 
 ## Deploying to Vercel
 

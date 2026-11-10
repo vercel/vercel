@@ -1,32 +1,10 @@
 import ms from 'ms';
 import type { Granularity } from './types';
+export { parseTimeFlag, resolveTimeRange } from '../../util/time-utils';
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
-
-export function parseTimeFlag(input: string): Date {
-  const milliseconds = ms(input);
-  if (milliseconds !== undefined) {
-    return new Date(Date.now() - milliseconds);
-  }
-  const date = new Date(input);
-  if (isNaN(date.getTime())) {
-    throw new Error(
-      `Invalid time format "${input}". Use relative (1h, 30m, 2d, 1w) or ISO 8601 datetime.`
-    );
-  }
-  return date;
-}
-
-export function resolveTimeRange(
-  since?: string,
-  until?: string
-): { startTime: Date; endTime: Date } {
-  const startTime = parseTimeFlag(since ?? '1h');
-  const endTime = until ? parseTimeFlag(until) : new Date();
-  return { startTime, endTime };
-}
 
 export function toGranularityDuration(input: string): Granularity {
   const milliseconds = ms(input);
@@ -127,28 +105,6 @@ export function computeGranularity(
     duration: toGranularityDuration(explicit),
     adjusted: false,
   };
-}
-
-/**
- * Floors start and ceils end to the nearest granularity boundary so every
- * time bucket covers the full granularity interval. Without rounding,
- * the first and last buckets could be shorter than the rest
- * (e.g. 1h buckets over 14:23–16:47 would produce a 37-min first bucket
- * and a 47-min last bucket). Rounding to 14:00–17:00 ensures all three
- * buckets are full 1-hour intervals.
- */
-export function roundTimeBoundaries(
-  start: Date,
-  end: Date,
-  granularityMs: number
-): { start: Date; end: Date } {
-  const flooredStart = new Date(
-    Math.floor(start.getTime() / granularityMs) * granularityMs
-  );
-  const ceiledEnd = new Date(
-    Math.ceil(end.getTime() / granularityMs) * granularityMs
-  );
-  return { start: flooredStart, end: ceiledEnd };
 }
 
 export function toGranularityMsFromDuration(duration: Granularity): number {

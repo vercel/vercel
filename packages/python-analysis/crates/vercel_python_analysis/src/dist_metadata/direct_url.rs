@@ -23,9 +23,7 @@ pub(crate) fn parse(content: &str) -> Result<DirectUrlInfo, String> {
             url,
             hash: archive_info.hash,
         })),
-        DirectUrl::VcsUrl {
-            url, vcs_info, ..
-        } => Ok(DirectUrlInfo::Vcs(VcsUrlInfo {
+        DirectUrl::VcsUrl { url, vcs_info, .. } => Ok(DirectUrlInfo::Vcs(VcsUrlInfo {
             url,
             vcs: vcs_info.vcs.to_string(),
             commit_id: vcs_info.commit_id,

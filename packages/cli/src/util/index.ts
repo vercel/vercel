@@ -2,16 +2,15 @@ import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import fetch, { Headers } from 'node-fetch';
+import fetch from './fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
 import processDeployment from './deploy/process-deployment';
 import { responseError } from './error';
-import stamp from './output/stamp';
 import { APIError, BuildError } from './errors-ts';
 import printIndications from './print-indications';
-import type { GitMetadata, Org } from '@vercel-internals/types';
+import type { GitMetadata, Org, Project } from '@vercel-internals/types';
 import type { VercelConfig } from './dev/types';
 import type Client from './client';
 import { type FetchOptions, isJSONObject } from './client';
@@ -27,6 +26,8 @@ export interface NowOptions {
   withCache?: boolean;
 }
 
+export type BuildMachine = 'turbo';
+
 export interface CreateOptions {
   // Legacy
   nowConfig?: VercelConfig;
@@ -34,16 +35,17 @@ export interface CreateOptions {
   // Latest
   name: string;
   project?: string;
-  wantsPublic: boolean;
   prebuilt?: boolean;
+  anonymous?: boolean;
   vercelOutputDir?: string;
   rootDirectory?: string | null;
   meta: Dictionary<string>;
-  gitMetadata?: GitMetadata;
+  gitMetadata?: GitMetadata | Promise<GitMetadata | undefined>;
   regions?: string[];
   quiet?: boolean;
   env: Dictionary<string>;
   build: { env: Dictionary<string> };
+  buildMachine?: BuildMachine;
   forceNew?: boolean;
   withCache?: boolean;
   target?: string | null;
@@ -55,6 +57,9 @@ export interface CreateOptions {
   autoAssignCustomDomains?: boolean;
   agentName?: string;
   manual?: boolean;
+  jsonOutput?: boolean;
+  linkedProject?: Project;
+  linkedProjectIsPartial?: boolean;
 }
 
 export interface RemoveOptions {
@@ -106,25 +111,25 @@ export default class Now {
     path: string,
     {
       // Legacy
-      nowConfig: nowConfig = {},
+      nowConfig = {},
 
       // Latest
       name,
       project,
       prebuilt = false,
+      anonymous = false,
       vercelOutputDir,
       rootDirectory,
-      wantsPublic,
       meta,
       gitMetadata,
       regions,
       quiet = false,
       env,
       build,
+      buildMachine,
       forceNew = false,
       withCache = false,
       target = null,
-      deployStamp,
       projectSettings,
       skipAutoDetectionConfirmation,
       noWait,
@@ -132,23 +137,22 @@ export default class Now {
       autoAssignCustomDomains,
       agentName,
       manual,
+      jsonOutput = false,
+      linkedProject,
+      linkedProjectIsPartial,
     }: CreateOptions,
     org: Org,
     isSettingUpProject: boolean,
     archive?: ArchiveFormat
   ) {
-    const hashes: any = {};
-    const uploadStamp = stamp();
-
     const requestBody = {
       ...nowConfig,
       env,
       build,
-      public: wantsPublic || nowConfig.public,
+      buildMachine,
       name,
       project,
       meta,
-      gitMetadata,
       regions,
       target: target || undefined,
       projectSettings,
@@ -160,14 +164,16 @@ export default class Now {
     // Ignore specific items from vercel.json
     delete requestBody.scope;
     delete requestBody.github;
+    // `public` is no longer part of `VercelConfig`, but a user's
+    // vercel.json may still contain a stale value that must be stripped
+    // before sending to the API.
+    delete (requestBody as Record<string, unknown>).public;
 
     const deployment = await processDeployment({
       now: this,
-      agent: this._client.agent,
       path,
       requestBody,
-      uploadStamp,
-      deployStamp,
+      gitMetadata,
       quiet,
       force: forceNew,
       withCache,
@@ -177,12 +183,16 @@ export default class Now {
       archive,
       skipAutoDetectionConfirmation,
       prebuilt,
+      anonymous,
       vercelOutputDir,
       rootDirectory,
       noWait,
       withFullLogs,
       bulkRedirectsPath: nowConfig.bulkRedirectsPath,
       manual,
+      jsonOutput,
+      linkedProject,
+      linkedProjectIsPartial,
     });
 
     if (deployment && deployment.warnings) {
@@ -192,11 +202,9 @@ export default class Now {
       deployment.warnings.forEach((warning: any) => {
         if (warning.reason === 'size_limit_exceeded') {
           const { sha, limit } = warning;
-          const n = hashes[sha].names.pop();
 
-          warn(`Skipping file ${n} (size exceeded ${bytes(limit)}`);
+          warn(`Skipping file ${sha} (size exceeded ${bytes(limit)})`);
 
-          hashes[sha].names.unshift(n); // Move name (hack, if duplicate matches we report them in order)
           sizeExceeded++;
         } else if (warning.reason === 'node_version_not_found') {
           warn(`Requested node version ${warning.wanted} is not available`);
@@ -218,11 +226,14 @@ export default class Now {
   async handleDeploymentError(error: any, { env }: any) {
     if (error.status === 429) {
       if (error.code === 'builds_rate_limited') {
-        const err: APIError = Object.create(APIError.prototype);
-        err.message = error.message;
+        const err = new Error(error.message) as APIError;
         err.status = error.status;
-        err.retryAfterMs = 'never';
         err.code = error.code;
+        err.retryAfterMs = 'never';
+        err.ctaLabel = error.ctaLabel;
+        err.ctaUrl = error.ctaUrl;
+        err.action = error.action;
+        err.link = error.link;
         return err;
       }
 
@@ -360,7 +371,7 @@ export default class Now {
       delete opts.useCurrentTeam;
     }
 
-    opts.headers = new Headers(opts.headers);
+    opts.headers = new globalThis.Headers(opts.headers);
     opts.headers.set('accept', 'application/json');
     if (this._token) {
       opts.headers.set('authorization', `Bearer ${this._token}`);

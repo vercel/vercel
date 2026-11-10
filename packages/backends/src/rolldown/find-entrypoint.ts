@@ -59,9 +59,7 @@ export const findEntrypoint = async (
       try {
         await readFile(entrypointPath, 'utf-8');
         return entrypoint;
-      } catch (e) {
-        continue;
-      }
+      } catch (_e) {}
     }
     throw new Error('No entrypoint or framework found');
   }

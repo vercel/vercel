@@ -591,7 +591,7 @@ describe('integration-resource', () => {
           await expect(client.stderr).toOutput(
             'Error: Missing arguments. See `--help` for details.'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('should error when too many arguments passed', async () => {
@@ -608,7 +608,7 @@ describe('integration-resource', () => {
           await expect(client.stderr).toOutput(
             'Error: Too many arguments. See `--help` for details.'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('should error when minimum is not a number', async () => {
@@ -624,7 +624,7 @@ describe('integration-resource', () => {
           await expect(client.stderr).toOutput(
             'Error: Minimum is an invalid number format. Minimum must be a positive number (ex. "5.75")'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('should error when spend is not a number', async () => {
@@ -640,7 +640,7 @@ describe('integration-resource', () => {
           await expect(client.stderr).toOutput(
             'Error: Spend is an invalid number format. Spend must be a positive number (ex. "10.99").'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('should error when limit is not a number', async () => {
@@ -656,7 +656,7 @@ describe('integration-resource', () => {
           await expect(client.stderr).toOutput(
             'Error: Limit is an invalid number format. Limit must be a positive number (ex. "1000").'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
       });
 
@@ -678,7 +678,7 @@ describe('integration-resource', () => {
         await expect(client.stderr).toOutput(
           'Error: Minimum cannot be greater than spend.'
         );
-        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(exitCodePromise).resolves.toEqual(2);
       });
 
       it('should error when the specified minimum is greater than the limit', async () => {
@@ -699,7 +699,7 @@ describe('integration-resource', () => {
         await expect(client.stderr).toOutput(
           'Error: Minimum cannot be greater than limit.'
         );
-        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(exitCodePromise).resolves.toEqual(2);
       });
 
       it('should error when the specified spend is greater than the limit', async () => {
@@ -720,7 +720,7 @@ describe('integration-resource', () => {
         await expect(client.stderr).toOutput(
           'Error: Limit cannot be less than spend.'
         );
-        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(exitCodePromise).resolves.toEqual(2);
       });
 
       describe('with team', () => {

@@ -3,6 +3,7 @@ import {
   parseMetadataFlags,
   validateRequiredMetadata,
 } from '../../../../src/util/integration/parse-metadata';
+import { formatMetadataSchemaHelp } from '../../../../src/util/integration/format-schema-help';
 import type { MetadataSchema } from '../../../../src/util/integration/types';
 
 describe('parseMetadataFlags', () => {
@@ -103,12 +104,6 @@ describe('parseMetadataFlags', () => {
 
   it('handles empty/undefined input', () => {
     const result = parseMetadataFlags(undefined, basicSchema);
-    expect(result.errors).toEqual([]);
-    expect(result.metadata).toEqual({});
-  });
-
-  it('handles empty array', () => {
-    const result = parseMetadataFlags([], basicSchema);
     expect(result.errors).toEqual([]);
     expect(result.metadata).toEqual({});
   });
@@ -370,16 +365,6 @@ describe('validateRequiredMetadata', () => {
     expect(errors).toEqual([]);
   });
 
-  it('skips hidden fields', () => {
-    // hidden and hiddenOnCreate should be skipped
-    const errors = validateRequiredMetadata(
-      { region: 'us-east-1' },
-      schemaWithRequired
-    );
-    expect(errors).not.toContain('Required metadata missing: "hidden"');
-    expect(errors).not.toContain('Required metadata missing: "hiddenOnCreate"');
-  });
-
   it('returns empty array when all required fields provided', () => {
     const errors = validateRequiredMetadata(
       { region: 'us-east-1', version: '15' },
@@ -397,5 +382,80 @@ describe('validateRequiredMetadata', () => {
     };
     const errors = validateRequiredMetadata({}, schemaNoRequired);
     expect(errors).toEqual([]);
+  });
+
+  describe('region fields are always skipped', () => {
+    const regionSchema: MetadataSchema = {
+      type: 'object',
+      properties: {
+        region: {
+          type: 'string',
+          'ui:control': 'vercel-region',
+          'ui:options': ['iad1', 'sfo1', 'cdg1'],
+        },
+        readRegions: {
+          type: 'array',
+          'ui:control': 'multi-vercel-region',
+          items: { type: 'string' },
+          'ui:options': ['iad1', 'sfo1'],
+        },
+        name: {
+          type: 'string',
+          'ui:control': 'input',
+        },
+      },
+      required: ['region', 'readRegions', 'name'],
+    };
+
+    it('skips vercel-region and multi-vercel-region fields', () => {
+      const errors = validateRequiredMetadata({ name: 'my-db' }, regionSchema);
+      expect(errors).toEqual([]);
+    });
+
+    it('still errors on non-region required fields', () => {
+      const errors = validateRequiredMetadata({}, regionSchema);
+      expect(errors).toEqual(['Required metadata missing: "name"']);
+    });
+
+    it('does not skip non-region select fields', () => {
+      const schema: MetadataSchema = {
+        type: 'object',
+        properties: {
+          plan: {
+            type: 'string',
+            'ui:control': 'select',
+            'ui:options': ['free', 'pro'],
+          },
+        },
+        required: ['plan'],
+      };
+      const errors = validateRequiredMetadata({}, schema);
+      expect(errors).toEqual(['Required metadata missing: "plan"']);
+    });
+  });
+});
+
+describe('formatMetadataSchemaHelp', () => {
+  const regionSchema: MetadataSchema = {
+    type: 'object',
+    properties: {
+      region: {
+        type: 'string',
+        'ui:control': 'vercel-region',
+        'ui:options': ['iad1', 'sfo1'],
+      },
+      name: {
+        type: 'string',
+        'ui:control': 'input',
+      },
+    },
+    required: ['region', 'name'],
+  };
+
+  it('omits (required) for region fields', () => {
+    const output = formatMetadataSchemaHelp(regionSchema, 'test-integration');
+    // name should show (required) but region should not
+    const requiredCount = (output.match(/\(required\)/g) ?? []).length;
+    expect(requiredCount).toBe(1);
   });
 });

@@ -35,7 +35,9 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', undefined);
+    expect(mockCache.set).toHaveBeenCalledWith('b876d32', 'value', {
+      name: 'key',
+    });
     expect(mockCache.get).toHaveBeenCalledWith('b876d32', undefined);
   });
 
@@ -77,11 +79,9 @@ describe('getCache', () => {
     });
     await cache.set('key', 'value');
     expect(customHashFunction).toHaveBeenCalledWith('key');
-    expect(mockCache.set).toHaveBeenCalledWith(
-      'custom-key',
-      'value',
-      undefined
-    );
+    expect(mockCache.set).toHaveBeenCalledWith('custom-key', 'value', {
+      name: 'key',
+    });
   });
 
   test('should use the default key hash function if none is provided', async () => {
@@ -100,11 +100,9 @@ describe('getCache', () => {
     await cache.set('key', 'value');
     const result = await cache.get('key');
     expect(result).toBe('value');
-    expect(mockCache.set).toHaveBeenCalledWith(
-      'test:b876d32',
-      'value',
-      undefined
-    );
+    expect(mockCache.set).toHaveBeenCalledWith('test:b876d32', 'value', {
+      name: 'key',
+    });
     expect(mockCache.get).toHaveBeenCalledWith('test:b876d32', undefined);
   });
 
@@ -117,11 +115,43 @@ describe('getCache', () => {
     expect(mockCache.set).toHaveBeenCalledWith(
       `${namespace}$b876d32`,
       'value',
-      undefined
+      {
+        name: 'key',
+      }
     );
     expect(mockCache.get).toHaveBeenCalledWith(
       `${namespace}$b876d32`,
       undefined
     );
+  });
+
+  test('should default options.name to the original key when not provided', async () => {
+    const cache = getCache();
+    await cache.set('my-key', 'value');
+    expect(mockCache.set).toHaveBeenCalledWith('57f938ab', 'value', {
+      name: 'my-key',
+    });
+  });
+
+  test('should preserve an explicit empty string options.name as a suppression sentinel', async () => {
+    const cache = getCache();
+    await cache.set('my-key', 'value', { name: '' });
+    expect(mockCache.set).toHaveBeenCalledWith('57f938ab', 'value', {
+      name: '',
+    });
+  });
+
+  test('should preserve explicit options.name when provided', async () => {
+    const cache = getCache();
+    await cache.set('my-key', 'value', {
+      name: 'explicit-name',
+      tags: ['t1'],
+      ttl: 60,
+    });
+    expect(mockCache.set).toHaveBeenCalledWith('57f938ab', 'value', {
+      name: 'explicit-name',
+      tags: ['t1'],
+      ttl: 60,
+    });
   });
 });

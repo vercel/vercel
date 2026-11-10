@@ -17,7 +17,9 @@
       "mustContain": "This Is The Not Found Page"
     }
   ],
-  "env": {
-    "NEXT_BUILDER_INTEGRATION": "1"
+  "build": {
+    "env": {
+      "NEXT_BUILDER_INTEGRATION": "1"
+    }
   }
 }

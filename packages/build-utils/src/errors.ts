@@ -56,7 +56,8 @@ export function getPrettyError(obj: {
       const suggestion = getSuggestion(prop, params.additionalProperty);
       message += `should NOT have additional property \`${params.additionalProperty}\`. ${suggestion}`;
     } else if (params && typeof params.missingProperty === 'string') {
-      message += `missing required property \`${params.missingProperty}\`.`;
+      // Ajv prefixes a property required inside `anyOf` with a dot.
+      message += `missing required property \`${params.missingProperty.replace(/^\./, '')}\`.`;
     } else {
       message += `${ajvMessage}.`;
     }
@@ -67,7 +68,7 @@ export function getPrettyError(obj: {
       link: prop ? `${docsUrl}#${prop.toLowerCase()}` : docsUrl,
       action: 'View Documentation',
     });
-  } catch (e) {
+  } catch (_e) {
     return new NowBuildError({
       code: 'INVALID_VERCEL_CONFIG',
       message: `Failed to validate configuration.`,
@@ -102,8 +103,6 @@ const mapTypoToSuggestion: { [key: string]: { [key: string]: string } } = {
   redirects: { src: 'source', dest: 'destination', status: 'statusCode' },
   headers: { src: 'source', header: 'headers' },
   routes: {
-    source: 'src',
-    destination: 'dest',
     header: 'headers',
     method: 'methods',
   },

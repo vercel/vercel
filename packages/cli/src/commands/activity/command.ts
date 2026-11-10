@@ -1,0 +1,106 @@
+import { packageName } from '../../util/pkg-name';
+import {
+  formatOption,
+  jsonOption,
+  limitOption,
+  nextCursorOption,
+  projectOption,
+  sinceOption,
+  untilOption,
+} from '../../util/arg-common';
+
+export const typesSubcommand = {
+  name: 'types',
+  aliases: [],
+  description: 'List available event types with descriptions.',
+  arguments: [],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'List all event types',
+      value: `${packageName} activity types`,
+    },
+    {
+      name: 'Output JSON',
+      value: `${packageName} activity types --json`,
+    },
+  ],
+} as const;
+
+export const activityCommand = {
+  name: 'activity',
+  aliases: [],
+  description: 'List user activity events.',
+  arguments: [],
+  subcommands: [
+    // Hidden placeholder so the help synopsis renders [command] as optional
+    // (help.ts treats `command` as required unless a subcommand has `default: true`)
+    {
+      name: 'ls',
+      aliases: ['list'],
+      description: '',
+      default: true,
+      hidden: true,
+      arguments: [],
+      options: [],
+      examples: [],
+    },
+    typesSubcommand,
+  ],
+  options: [
+    {
+      name: 'type',
+      shorthand: null,
+      type: [String],
+      argument: 'TYPE',
+      deprecated: false,
+      description:
+        'Filter by event type. Repeatable and comma-separated (e.g. --type deployment --type project-created or --type deployment,project-created).',
+    },
+    sinceOption,
+    untilOption,
+    {
+      ...projectOption,
+      shorthand: 'p',
+      description:
+        'Filter by project (overrides auto-detected linked project).',
+    },
+    {
+      name: 'all',
+      shorthand: 'a',
+      type: Boolean,
+      deprecated: false,
+      description: 'Show all team events (ignore linked project auto-scoping).',
+    },
+    limitOption,
+    nextCursorOption,
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'List events for the linked project',
+      value: `${packageName} activity`,
+    },
+    {
+      name: 'Filter events by multiple types',
+      value: `${packageName} activity --type deployment --type project-created --since 7d`,
+    },
+    {
+      name: 'Filter events by comma-separated types',
+      value: `${packageName} activity --type deployment,project-created --since 7d`,
+    },
+    {
+      name: 'List all team events',
+      value: `${packageName} activity --all --since 30d`,
+    },
+    {
+      name: 'Output JSON',
+      value: `${packageName} activity --json | jq '.events[]'`,
+    },
+    {
+      name: 'List activity event types',
+      value: `${packageName} activity types`,
+    },
+  ],
+} as const;

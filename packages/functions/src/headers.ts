@@ -86,6 +86,10 @@ function getHeader(headers: Headers, key: string): string | undefined {
   return headers.get(key) ?? undefined;
 }
 
+function hasRequestHeaders(input: Request | Headers): input is Request {
+  return 'headers' in input && typeof input.headers?.get === 'function';
+}
+
 function getHeaderWithDecode(
   request: Request,
   key: string
@@ -129,7 +133,7 @@ function getFlag(countryCode: string | undefined): string | undefined {
  *
  */
 export function ipAddress(input: Request | Headers): string | undefined {
-  const headers = 'headers' in input ? input.headers : input;
+  const headers = hasRequestHeaders(input) ? input.headers : input;
   return getHeader(headers, IP_HEADER_NAME);
 }
 

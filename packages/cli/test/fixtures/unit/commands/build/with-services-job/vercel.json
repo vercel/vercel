@@ -1,0 +1,22 @@
+{
+  "experimentalServices": {
+    "cleanup": {
+      "type": "job",
+      "trigger": "schedule",
+      "entrypoint": "index.js",
+      "schedule": "0 0 * * *"
+    },
+    "processor": {
+      "type": "job",
+      "trigger": "queue",
+      "entrypoint": "index.js",
+      "topics": [
+        {
+          "topic": "orders",
+          "retryAfterSeconds": 10,
+          "initialDelaySeconds": 5
+        }
+      ]
+    }
+  }
+}

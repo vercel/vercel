@@ -1,0 +1,5 @@
+[project]
+name = "fastapi-prisma-fixture"
+version = "0.0.0"
+# We are specifically also testing the flow where requires-python is not set.
+dependencies = ["fastapi", "prisma"]

@@ -1,0 +1,44 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "web": {
+      "entrypoint": "apps/web",
+      "routePrefix": "/"
+    },
+    "dashboard": {
+      "entrypoint": "apps/dashboard",
+      "routePrefix": "/dashboard"
+    },
+    "go-api": {
+      "entrypoint": "services/go-api/index.go",
+      "routePrefix": "/api/go"
+    },
+    "py-api": {
+      "entrypoint": "services/py-api/index.py",
+      "routePrefix": "/api/py"
+    },
+    "node-api": {
+      "entrypoint": "services/node-api/index.js",
+      "routePrefix": "/api/node"
+    },
+    "express-api": {
+      "entrypoint": "services/express-api/index.js",
+      "routePrefix": "/api/express"
+    },
+    "koa-api": {
+      "entrypoint": "services/koa-api/index.js",
+      "routePrefix": "/api/koa"
+    },
+    "hono-api": {
+      "entrypoint": "services/hono-api/index.js",
+      "routePrefix": "/api/hono"
+    },
+    "rb-api": {
+      "entrypoint": "services/rb-api/config.ru",
+      "routePrefix": "/api/rb"
+    }
+  }
+}

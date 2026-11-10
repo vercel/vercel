@@ -17,6 +17,8 @@ import stripAnsi from 'strip-ansi';
 import ansiEscapes from 'ansi-escapes';
 import { TelemetryEventStore } from '../../src/util/telemetry';
 import output from '../../src/output-manager';
+import { resetDeprecatedShorthands } from '../../src/util/get-args';
+import { setCommandFlagsSpecification } from '../../src/util/get-flags-specification';
 
 const ignoredAnsi = new Set([ansiEscapes.cursorHide, ansiEscapes.cursorShow]);
 
@@ -162,10 +164,23 @@ function setupMockServer(mockClient: MockClient): Express {
     mockClient.scenario(req, res, next);
   });
 
+  // Deploy follows `/events` even without `--logs`. Tests that don't stub it
+  // used to 500 here, and printEvents retried after the command returned,
+  // leaking sockets until the chunk watchdog killed the vitest worker.
+  app.use((req, res, next) => {
+    if (
+      req.method === 'GET' &&
+      /^\/v\d+\/now\/deployments\/[^/]+\/events$/.test(req.path)
+    ) {
+      res.end();
+      return;
+    }
+    next?.();
+  });
+
   // catch requests that were not intercepted
   app.use((req, res) => {
     const message = `[Vercel API Mock] \`${req.method} ${req.path}\` was not handled.`;
-    // eslint-disable-next-line no-console
     console.warn(message);
     res.status(500).json({
       error: {
@@ -177,7 +192,6 @@ function setupMockServer(mockClient: MockClient): Express {
 
   // global error handling must be last
   // @ts-ignore - this signature is actually valid
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((error, _req, res, _next) => {
     res.status(500).json({
       error: {
@@ -226,6 +240,27 @@ export class MockClient extends Client {
     this.stdout = new MockStream();
     this.stdout.setEncoding('utf8');
     this.stdout.end = () => this.stdout;
+    // Mirror JSON written to stdout into console.log so existing
+    // tests that spy on console.log still see the structured payload,
+    // while the real CLI only writes once to stdout.
+    const originalStdoutWrite = this.stdout.write.bind(this.stdout);
+    this.stdout.write = ((chunk: unknown, encoding?: unknown, cb?: unknown) => {
+      const str =
+        typeof chunk === 'string'
+          ? chunk
+          : Buffer.isBuffer(chunk)
+            ? chunk.toString('utf8')
+            : String(chunk);
+      const trimmed = str.trim();
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        console.log(trimmed);
+      }
+      return originalStdoutWrite(
+        chunk,
+        encoding as BufferEncoding | undefined,
+        cb as ((error: Error | null | undefined) => void) | undefined
+      );
+    }) as typeof this.stdout.write;
     this.stdout.pause();
 
     this.stderr = new MockStream();
@@ -239,27 +274,33 @@ export class MockClient extends Client {
       supportsHyperlink: false,
     });
 
-    this.argv = [];
+    super.setArgv([]);
     this.authConfig = {
       token: 'token_dummy',
+      skipWrite: true,
     };
     this.config = {};
+    this.savedTeam = undefined;
     this.localConfig = {};
     this.localConfigPath = undefined;
+    this.user = undefined;
+    this.userPromise = undefined;
+    this.teams = undefined;
+    this.teamsPromise = undefined;
 
     this.scenario = Router();
 
-    this.agent?.destroy();
-    this.agent = undefined;
-
     this.cwd = originalCwd;
     this.telemetryEventStore.reset();
+    resetDeprecatedShorthands();
+    setCommandFlagsSpecification(undefined);
 
     // Reset agent and confirmation flags
     this.isAgent = false;
     this.agentName = undefined;
     this.dangerouslySkipPermissions = false;
     this.nonInteractive = false;
+    this.ignoresSavedTeam = false;
   }
 
   events = {
@@ -315,6 +356,7 @@ export class MockClient extends Client {
         return;
       }
 
+      this.mockServer.closeAllConnections?.();
       this.mockServer.close(error => {
         if (error) {
           reject(error);
@@ -325,8 +367,20 @@ export class MockClient extends Client {
     });
   }
 
-  setArgv(...argv: string[]) {
-    this.argv = [process.execPath, 'cli.js', ...argv];
+  setArgv(argv: string[]): void;
+  setArgv(...argv: string[]): void;
+  setArgv(argvOrFirst?: string[] | string, ...rest: string[]) {
+    if (Array.isArray(argvOrFirst) && argvOrFirst[0] === process.execPath) {
+      super.setArgv(argvOrFirst);
+      return;
+    }
+    const argv = Array.isArray(argvOrFirst)
+      ? argvOrFirst
+      : typeof argvOrFirst === 'string'
+        ? [argvOrFirst, ...rest]
+        : [];
+
+    super.setArgv([process.execPath, 'cli.js', ...argv]);
 
     output.initialize({
       debug: argv.includes('--debug') || argv.includes('-d'),

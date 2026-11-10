@@ -1,6 +1,6 @@
 import type { Env } from './types';
 
-const { hasOwnProperty } = Object.prototype;
+const hasProp = Object.prototype.hasOwnProperty;
 
 /**
  * Clones zero or more objects into a single new object while ensuring that the
@@ -19,7 +19,7 @@ export function cloneEnv(...envs: (Env | undefined)[]): Env {
     // mixin the env first
     obj = Object.assign(obj, env);
 
-    if (hasOwnProperty.call(env, 'Path')) {
+    if (hasProp.call(env, 'Path')) {
       // the system path is called `Path` on Windows and Node.js will
       // automatically return the system path when accessing `PATH`,
       // however we lose this proxied value when we destructure and

@@ -1,0 +1,19 @@
+{
+  "experimentalServices": {
+    "service-next": {
+      "framework": "nextjs",
+      "entrypoint": "service-next",
+      "mount": "/"
+    },
+    "service-fastapi": {
+      "framework": "fastapi",
+      "entrypoint": "service-fastapi",
+      "mount": "/api/fastapi"
+    },
+    "service-flask": {
+      "framework": "flask",
+      "entrypoint": "service-flask",
+      "mount": "/api/flask"
+    }
+  }
+}

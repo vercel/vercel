@@ -6,8 +6,9 @@ import {
   glob,
   Lambda,
   type BuildOptions,
-  type BuildResultV3,
+  type BuildResultVX,
   getLambdaOptionsFromFunction,
+  getReportedServiceType,
 } from '@vercel/build-utils';
 import execa from 'execa';
 import { installRustToolchain } from './lib/rust-toolchain';
@@ -19,21 +20,46 @@ import {
   findCargoBuildConfiguration,
 } from './lib/cargo';
 import {
-  assertEnv,
+  excludeCargoTargetDir,
   getExecutableName,
   gatherExtraFiles,
+  missingEntrypointError,
   runUserScripts,
 } from './lib/utils';
+import {
+  compileCargoBinary,
+  createRustEnv,
+  getRustHostTargetTriple,
+  getTargetTriple,
+  resolveCompiledBinaryPath,
+} from './lib/compile';
 
 import { startDevServer as rustStartDevServer } from './lib/start-dev-server';
+import {
+  buildStandaloneServer,
+  getVercelRuntimeRoutes,
+  isApiHandlerBuild,
+  resolveStandaloneMode,
+  startStandaloneDevServer,
+  useStandaloneMode,
+} from './standalone-server';
+import { generateProjectManifest } from './diagnostics';
+export { diagnostics } from './diagnostics';
+export { detectEntrypoint, detectRustEntrypoint } from './entrypoint';
 
-type RustEnv = Record<'RUSTFLAGS' | 'PATH', string>;
-
-async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
+async function buildHandler(options: BuildOptions): Promise<BuildResultVX> {
   const BUILDER_DEBUG = Boolean(process.env.VERCEL_BUILDER_DEBUG ?? false);
   const isVercelBuild = Boolean(process.env.VERCEL_BUILD_IMAGE ?? false);
 
-  const { files, entrypoint, workPath, config, meta } = options;
+  const {
+    files,
+    entrypoint,
+    workPath,
+    config,
+    meta,
+    service,
+    diagnosticsValues,
+  } = options;
 
   // If we are not building on Vercel and we are not initiainted from `vercel dev`,
   // we are building for a prebuilt deployment, so we need to cross-compile
@@ -48,17 +74,37 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   await installRustToolchain();
 
   debug('Creating file system');
-  const downloadedFiles = await download(files, workPath, meta);
-  const entryPath = downloadedFiles[entrypoint].fsPath;
+  const downloadedFiles = await download(
+    excludeCargoTargetDir(files, process.env, workPath),
+    workPath,
+    meta
+  );
 
-  const HOME =
-    process.platform === 'win32' ? assertEnv('USERPROFILE') : assertEnv('HOME');
-  const PATH = assertEnv('PATH');
+  const rustEnv = createRustEnv();
 
-  const rustEnv: RustEnv = {
-    PATH: `${path.join(HOME, '.cargo/bin')}${path.delimiter}${PATH}`,
-    RUSTFLAGS: [process.env.RUSTFLAGS].filter(Boolean).join(' '),
-  };
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
+  const architecture = lambdaOptions?.architecture || 'x86_64';
+  const targetTriple = getTargetTriple(architecture);
+  const modeTarget = meta?.isDev
+    ? await getRustHostTargetTriple(rustEnv)
+    : targetTriple;
+
+  if (await resolveStandaloneMode(workPath, entrypoint, rustEnv, modeTarget)) {
+    return buildStandaloneServer(options, {
+      rustEnv,
+      crossCompilation: crossCompilationEnabled,
+      verbose: BUILDER_DEBUG,
+    });
+  }
+
+  const downloadedEntry = downloadedFiles[entrypoint];
+  if (!downloadedEntry) {
+    throw missingEntrypointError(entrypoint, isApiHandlerBuild(entrypoint));
+  }
+  const entryPath = downloadedEntry.fsPath;
 
   const cargoWorkspace = await findCargoWorkspace({
     env: rustEnv,
@@ -73,71 +119,37 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
 
   const extraFiles = await gatherExtraFiles(config.includeFiles, workPath);
 
-  const lambdaOptions = await getLambdaOptionsFromFunction({
-    sourceFile: entrypoint,
-    config,
-  });
-
-  const architecture = lambdaOptions?.architecture || 'x86_64';
-
   const buildVariant = meta?.isDev ? 'debug' : 'release';
-  const buildTarget = cargoBuildConfiguration?.build.target ?? '';
 
-  try {
-    // If we are not building on Vercel (it means we are building for a prebuilt deployment),
-    // We cross-compile it for linux x86_64 using `zigbuild`
-    const args = crossCompilationEnabled
-      ? [
-          'zigbuild',
-          '--target',
-          architecture === 'x86_64'
-            ? 'x86_64-unknown-linux-gnu'
-            : 'aarch64-unknown-linux-gnu',
-          '--bin',
-          binaryName,
-        ].concat(BUILDER_DEBUG ? ['--verbose'] : ['--quiet'], ['--release'])
-      : ['build', '--bin', binaryName].concat(
-          BUILDER_DEBUG ? ['--verbose'] : ['--quiet'],
-          meta?.isDev ? [] : ['--release']
-        );
-
-    debug(
-      `Running \`cargo build\` for \`${binaryName}\` (\`${architecture}\`)`
-    );
-    await execa('cargo', args, {
-      cwd: workPath,
-      env: rustEnv,
-    });
-  } catch (err) {
-    debug(`Running \`cargo build\` for \`${binaryName}\` failed`);
-    throw err;
-  }
+  // When not building on Vercel (i.e. building for a prebuilt deployment),
+  // cross-compile for Linux using `zigbuild`.
+  await compileCargoBinary({
+    workPath,
+    rustEnv,
+    binaryName,
+    crossCompilation: crossCompilationEnabled,
+    targetTriple,
+    release: crossCompilationEnabled || !meta?.isDev,
+    verbose: BUILDER_DEBUG,
+  });
 
   debug(
     `Building \`${binaryName}\` for \`${process.platform}\` (\`${architecture}\`) completed`
   );
 
-  let { target_directory: targetDirectory } = await getCargoMetadata({
-    cwd: workPath,
-    env: rustEnv,
-  });
-
-  // If we are building for a prebuilt deployment, adjust the target directory to the cross compilation dir
-  if (crossCompilationEnabled) {
-    targetDirectory = path.join(
-      targetDirectory,
-      architecture === 'x86_64'
-        ? 'x86_64-unknown-linux-gnu'
-        : 'aarch64-unknown-linux-gnu'
-    );
-  }
-  targetDirectory = path.join(targetDirectory, buildTarget);
-
-  const bin = path.join(
-    targetDirectory,
-    buildVariant,
-    getExecutableName(binaryName)
+  const cargoMetadata = await getCargoMetadata(
+    { cwd: workPath, env: rustEnv },
+    targetTriple
   );
+
+  const bin = resolveCompiledBinaryPath({
+    targetDirectory: cargoMetadata.target_directory,
+    crossCompilation: crossCompilationEnabled,
+    targetTriple,
+    buildTarget: cargoBuildConfiguration?.build.target,
+    variant: buildVariant,
+    binaryName,
+  });
 
   const handler = getExecutableName('executable');
   const executableFile = new FileFsRef({ mode: 0o755, fsPath: bin });
@@ -155,16 +167,50 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultV3> {
   });
   lambda.zipBuffer = await lambda.createZip();
 
+  let resolvedRustVersion: string | undefined;
+  try {
+    const { stdout: rustcOut } = await execa('rustc', ['--version'], {
+      env: rustEnv,
+      cwd: workPath,
+    });
+    // "rustc 1.87.0 (17067e9ac 2025-05-09)" → "1.87.0"
+    resolvedRustVersion = rustcOut.split(' ')[1];
+  } catch {
+    debug('Failed to determine rustc version');
+  }
+
+  const rootPkg = cargoMetadata.packages.find(
+    p => p.id === cargoMetadata.resolve.root
+  );
+  const requestedRustVersion = rootPkg?.rust_version || undefined;
+
+  await generateProjectManifest({
+    workPath,
+    cargoMetadata,
+    framework: diagnosticsValues?.framework,
+    serviceType: service ? getReportedServiceType(service) : undefined,
+    runtimeVersion: resolvedRustVersion
+      ? {
+          ...(requestedRustVersion ? { requested: requestedRustVersion } : {}),
+          resolved: resolvedRustVersion,
+        }
+      : undefined,
+  });
+
   debug(`generating function for \`${entrypoint}\``);
 
+  const routes = getVercelRuntimeRoutes(entrypoint, service);
   return {
-    output: lambda,
+    resultVersion: 3,
+    result: { output: lambda, ...(routes ? { routes } : {}) },
   };
 }
 
 // Reference -  https://github.com/vercel/vercel/blob/main/DEVELOPING_A_RUNTIME.md#runtime-developer-reference
 const runtime: Runtime = {
-  version: 3,
+  // Standalone builds need a named V2 output and their own route table. The
+  // classic `vercel_runtime` path stays V3 so preset routing remains intact.
+  version: -1,
   build: buildHandler,
   prepareCache: async ({ workPath }) => {
     debug(`Caching \`${workPath}\``);
@@ -184,10 +230,38 @@ const runtime: Runtime = {
     }
     return cacheFiles;
   },
-  startDevServer: rustStartDevServer,
+  startDevServer: async options => {
+    const { workPath, entrypoint } = options;
+    await installRustToolchain();
+    const rustEnv = createRustEnv();
+    const hostTarget = await getRustHostTargetTriple(rustEnv);
+    if (
+      await resolveStandaloneMode(workPath, entrypoint, rustEnv, hostTarget)
+    ) {
+      return startStandaloneDevServer(options);
+    }
+    return rustStartDevServer(options);
+  },
   shouldServe: async (options): Promise<boolean> => {
     debug(`Requested ${options.requestPath} for ${options.entrypoint}`);
-    return Promise.resolve(options.requestPath === options.entrypoint);
+    // A standalone server owns its own routing, so it serves every request.
+    //
+    // Keyed on the resolved mode rather than just the entrypoint: a
+    // `vercel_runtime` whole-app build is still reached through the preset's
+    // catch-all route, so claiming every path here would shadow the static
+    // assets that the `filesystem` phase is supposed to serve first.
+    if (await useStandaloneMode(options.workPath, options.entrypoint)) {
+      return true;
+    }
+    // Match exact path or path without .rs extension
+    const entrypointWithoutExt = options.entrypoint.replace(/\.rs$/, '');
+    const matches =
+      options.requestPath === options.entrypoint ||
+      options.requestPath === entrypointWithoutExt;
+    debug(
+      `shouldServe: ${matches} (entrypointWithoutExt: ${entrypointWithoutExt})`
+    );
+    return matches;
   },
 };
 

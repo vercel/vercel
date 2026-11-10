@@ -277,22 +277,12 @@ def _execute_envelope(celery_app: CeleryApp, payload: Any) -> ExecutionOutcome:
     task_id = cast(str, env.get("id"))
     args = env.get("args") or []
     kwargs = env.get("kwargs") or {}
-    eta_dt = _parse_iso_datetime(env.get("eta"))
     expires_dt = _parse_iso_datetime(env.get("expires"))
 
-    # Message-level scheduling:
-    # - If expires is in the past, acknowledge without executing.
-    # - If eta is in the future, ask the queue to retry later (delay visibility).
-    #
-    # We do this here (instead of at publish time) because Vercel Queues v2 is
-    # callback-driven and does not expose a dedicated "delay on send" API that
-    # Celery can target generically via Kombu.
+    # If expires is in the past, acknowledge without executing.
     now = _now_utc()
     if expires_dt is not None and expires_dt <= now:
         return {"ack": True}
-    if eta_dt is not None and eta_dt > now:
-        delay_seconds = int(max(0.0, (eta_dt - now).total_seconds()))
-        return {"timeoutSeconds": delay_seconds}
 
     task = celery_app.tasks.get(task_name)
     if task is None:

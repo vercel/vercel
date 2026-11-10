@@ -16,8 +16,22 @@ import {
 import { IntegrationResourceRemoveTelemetryClient } from '../../util/telemetry/commands/integration-resource/remove';
 import { removeSubcommand } from './command';
 import { handleDisconnectAllProjects } from './disconnect';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
+import { packageName } from '../../util/pkg-name';
 
-export async function remove(client: Client) {
+const suggestRemoveOpts: {
+  prependGlobalFlags: true;
+  excludeFlags: string[];
+} = {
+  prependGlobalFlags: true,
+  excludeFlags: ['--yes', '-y'],
+};
+
+export async function remove(client: Client, argv: string[]) {
   const telemetry = new IntegrationResourceRemoveTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -28,16 +42,16 @@ export async function remove(client: Client) {
   const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
+    parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -46,8 +60,8 @@ export async function remove(client: Client) {
   telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
 
   if (asJson && !skipConfirmation) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
-    return 1;
+    output.error('--json requires --yes to skip confirmation prompts');
+    return 2;
   }
 
   const { team } = await getScope(client);
@@ -57,34 +71,78 @@ export async function remove(client: Client) {
   }
   client.config.currentTeam = team.id;
 
-  const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
-  if (isMissingResourceOrIntegration) {
-    output.error('You must specify a resource. See `--help` for details.');
-    return 1;
+  const isMissingResource = parsedArguments.args.length < 1;
+  if (isMissingResource) {
+    const message = 'You must specify a resource. See `--help` for details.';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        message,
+        hint: `Put global options first, then \`integration resource delete <resource> --yes\`. Use \`--disconnect-all\` to detach projects before delete.`,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration resource delete <resource> --yes',
+              packageName,
+              suggestRemoveOpts
+            ),
+            when: 'Replace <resource> with the store name (angle brackets are not part of the command)',
+          },
+        ],
+      },
+      2
+    );
+    output.error(message);
+    return 2;
   }
 
-  const hasTooManyArguments = parsedArguments.args.length > 2;
+  const hasTooManyArguments = parsedArguments.args.length > 1;
   if (hasTooManyArguments) {
-    output.error('Cannot specify more than one resource at a time.');
-    return 1;
+    const message = 'Cannot specify more than one resource at a time.';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message,
+        hint: `One resource per invocation: \`${packageName} [global options] integration resource delete <resource> [--disconnect-all] --yes\`.`,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration resource delete <resource> --disconnect-all --yes',
+              packageName,
+              suggestRemoveOpts
+            ),
+            when: 'Single resource name in place of <resource>',
+          },
+        ],
+      },
+      2
+    );
+    output.error(message);
+    return 2;
   }
 
   const disconnectAll = !!parsedArguments.flags['--disconnect-all'];
-  const resourceName = parsedArguments.args[1];
+  const resourceReference = parsedArguments.args[0];
 
-  telemetry.trackCliArgumentResource(resourceName);
+  telemetry.trackCliArgumentResource(resourceReference);
   telemetry.trackCliFlagDisconnectAll(disconnectAll);
   telemetry.trackCliFlagYes(skipConfirmation);
 
   output.spinner('Retrieving resource…', 500);
   const resources = await getResources(client);
-  const targetedResource = resources.find(
-    resource => resource.name === resourceName
-  );
+  const targetedResource =
+    resources.find(resource => resource.name === resourceReference) ??
+    resources.find(resource => resource.id === resourceReference);
   output.stopSpinner();
 
   if (!targetedResource) {
-    output.error(`No resource ${chalk.bold(resourceName)} found.`);
+    output.error(`No resource ${chalk.bold(resourceReference)} found.`);
     return 1;
   }
 
@@ -129,7 +187,7 @@ async function handleDeleteResource(
     resource.projectsMetadata && resource.projectsMetadata?.length > 0;
   if (!options?.skipProjectCheck && hasProjects) {
     output.error(
-      `Cannot delete resource ${chalk.bold(resource.name)} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` flag.`
+      `Cannot delete resource ${chalk.bold(resource.name)} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` option.`
     );
     return 1;
   }

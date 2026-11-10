@@ -18,7 +18,6 @@ if (process.env.NODE_ENV !== 'production' && region !== 'dev1') {
 }
 
 // @ts-ignore
-// eslint-disable-next-line
 let page: any = {};
 // __LAUNCHER_PAGE_HANDLER__
 

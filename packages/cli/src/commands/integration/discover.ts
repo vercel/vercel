@@ -62,7 +62,7 @@ export async function discover(client: Client, args: string[]) {
     parsedArguments = parseArguments(args, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new IntegrationDiscoverTelemetryClient({
@@ -71,20 +71,25 @@ export async function discover(client: Client, args: string[]) {
     },
   });
 
-  if (parsedArguments.args.length > 0) {
+  if (parsedArguments.args.length > 1) {
     output.error(
-      'Invalid number of arguments. Usage: `vercel integration discover`'
+      'Invalid number of arguments. Usage: `vercel integration discover [query]`'
     );
-    return 1;
+    return 2;
   }
+
+  const query = parsedArguments.args[0] ?? '';
+  telemetry.trackCliArgumentQuery(query);
+
+  const categoryFilters = parsedArguments.flags['--category'];
+  telemetry.trackCliOptionCategory(categoryFilters);
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
-  telemetry.trackCliFlagJson(parsedArguments.flags['--json']);
 
   output.spinner('Fetching marketplace integrations...', 500);
 
@@ -92,7 +97,7 @@ export async function discover(client: Client, args: string[]) {
   let categories: IntegrationCategory[] = [];
   try {
     const [integrationsResult, categoriesResult] = await Promise.allSettled([
-      fetchMarketplaceIntegrationsList(client),
+      fetchMarketplaceIntegrationsList(client, categoryFilters),
       fetchIntegrationCategories(client),
     ]);
 
@@ -160,11 +165,15 @@ export async function discover(client: Client, args: string[]) {
 
   output.stopSpinner();
 
+  const filtered = query
+    ? results.filter(product => matchesSearchTerm(product, query))
+    : results;
+
   if (asJson) {
     client.stdout.write(
       `${JSON.stringify(
         {
-          products: results,
+          products: filtered,
         },
         null,
         2
@@ -173,16 +182,20 @@ export async function discover(client: Client, args: string[]) {
     return 0;
   }
 
-  if (results.length === 0) {
-    output.log('No marketplace products found.');
+  if (filtered.length === 0) {
+    if (query) {
+      output.log(`No marketplace products matching "${query}" found.`);
+    } else {
+      output.log('No marketplace products found.');
+    }
     return 0;
   }
 
   const useCompactFormat =
     client.stderr.columns > 0 && client.stderr.columns < 120;
   const formattedOutput = useCompactFormat
-    ? formatCompactList(results)
-    : formatTable(results);
+    ? formatCompactList(filtered)
+    : formatTable(filtered);
   output.log('Available marketplace products:\n' + formattedOutput);
   return 0;
 }
@@ -201,6 +214,17 @@ function formatTable(products: ProductEntry[]) {
       ]),
     ],
     { hsep: 4 }
+  );
+}
+
+function matchesSearchTerm(product: ProductEntry, term: string): boolean {
+  const lower = term.toLowerCase();
+  return (
+    product.name.toLowerCase().includes(lower) ||
+    product.slug.toLowerCase().includes(lower) ||
+    product.provider.toLowerCase().includes(lower) ||
+    product.description.toLowerCase().includes(lower) ||
+    product.tags.some(tag => tag.toLowerCase().includes(lower))
   );
 }
 

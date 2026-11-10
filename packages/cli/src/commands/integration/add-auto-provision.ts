@@ -1,44 +1,79 @@
 import chalk from 'chalk';
+import execa from 'execa';
 import { errorToString } from '@vercel/error-utils';
+import type { Project } from '@vercel-internals/types';
 import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
+import indent from '../../util/output/indent';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
-import { fetchIntegrationWithTelemetry } from '../../util/integration/fetch-integration';
+import { resolveAndFetchIntegration } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
+import { acceptTermsViaBrowser } from '../../util/integration/accept-terms-via-browser';
 import { promptForTermAcceptance } from '../../util/integration/prompt-for-terms';
 import { selectProduct } from '../../util/integration/select-product';
+import {
+  resolveProductSkills,
+  type ResolvedSkill,
+} from '../../util/integration/skill-suggestion';
+import { runClaimForResource } from '../integration-resource/claim';
+import { getResources } from '../../util/integration-resource/get-resources';
+import { packageName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  outputActionRequired,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 import type {
   AcceptedPolicies,
   AutoProvisionedResponse,
   AutoProvisionFallback,
   AutoProvisionResult,
 } from '../../util/integration/types';
+import { buildSSOLink } from '../../util/integration/build-sso-link';
 import { resolveResourceName } from '../../util/integration/generate-resource-name';
 import {
+  ENV_PULL_FAILED_MESSAGE,
   getLinkedProjectField,
   postProvisionSetup,
   type PostProvisionOptions,
+  validateEnvironments,
 } from '../../util/integration/post-provision-setup';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 import {
   parseMetadataFlags,
   validateAndPrintRequiredMetadata,
 } from '../../util/integration/parse-metadata';
+import {
+  isServerHandledRegion,
+  getVisibleOptions,
+  mergeMetadataSchemas,
+} from '../../util/integration/format-schema-help';
 import type { Metadata } from '../../util/integration/types';
+import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectEnvironments } from '../../util/integration/resolve-project-environments';
+import type { IntegrationAddFlags } from './command';
+import type { DeprecatedOptionWarning } from '../../util/renamed-option';
 
-export interface AddAutoProvisionOptions extends PostProvisionOptions {
+interface AddAutoProvisionOptions extends PostProvisionOptions {
   metadata?: string[];
   productSlug?: string;
   billingPlanId?: string;
   installationId?: string;
   commandName?: 'integration add' | 'install';
+  asJson?: boolean;
+  claim?: boolean;
+  noClaim?: boolean;
+  /** The flags as typed, so telemetry keeps a key per renamed option name. */
+  flags?: IntegrationAddFlags;
+  /** Deprecation warnings for renamed options, for the JSON result. */
+  deprecations?: ReadonlyArray<DeprecatedOptionWarning | undefined>;
 }
 
 export async function addAutoProvision(
   client: Client,
-  integrationSlug: string,
+  integrationSlugOrQuery: string,
   resourceNameArg?: string,
   options: AddAutoProvisionOptions = {}
 ) {
@@ -49,13 +84,17 @@ export async function addAutoProvision(
     },
   });
   telemetry.trackCliOptionName(resourceNameArg);
-  telemetry.trackCliOptionMetadata(options.metadata);
+  telemetry.trackCliOptionMeta(options.flags?.['--meta']);
+  telemetry.trackCliOptionMetadata(options.flags?.['--metadata']);
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
-  telemetry.trackCliOptionPlan(options.billingPlanId);
-  telemetry.trackCliOptionInstallationId(options.installationId);
+  telemetry.trackCliOptionBillingPlan(options.flags?.['--billing-plan']);
+  telemetry.trackCliOptionPlan(options.flags?.['--plan']);
+  telemetry.trackCliOptionInstallation(options.flags?.['--installation']);
+  telemetry.trackCliOptionInstallationId(options.flags?.['--installation-id']);
   telemetry.trackCliOptionEnvironment(options.environments);
   telemetry.trackCliOptionPrefix(options.prefix);
+  telemetry.trackCliOptionFormat(options.asJson ? 'json' : undefined);
 
   // Get team context
   const { contextName, team } = await getScope(client);
@@ -65,19 +104,44 @@ export async function addAutoProvision(
   }
   client.config.currentTeam = team.id;
 
-  // Fetch integration
-  const integration = await fetchIntegrationWithTelemetry(
+  if (options.environments?.length) {
+    let project: Pick<Project, 'id' | 'name'> | undefined;
+    if (!validateEnvironments(options.environments).valid) {
+      const linkedProject = await getLinkedProject(client);
+      if (linkedProject.status === 'error') {
+        return linkedProject.exitCode;
+      }
+      project =
+        linkedProject.status === 'linked' ? linkedProject.project : undefined;
+    }
+    const environmentResult = await resolveProjectEnvironments(
+      client,
+      project,
+      options.environments
+    );
+    if (!environmentResult.valid) {
+      output.error(environmentResult.error);
+      return 1;
+    }
+    options.environments = environmentResult.environments;
+  }
+
+  // Fetch integration (with discover fallback if slug not found)
+  const integration = await resolveAndFetchIntegration(
     client,
-    integrationSlug,
+    integrationSlugOrQuery,
     telemetry
   );
   if (!integration) {
     return 1;
   }
+  if (integration.productSlug && !options.productSlug) {
+    options.productSlug = integration.productSlug;
+  }
 
   if (!integration.products?.length) {
     output.error(
-      `Integration "${integrationSlug}" is not a Marketplace integration`
+      `Integration "${integration.slug}" is not a Marketplace integration`
     );
     return 1;
   }
@@ -89,12 +153,12 @@ export async function addAutoProvision(
     !client.stdin.isTTY
   ) {
     const choices = integration.products
-      .map(p => `  ${integrationSlug}/${p.slug}`)
+      .map(p => `  ${integration.slug}/${p.slug}`)
       .join('\n');
     output.error(
-      `Integration "${integrationSlug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${integrationSlug}/${integration.products[0].slug}`
+      `Integration "${integration.slug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${integration.slug}/${integration.products[0].slug}`
     );
-    return 1;
+    return 2;
   }
 
   // Select product and check installations in parallel
@@ -132,7 +196,6 @@ export async function addAutoProvision(
     product_slug: product.slug,
     team_id: team.id,
     source: 'cli',
-    is_auto_provision: true,
   };
 
   telemetry.trackMarketplaceEvent(
@@ -148,34 +211,78 @@ export async function addAutoProvision(
     `Product metadataSchema: ${JSON.stringify(product.metadataSchema, null, 2)}`
   );
 
-  // 3b. Check if integration is installed on this team
+  // Check if integration is installed on this team
   const teamInstallation = installations.find(
     i => i.ownerId === team.id && i.installationType === 'marketplace'
   );
 
   let acceptedPolicies: AcceptedPolicies = {};
+  let browserInstallationId: string | undefined;
   if (!teamInstallation) {
-    const policies = await promptForTermAcceptance(client, integration);
-    if (!policies) {
-      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
-        ...baseProps,
-        reason: 'policy_declined',
-      });
-      return 1;
+    if (
+      // AI agent mode — cannot interact with terminal prompts
+      client.isAgent ||
+      // Non-interactive terminal (CI/scripts) — no TTY for prompts
+      !client.stdin.isTTY ||
+      // Server declares browser install required (e.g. needs device fingerprint)
+      integration.capabilities?.requiresBrowserInstall
+    ) {
+      // Browser flow: open browser for terms acceptance, poll for installation
+      const browserInstallation = await acceptTermsViaBrowser(
+        client,
+        integration,
+        team.id,
+        contextName
+      );
+      if (!browserInstallation) {
+        telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+          ...baseProps,
+          reason: 'browser_terms_timeout',
+        });
+        return 1;
+      }
+      browserInstallationId = browserInstallation.id;
+    } else {
+      // Interactive TTY: keep existing prompt behavior
+      const policies = await promptForTermAcceptance(client, integration);
+      if (!policies) {
+        telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+          ...baseProps,
+          reason: 'policy_declined',
+        });
+        return 1;
+      }
+      acceptedPolicies = policies;
     }
-    acceptedPolicies = policies;
   }
 
-  // Validate metadata flags (if provided) BEFORE prompting for resource name
+  // Validate metadata flags (if provided) BEFORE prompting for resource name.
+  // For integrations with an installation-level metadataSchema (e.g. Sentry with
+  // name/region), we accept both product and installation keys via -m flags, then
+  // split them into separate fields for the API. This avoids key conflicts if a
+  // partner uses the same key name in both schemas.
+  const integrationSchemaProps = integration.metadataSchema?.properties ?? {};
+  const productSchemaProps = product.metadataSchema.properties;
+  const mergedParsingSchema =
+    mergeMetadataSchemas(product.metadataSchema, integration.metadataSchema) ??
+    product.metadataSchema;
+  for (const key of Object.keys(integrationSchemaProps)) {
+    if (key in productSchemaProps) {
+      output.debug(
+        `Metadata key "${key}" exists in both product and installation schemas — product definition wins`
+      );
+    }
+  }
   let metadata: Metadata;
+  let installationMetadata: Metadata = {};
   if (options.metadata?.length) {
-    // Parse metadata from CLI flags
+    // Parse metadata from CLI flags against merged schema (accepts all keys)
     output.debug(
-      `Parsing metadata from flags: ${JSON.stringify(options.metadata)}`
+      `Parsing metadata from options: ${JSON.stringify(options.metadata)}`
     );
     const { metadata: parsed, errors } = parseMetadataFlags(
       options.metadata,
-      product.metadataSchema
+      mergedParsingSchema
     );
     if (errors.length) {
       for (const error of errors) {
@@ -187,16 +294,36 @@ export async function addAutoProvision(
       });
       return 1;
     }
-    if (!validateAndPrintRequiredMetadata(parsed, product.metadataSchema)) {
+    // Validate required fields against the merged schema (both product + installation required)
+    if (!validateAndPrintRequiredMetadata(parsed, mergedParsingSchema)) {
       telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
         ...baseProps,
         reason: 'metadata_validation_failed',
       });
       return 1;
     }
-    metadata = parsed;
+
+    // Split parsed metadata into product vs installation buckets.
+    // Keys in both schemas go to product metadata (the more common case).
+    const productMeta: Metadata = {};
+    const installMeta: Metadata = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value === undefined) continue;
+      const inProduct = key in productSchemaProps;
+      const inInstallation = key in integrationSchemaProps;
+      if (inProduct) {
+        productMeta[key] = value;
+      } else if (inInstallation) {
+        installMeta[key] = value;
+      } else {
+        // Key was accepted by merged schema but somehow not in either — include in product
+        productMeta[key] = value;
+      }
+    }
+    metadata = productMeta;
+    installationMetadata = installMeta;
   } else {
-    // No --metadata flags: pass {} and let server fill defaults (API PR #58905)
+    // No --meta flags: pass {} and let server fill defaults (API PR #58905)
     metadata = {};
   }
 
@@ -240,7 +367,8 @@ export async function addAutoProvision(
       metadata,
       acceptedPolicies,
       options.billingPlanId,
-      options.installationId
+      browserInstallationId ?? options.installationId,
+      installationMetadata
     );
   } catch (error) {
     output.stopSpinner();
@@ -280,8 +408,8 @@ export async function addAutoProvision(
       .map(line => `  - ${line}`)
       .join('\n');
     const slug = options.productSlug
-      ? `${integrationSlug}/${options.productSlug}`
-      : integrationSlug;
+      ? `${integration.slug}/${options.productSlug}`
+      : integration.slug;
     telemetry.trackMarketplaceEvent(
       'marketplace_install_flow_multiple_installations',
       {
@@ -290,7 +418,7 @@ export async function addAutoProvision(
       }
     );
     output.error(
-      `Multiple installations found for "${integrationSlug}":\n${installationsList}\n\nRe-run with --installation-id to select one, e.g.:\n  vercel ${commandName} ${slug} --installation-id ${result.installations[0].id}`
+      `Multiple installations found for "${integration.slug}":\n${installationsList}\n\nRe-run with --installation to select one, e.g.:\n  vercel ${commandName} ${slug} --installation ${result.installations[0].id}`
     );
     return 1;
   }
@@ -318,12 +446,41 @@ export async function addAutoProvision(
       return projectLink.exitCode;
     }
 
-    output.log('Additional setup required. Opening browser...');
+    // Check for missing required metadata to give an actionable message
+    const missingRequired = (mergedParsingSchema.required ?? []).filter(key => {
+      if (key in metadata || key in installationMetadata) return false;
+      const prop = mergedParsingSchema.properties[key];
+      return prop && !isServerHandledRegion(prop);
+    });
+
+    if (missingRequired.length > 0) {
+      const examples = missingRequired.map(key => {
+        const prop = mergedParsingSchema.properties[key];
+        const options = prop ? getVisibleOptions(prop) : undefined;
+        const exampleVal = options?.[0] ?? '<value>';
+        return `--meta ${key}=${exampleVal}`;
+      });
+      output.error(`Missing required metadata: ${missingRequired.join(', ')}.`);
+      output.log(
+        `  Provide ${examples.join(' ')} to provision directly from the CLI.`
+      );
+      output.log(
+        `  Run \`vercel ${commandName} ${integration.slug} --help\` for all metadata options.`
+      );
+      return 1;
+    }
+
     const url = new URL(fallback.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
     if (Object.keys(metadata).length > 0) {
       url.searchParams.set('metadata', JSON.stringify(metadata));
+    }
+    if (Object.keys(installationMetadata).length > 0) {
+      url.searchParams.set(
+        'installationMetadata',
+        JSON.stringify(installationMetadata)
+      );
     }
     if (projectLink.value) {
       url.searchParams.set('projectSlug', projectLink.value);
@@ -331,7 +488,36 @@ export async function addAutoProvision(
     if (options.billingPlanId) {
       url.searchParams.set('planId', options.billingPlanId);
     }
-    output.debug(`Opening URL: ${url.href}`);
+    if (options.environments?.length) {
+      url.searchParams.set('environment', options.environments.join(','));
+    }
+    const setupMessage = fallback.error_message
+      ? `Additional setup required: ${fallback.error_message}`
+      : 'Additional setup required.';
+
+    // Agents and CI can't use a browser, so hand them the URL instead.
+    outputActionRequired(client, {
+      status: 'action_required',
+      reason: AGENT_REASON.INTEGRATION_SETUP_REQUIRED,
+      message: `${setupMessage} Finish setup for "${integration.name}" in the browser at verification_uri. This command does not wait for it in non-interactive mode.`,
+      verification_uri: url.href,
+      userActionRequired: true,
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'integration list',
+            packageName,
+            { prependGlobalFlags: true }
+          ),
+          when: 'Confirm the resource exists after setup is finished in the browser',
+        },
+      ],
+    });
+
+    output.log(setupMessage);
+    output.log('Opening browser to finish setup...');
+    output.log(`Visit this URL if the browser does not open: ${url.href}`);
     open(url.href).catch((err: unknown) =>
       output.debug(`Failed to open browser: ${err}`)
     );
@@ -360,14 +546,80 @@ export async function addAutoProvision(
     `${product.name} successfully provisioned: ${chalk.bold(resourceName)}`
   );
 
+  // Sandbox resources (e.g. Stripe, Shopify) require the user to claim the
+  // account in the provider UI to convert from sandbox to a real owned account.
+  const isSandbox = provisioned.resource.ownership === 'sandbox';
+  if (isSandbox && !options.noClaim) {
+    telemetry.trackCliFlagClaim(options.claim);
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+
+    const shouldRunClaim =
+      options.claim || (client.stdin.isTTY && !options.asJson);
+
+    if (shouldRunClaim) {
+      let runClaim = !!options.claim;
+      if (!runClaim && client.stdin.isTTY) {
+        runClaim = await client.input.confirm(
+          `${chalk.bold(resourceName)} is a sandbox resource. Claim it now?`,
+          true
+        );
+      }
+
+      if (runClaim) {
+        try {
+          const allResources = await getResources(client);
+          const targetResource = allResources.find(
+            r => r.id === provisioned.resource.id
+          );
+          if (targetResource) {
+            await runClaimForResource(client, targetResource, {
+              suppressActionRequired: true,
+            });
+          } else {
+            output.warn(
+              `Could not locate the newly provisioned resource. Run \`${packageName} integration resource claim ${resourceName}\` to claim it.`
+            );
+          }
+        } catch (error) {
+          output.warn(
+            `Failed to start claim flow: ${(error as Error).message}. Run \`${packageName} integration resource claim ${resourceName}\` to retry.`
+          );
+        }
+      }
+    } else {
+      output.log(
+        `Sandbox resource — claim it with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
+      );
+    }
+  } else if (isSandbox && options.noClaim) {
+    telemetry.trackCliFlagNoClaim(options.noClaim);
+    output.log(
+      `Sandbox resource — claim it later with: ${chalk.cyan(`vercel integration resource claim ${resourceName}`)}`
+    );
+  }
+
+  const guideSlug =
+    integration.products.length > 1
+      ? `${integration.slug}/${product.slug}`
+      : integration.slug;
+  const guideCommand = `vercel integration guide ${guideSlug}`;
+  output.log(
+    indent(
+      `Guide: Run ${chalk.cyan(`\`${guideCommand}\``)} for getting started guides and code snippets`,
+      4
+    )
+  );
+
   // Post-provision: dashboard URL, connect, env pull
-  return postProvisionSetup(
+  const setupResult = await postProvisionSetup(
     client,
     resourceName,
     provisioned.resource.id,
     contextName,
     {
       ...options,
+      integrationSlug: integration.slug,
+      installationId: provisioned.installation.id,
       onProjectConnected: (projectId: string) => {
         telemetry.trackMarketplaceEvent('marketplace_project_connected', {
           ...baseProps,
@@ -385,4 +637,155 @@ export async function addAutoProvision(
       },
     }
   );
+
+  // Install the product's declared agent skills (from `agentSkills`) in all
+  // modes, including --json, where the human-readable summary is
+  // suppressed and each skill's `installed` status is reported in the payload.
+  const skills = resolveProductSkills(product);
+  const failedSkills: ResolvedSkill[] = [];
+
+  if (skills.length) {
+    if (!options.asJson) {
+      output.spinner(`Installing agent skills for ${product.name}...`);
+    }
+    // Provenance for the skills CLI's install telemetry: attributes the
+    // install to the marketplace flow and its integration/product. Everything
+    // else (agent, CI, versions) is detected by the skills CLI itself.
+    const skillsTelemetryMetadata = JSON.stringify({
+      origin: 'vercel-cli',
+      flow: 'integration-install',
+      integration: integration.slug,
+      product: product.slug,
+    });
+    for (const skill of skills) {
+      // Both `--yes` flags are needed in non-interactive (agent/CI) contexts:
+      // the first stops `npx` from prompting to install the `skills` package,
+      // the second makes `skills add` accept its defaults instead of asking.
+      // `--metadata` requires skills >= 1.5.16; older resolved versions
+      // silently ignore the flag and still install successfully (verified
+      // against 1.5.15), so no attribution is logged but nothing fails.
+      const args = [
+        '--yes',
+        'skills',
+        'add',
+        skill.repoUrl,
+        ...(skill.skill ? ['--skill', skill.skill] : []),
+        '--yes',
+        '--metadata',
+        skillsTelemetryMetadata,
+      ];
+      const result = await execa('npx', args, {
+        cwd: client.cwd,
+        stdio: 'pipe',
+        reject: false,
+      });
+      if (result.exitCode !== 0) {
+        failedSkills.push(skill);
+        output.debug(`skills add failed: ${result.stderr}`);
+        if (!options.asJson) {
+          output.warn(
+            `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${chalk.cyan(skill.command)}`
+          );
+        }
+      }
+    }
+    const installed = skills.length - failedSkills.length;
+    if (installed > 0 && !options.asJson) {
+      // Link to the page that renders the product's Agent Skills section: the
+      // product page for multi-product integrations, the integration page
+      // otherwise (single-product product pages are not linked in the UI).
+      const marketplaceUrl =
+        integration.products.length > 1
+          ? `https://vercel.com/marketplace/${integration.slug}/${product.slug}`
+          : `https://vercel.com/marketplace/${integration.slug}`;
+      output.log(
+        `Installed ${installed} agent skill${installed === 1 ? '' : 's'} for ${chalk.bold(product.name)}`
+      );
+      output.log(
+        indent(
+          `Learn more: ${output.link(marketplaceUrl, marketplaceUrl, { fallback: false })}`,
+          2
+        )
+      );
+    }
+  }
+
+  if (options.asJson) {
+    // This result's `warnings` are plain messages.
+    const warnings: string[] = (options.deprecations ?? []).flatMap(warning =>
+      warning ? [warning.message] : []
+    );
+    if (setupResult.connectError) {
+      warnings.push(
+        `Failed to connect to project: ${setupResult.connectError}`
+      );
+    }
+    if (setupResult.connected && !setupResult.envPulled && !options.noEnvPull) {
+      warnings.push(ENV_PULL_FAILED_MESSAGE);
+    }
+    for (const skill of failedSkills) {
+      warnings.push(
+        `Failed to install ${skill.skill ?? skill.repoUrl}. Run it manually: ${skill.command}`
+      );
+    }
+
+    const jsonOutput: Record<string, unknown> = {
+      resource: {
+        id: provisioned.resource.id,
+        name: provisioned.resource.name,
+        status: provisioned.resource.status,
+        externalResourceId: provisioned.resource.externalResourceId,
+        ...(provisioned.resource.ownership && {
+          ownership: provisioned.resource.ownership,
+        }),
+      },
+      integration: {
+        id: provisioned.integration.id,
+        slug: provisioned.integration.slug,
+        name: provisioned.integration.name,
+      },
+      product: {
+        id: provisioned.product.id,
+        slug: provisioned.product.slug,
+        name: provisioned.product.name,
+      },
+      installation: {
+        id: provisioned.installation.id,
+      },
+      billingPlan: provisioned.billingPlan
+        ? {
+            id: provisioned.billingPlan.id,
+            name: provisioned.billingPlan.name,
+            type: provisioned.billingPlan.type,
+          }
+        : null,
+      dashboardUrl: setupResult.dashboardUrl,
+      ssoUrl: {
+        integration: buildSSOLink(team, provisioned.installation.id),
+        resource: buildSSOLink(
+          team,
+          provisioned.installation.id,
+          provisioned.resource.externalResourceId
+        ),
+      },
+      project: setupResult.project ?? null,
+      connected: setupResult.connected,
+      connectError: setupResult.connectError ?? null,
+      environments: setupResult.environments,
+      envPulled: setupResult.envPulled,
+      guideCommand,
+      skills: skills.map(skill => ({
+        ...skill,
+        installed: !failedSkills.includes(skill),
+      })),
+      warnings,
+    };
+
+    client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
+
+    // Partial failures (connect/env-pull) still return 0 when resource was provisioned
+    return setupResult.connectError ? 0 : setupResult.exitCode;
+  }
+
+  return setupResult.exitCode;
 }

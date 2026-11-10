@@ -29,8 +29,8 @@ vi.mock('fs-extra', async () => {
 });
 
 vi.mock('../../../../src/util/projects/detect-services', () => ({
-  isExperimentalServicesEnabled: vi.fn(() => false),
-  tryDetectServices: vi.fn(() => null),
+  isExperimentalServicesEnabled: vi.fn(async () => false),
+  tryDetectServices: vi.fn(async () => null),
 }));
 
 describe('findProjectRoot', () => {
@@ -105,7 +105,7 @@ describe('resolveProjectCwd', () => {
 
   beforeEach(() => {
     vol.reset();
-    mockedIsEnabled.mockReturnValue(false);
+    mockedIsEnabled.mockResolvedValue(false);
     mockedTryDetect.mockResolvedValue(null);
   });
 
@@ -114,7 +114,7 @@ describe('resolveProjectCwd', () => {
   });
 
   it('should return cwd unchanged when feature flag is off', async () => {
-    mockedIsEnabled.mockReturnValue(false);
+    mockedIsEnabled.mockResolvedValue(false);
 
     const result = await resolveProjectCwd('/project/services/api');
 
@@ -122,7 +122,7 @@ describe('resolveProjectCwd', () => {
   });
 
   it('should return project root when flag is on and services detected', async () => {
-    mockedIsEnabled.mockReturnValue(true);
+    mockedIsEnabled.mockResolvedValue(true);
     mockedTryDetect.mockResolvedValue({
       services: [{ name: 'api', slug: 'api', directory: 'services/api' }],
     } as any);
@@ -138,7 +138,7 @@ describe('resolveProjectCwd', () => {
   });
 
   it('should return original cwd when flag is on but no services found', async () => {
-    mockedIsEnabled.mockReturnValue(true);
+    mockedIsEnabled.mockResolvedValue(true);
     mockedTryDetect.mockResolvedValue({
       services: [],
     } as any);
@@ -154,7 +154,7 @@ describe('resolveProjectCwd', () => {
   });
 
   it('should return original cwd when no project root found', async () => {
-    mockedIsEnabled.mockReturnValue(true);
+    mockedIsEnabled.mockResolvedValue(true);
 
     vol.fromJSON({
       '/some/deep/path/package.json': '{}',

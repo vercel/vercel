@@ -25,7 +25,10 @@ export function toHaveTelemetryEvents(
         expect.objectContaining({
           id: expect.any(String),
           teamId: expect.any(String),
+          userId: expect.any(String),
+          projectId: expect.any(String),
           sessionId: firstEvent?.sessionId,
+          invocationId: received.currentInvocationId,
           key: event?.key,
           value: event?.value,
         });

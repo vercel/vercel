@@ -7,8 +7,8 @@ import { add } from '../integration/add';
 import { printAddDynamicHelp } from '../integration/add-help';
 import { addSubcommand } from '../integration/command';
 import { installCommand } from './command';
-import output from '../../output-manager';
 import { InstallTelemetryClient } from '../../util/telemetry/commands/install';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 export default async function install(client: Client) {
   const flagsSpecification = getFlagsSpecification(addSubcommand.options);
@@ -17,24 +17,17 @@ export default async function install(client: Client) {
     parsed = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags } = parsed;
+  if (args[0] === 'i') {
+    warnDeprecatedSubcommand(client, 'i', 'install');
+  }
   const telemetry = new InstallTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
     },
   });
-
-  const ffAutoProvision = process.env.FF_AUTO_PROVISION_INSTALL === '1';
-  const cmd = ffAutoProvision
-    ? installCommand
-    : {
-        ...installCommand,
-        options: installCommand.options.filter(
-          o => o.name !== 'installation-id'
-        ),
-      };
 
   if (flags['--help']) {
     telemetry.trackCliFlagHelp('install');
@@ -42,21 +35,28 @@ export default async function install(client: Client) {
     const printed = await printAddDynamicHelp(
       client,
       args[1],
-      cmd,
-      c => output.print(help(c, { columns: client.stderr.columns })),
+      installCommand,
+      (c, options) =>
+        client.stdout.write(
+          help(c, {
+            ...options,
+            stream: client.stdout,
+            columns: client.stdout.columns ?? client.stderr.columns,
+          })
+        ),
       'install'
     );
 
     if (!printed) {
-      output.print(help(cmd, { columns: client.stderr.columns }));
+      client.stdout.write(
+        help(installCommand, {
+          stream: client.stdout,
+          columns: client.stdout.columns ?? client.stderr.columns,
+        })
+      );
     }
 
     return 0;
-  }
-
-  if (!ffAutoProvision && flags['--installation-id']) {
-    output.error('Unknown or unexpected option: --installation-id');
-    return 1;
   }
 
   return add(client, args.slice(1), flags, 'install');

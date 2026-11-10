@@ -1,0 +1,15 @@
+{
+  "projectSettings": {
+    "rootDirectory": "app"
+  },
+  "build": {
+    "env": {
+      "VERCEL_API_FUNCTION_BUNDLING": "1"
+    }
+  },
+  "probes": [
+    { "path": "/api/hello", "mustContain": "hello:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/api/another", "mustContain": "another:RANDOMNESS_PLACEHOLDER" },
+    { "path": "/api/nested/deep", "mustContain": "deep:RANDOMNESS_PLACEHOLDER" }
+  ]
+}

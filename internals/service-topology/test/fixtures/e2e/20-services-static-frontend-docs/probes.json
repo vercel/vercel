@@ -1,0 +1,43 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "SERVICE_FRONTEND_STATIC"
+    },
+    {
+      "path": "/any/frontend/path",
+      "status": 200,
+      "mustContain": "SERVICE_FRONTEND_STATIC"
+    },
+    {
+      "path": "/docs",
+      "status": 200,
+      "mustContain": "SERVICE_DOCS_STATIC_BUILD_INDEX"
+    },
+    {
+      "path": "/docs/index.html",
+      "status": 200,
+      "mustContain": "SERVICE_DOCS_STATIC_BUILD_INDEX"
+    },
+    {
+      "path": "/docs/page",
+      "status": 200,
+      "mustContain": "SERVICE_DOCS_STATIC_BUILD_PAGE"
+    },
+    {
+      "path": "/docs/page/index.html",
+      "status": 200,
+      "mustContain": "SERVICE_DOCS_STATIC_BUILD_PAGE"
+    },
+    {
+      "path": "/docs/assets/docs.css",
+      "status": 200,
+      "mustContain": "SERVICE_DOCS_STATIC_BUILD_CSS"
+    },
+    {
+      "path": "/docs/missing-file.txt",
+      "status": 404
+    }
+  ]
+}

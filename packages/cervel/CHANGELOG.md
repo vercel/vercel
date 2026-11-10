@@ -1,5 +1,802 @@
 # @vercel/cervel
 
+## 0.1.89
+
+### Patch Changes
+
+- @vercel/backends@23.0.0
+
+## 0.1.88
+
+### Patch Changes
+
+- Updated dependencies [2f0edaf]
+  - @vercel/backends@22.0.2
+
+## 0.1.87
+
+### Patch Changes
+
+- @vercel/backends@22.0.1
+
+## 0.1.86
+
+### Patch Changes
+
+- @vercel/backends@22.0.0
+
+## 0.1.85
+
+### Patch Changes
+
+- @vercel/backends@21.0.0
+
+## 0.1.84
+
+### Patch Changes
+
+- @vercel/backends@20.0.0
+
+## 0.1.83
+
+### Patch Changes
+
+- @vercel/backends@19.0.3
+
+## 0.1.82
+
+### Patch Changes
+
+- @vercel/backends@19.0.2
+
+## 0.1.81
+
+### Patch Changes
+
+- @vercel/backends@19.0.1
+
+## 0.1.80
+
+### Patch Changes
+
+- @vercel/backends@19.0.0
+
+## 0.1.79
+
+### Patch Changes
+
+- @vercel/backends@18.0.1
+
+## 0.1.78
+
+### Patch Changes
+
+- @vercel/backends@18.0.0
+
+## 0.1.77
+
+### Patch Changes
+
+- @vercel/backends@17.0.0
+
+## 0.1.76
+
+### Patch Changes
+
+- Updated dependencies [8ac5320]
+  - @vercel/backends@16.0.0
+
+## 0.1.75
+
+### Patch Changes
+
+- @vercel/backends@15.0.0
+
+## 0.1.74
+
+### Patch Changes
+
+- @vercel/backends@14.0.0
+
+## 0.1.73
+
+### Patch Changes
+
+- @vercel/backends@13.0.0
+
+## 0.1.72
+
+### Patch Changes
+
+- @vercel/backends@12.0.0
+
+## 0.1.71
+
+### Patch Changes
+
+- @vercel/backends@11.0.2
+
+## 0.1.70
+
+### Patch Changes
+
+- @vercel/backends@11.0.1
+
+## 0.1.69
+
+### Patch Changes
+
+- @vercel/backends@11.0.0
+
+## 0.1.68
+
+### Patch Changes
+
+- @vercel/backends@10.0.0
+
+## 0.1.67
+
+### Patch Changes
+
+- @vercel/backends@9.0.0
+
+## 0.1.66
+
+### Patch Changes
+
+- @vercel/backends@8.0.2
+
+## 0.1.65
+
+### Patch Changes
+
+- @vercel/backends@8.0.1
+
+## 0.1.64
+
+### Patch Changes
+
+- @vercel/backends@8.0.0
+
+## 0.1.63
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/backends@7.0.4
+
+## 0.1.62
+
+### Patch Changes
+
+- @vercel/backends@7.0.3
+
+## 0.1.61
+
+### Patch Changes
+
+- @vercel/backends@7.0.2
+
+## 0.1.60
+
+### Patch Changes
+
+- Updated dependencies [1453e3a]
+  - @vercel/backends@7.0.1
+
+## 0.1.59
+
+### Patch Changes
+
+- @vercel/backends@7.0.0
+
+## 0.1.58
+
+### Patch Changes
+
+- @vercel/backends@6.0.0
+
+## 0.1.57
+
+### Patch Changes
+
+- @vercel/backends@5.0.0
+
+## 0.1.56
+
+### Patch Changes
+
+- Updated dependencies [aad9541]
+  - @vercel/backends@4.0.1
+
+## 0.1.55
+
+### Patch Changes
+
+- @vercel/backends@4.0.0
+
+## 0.1.54
+
+### Patch Changes
+
+- @vercel/backends@3.0.3
+
+## 0.1.53
+
+### Patch Changes
+
+- @vercel/backends@3.0.2
+
+## 0.1.52
+
+### Patch Changes
+
+- @vercel/backends@3.0.1
+
+## 0.1.51
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/backends@3.0.0
+
+## 0.1.50
+
+### Patch Changes
+
+- @vercel/backends@2.0.1
+
+## 0.1.49
+
+### Patch Changes
+
+- @vercel/backends@2.0.0
+
+## 0.1.48
+
+### Patch Changes
+
+- Updated dependencies [cd6b038]
+- Updated dependencies [0d71a61]
+  - @vercel/backends@1.0.0
+
+## 0.1.47
+
+### Patch Changes
+
+- @vercel/backends@0.8.39
+
+## 0.1.46
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/backends@0.8.38
+
+## 0.1.45
+
+### Patch Changes
+
+- @vercel/backends@0.8.37
+
+## 0.1.44
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/backends@0.8.36
+
+## 0.1.43
+
+### Patch Changes
+
+- @vercel/backends@0.8.35
+
+## 0.1.42
+
+### Patch Changes
+
+- @vercel/backends@0.8.34
+
+## 0.1.41
+
+### Patch Changes
+
+- @vercel/backends@0.8.33
+
+## 0.1.40
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/backends@0.8.32
+
+## 0.1.39
+
+### Patch Changes
+
+- Updated dependencies [ce2eba4]
+- Updated dependencies [ce2eba4]
+- Updated dependencies [3586b18]
+  - @vercel/backends@0.8.31
+
+## 0.1.38
+
+### Patch Changes
+
+- @vercel/backends@0.8.30
+
+## 0.1.37
+
+### Patch Changes
+
+- Updated dependencies [57dec92]
+  - @vercel/backends@0.8.29
+
+## 0.1.36
+
+### Patch Changes
+
+- @vercel/backends@0.8.28
+
+## 0.1.35
+
+### Patch Changes
+
+- @vercel/backends@0.8.27
+
+## 0.1.34
+
+### Patch Changes
+
+- @vercel/backends@0.8.26
+
+## 0.1.33
+
+### Patch Changes
+
+- @vercel/backends@0.8.25
+
+## 0.1.32
+
+### Patch Changes
+
+- @vercel/backends@0.8.24
+
+## 0.1.31
+
+### Patch Changes
+
+- @vercel/backends@0.8.23
+
+## 0.1.30
+
+### Patch Changes
+
+- @vercel/backends@0.8.22
+
+## 0.1.29
+
+### Patch Changes
+
+- Updated dependencies [cbf22bf]
+  - @vercel/backends@0.8.21
+
+## 0.1.28
+
+### Patch Changes
+
+- @vercel/backends@0.8.20
+
+## 0.1.27
+
+### Patch Changes
+
+- Updated dependencies [62a884e]
+  - @vercel/backends@0.8.19
+
+## 0.1.26
+
+### Patch Changes
+
+- Updated dependencies [8dc4702]
+  - @vercel/backends@0.8.18
+
+## 0.1.25
+
+### Patch Changes
+
+- Updated dependencies [fdb6121]
+  - @vercel/backends@0.8.17
+
+## 0.1.24
+
+### Patch Changes
+
+- @vercel/backends@0.8.16
+
+## 0.1.23
+
+### Patch Changes
+
+- @vercel/backends@0.8.15
+
+## 0.1.22
+
+### Patch Changes
+
+- Updated dependencies [c453e66]
+  - @vercel/backends@0.8.14
+
+## 0.1.21
+
+### Patch Changes
+
+- Updated dependencies [4421ad9]
+  - @vercel/backends@0.8.13
+
+## 0.1.20
+
+### Patch Changes
+
+- Updated dependencies [52f005f]
+- Updated dependencies [2d2aad9]
+  - @vercel/backends@0.8.12
+
+## 0.1.19
+
+### Patch Changes
+
+- @vercel/backends@0.8.11
+
+## 0.1.18
+
+### Patch Changes
+
+- @vercel/backends@0.8.10
+
+## 0.1.17
+
+### Patch Changes
+
+- @vercel/backends@0.8.9
+
+## 0.1.16
+
+### Patch Changes
+
+- @vercel/backends@0.8.8
+
+## 0.1.15
+
+### Patch Changes
+
+- Updated dependencies [aeb5bfa]
+  - @vercel/backends@0.8.7
+
+## 0.1.14
+
+### Patch Changes
+
+- @vercel/backends@0.8.6
+
+## 0.1.13
+
+### Patch Changes
+
+- @vercel/backends@0.8.5
+
+## 0.1.12
+
+### Patch Changes
+
+- @vercel/backends@0.8.4
+
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies [ab0e5aa]
+  - @vercel/backends@0.8.3
+
+## 0.1.10
+
+### Patch Changes
+
+- @vercel/backends@0.8.2
+
+## 0.1.9
+
+### Patch Changes
+
+- @vercel/backends@0.8.1
+
+## 0.1.8
+
+### Patch Changes
+
+- Updated dependencies [e917989]
+  - @vercel/backends@0.8.0
+
+## 0.1.7
+
+### Patch Changes
+
+- @vercel/backends@0.7.2
+
+## 0.1.6
+
+### Patch Changes
+
+- @vercel/backends@0.7.1
+
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [0a691bf]
+- Updated dependencies [fb0cb8d]
+  - @vercel/backends@0.7.0
+
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [9615277]
+  - @vercel/backends@0.6.0
+
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [22f77b9]
+  - @vercel/backends@0.5.0
+
+## 0.1.2
+
+### Patch Changes
+
+- @vercel/backends@0.4.1
+
+## 0.1.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+- Updated dependencies [e53dd86]
+- Updated dependencies [ae20217]
+- Updated dependencies [b4ada64]
+  - @vercel/backends@0.4.0
+
+## 0.1.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/backends@0.3.0
+
+## 0.0.55
+
+### Patch Changes
+
+- Updated dependencies [[`2aa78415831fe89d1b21dd89704706bd1ad5e78d`](https://github.com/vercel/vercel/commit/2aa78415831fe89d1b21dd89704706bd1ad5e78d)]:
+  - @vercel/backends@0.2.0
+
+## 0.0.54
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.1.2
+
+## 0.0.53
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.1.1
+
+## 0.0.52
+
+### Patch Changes
+
+- Updated dependencies [[`055f6239a4fe763b9f3b33cfbb5baa2e0e214767`](https://github.com/vercel/vercel/commit/055f6239a4fe763b9f3b33cfbb5baa2e0e214767)]:
+  - @vercel/backends@0.1.0
+
+## 0.0.51
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.64
+
+## 0.0.50
+
+### Patch Changes
+
+- Updated dependencies [[`2babfa22946d80a92f1307a8d860a9039d695b09`](https://github.com/vercel/vercel/commit/2babfa22946d80a92f1307a8d860a9039d695b09), [`2babfa22946d80a92f1307a8d860a9039d695b09`](https://github.com/vercel/vercel/commit/2babfa22946d80a92f1307a8d860a9039d695b09)]:
+  - @vercel/backends@0.0.63
+
+## 0.0.49
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.62
+
+## 0.0.48
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.61
+
+## 0.0.47
+
+### Patch Changes
+
+- Updated dependencies [[`8b77cdcd71ba645df4eed52cdccde9a2cbb913f8`](https://github.com/vercel/vercel/commit/8b77cdcd71ba645df4eed52cdccde9a2cbb913f8)]:
+  - @vercel/backends@0.0.60
+
+## 0.0.46
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.59
+
+## 0.0.45
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.58
+
+## 0.0.44
+
+### Patch Changes
+
+- Updated dependencies [[`aea2272ac976a2e13591e402b2a41173cf51f740`](https://github.com/vercel/vercel/commit/aea2272ac976a2e13591e402b2a41173cf51f740)]:
+  - @vercel/backends@0.0.57
+
+## 0.0.43
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.56
+
+## 0.0.42
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.55
+
+## 0.0.41
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.54
+
+## 0.0.40
+
+### Patch Changes
+
+- Updated dependencies [[`9a7d4c509f56b5efdfc8b9e72e76fa69fc21e545`](https://github.com/vercel/vercel/commit/9a7d4c509f56b5efdfc8b9e72e76fa69fc21e545)]:
+  - @vercel/backends@0.0.53
+
+## 0.0.39
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.52
+
+## 0.0.38
+
+### Patch Changes
+
+- Updated dependencies [[`69cd8ea307f507037fe735d7ba09c58fb4193e13`](https://github.com/vercel/vercel/commit/69cd8ea307f507037fe735d7ba09c58fb4193e13)]:
+  - @vercel/backends@0.0.51
+
+## 0.0.37
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.50
+
+## 0.0.36
+
+### Patch Changes
+
+- Updated dependencies [[`bb5277ab85e41810f96d1619949d76ea5603a58f`](https://github.com/vercel/vercel/commit/bb5277ab85e41810f96d1619949d76ea5603a58f)]:
+  - @vercel/backends@0.0.49
+
+## 0.0.35
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.48
+
+## 0.0.34
+
+### Patch Changes
+
+- Updated dependencies [[`485ff9cc64a894d4fff0fb49f891e0e0a21d30ee`](https://github.com/vercel/vercel/commit/485ff9cc64a894d4fff0fb49f891e0e0a21d30ee), [`db17810dd1230baf8257ab4ce8d9b9f95b333abb`](https://github.com/vercel/vercel/commit/db17810dd1230baf8257ab4ce8d9b9f95b333abb)]:
+  - @vercel/backends@0.0.47
+
+## 0.0.33
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.46
+
+## 0.0.32
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.45
+
+## 0.0.31
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.44
+
+## 0.0.30
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.43
+
+## 0.0.29
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.42
+
+## 0.0.28
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.41
+
+## 0.0.27
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.40
+
+## 0.0.26
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @vercel/backends@0.0.39
+
+## 0.0.25
+
+### Patch Changes
+
+- Updated dependencies [[`9a6358529f0737415110cf03d626dc9ee8e99126`](https://github.com/vercel/vercel/commit/9a6358529f0737415110cf03d626dc9ee8e99126)]:
+  - @vercel/backends@0.0.38
+
 ## 0.0.24
 
 ### Patch Changes

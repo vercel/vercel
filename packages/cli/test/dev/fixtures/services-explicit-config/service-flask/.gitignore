@@ -1,0 +1,6 @@
+__pycache__/
+.venv/
+venv/
+.vercel/
+build/
+services_explicit_config_services_flask.egg-info/

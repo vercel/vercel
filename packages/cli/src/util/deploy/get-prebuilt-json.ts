@@ -7,7 +7,7 @@ export default async function getPrebuiltJson(
 ): Promise<BuildsManifest | null> {
   try {
     return await fs.readJSON(join(directory, 'builds.json'));
-  } catch (error) {
+  } catch (_error) {
     // ignoring error
   }
 

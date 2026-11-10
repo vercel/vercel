@@ -11,7 +11,7 @@
     "worker": {
       "type": "worker",
       "entrypoint": "worker.py",
-      "topic": "celery",
+      "topics": ["celery"],
       "consumer": "default"
     }
   }

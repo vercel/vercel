@@ -1,0 +1,11 @@
+{
+  "name": "hono",
+  "type": "module",
+  "dependencies": {
+    "hono": "^4.8.9"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.8.3"
+  }
+}

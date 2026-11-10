@@ -1,5 +1,239 @@
 # @vercel/router-sdk
 
+## 0.14.0
+
+### Minor Changes
+
+- d0629bd: Remove the deprecated array format for `schedules`. `schedules` in `vercel.json`, in Build Output `config.json`, and from `getDevManifest` must be an object keyed by schedule name. `@vercel/config` no longer exports `Schedule` (use `ScheduleDefinition`), and `@vercel/client` no longer exports `VercelConfigSchedule`.
+
+## 0.13.0
+
+### Minor Changes
+
+- d39dd61: Require `name` for `schedules` entries in `vercel.json` and Build Output `config.json`. Schedules without a `name` no longer get a derived default name, and `getScheduleName` and `defaultScheduleName` are removed from `@vercel/build-utils`.
+- 5aa1b58: `schedules` in `vercel.json` can now be an object keyed by schedule name, like `"schedules": { "nightly": { "schedule": "0 0 * * *", "path": "/api/cron" } }`. `vercel build` writes `schedules` to Build Output `config.json` in the format it was given, and builders can return it from `getDevManifest`. The array of named schedules still works but is deprecated, and `vercel build` and `vercel dev` warn when it's used.
+
+## 0.12.0
+
+### Minor Changes
+
+- e041037: Add an optional `service` to function-target `schedules`, naming the service that owns `function`. `function` is then the path within that service. `vercel dev` does not run service-hosted schedule targets yet.
+
+## 0.11.0
+
+### Minor Changes
+
+- e58b37a: Breaking (beta): the nested `expression`/`target` `schedules` format is no longer supported in `vercel.json` or Build Output. `schedules` entries use `schedule` plus exactly one of `path`, `function`, `topic`, or `entrypoint`, with optional `name`, `timezone`, and `jitter`. When `name` is omitted, it defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+
+  `Schedule` now has the flat shape. Removed exports: `parseScheduleDefinition`, `formatBuildOutputSchedule`, `FlatBuildOutputSchedule`, `ScheduleExpression`, and `ScheduleTarget` from `@vercel/build-utils`; `FlatScheduleDefinition`, `LegacyScheduleDefinition`, and `ScheduleDefinition` from `@vercel/config`; and `VercelConfigFlatSchedule` from `@vercel/client`.
+
+## 0.10.0
+
+### Minor Changes
+
+- 94f6cea: Flat path `schedules` accept an optional `requestMethod` of `GET` or `POST`, defaulting to `POST`. `vercel build` writes it to Build Output, and `vercel dev` invokes path schedules with it.
+
+## 0.9.0
+
+### Minor Changes
+
+- 20c5940: Make `name` optional for flat `schedules` entries. When omitted, the name defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+
+## 0.8.0
+
+### Minor Changes
+
+- 2e10142: Accept the flat `schedules` format (`schedule` plus one of `path`, `function`, `topic`, or `entrypoint`) in `VercelConfig`, and export `FlatScheduleDefinition`, `LegacyScheduleDefinition`, and `ScheduleDefinition` types. The nested `expression`/`target` format is still accepted.
+
+### Patch Changes
+
+- d417d64: Add the optional `skipMiddlewareRequestBody` boolean to `VercelConfig`, matching the `vercel.json` schema. When enabled, routing middleware omits the request body while the destination request body is preserved. Defaults to false.
+
+## 0.7.2
+
+### Patch Changes
+
+- b76f6c1: Add `schedules` and `schedule/v1beta` function triggers to the generated `vercel.ts` config types.
+
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [f8eb285]
+  - @vercel/routing-utils@6.6.0
+
+## 0.7.0
+
+### Minor Changes
+
+- e82de48: Add strict function affinity configuration and serialize it into function outputs.
+
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/routing-utils@6.5.0
+
+## 0.6.0
+
+### Minor Changes
+
+- d72c4fe: Add `maxConcurrency` to the per-function configuration type.
+
+## 0.5.6
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/routing-utils@6.4.1
+
+## 0.5.5
+
+### Patch Changes
+
+- Updated dependencies [7cecf55]
+  - @vercel/routing-utils@6.4.0
+
+## 0.5.4
+
+### Patch Changes
+
+- c4afec8: [routing-utils] support `request.path` transforms on routes and high-level rewrites, lowering path-to-regexp parameters such as `/:path*` to low-level capture references such as `/$1`
+  [config] support request path transforms in the router builder
+  [cli] preserve request path transform syntax and environment metadata across AI/manual route edits
+- Updated dependencies [c4afec8]
+  - @vercel/routing-utils@6.3.1
+
+## 0.5.3
+
+### Patch Changes
+
+- fd26487: Remove deprecated `public` from deployment test fixtures and helpers, and stop the CLI from sending the removed `public` field on deploy (including the `--public` flag).
+
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies [90a7cc1]
+  - @vercel/routing-utils@6.3.0
+
+## 0.5.1
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+
+## 0.5.0
+
+### Minor Changes
+
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
+## 0.4.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+## 0.3.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/routing-utils@6.2.0
+
+## 0.2.1
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+## 0.2.0
+
+### Minor Changes
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+## 0.1.1
+
+### Patch Changes
+
+- Add `mount` support for experimental services across config validation and service resolution. ([#15882](https://github.com/vercel/vercel/pull/15882))
+
+## 0.1.0
+
+### Minor Changes
+
+- [services] support multiple topics for a single worker service ([#15615](https://github.com/vercel/vercel/pull/15615))
+
+- [services] support for specifying an env prefix for each service ([#15641](https://github.com/vercel/vercel/pull/15641))
+
+### Patch Changes
+
+- Updated dependencies [[`13f719da050ba4b73b95b51e8edf7141c967b9a2`](https://github.com/vercel/vercel/commit/13f719da050ba4b73b95b51e8edf7141c967b9a2)]:
+  - @vercel/routing-utils@6.1.1
+
+## 0.0.41
+
+### Patch Changes
+
+- Updated dependencies [[`62b9c34a92fe6d60d73f81a1674c2e483f12fc8f`](https://github.com/vercel/vercel/commit/62b9c34a92fe6d60d73f81a1674c2e483f12fc8f)]:
+  - @vercel/routing-utils@6.1.0
+
+## 0.0.40
+
+### Patch Changes
+
+- [config] Fix rewrite() and redirect() return types for VercelConfig compatibility ([#15566](https://github.com/vercel/vercel/pull/15566))
+
+## 0.0.39
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 0.0.38
+
+### Patch Changes
+
+- Fix type generation ([#15386](https://github.com/vercel/vercel/pull/15386))
+
+## 0.0.37
+
+### Patch Changes
+
+- Updated dependencies [[`e6c736fb74bedb975caad76d4c1f1e589a1c6cc9`](https://github.com/vercel/vercel/commit/e6c736fb74bedb975caad76d4c1f1e589a1c6cc9)]:
+  - @vercel/routing-utils@6.0.2
+
+## 0.0.36
+
+### Patch Changes
+
+- Updated dependencies [[`b3b94f2335026634f4fa9fdfe0671677fa00000e`](https://github.com/vercel/vercel/commit/b3b94f2335026634f4fa9fdfe0671677fa00000e)]:
+  - @vercel/routing-utils@6.0.1
+
+## 0.0.35
+
+### Patch Changes
+
+- Updated dependencies [[`e64a85daec784b4fe571abe7405a80aca150007a`](https://github.com/vercel/vercel/commit/e64a85daec784b4fe571abe7405a80aca150007a), [`af6a651229cad4ddb7fcc15bd14d06355c2b77ee`](https://github.com/vercel/vercel/commit/af6a651229cad4ddb7fcc15bd14d06355c2b77ee)]:
+  - @vercel/routing-utils@6.0.0
+
+## 0.0.34
+
+### Patch Changes
+
+- Undeprecate `routes` to match new routing-utils ([#15016](https://github.com/vercel/vercel/pull/15016))
+
+- Updated dependencies [[`0c961fce30d495620542066249dae447764d2eba`](https://github.com/vercel/vercel/commit/0c961fce30d495620542066249dae447764d2eba)]:
+  - @vercel/routing-utils@5.4.0
+
 ## 0.0.33
 
 ### Patch Changes

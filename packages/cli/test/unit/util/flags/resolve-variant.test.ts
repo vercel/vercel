@@ -1,7 +1,11 @@
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { describe, expect, it } from 'vitest';
 import {
   resolveVariant,
+  formatVariantForCliArg,
   formatVariantForDisplay,
+  formatVariantListSummary,
   formatAvailableVariants,
 } from '../../../../src/util/flags/resolve-variant';
 import type { FlagVariant } from '../../../../src/util/flags/types';
@@ -103,23 +107,30 @@ describe('resolve-variant', () => {
       });
     });
 
-    describe('resolution by label', () => {
-      it('resolves variant by label (case-insensitive)', () => {
+    describe('label handling', () => {
+      it('does not resolve variant by label', () => {
         const result = resolveVariant('Enabled', booleanVariants);
-        expect(result.error).toBeNull();
-        expect(result.variant?.id).toBe('variant_abc123');
+        expect(result.variant).toBeNull();
+        expect(result.error).toContain('Variant "Enabled" not found');
+        expect(result.error).toContain(
+          'You can specify a variant by its ID or value.'
+        );
       });
 
-      it('resolves variant by label with different case', () => {
+      it('does not resolve variant by label with different case', () => {
         const result = resolveVariant('enabled', booleanVariants);
-        expect(result.error).toBeNull();
-        expect(result.variant?.id).toBe('variant_abc123');
+        expect(result.variant).toBeNull();
+        expect(result.error).toContain('Variant "enabled" not found');
+        expect(result.error).toContain('Enabled');
+        expect(result.error).toContain('Disabled');
       });
 
-      it('resolves "Control Group" label', () => {
+      it('shows labels in available variants when a label-like selector is used', () => {
         const result = resolveVariant('Control Group', stringVariants);
-        expect(result.error).toBeNull();
-        expect(result.variant?.id).toBe('variant_str1');
+        expect(result.variant).toBeNull();
+        expect(result.error).toContain('Variant "Control Group" not found');
+        expect(result.error).toContain('Control Group');
+        expect(result.error).toContain('Variant A');
       });
     });
 
@@ -136,7 +147,7 @@ describe('resolve-variant', () => {
       it('includes helpful message in error', () => {
         const result = resolveVariant('bad-value', stringVariants);
         expect(result.error).toContain(
-          'You can specify a variant by its value'
+          'You can specify a variant by its ID or value.'
         );
       });
 
@@ -151,29 +162,63 @@ describe('resolve-variant', () => {
   describe('formatVariantForDisplay', () => {
     it('formats variant with label', () => {
       const result = formatVariantForDisplay(booleanVariants[0]);
-      expect(result).toContain('variant_abc123');
-      expect(result).toContain('value: true');
-      expect(result).toContain('label: "Enabled"');
+      expect(stripAnsi(result)).toBe('Enabled (true)');
+      expect(result).toBe(`Enabled (${chalk.dim('true')})`);
     });
 
     it('formats variant without label', () => {
       const result = formatVariantForDisplay(stringVariants[2]);
-      expect(result).toContain('variant_str3');
-      expect(result).toContain('value: "off"');
-      expect(result).not.toContain('label');
+      expect(result).toBe('"off"');
+    });
+  });
+
+  describe('formatVariantForCliArg', () => {
+    it('uses boolean and number values instead of opaque IDs', () => {
+      expect(formatVariantForCliArg(booleanVariants[1])).toBe('false');
+      expect(formatVariantForCliArg(numberVariants[1])).toBe('100');
+    });
+
+    it('uses the raw string value without JSON quotes', () => {
+      expect(formatVariantForCliArg(stringVariants[0])).toBe('control');
+      expect(formatVariantForCliArg(stringVariants[2])).toBe('off');
+    });
+
+    it('serializes JSON values', () => {
+      expect(
+        formatVariantForCliArg({ id: 'obj_1', value: { plan: 'pro' } })
+      ).toBe('{"plan":"pro"}');
+    });
+  });
+
+  describe('formatVariantListSummary', () => {
+    it('matches the value-first format used by flags inspect', () => {
+      const result = formatVariantListSummary(booleanVariants[0]);
+      expect(stripAnsi(result)).toBe('true: Enabled');
+      expect(result).toBe(`true: ${chalk.gray('Enabled')}`);
+    });
+
+    it('formats a variant without a label as its JSON value', () => {
+      expect(formatVariantListSummary(stringVariants[2])).toBe('"off"');
     });
   });
 
   describe('formatAvailableVariants', () => {
     it('formats list of variants with labels', () => {
       const result = formatAvailableVariants(booleanVariants);
-      expect(result).toContain('- true (Enabled)');
-      expect(result).toContain('- false (Disabled)');
+      expect(stripAnsi(result)).toContain('- true Enabled');
+      expect(stripAnsi(result)).toContain('- false Disabled');
+      expect(result).toContain(
+        `- ${chalk.bold('true')} ${chalk.dim('Enabled')}`
+      );
+      expect(result).toContain(
+        `- ${chalk.bold('false')} ${chalk.dim('Disabled')}`
+      );
     });
 
     it('formats list of variants without labels', () => {
       const result = formatAvailableVariants([stringVariants[2]]);
-      expect(result).toContain('- "off"');
+      expect(stripAnsi(result)).toContain('- "off"');
+      expect(result).toContain(`- "${chalk.bold('off')}"`);
       expect(result).not.toContain('(');
     });
   });

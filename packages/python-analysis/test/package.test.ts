@@ -329,9 +329,10 @@ describe('discoverPythonPackage', () => {
       expect(result.requiresPython).toBeDefined();
       expect(result.requiresPython?.length).toBeGreaterThan(0);
       const constraint = result.requiresPython?.find(c =>
-        c.source.includes('requires-python')
+        c.source.includes('pyproject.toml')
       );
       expect(constraint).toBeDefined();
+      expect(constraint?.specifier).toBe('>=3.10');
     });
 
     it('extracts requires-python from .python-version file', async () => {
@@ -346,6 +347,22 @@ describe('discoverPythonPackage', () => {
         c.source.includes('.python-version')
       );
       expect(constraint).toBeDefined();
+      expect(constraint?.specifier).toBe('3.12');
+    });
+
+    it('preserves specifier from nested .python-version', async () => {
+      const root = fixtureRoot('python-version-nested');
+      const entrypoint = path.join(root, 'api');
+      const result = await discoverPythonPackage({
+        entrypointDir: entrypoint,
+        rootDir: root,
+      });
+
+      const constraint = result.requiresPython?.find(c =>
+        c.source.includes('.python-version')
+      );
+      expect(constraint).toBeDefined();
+      expect(constraint?.specifier).toBe('3.12');
     });
 
     it('uses workspace requires-python when package does not specify', async () => {
@@ -458,6 +475,52 @@ describe('discoverPythonPackage', () => {
           rootDir: root,
         })
       ).rejects.toThrow('Entrypoint directory outside of repository root');
+    });
+  });
+
+  describe('dependency group normalization', () => {
+    it('normalizes pyproject.toml group names and include-group references', async () => {
+      const root = fixtureRoot('dependency-groups-pyproject');
+      const result = await discoverPythonPackage({
+        entrypointDir: root,
+        rootDir: root,
+      });
+
+      expect(result.manifest?.data['dependency-groups']).toEqual({
+        'vercel-proxy': ['vercel-proxy'],
+        'test-group': ['pytest'],
+        dev: ['ruff', { 'include-group': 'test-group' }],
+      });
+    });
+
+    it('normalizes group names converted from Pipfile categories', async () => {
+      const root = fixtureRoot('dependency-groups-pipfile');
+      const result = await discoverPythonPackage({
+        entrypointDir: root,
+        rootDir: root,
+      });
+
+      // Pipfiles have no include-group, so `dev` (from [dev-packages]) lists
+      // ruff only.
+      expect(result.manifest?.data['dependency-groups']).toEqual({
+        'vercel-proxy': ['vercel-proxy'],
+        'test-group': ['pytest'],
+        dev: ['ruff'],
+      });
+    });
+
+    it('rejects group names that collide after normalization', async () => {
+      const root = fixtureRoot('dependency-groups-duplicate');
+
+      await expect(
+        discoverPythonPackage({
+          entrypointDir: root,
+          rootDir: root,
+        })
+      ).rejects.toMatchObject({
+        code: 'PYTHON_DUPLICATE_DEPENDENCY_GROUP',
+        path: 'pyproject.toml',
+      });
     });
   });
 

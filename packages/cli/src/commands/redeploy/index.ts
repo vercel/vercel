@@ -1,21 +1,24 @@
 import chalk from 'chalk';
 import { checkDeploymentStatus } from '@vercel/client';
 import type Client from '../../util/client';
-import { emoji, prependEmoji } from '../../util/emoji';
 import { parseArguments } from '../../util/get-args';
+import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import { getCommandName } from '../../util/pkg-name';
 import { getDeploymentByIdOrURL } from '../../util/deploy/get-deployment-by-id-or-url';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import { printError } from '../../util/error';
 import { isErrnoException } from '@vercel/error-utils';
 import Now from '../../util';
 import { printDeploymentStatus } from '../../util/deploy/print-deployment-status';
 import stamp from '../../util/output/stamp';
+import renderLink from '../../util/output/link';
 import ua from '../../util/ua';
+import { getFetchDispatcher } from '../../util/fetch';
 import type { VercelClientOptions } from '@vercel/client';
 import { help } from '../help';
 import { redeployCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
+import { applyDeprecatedTargetFlag } from '../../util/parse-target';
 import output from '../../output-manager';
 import { RedeployTelemetryClient } from '../../util/telemetry/commands/redeploy';
 import type {
@@ -45,7 +48,7 @@ export default async function redeploy(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new RedeployTelemetryClient({
@@ -56,27 +59,37 @@ export default async function redeploy(client: Client): Promise<number> {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('redeploy');
-    output.print(help(redeployCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(redeployCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   const deployIdOrUrl = parsedArgs.args[1];
   if (!deployIdOrUrl) {
     output.error(
       `Missing required deployment id or url: ${getCommandName(
-        `redeploy <deployment-id-or-url>`
+        `redeploy <deployment>`
       )}`
     );
     return 1;
   }
 
-  telemetry.trackCliArgumentUrlOrDeploymentId(deployIdOrUrl);
+  telemetry.trackCliArgumentDeployment(deployIdOrUrl);
   telemetry.trackCliFlagNoWait(parsedArgs.flags['--no-wait']);
   telemetry.trackCliOptionTarget(parsedArgs.flags['--target']);
+  telemetry.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
 
-  const { contextName } = await getScope(client);
+  if (!applyDeprecatedTargetFlag(client, parsedArgs.flags)) {
+    return 2;
+  }
+
+  const contextName = await getContextName(client);
   const noWait = !!parsedArgs.flags['--no-wait'];
-  const targetArgument = parsedArgs.flags['--target'];
+  const targetArgument = parsedArgs.flags['--environment'];
 
   try {
     const fromDeployment = await getDeploymentByIdOrURL({
@@ -122,7 +135,24 @@ export default async function redeploy(client: Client): Promise<number> {
       output.error(
         `The provided argument "${targetArgument}" is not a valid target environment.`
       );
-      return 1;
+      return 2;
+    }
+
+    if (
+      fromDeployment.prebuilt &&
+      fromDeployment.manualProvisioning === undefined
+    ) {
+      output.warning(
+        [
+          `Deployment ${fromDeployment.id} is a prebuilt deployment. Redeploying reuses its prebuilt output, so it is not rebuilt from source and will not use the latest environment variables or project settings.`,
+          `To use the latest settings, create a new deployment instead: run ${getCommandName(
+            'pull'
+          )}, ${getCommandName('build')}, and ${getCommandName(
+            'deploy --prebuilt'
+          )} with the same ${chalk.bold('--environment')} option (for example ${chalk.bold('--environment production')}).`,
+          `Learn More: ${renderLink('https://vercel.com/docs/cli/deploy#prebuilt')}`,
+        ].join('\n')
+      );
     }
 
     const deployStamp = stamp();
@@ -150,20 +180,14 @@ export default async function redeploy(client: Client): Promise<number> {
       isProdDeployment = customEnvironment.type === 'production';
     }
 
-    output.print(
-      `${prependEmoji(
-        `Inspect: ${chalk.bold(deployment.inspectorUrl)} ${deployStamp()}`,
-        emoji('inspect')
-      )}\n`
-    );
+    printAlignedLabel('Inspect', chalk.cyan(deployment.inspectorUrl));
 
-    output.print(
-      prependEmoji(
-        `${isProdDeployment ? 'Production' : 'Preview'}: ${chalk.bold(
-          previewUrl
-        )} ${deployStamp()}`,
-        emoji('success')
-      ) + `\n`
+    // The ▲ gutter belongs on the Aliased row, which only prints when we
+    // wait for alias assignment — with --no-wait it falls back to Production.
+    printAlignedLabel(
+      isProdDeployment ? 'Production' : 'Preview',
+      chalk.cyan(previewUrl),
+      isProdDeployment && noWait ? { gutter: '▲' } : {}
     );
 
     if (!client.stdout.isTTY) {
@@ -172,7 +196,7 @@ export default async function redeploy(client: Client): Promise<number> {
 
     if (!noWait) {
       output.spinner(
-        deployment.readyState === 'QUEUED' ? 'Queued' : 'Building',
+        deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…',
         0
       );
       let project: Project | ProjectNotFound | undefined;
@@ -187,11 +211,24 @@ export default async function redeploy(client: Client): Promise<number> {
         deployment.aliasAssigned &&
         !rollingRelease
       ) {
-        output.spinner('Completing', 0);
+        output.spinner('Completing…', 0);
+
+        // The status polling loop is skipped, so render the Aliased row
+        // (and its ▲ gutter) here instead of in the alias-assigned handler.
+        if (
+          deployment.target === 'production' &&
+          deployment.alias &&
+          deployment.alias.length > 0
+        ) {
+          output.stopSpinner();
+          const primaryDomain = deployment.alias[0];
+          const prodUrl = `https://${primaryDomain}`;
+          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
+        }
       } else {
         try {
           const clientOptions: VercelClientOptions = {
-            agent: client.agent,
+            dispatcher: getFetchDispatcher(),
             apiUrl: client.apiUrl,
             debug: output.debugEnabled,
             path: '', // unused by checkDeploymentStatus()
@@ -205,9 +242,9 @@ export default async function redeploy(client: Client): Promise<number> {
             clientOptions
           )) {
             if (event.type === 'building') {
-              output.spinner('Building', 0);
+              output.spinner('Building…', 0);
             } else if (event.type === 'ready' && rollingRelease) {
-              output.spinner('Releasing', 0);
+              output.spinner('Releasing…', 0);
               output.stopSpinner();
               deployment = event.payload;
               break;
@@ -217,9 +254,9 @@ export default async function redeploy(client: Client): Promise<number> {
                 ? (event.payload as any).checksState === 'completed'
                 : true)
             ) {
-              output.spinner('Completing', 0);
+              output.spinner('Completing…', 0);
             } else if (event.type === 'checks-running') {
-              output.spinner('Running Checks', 0);
+              output.spinner('Running Checks…', 0);
             } else if (
               event.type === 'alias-assigned' ||
               event.type === 'checks-conclusion-failed'
@@ -235,12 +272,9 @@ export default async function redeploy(client: Client): Promise<number> {
               ) {
                 const primaryDomain = event.payload.alias[0];
                 const prodUrl = `https://${primaryDomain}`;
-                output.print(
-                  prependEmoji(
-                    `Aliased: ${chalk.bold(prodUrl)} ${deployStamp()}`,
-                    emoji('link')
-                  ) + '\n'
-                );
+                printAlignedLabel('Aliased', chalk.cyan(prodUrl), {
+                  gutter: '▲',
+                });
               }
 
               deployment = event.payload;
@@ -269,7 +303,13 @@ export default async function redeploy(client: Client): Promise<number> {
       }
     }
 
-    return printDeploymentStatus(deployment, deployStamp, noWait, false);
+    return printDeploymentStatus(
+      client,
+      deployment,
+      deployStamp,
+      noWait,
+      false
+    );
   } catch (err: unknown) {
     output.prettyError(err);
     if (isErrnoException(err) && err.code === 'ERR_INVALID_TEAM') {

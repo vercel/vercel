@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.0",
+    "dotenv": "17.3.1"
+  }
+}

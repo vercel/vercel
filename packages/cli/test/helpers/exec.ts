@@ -10,9 +10,11 @@ const defaultOptions = {
 export function execCli(
   file: string,
   args: string[] = [],
-  opts: execa.Options<string> & { token?: string | boolean } = {}
+  opts: execa.Options<string> & {
+    token?: string | boolean;
+    scope?: false;
+  } = {}
 ): execa.ExecaChildProcess<string> {
-  // eslint-disable-next-line no-console
   console.log(`$ vercel ${args.join(' ')}`);
 
   if (!args.includes('--token') && opts.token !== false) {
@@ -22,7 +24,7 @@ export function execCli(
     );
   }
 
-  if (!args.includes('--scope')) {
+  if (!args.includes('--scope') && opts.scope !== false) {
     args.push('--scope', process.env.VERCEL_TEAM_ID!);
   }
 
@@ -38,6 +40,9 @@ export function execCli(
   // which takes precedence over NO_COLOR in chalk.
   combinedOptions.env['NO_COLOR'] = '1';
   combinedOptions.env['FORCE_COLOR'] = '0';
+  // Disable the update notifier so interactive tests don't hang on the
+  // cache-dependent "Would you like to upgrade now?" prompt.
+  combinedOptions.env['NO_UPDATE_NOTIFIER'] = '1';
 
   return execa(file, args, combinedOptions);
 }

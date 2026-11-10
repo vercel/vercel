@@ -22,4 +22,5 @@ export const uvConfigSchema = z.object({
     .optional(),
   index: z.array(uvIndexEntrySchema).optional(),
   workspace: uvConfigWorkspaceSchema.optional(),
+  'dev-dependencies': z.array(z.string()).optional(),
 });

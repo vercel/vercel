@@ -1,717 +1,864 @@
-import { isErrnoException } from '@vercel/error-utils';
 import chalk from 'chalk';
-import { format } from 'date-fns';
+import { errorToString } from '@vercel/error-utils';
 import type Client from '../../util/client';
-import { createGitMeta } from '../../util/create-git-meta';
-import { printError } from '../../util/error';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
-import getScope from '../../util/get-scope';
-import { formatProject } from '../../util/projects/format-project';
-import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
-import { getLinkedProject } from '../../util/projects/link';
-import {
-  DeploymentNotFound,
-  InvalidDeploymentId,
-  ProjectNotFound,
-} from '../../util/errors-ts';
-import { displayRuntimeLogs } from '../../util/logs';
-import { fetchAllRequestLogs, type RequestLogEntry } from '../../util/logs-v2';
-import getDeployment from '../../util/get-deployment';
-import { getCommandName } from '../../util/pkg-name';
-import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
-import { help } from '../help';
-import { logsCommand } from './command';
 import output from '../../output-manager';
+import { AGENT_REASON } from '../../util/agent-output-constants';
+import { validateIntegerRangeWithDefault } from '../../util/command-validation';
+import { validateJsonOutput } from '../../util/output-format';
+import { printError } from '../../util/error';
+import { isArgumentError, parseArguments } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import getSubcommand from '../../util/get-subcommand';
+import {
+  decodeContinuation,
+  encodeContinuation,
+  type EventsContinuation,
+} from '../../util/observability/continuation';
+import { quoteArg } from '../../util/flags/quote-arg';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
+import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
+import { ProjectNotFound } from '../../util/errors-ts';
+import { writeWithBackpressure } from '../../util/output/write-with-backpressure';
+import { sortIntervals } from '../../util/observability/events';
+import { LogsTelemetryClient } from '../../util/telemetry/commands/logs';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
+import { getCommandAliases } from '..';
+import { help } from '../help';
+import {
+  DEFAULT_LIMIT,
+  MAX_LIMIT,
+  logsCommand,
+  requestsSubcommand,
+  runtimeSubcommand,
+} from './command';
+import { describeLogsApiError, printLogsApiError } from './errors';
+import {
+  type JsonErrorPayload,
+  recordLine,
+  serializeTimeRange,
+  summaryLine,
+  type WarningReason,
+  warningLine,
+  writeJsonError,
+} from './json-output';
+import {
+  getLegacyOptionError,
+  legacyLogsOptions,
+  usedLegacyOptions,
+} from './legacy-options';
+import {
+  composeFilter,
+  type EventsResult,
+  type ExcludedInterval,
+  fetchEventPages,
+  InvalidEventsResponseError,
+  RecordTooLargeError,
+} from './query';
+import { createRenderer, formatWindow, sanitize } from './render';
+import {
+  BACKGROUND_FUNCTION_EXCLUSION,
+  logsSources,
+  type LogsSource,
+  type LogsSourceName,
+  sourceForEvent,
+} from './sources';
+import { resolveLogsTarget, teamLabel } from './target';
+import { type LogsTimeRange, resolveLogsTimeRange } from './time-range';
 
-interface BranchDeployment {
-  id: string;
-  url: string;
-}
+const COMMAND_CONFIG = {
+  runtime: getCommandAliases(runtimeSubcommand),
+  requests: getCommandAliases(requestsSubcommand),
+};
 
-async function getLatestDeploymentByBranch(
-  client: Client,
-  projectId: string,
-  branch: string
-): Promise<BranchDeployment | null> {
-  interface DeploymentResponse {
-    deployments: Array<{ uid: string; url: string }>;
-  }
+const SUBCOMMAND_METADATA = {
+  runtime: runtimeSubcommand,
+  requests: requestsSubcommand,
+} as const;
 
-  // Different git providers use different metadata keys for the branch
-  const branchMetaKeys = [
-    'githubCommitRef',
-    'gitlabCommitRef',
-    'bitbucketCommitRef',
-  ];
+const SOURCE_TITLES: Record<LogsSourceName, string> = {
+  runtime: 'Runtime logs',
+  requests: 'CDN requests',
+};
 
-  for (const metaKey of branchMetaKeys) {
-    const query = new URLSearchParams();
-    query.set('projectId', projectId);
-    query.set('limit', '1');
-    query.set('state', 'READY');
-    query.set(`meta-${metaKey}`, branch);
+/** Options fixed by a `--next` cursor; combining them with it is an error. */
+const CONTINUATION_CONFLICTS = [
+  '--project',
+  '--deployment',
+  '--environment',
+  '--query',
+  '--since',
+  '--until',
+] as const;
 
-    const { deployments } = await client.fetch<DeploymentResponse>(
-      `/v6/deployments?${query}`
-    );
-
-    if (deployments.length > 0) {
-      return {
-        id: deployments[0].uid,
-        url: deployments[0].url,
-      };
-    }
-  }
-
-  return null;
-}
-
-const TIME_ONLY_FORMAT = 'HH:mm:ss.SS';
-const DATE_TIME_FORMAT = 'MMM DD HH:mm:ss.SS';
-
-interface ColumnDef<T> {
-  label: string;
-  padding?: [number, number];
-  width?: number | 'stretch';
-  getValue: (row: T) => string;
-  format?: (paddedValue: string, row: T) => string;
-}
-
-interface TableOptions<T> {
-  columns: ColumnDef<T>[];
-  rows: T[];
-  tableWidth: number;
-  formatHeader?: (formattedHeader: string) => string;
-  formatRow?: (formattedRow: string, row: T) => string;
-}
-
-function table<T>({
-  columns,
-  rows,
-  tableWidth,
-  formatHeader,
-  formatRow,
-}: TableOptions<T>): { header: string; rows: string[] } {
-  const zeroPad: [number, number] = [0, 0];
-
-  // Calculate max content width for each column
-  const maxWidths = columns.map(col => {
-    const headerWidth = col.label.length;
-    const maxContent = Math.max(
-      headerWidth,
-      ...rows.map(row => col.getValue(row).length)
-    );
-    return maxContent;
-  });
-
-  // Calculate final widths
-  const colPaddings: [number, number][] = columns.map(
-    col => col.padding ?? zeroPad
+function looksLikeDeployment(value: string): boolean {
+  return (
+    value.startsWith('dpl_') ||
+    value.includes('.') ||
+    /^https?:\/\//i.test(value)
   );
-  const finalWidths: number[] = [];
-  let usedWidth = 0;
-  let stretchIndex = -1;
-
-  for (let i = 0; i < columns.length; i++) {
-    const col = columns[i];
-    const padding = colPaddings[i][0] + colPaddings[i][1];
-
-    if (col.width === 'stretch') {
-      stretchIndex = i;
-      finalWidths.push(0);
-    } else if (typeof col.width === 'number') {
-      finalWidths.push(col.width);
-      usedWidth += col.width + padding;
-    } else {
-      finalWidths.push(maxWidths[i]);
-      usedWidth += maxWidths[i] + padding;
-    }
-  }
-
-  // Add separator space between columns (2 spaces)
-  usedWidth += (columns.length - 1) * 2;
-
-  // Fill stretch column
-  if (stretchIndex >= 0) {
-    const stretchPadding =
-      colPaddings[stretchIndex][0] + colPaddings[stretchIndex][1];
-    finalWidths[stretchIndex] = Math.max(
-      10,
-      tableWidth - usedWidth - stretchPadding
-    );
-  }
-
-  // Pad and truncate a value to fit width
-  const pad = (value: string, width: number): string => {
-    if (value.length > width) {
-      return value.slice(0, width - 1) + '…';
-    }
-    return value.padEnd(width);
-  };
-
-  // Build header
-  const headerStr = columns
-    .map((col, i) => {
-      const padded = pad(col.label, finalWidths[i]);
-      return (
-        ' '.repeat(colPaddings[i][0]) + padded + ' '.repeat(colPaddings[i][1])
-      );
-    })
-    .join('  ');
-  const header = formatHeader ? formatHeader(headerStr) : headerStr;
-
-  // Build rows
-  const formattedRows = rows.map(row => {
-    const rowStr = columns
-      .map((col, i) => {
-        const value = col.getValue(row);
-        const padded = pad(value, finalWidths[i]);
-        const formatted = col.format ? col.format(padded, row) : padded;
-        return (
-          ' '.repeat(colPaddings[i][0]) +
-          formatted +
-          ' '.repeat(colPaddings[i][1])
-        );
-      })
-      .join('  ');
-    return formatRow ? formatRow(rowStr, row) : rowStr;
-  });
-
-  return { header, rows: formattedRows };
 }
 
-function logsSpanMultipleDays(logs: RequestLogEntry[]): boolean {
-  if (logs.length === 0) return false;
-  const firstDay = new Date(logs[0].timestamp).toDateString();
-  return logs.some(log => new Date(log.timestamp).toDateString() !== firstDay);
-}
-
-function parseLevels(levels?: string | string[]): string[] {
-  if (!levels) return [];
-  if (typeof levels === 'string') return [levels];
-  return levels;
-}
-
-function parseSources(sources?: string | string[]): string[] {
-  if (!sources) return [];
-  if (typeof sources === 'string') return [sources];
-  return sources;
-}
-
-export default async function logs(client: Client) {
-  let parsedArguments;
-  const flagsSpecification = getFlagsSpecification(logsCommand.options);
-
+function deploymentHost(value: string): string {
   try {
-    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
-  } catch (err) {
-    printError(err);
-    return 1;
+    return new URL(value).hostname;
+  } catch {
+    return value;
   }
+}
 
+/**
+ * JSON output requested before parsing (`--json`, `--json=true`,
+ * `--format json`, `--format=json`, `-F json`, `-F=json`), so parse errors
+ * can use the JSON contract.
+ */
+function argvRequestsJson(argv: string[]): boolean {
+  const args = argv.slice(2);
+  for (const [index, arg] of args.entries()) {
+    if (arg === '--') break;
+    if (arg === '--json') return true;
+    if (arg.startsWith('--json=')) {
+      if (arg.slice('--json='.length).toLowerCase() !== 'false') return true;
+      continue;
+    }
+    if (
+      arg.toLowerCase() === '--format=json' ||
+      (arg.startsWith('-F=') &&
+        arg.slice('-F='.length).toLowerCase() === 'json')
+    ) {
+      return true;
+    }
+    if (
+      (arg === '--format' || arg === '-F') &&
+      args[index + 1]?.toLowerCase() === 'json'
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * The parser's error for the removed `-j` shorthand, alone or grouped with
+ * other short flags (`-jf`).
+ */
+function isRemovedJsonShorthandError(err: unknown): boolean {
+  return isArgumentError(err) && err.invalidOption === '-j';
+}
+
+/** An explicit team flag; configuration-derived scope does not count. */
+function argvHasScopeFlag(argv: string[]): boolean {
+  for (const arg of argv.slice(2)) {
+    if (arg === '--') break;
+    if (
+      arg === '--scope' ||
+      arg === '--team' ||
+      arg === '-S' ||
+      arg === '-T' ||
+      arg.startsWith('--scope=') ||
+      arg.startsWith('--team=')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** The `--deployment` form of a positional deployment, shell-quoted. */
+function deploymentFlag(value: string): string {
+  return `--deployment ${quoteArg(deploymentHost(value))}`;
+}
+
+/**
+ * Explains a positional argument that can't run. Data sources are the only
+ * positionals; a single deployment is accepted as a deprecated alias.
+ */
+function positionalError(
+  value: string,
+  explicitSource: LogsSourceName | undefined
+): string {
+  const sourcePart = explicitSource ? ` ${explicitSource}` : '';
+  if (looksLikeDeployment(value)) {
+    return `Select a deployment with --deployment: ${getCommandName(
+      `logs${sourcePart} ${deploymentFlag(value)}`
+    )}`;
+  }
+  if (explicitSource) {
+    return `Unexpected argument "${value}". ${getCommandName(
+      `logs ${explicitSource}`
+    )} takes no arguments.`;
+  }
+  return `Unknown data source "${value}". Use runtime or requests. See ${getCommandName(
+    'logs --help'
+  )}.`;
+}
+
+function isClosedOutputError(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    ((err as NodeJS.ErrnoException).code === 'EPIPE' ||
+      err.message === 'Output stream closed.')
+  );
+}
+
+/** One query to run: a fresh query, or the continuation of a previous one. */
+interface QueryPlan {
+  readonly source: LogsSource;
+  readonly teamId: string;
+  readonly projectId: string;
+  readonly timeRange: LogsTimeRange;
+  readonly filter?: string;
+  readonly startCursor?: string;
+  /** Human context line, printed on stderr. */
+  readonly context: () => Promise<string>;
+}
+
+function streamGapMessage(interval: ExcludedInterval): string {
+  return `Results omit ${sanitize(interval.start)} to ${sanitize(interval.end)}: data for this period is unavailable to this query.`;
+}
+
+export default async function logs(client: Client): Promise<number> {
+  // Relative times resolve against one instant, so every page uses the same
+  // bounds.
+  const commandStart = Date.now();
   const telemetry = new LogsTelemetryClient({
-    opts: {
-      store: client.telemetryEventStore,
-    },
+    opts: { store: client.telemetryEventStore },
   });
 
-  if (parsedArguments.flags['--help']) {
-    telemetry.trackCliFlagHelp('logs');
-    output.print(help(logsCommand, { columns: client.stderr.columns }));
+  let parsedArguments;
+  try {
+    parsedArguments = parseArguments(
+      client.argv.slice(2),
+      getFlagsSpecification([...logsCommand.options, ...legacyLogsOptions])
+    );
+  } catch (err) {
+    const removedShorthand = isRemovedJsonShorthandError(err);
+    if (removedShorthand) {
+      telemetry.trackCliLegacyOption('j');
+    }
+    const message = removedShorthand
+      ? '-j was removed. Use --json.'
+      : err instanceof Error
+        ? err.message
+        : String(err);
+    if (client.nonInteractive || argvRequestsJson(client.argv)) {
+      return writeJsonError(client, {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message,
+        next: [{ command: 'vercel logs --help' }],
+      });
+    }
+    if (removedShorthand) {
+      output.error(message);
+      return 2;
+    }
+    printError(err);
+    output.print(`Run ${getCommandName('logs --help')} for usage.\n`);
     return 2;
   }
-
-  const subArgs = parsedArguments.args.slice(1);
-  const [deploymentArgument] = subArgs;
-
-  const projectOption = parsedArguments.flags['--project'];
-  const deploymentFlag = parsedArguments.flags['--deployment'];
-  const environmentOption = parsedArguments.flags['--environment'];
-
-  let deploymentOption: string | undefined = deploymentFlag;
-  if (deploymentArgument) {
-    let deploymentIdOrHost = deploymentArgument;
-    try {
-      deploymentIdOrHost = new URL(deploymentArgument).hostname;
-    } catch {}
-    deploymentOption = deploymentIdOrHost;
+  if (parsedArguments.args[0] === 'log') {
+    warnDeprecatedSubcommand(client, 'log', 'logs');
   }
-  const levelOption = parsedArguments.flags['--level'];
-  const statusCodeOption = parsedArguments.flags['--status-code'];
-  const sourceOption = parsedArguments.flags['--source'];
-  const sinceOption = parsedArguments.flags['--since'];
-  const untilOption = parsedArguments.flags['--until'];
-  const limitOption = parsedArguments.flags['--limit'];
-  const jsonOption = parsedArguments.flags['--json'];
-  const queryOption = parsedArguments.flags['--query'];
-  const requestIdOption = parsedArguments.flags['--request-id'];
-  const expandOption = parsedArguments.flags['--expand'];
-  const branchFlagValue = parsedArguments.flags['--branch'];
+  const { flags } = parsedArguments;
+  const formatResult = validateJsonOutput(flags);
+  // What the caller asked for, even when `--format` itself is invalid, so
+  // that error is reported in the requested mode.
+  const json =
+    Boolean(flags['--json']) ||
+    (formatResult.valid && formatResult.jsonOutput) ||
+    argvRequestsJson(client.argv) ||
+    client.nonInteractive;
 
-  // Implicit --follow when deployment is specified (for backwards compatibility)
-  // unless --no-follow is explicitly set
-  const followFlagValue = parsedArguments.flags['--follow'];
-  const noFollowFlagValue = parsedArguments.flags['--no-follow'];
-  const followOption =
-    deploymentOption && !noFollowFlagValue ? true : followFlagValue;
+  const { subcommand, subcommandOriginal, args } = getSubcommand(
+    parsedArguments.args.slice(1),
+    COMMAND_CONFIG
+  );
+  const explicitSource =
+    subcommand === 'runtime' || subcommand === 'requests'
+      ? subcommand
+      : undefined;
 
-  telemetry.trackCliArgumentUrlOrDeploymentId(deploymentArgument);
+  if (flags['--help']) {
+    telemetry.trackCliFlagHelp('logs', explicitSource && subcommandOriginal);
+    output.print(
+      help(explicitSource ? SUBCOMMAND_METADATA[explicitSource] : logsCommand, {
+        stream: client.stderr,
+        parent: explicitSource ? logsCommand : undefined,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
+  }
+
+  const nextOption = flags['--next'];
+  const trimmedNext = nextOption?.trim();
+  const continuation = trimmedNext
+    ? decodeContinuation(trimmedNext)
+    : undefined;
+  const continuationSource = continuation
+    ? sourceForEvent(continuation.event)
+    : undefined;
+
+  // A continuation's source comes from its cursor, so telemetry records the
+  // source that actually runs.
+  const sourceName: LogsSourceName =
+    explicitSource ?? continuationSource?.name ?? 'runtime';
+  if (sourceName === 'requests') {
+    telemetry.trackCliSubcommandRequests(subcommandOriginal);
+  } else {
+    telemetry.trackCliSubcommandRuntime(subcommandOriginal);
+  }
+  const projectOption = flags['--project'];
+  const deploymentOption = flags['--deployment'];
+  const environmentOption = flags['--environment'];
+  const queryOption = flags['--query'];
+  const sinceOption = flags['--since'];
+  const untilOption = flags['--until'];
+  const limitOption = flags['--limit'];
   telemetry.trackCliOptionProject(projectOption);
-  telemetry.trackCliOptionDeployment(deploymentFlag);
+  telemetry.trackCliOptionDeployment(deploymentOption);
   telemetry.trackCliOptionEnvironment(environmentOption);
-  telemetry.trackCliOptionLevel(levelOption);
-  telemetry.trackCliOptionStatusCode(statusCodeOption);
-  telemetry.trackCliOptionSource(sourceOption);
+  telemetry.trackCliOptionQuery(queryOption);
   telemetry.trackCliOptionSince(sinceOption);
   telemetry.trackCliOptionUntil(untilOption);
   telemetry.trackCliOptionLimit(limitOption);
-  telemetry.trackCliFlagJson(jsonOption);
-  telemetry.trackCliFlagFollow(followOption);
-  telemetry.trackCliOptionQuery(queryOption);
-  telemetry.trackCliOptionRequestId(requestIdOption);
-  telemetry.trackCliFlagExpand(expandOption);
-  telemetry.trackCliOptionBranch(branchFlagValue);
+  telemetry.trackCliOptionNext(nextOption);
+  telemetry.trackCliOptionFormat(flags['--format']);
+  telemetry.trackCliFlagJson(flags['--json']);
+  telemetry.trackCliFlagFollow(flags['--follow']);
 
-  if (followOption) {
-    const incompatibleFlags = [
-      { flag: '--environment', value: environmentOption },
-      { flag: '--level', value: levelOption },
-      { flag: '--status-code', value: statusCodeOption },
-      { flag: '--source', value: sourceOption },
-      { flag: '--since', value: sinceOption },
-      { flag: '--until', value: untilOption },
-      { flag: '--limit', value: limitOption },
-      { flag: '--query', value: queryOption },
-      { flag: '--request-id', value: requestIdOption },
-    ];
-
-    const usedIncompatible = incompatibleFlags
-      .filter(f => f.value !== undefined && f.value !== null)
-      .map(f => chalk.bold(f.flag));
-
-    if (usedIncompatible.length > 0) {
-      output.error(
-        `The ${chalk.bold('--follow')} flag does not support filtering. Remove: ${usedIncompatible.join(', ')}`
-      );
-      return 1;
-    }
-  }
-
-  let contextName: string | null = null;
-
-  try {
-    ({ contextName } = await getScope(client));
-  } catch (err: unknown) {
-    if (
-      isErrnoException(err) &&
-      (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
-    ) {
-      output.error(err.message);
-      return 1;
-    }
-    throw err;
-  }
-
-  let projectId: string;
-  let projectSlug: string;
-  let orgSlug: string;
-  let ownerId: string;
-
-  if (projectOption) {
-    output.spinner(`Fetching project "${projectOption}"`, 1000);
-    const project = await getProjectByIdOrName(
-      client,
-      projectOption,
-      client.config.currentTeam
-    );
+  /** Reports a failure in the active output mode and returns its exit code. */
+  const fail = (
+    reason: string,
+    message: string,
+    exitCode?: number,
+    extra: Partial<JsonErrorPayload> = {}
+  ): number => {
     output.stopSpinner();
+    if (json) {
+      return writeJsonError(
+        client,
+        { status: 'error', reason, message, ...extra },
+        exitCode
+      );
+    }
+    output.error(message);
+    return exitCode ?? (reason === AGENT_REASON.INVALID_ARGUMENTS ? 2 : 1);
+  };
+  const usageError = (message: string): number =>
+    fail(AGENT_REASON.INVALID_ARGUMENTS, message, 2);
 
-    if (project instanceof ProjectNotFound) {
-      output.error(`Project not found: ${projectOption}`);
+  /** Reports an unexpected thrown error in the active output mode. */
+  const failUnexpected = (err: unknown): number => {
+    output.stopSpinner();
+    if (!json) {
+      printError(err);
       return 1;
     }
-    projectId = project.id;
-    projectSlug = project.name;
-    orgSlug = contextName!;
-    ownerId = project.accountId;
-  } else {
-    const link = await getLinkedProject(client);
-    if (link.status === 'error') {
-      return link.exitCode;
-    } else if (link.status === 'not_linked') {
-      output.error(
-        `Your codebase isn't linked to a project on Vercel. Run ${getCommandName(
-          'link'
-        )} to begin, or specify a project with ${chalk.bold('--project')}.`
-      );
-      return 1;
+    const failure = describeLogsApiError(client, err, sourceName);
+    if (failure) {
+      return writeJsonError(client, failure.json, failure.exitCode);
     }
-    client.config.currentTeam =
-      link.org.type === 'team' ? link.org.id : undefined;
-    projectId = link.project.id;
-    projectSlug = link.project.name;
-    orgSlug = link.org.slug;
-    ownerId = link.org.id;
+    return writeJsonError(client, {
+      status: 'error',
+      reason: AGENT_REASON.API_ERROR,
+      message: errorToString(err),
+    });
+  };
+
+  if (!formatResult.valid) {
+    return usageError(formatResult.error);
   }
 
-  let deploymentId: string | undefined;
-  if (deploymentOption) {
-    output.spinner(`Resolving deployment "${deploymentOption}"`, 1000);
-    try {
-      const deployment = await getDeployment(
-        client,
-        contextName!,
-        deploymentOption
-      );
-      deploymentId = deployment.id;
-      output.stopSpinner();
-    } catch (err) {
-      output.stopSpinner();
-      if (err instanceof DeploymentNotFound) {
-        output.error(`Deployment not found: ${deploymentOption}`);
-        return 1;
-      }
-      if (err instanceof InvalidDeploymentId) {
-        output.error(`Invalid deployment ID: ${deploymentOption}`);
-        return 1;
-      }
-      throw err;
-    }
+  const legacyOptions = usedLegacyOptions(flags);
+  for (const name of legacyOptions) {
+    telemetry.trackCliLegacyOption(name);
+  }
+  const legacyError = getLegacyOptionError(flags);
+  if (legacyError) {
+    return usageError(legacyError);
   }
 
-  // Determine branch filter:
-  // - If --branch is explicitly set (string), use it
-  // - If --no-branch is set, don't filter by branch
-  // - Otherwise, auto-detect current git branch when no deployment is specified
-  const noBranchFlagValue = parsedArguments.flags['--no-branch'];
-  let branchOption: string | undefined;
-  if (typeof branchFlagValue === 'string') {
-    branchOption = branchFlagValue;
-  } else if (!noBranchFlagValue && !deploymentId) {
-    try {
-      const gitMeta = await createGitMeta(client.cwd);
-      if (gitMeta?.commitRef) {
-        branchOption = gitMeta.commitRef;
-        output.debug(`Detected git branch: ${branchOption}`);
-      }
-    } catch {
-      // Not in a git repo or git not available, continue without branch filter
+  // `vercel logs <deployment>` is a deprecated alias of `--deployment`.
+  let positionalDeployment: string | undefined;
+  if (args.length > 0) {
+    telemetry.trackCliArgumentPositional(
+      looksLikeDeployment(args[0]) ? 'deployment' : 'unknown'
+    );
+    if (args.length > 1 || !looksLikeDeployment(args[0])) {
+      return usageError(positionalError(args[0], explicitSource));
     }
+    if (deploymentOption !== undefined) {
+      return usageError(
+        'Pass the deployment once, with --deployment. Remove the deployment argument.'
+      );
+    }
+    if (nextOption !== undefined) {
+      return usageError(
+        "A deployment argument can't be combined with --next. The cursor keeps the original target, filter, and time window."
+      );
+    }
+    positionalDeployment = args[0];
   }
 
-  if (followOption) {
-    // If no deployment specified, try to find one by branch
-    if (!deploymentId) {
-      if (noBranchFlagValue) {
-        output.error(
-          `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or remove ${chalk.bold('--no-branch')} to auto-detect from the current git branch.`
-        );
-        return 1;
-      }
-
-      if (!branchOption) {
-        output.error(
-          `The ${chalk.bold('--follow')} flag requires a deployment. Specify one with ${chalk.bold('--deployment')} or run from within a git repository.`
-        );
-        return 1;
-      }
-
-      output.spinner(
-        `Finding latest deployment for branch "${branchOption}"`,
-        1000
-      );
-      const branchDeployment = await getLatestDeploymentByBranch(
-        client,
-        projectId,
-        branchOption
-      );
-      output.stopSpinner();
-
-      if (!branchDeployment) {
-        output.error(
-          `No deployments found for branch "${branchOption}". Deploy this branch first or specify a deployment with ${chalk.bold('--deployment')}.`
-        );
-        return 1;
-      }
-
-      deploymentId = branchDeployment.id;
-      output.debug(
-        `Found deployment ${deploymentId} for branch ${branchOption}`
-      );
+  // Warnings known before the query: JSON prints them as the first lines.
+  const upfrontWarnings: string[] = [];
+  const warn = (
+    reason: WarningReason,
+    message: string,
+    data?: Record<string, unknown>
+  ) => {
+    if (json) {
+      upfrontWarnings.push(warningLine({ reason, message, data }));
+    } else {
+      output.warning(message);
     }
+  };
 
-    if (!jsonOption) {
-      output.print(
-        `Streaming logs for deployment ${chalk.bold(deploymentId)} starting from ${chalk.bold(format(Date.now(), TIME_ONLY_FORMAT))}\n\n`
-      );
-    }
-    const abortController = new AbortController();
-    return await displayRuntimeLogs(
-      client,
-      {
-        deploymentId: deploymentId!,
-        projectId,
-        parse: !jsonOption,
-      },
-      abortController
+  if (flags['--follow']) {
+    warn(
+      'deprecated',
+      '--follow is deprecated and no longer streams logs. Showing a bounded result; remove --follow.'
     );
   }
 
+  if (positionalDeployment !== undefined) {
+    warn(
+      'deprecated',
+      `Passing a deployment as an argument is deprecated. Use ${deploymentFlag(
+        positionalDeployment
+      )}.`
+    );
+  }
+
+  let limit: number;
   if (
-    environmentOption &&
-    !['production', 'preview'].includes(environmentOption)
+    typeof limitOption === 'number' &&
+    Number.isInteger(limitOption) &&
+    limitOption > MAX_LIMIT
   ) {
-    output.error(
-      `Invalid environment: ${environmentOption}. Must be "production" or "preview".`
+    limit = MAX_LIMIT;
+    warn(
+      'limit_clamped',
+      `--limit ${limitOption} is above the maximum of ${MAX_LIMIT}. Using ${MAX_LIMIT}.`,
+      { requested: limitOption, limit: MAX_LIMIT }
     );
-    return 1;
-  }
-
-  const validLevels = ['error', 'warning', 'info', 'fatal'];
-  const levels = parseLevels(levelOption);
-  for (const level of levels) {
-    if (!validLevels.includes(level)) {
-      output.error(
-        `Invalid log level: ${level}. Must be one of: ${validLevels.join(', ')}.`
-      );
-      return 1;
+  } else {
+    const limitResult = validateIntegerRangeWithDefault(limitOption, {
+      flag: '--limit',
+      min: 1,
+      max: MAX_LIMIT,
+      defaultValue: DEFAULT_LIMIT,
+    });
+    if (!limitResult.valid) {
+      return usageError(limitResult.message);
     }
+    limit = limitResult.value;
   }
 
-  const validSources = [
-    'serverless',
-    'edge-function',
-    'edge-middleware',
-    'static',
-  ];
-  const sources = parseSources(sourceOption);
-  for (const source of sources) {
-    if (!validSources.includes(source)) {
-      output.error(
-        `Invalid source: ${source}. Must be one of: ${validSources.join(', ')}.`
-      );
-      return 1;
+  let plan: QueryPlan;
+  if (nextOption !== undefined) {
+    const planResult = await planContinuation();
+    if (typeof planResult === 'number') return planResult;
+    plan = planResult;
+  } else {
+    const planResult = await planQuery();
+    if (typeof planResult === 'number') return planResult;
+    plan = planResult;
+  }
+
+  async function planContinuation(): Promise<QueryPlan | number> {
+    if (!trimmedNext) {
+      return usageError('--next must not be empty.');
     }
-  }
+    const invalidCursor = `--next is not a valid cursor. Use the pagination.next value from the summary of a previous ${getCommandName(
+      'logs --json'
+    )} run.`;
+    if (!continuation || !continuationSource) {
+      return usageError(invalidCursor);
+    }
+    const parsed = parseContinuation(continuation);
+    if (!parsed) {
+      return usageError(invalidCursor);
+    }
+    if (explicitSource && explicitSource !== continuationSource.name) {
+      return usageError(
+        `The --next cursor continues a ${continuationSource.name} query. Use ${getCommandName(
+          `logs --next <CURSOR>`
+        )} without "${explicitSource}".`
+      );
+    }
+    for (const flag of CONTINUATION_CONFLICTS) {
+      if (flags[flag] !== undefined) {
+        return usageError(
+          `${flag} can't be combined with --next. The cursor keeps the original target, filter, and time window.`
+        );
+      }
+    }
+    // Without an explicit team flag, the cursor supplies the team. An
+    // explicit one must agree with it; the entry point already resolved it.
+    if (
+      argvHasScopeFlag(client.argv) &&
+      client.config.currentTeam !== continuation.ownerId
+    ) {
+      return usageError(
+        'The --next cursor belongs to a different team than --scope. Remove --scope to use the team in the cursor.'
+      );
+    }
 
-  const limit = limitOption ?? 100;
-
-  output.spinner('Fetching logs...', 1000);
-
-  const terminalWidth = client.stderr.isTTY
-    ? client.stderr.columns || 120
-    : 120;
-
-  const logs: RequestLogEntry[] = [];
-  try {
-    for await (const log of fetchAllRequestLogs(client, {
+    const { teamId, projectId, timeRange } = parsed;
+    return {
+      source: continuationSource,
+      teamId,
       projectId,
-      ownerId,
-      deploymentId,
-      environment: environmentOption,
-      level: levels.length > 0 ? levels : undefined,
-      statusCode: statusCodeOption,
-      source: sources.length > 0 ? sources : undefined,
+      timeRange,
+      filter: continuation.filter,
+      startCursor: continuation.cursor,
+      context: async () => {
+        const [label, project] = await Promise.all([
+          teamLabel(client, teamId),
+          getProjectByIdOrName(client, projectId, teamId).catch(() => null),
+        ]);
+        const projectName =
+          project && !(project instanceof ProjectNotFound)
+            ? project.name
+            : projectId;
+        return `${SOURCE_TITLES[continuationSource.name]} for ${label}/${projectName} (continued), ${formatWindow(timeRange)}`;
+      },
+    };
+  }
+
+  async function planQuery(): Promise<QueryPlan | number> {
+    const source = logsSources[sourceName];
+    const filter = queryOption?.trim();
+    if (queryOption !== undefined && !filter) {
+      return usageError('--query must not be empty.');
+    }
+    const environment = environmentOption?.trim();
+    if (environmentOption !== undefined && !environment) {
+      return usageError('--environment must not be empty.');
+    }
+    const deploymentInput = deploymentOption ?? positionalDeployment;
+    const deployment = deploymentInput?.trim();
+    if (deploymentInput !== undefined && !deployment) {
+      return usageError('--deployment must not be empty.');
+    }
+    const project = projectOption?.trim();
+    if (projectOption !== undefined && !project) {
+      return usageError('--project must not be empty.');
+    }
+
+    const timeRangeResult = resolveLogsTimeRange({
       since: sinceOption,
       until: untilOption,
-      limit,
-      search: queryOption,
-      requestId: requestIdOption,
-      branch: branchOption,
-    })) {
+      now: commandStart,
+      wholeSeconds: source.wholeSecondBounds,
+    });
+    if ('error' in timeRangeResult) {
+      return usageError(timeRangeResult.error);
+    }
+    const timeRange = timeRangeResult.range;
+
+    let targetResult;
+    try {
+      targetResult = await resolveLogsTarget(client, {
+        project,
+        deployment: deployment && deploymentHost(deployment),
+        deploymentFromArgument: positionalDeployment !== undefined,
+        quiet: json,
+      });
+    } catch (err) {
+      return failUnexpected(err);
+    }
+    if ('error' in targetResult) {
+      return fail(
+        targetResult.reason,
+        targetResult.error,
+        targetResult.exitCode
+      );
+    }
+    const { target } = targetResult;
+
+    return {
+      source,
+      teamId: target.teamId,
+      projectId: target.projectId,
+      timeRange,
+      filter: composeFilter({
+        source,
+        deploymentId: target.deploymentId,
+        environment,
+        filter,
+      }),
+      context: async () => {
+        const details = [
+          target.deploymentId ? `deployment ${target.deploymentId}` : undefined,
+          environment ? `environment ${environment}` : undefined,
+        ].filter(Boolean);
+        return (
+          `${SOURCE_TITLES[source.name]} for ${target.teamLabel}/${target.projectName}` +
+          (details.length > 0 ? ` (${details.join(', ')})` : '') +
+          `, ${formatWindow(timeRange)}`
+        );
+      },
+    };
+  }
+
+  const { source, timeRange } = plan;
+  const serializedTimeRange = serializeTimeRange(timeRange);
+  const tokenFor = (cursor: string): string =>
+    encodeContinuation({
+      event: source.event,
+      ownerId: plan.teamId,
+      projectIds: [plan.projectId],
+      timeRange: serializedTimeRange,
+      ...(plan.filter !== undefined ? { filter: plan.filter } : {}),
+      order: 'desc',
+      cursor,
+    });
+
+  /** Writes to stdout; `false` when the reader closed the stream. */
+  const write = async (text: string): Promise<boolean> => {
+    try {
+      await writeWithBackpressure(client.stdout, text);
+      return true;
+    } catch (err) {
+      if (isClosedOutputError(err)) return false;
+      throw err;
+    }
+  };
+
+  if (!json) {
+    output.print(chalk.dim(`${await plan.context()}\n`));
+  }
+
+  const pages = fetchEventPages(
+    client,
+    {
+      source,
+      teamId: plan.teamId,
+      projectId: plan.projectId,
+      timeRange,
+      filter: plan.filter,
+    },
+    limit,
+    plan.startCursor
+  );
+  const renderer = json ? undefined : createRenderer(source.name, timeRange);
+  const excludedIntervals = new Map<string, ExcludedInterval>();
+  let written = 0;
+  let pagesFetched = 0;
+  // The cursor the next request uses: after the last fully written page.
+  let resumeCursor: string | undefined = plan.startCursor;
+  let result: EventsResult;
+
+  try {
+    if (
+      upfrontWarnings.length > 0 &&
+      !(await write(upfrontWarnings.join('')))
+    ) {
+      return 0;
+    }
+
+    for (;;) {
+      // Only before the first request: later spinners would interleave with
+      // printed records, and a non-TTY prints each spinner message again.
+      if (!json && pagesFetched === 0) {
+        output.spinner(`Fetching ${source.recordsLabel}…`, 1000);
+      }
+      let next;
+      try {
+        next = await pages.next();
+      } catch (err) {
+        return reportFetchFailure(err);
+      }
       output.stopSpinner();
-      if (jsonOption) {
-        client.stdout.write(JSON.stringify(log) + '\n');
+      pagesFetched += 1;
+      if (next.done) {
+        result = next.value;
+        break;
+      }
+
+      for (const interval of next.value.excludedIntervals) {
+        excludedIntervals.set(`${interval.start}/${interval.end}`, interval);
+      }
+
+      const { events } = next.value;
+      let chunk = '';
+      if (renderer) {
+        if (written === 0 && events.length > 0) {
+          chunk += `${renderer.header()}\n`;
+        }
+        for (const event of events) {
+          chunk += `${renderer.row(event)}\n`;
+        }
       } else {
-        logs.push(log);
+        for (const event of events) {
+          chunk += recordLine(source.recordType, event);
+        }
       }
+      if (chunk && !(await write(chunk))) {
+        return 0;
+      }
+      written += events.length;
+      resumeCursor = next.value.nextCursor ?? undefined;
     }
-  } catch (err) {
-    output.stopSpinner();
-    printError(err);
-    return 1;
-  }
 
-  output.stopSpinner();
+    const intervals = sortIntervals(excludedIntervals.values());
+    const nextToken = result.nextCursor ? tokenFor(result.nextCursor) : null;
 
-  if (!jsonOption) {
-    const branchSuffix = branchOption
-      ? ` on branch ${chalk.cyan(branchOption)}`
-      : '';
-    if (logs.length === 0) {
-      output.print(
-        chalk.dim(
-          `No logs found for ${formatProject(orgSlug, projectSlug)}${branchSuffix}\n`
-        )
-      );
-    } else {
-      const showDate = logsSpanMultipleDays(logs);
-      const timeFormat = showDate ? DATE_TIME_FORMAT : TIME_ONLY_FORMAT;
+    if (json) {
+      const tail =
+        intervals
+          .map(interval =>
+            warningLine({
+              reason: 'stream_gap',
+              message: streamGapMessage(interval),
+              data: { start: interval.start, end: interval.end },
+            })
+          )
+          .join('') +
+        summaryLine({
+          recordsReturned: written,
+          timeRange: serializedTimeRange,
+          pagination: { hasMore: result.hasMore, next: nextToken },
+          excludedIntervals: intervals,
+        });
+      await write(tail);
+      return 0;
+    }
 
-      // Build row data
-      type RowData = {
-        time: string;
-        host: string;
-        level: string;
-        path: string;
-        status: string;
-        statusCode: number;
-        message: string;
-        messageTruncated?: boolean;
-      };
+    for (const interval of intervals) {
+      output.warning(streamGapMessage(interval));
+    }
 
-      const rowData: RowData[] = logs.map(log => {
-        const statusCode = log.responseStatusCode;
-        return {
-          time: format(log.timestamp, timeFormat),
-          host: log.domain || '',
-          level: log.level,
-          path: `${getSourceIcon(log.source)} ${log.requestMethod} ${log.requestPath}`,
-          status: !statusCode || statusCode <= 0 ? '---' : String(statusCode),
-          statusCode,
-          message: log.message?.replace(/\n/g, ' ').trim() || '',
-          messageTruncated: log.messageTruncated,
-        };
-      });
-
-      // Define columns with formatting
-      const baseColumns: ColumnDef<RowData>[] = [
-        {
-          label: 'TIME',
-          getValue: row => row.time,
-          format: padded => chalk.dim(padded),
-        },
-        {
-          label: 'HOST',
-          getValue: row => row.host,
-          format: padded => chalk.dim(padded),
-        },
-        {
-          label: 'LEVEL',
-          getValue: row => row.level,
-          format: (padded, row) => colorizeLevel(padded, row.level),
-        },
-        {
-          label: '',
-          padding: [0, 3],
-          getValue: row => row.path,
-        },
+    if (written === 0) {
+      const notes = [
+        `No ${source.recordsLabel} found in this window. Use an earlier --since to search further back.`,
       ];
-
-      const columns: ColumnDef<RowData>[] = expandOption
-        ? baseColumns
-        : [
-            ...baseColumns,
-            {
-              label: 'STATUS',
-              getValue: row => row.status,
-              format: (padded, row) =>
-                row.statusCode <= 0
-                  ? chalk.gray(padded)
-                  : colorizeStatus(padded, row.statusCode),
-            },
-            {
-              label: 'MESSAGE',
-              width: 'stretch',
-              getValue: row => row.message || '(no message)',
-              format: (padded, row) =>
-                row.message
-                  ? colorizeMessage(padded, row.level)
-                  : chalk.dim(padded),
-            },
-          ];
-
-      const formatted = table({
-        columns,
-        rows: rowData,
-        tableWidth: terminalWidth,
-        formatHeader: header => chalk.dim(header),
-        formatRow: expandOption
-          ? (rowStr, row) => {
-              if (row.message) {
-                const coloredMessage = colorizeMessage(row.message, row.level);
-                const truncatedIndicator = row.messageTruncated
-                  ? chalk.gray('…')
-                  : '';
-                return `${rowStr}\n${coloredMessage}${truncatedIndicator}\n`;
-              }
-              return rowStr + '\n';
-            }
-          : undefined,
-      });
-
-      // Print header
-      output.print(formatted.header + '\n');
-
-      // Print rows
-      for (const row of formatted.rows) {
-        output.print(row + '\n');
+      if (source.fixedFilters.includes(BACKGROUND_FUNCTION_EXCLUSION)) {
+        notes.push('Background function executions are always excluded.');
       }
+      output.print(chalk.dim(`${notes.join('\n')}\n`));
+    }
 
-      output.print(
-        chalk.gray(
-          `Fetched ${logs.length} logs for ${formatProject(orgSlug, projectSlug)}${branchSuffix}\n`
-        )
+    if (result.hasMore) {
+      output.log(`More ${source.recordsLabel} matched.`);
+      if (nextToken) {
+        output.print('\n');
+        printNextPageCommand(getCommandNamePlain(`logs --next ${nextToken}`));
+      }
+      if (!nextToken || limit === MAX_LIMIT) {
+        output.print('Narrow --query, --since, or --until to see the rest.\n');
+      }
+    }
+
+    return 0;
+  } catch (err) {
+    // A write failure other than a closed reader: the output boundary is
+    // uncertain, so no continuation is offered.
+    return fail(
+      'output_error',
+      `Couldn't write the output: ${errorToString(err)}`,
+      1
+    );
+  }
+
+  function reportFetchFailure(err: unknown): number {
+    output.stopSpinner();
+    const intervals = sortIntervals(excludedIntervals.values());
+    const progress =
+      written > 0
+        ? {
+            recordsReturned: written,
+            outputIncomplete: true,
+            timeRange: serializedTimeRange,
+            pagination: {
+              hasMore: true,
+              next: resumeCursor ? tokenFor(resumeCursor) : null,
+            },
+            excludedIntervals: intervals,
+          }
+        : undefined;
+
+    const knownError =
+      err instanceof RecordTooLargeError ||
+      err instanceof InvalidEventsResponseError;
+
+    if (json) {
+      if (knownError) {
+        return writeJsonError(client, {
+          status: 'error',
+          reason: AGENT_REASON.API_ERROR,
+          message: err.message,
+          ...(progress ? { data: progress } : {}),
+        });
+      }
+      const failure = describeLogsApiError(client, err, source.name);
+      const payload: JsonErrorPayload = failure
+        ? failure.json
+        : {
+            status: 'error',
+            reason: AGENT_REASON.API_ERROR,
+            message: errorToString(err),
+          };
+      return writeJsonError(
+        client,
+        progress
+          ? { ...payload, data: { ...payload.data, ...progress } }
+          : payload,
+        failure?.exitCode ?? 1
       );
     }
-  }
 
-  return 0;
-}
-
-function colorizeLevel(formatted: string, level: string): string {
-  switch (level) {
-    case 'fatal':
-      return chalk.red.bold(formatted);
-    case 'error':
-      return chalk.red(formatted);
-    case 'warning':
-      return chalk.yellow(formatted);
-    default:
-      return chalk.dim(formatted);
-  }
-}
-
-function colorizeStatus(formatted: string, statusCode: number): string {
-  if (statusCode >= 500) {
-    return chalk.red(formatted);
-  } else if (statusCode >= 400) {
-    return chalk.yellow(formatted);
-  } else if (statusCode >= 300) {
-    return chalk.cyan(formatted);
-  } else if (statusCode >= 200) {
-    return chalk.green(formatted);
-  }
-  return chalk.gray(formatted);
-}
-
-function getSourceIcon(source: string): string {
-  switch (source) {
-    case 'serverless':
-    case 'lambda':
-      return 'λ';
-    case 'edge-function':
-    case 'edge-middleware':
-    case 'middleware':
-      return 'ε';
-    case 'static':
-    case 'external':
-    case 'redirect':
-      return '◇';
-    default:
-      return ' ';
+    let exitCode = 1;
+    if (knownError) {
+      output.error(err.message);
+    } else {
+      exitCode = describeLogsApiError(client, err, source.name)?.exitCode ?? 1;
+      printLogsApiError(client, err, source.name);
+    }
+    if (progress) {
+      output.error(
+        `Output is incomplete: ${written} ${source.recordsLabel} were printed before the failure.`
+      );
+      if (progress.pagination.next) {
+        output.print(
+          `Retry the failed page:\n  ${getCommandName(
+            `logs --next ${progress.pagination.next}`
+          )}\n`
+        );
+      }
+    }
+    return exitCode;
   }
 }
 
-function colorizeMessage(message: string, level: string): string {
-  switch (level) {
-    case 'fatal':
-    case 'error':
-      return chalk.red(message);
-    case 'warning':
-      return chalk.yellow(message);
-    default:
-      return chalk.dim(message);
+/** Validates the parts of a continuation the CLI relies on. */
+function parseContinuation(
+  continuation: EventsContinuation
+): { teamId: string; projectId: string; timeRange: LogsTimeRange } | undefined {
+  const projectIds = continuation.projectIds ?? [];
+  if (projectIds.length !== 1 || continuation.order !== 'desc') {
+    return undefined;
   }
+  const start = new Date(continuation.timeRange.start);
+  const end = new Date(continuation.timeRange.end);
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    start.getTime() >= end.getTime() ||
+    // Requests must replay byte-identical bounds; reject anything the CLI
+    // would serialize differently.
+    start.toISOString() !== continuation.timeRange.start ||
+    end.toISOString() !== continuation.timeRange.end
+  ) {
+    return undefined;
+  }
+  return {
+    teamId: continuation.ownerId,
+    projectId: projectIds[0],
+    timeRange: { start, end },
+  };
 }

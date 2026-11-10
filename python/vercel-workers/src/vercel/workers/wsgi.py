@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import Any
 
 WSGI = Callable[[dict[str, Any], Callable[..., Any]], list[bytes]]
-Handler = Callable[[bytes], tuple[int, list[tuple[str, str]], bytes]]
+Handler = Callable[[bytes, dict[str, Any]], tuple[int, list[tuple[str, str]], bytes]]
 
 
 _STATUS_REASONS: dict[int, str] = {
@@ -64,8 +64,11 @@ def build_wsgi_app(handler: Handler) -> WSGI:
 
         # Queue callback
         if method == "POST":
-            content_type = str(environ.get("CONTENT_TYPE") or "")
-            if "application/cloudevents+json" not in content_type:
+            content_type = environ.get("CONTENT_TYPE", "")
+            ce_type = environ.get("HTTP_CE_TYPE", "")
+            is_v1beta = "application/cloudevents+json" in content_type
+            is_v2beta = ce_type == "com.vercel.queue.v2beta"
+            if not is_v1beta and not is_v2beta:
                 err = (
                     b'{"error":"Invalid content type: expected \\"application/cloudevents+json\\""}'
                 )
@@ -79,7 +82,7 @@ def build_wsgi_app(handler: Handler) -> WSGI:
                 return [err]
 
             raw_body = _read_body(environ)
-            status_code, headers, body = handler(raw_body)
+            status_code, headers, body = handler(raw_body, environ)
             start_response(f"{int(status_code)} {status_reason(int(status_code))}", headers)
             return [body]
 

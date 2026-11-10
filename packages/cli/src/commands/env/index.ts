@@ -48,7 +48,7 @@ export default async function main(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(1);
@@ -61,49 +61,64 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('env', subcommand);
-    output.print(help(envCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(envCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: envCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: envCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
+
+  let exitCode: number;
 
   switch (subcommand) {
     case 'ls':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
-      return ls(client, args);
+      exitCode = await ls(client, args);
+      break;
     case 'add':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
-      return add(client, args);
+      exitCode = await add(client, args);
+      break;
     case 'rm':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
-      return rm(client, args);
+      exitCode = await rm(client, args);
+      break;
     case 'pull':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(pullSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandPull(subcommandOriginal);
-      return pull(client, args);
+      exitCode = await pull(client, args);
+      break;
     case 'run':
       /**
        * The run subcommand uses a helper to check for --help because of the
@@ -115,21 +130,30 @@ export default async function main(client: Client) {
       if (needsHelpForRun(client)) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(runSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRun(subcommandOriginal);
-      return run(client);
+      exitCode = await run(client, telemetry);
+      break;
     case 'update':
       if (needHelp) {
         telemetry.trackCliFlagHelp('env', subcommandOriginal);
         printHelp(updateSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
-      return update(client, args);
+      exitCode = await update(client, args);
+      break;
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(envCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(envCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
+
+  return exitCode;
 }

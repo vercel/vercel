@@ -51,6 +51,10 @@ export function setupTmpDir(fixtureName?: string) {
   return fs.realpathSync(cwd);
 }
 
+export function removeProjectLink(cwd: string) {
+  fs.rmSync(path.join(cwd, '.vercel'), { recursive: true, force: true });
+}
+
 export function cleanupFixtures() {
   if (tempRoot) {
     tempRoot.removeCallback();

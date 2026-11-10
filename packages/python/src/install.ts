@@ -12,8 +12,30 @@ import {
   type PythonPackage,
 } from '@vercel/python-analysis';
 import { getVenvPythonBin } from './utils';
-import { UvRunner, filterUnsafeUvPipArgs, getProtectedUvEnv } from './uv';
-import { DEFAULT_PYTHON_VERSION } from './version';
+import {
+  UvRunner,
+  filterUnsafeUvPipArgs,
+  getProtectedUvEnv,
+  getUvCacheDir,
+} from './uv';
+import { DEFAULT_PYTHON_VERSION_STRING } from './version';
+
+/**
+ * Restore a previously cached uv.lock into the project directory so that
+ * `uv lock` can validate it instead of re-resolving from PyPI.  Only
+ * restores when a cached file exists and no lock file is already present.
+ */
+async function restoreCachedLock(
+  cachedLockPath: string | undefined,
+  projectDir: string
+): Promise<void> {
+  if (!cachedLockPath) return;
+  const targetLockPath = join(projectDir, 'uv.lock');
+  if (fs.existsSync(cachedLockPath) && !fs.existsSync(targetLockPath)) {
+    debug('Restoring cached uv.lock');
+    await fs.promises.copyFile(cachedLockPath, targetLockPath);
+  }
+}
 
 const makeDependencyCheckCode = (dependency: string) => `
 from importlib import util
@@ -38,7 +60,7 @@ export async function isInstalled(
       }
     );
     return stdout.startsWith(cwd);
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
 }
@@ -67,7 +89,7 @@ async function areRequirementsInstalled(
       }
     );
     return true;
-  } catch (err) {
+  } catch (_err) {
     return false;
   }
 }
@@ -110,44 +132,19 @@ export function resolveVendorDir() {
   return vendorDir;
 }
 
-function toBuildError(error: PythonAnalysisError): NowBuildError {
-  return new NowBuildError({
-    code: error.code,
-    message: error.message,
-    link: error.link,
-    action: error.action,
-  });
-}
-
-export type ManifestType = 'uv.lock' | 'pylock.toml' | 'pyproject.toml' | null;
-
-export interface InstallSourceInfo {
-  manifestPath: string | null;
-  manifestType: ManifestType;
-  /** The discovered package info from python-analysis. */
-  pythonPackage?: PythonPackage;
-}
-
-interface DetectInstallSourceParams {
-  workPath: string;
-  entryDirectory: string;
-  repoRootPath?: string;
-}
-
-export async function detectInstallSource({
-  workPath,
-  entryDirectory,
-  repoRootPath,
-}: DetectInstallSourceParams): Promise<InstallSourceInfo> {
-  const entrypointDir = join(workPath, entryDirectory);
-  const rootDir = repoRootPath ?? workPath;
-
-  let pythonPackage: PythonPackage;
+/**
+ * Discover Python package metadata, converting PythonAnalysisError
+ * into NowBuildError with diagnostic logging.
+ */
+export async function discoverPackage({
+  entrypointDir,
+  rootDir,
+}: {
+  entrypointDir: string;
+  rootDir: string;
+}): Promise<PythonPackage> {
   try {
-    pythonPackage = await discoverPythonPackage({
-      entrypointDir,
-      rootDir,
-    });
+    return await discoverPythonPackage({ entrypointDir, rootDir });
   } catch (error: unknown) {
     if (error instanceof PythonAnalysisError) {
       if (
@@ -159,11 +156,30 @@ export async function detectInstallSource({
           `Failed to parse "${error.path}". File content:\n${error.fileContent}`
         );
       }
-      throw toBuildError(error);
+      throw new NowBuildError({
+        code: error.code,
+        message: error.message,
+        link: error.link,
+        action: error.action,
+      });
     }
     throw error;
   }
+}
 
+export type ManifestType = 'uv.lock' | 'pylock.toml' | 'pyproject.toml' | null;
+
+export interface InstallSourceInfo {
+  manifestPath: string | null;
+  manifestType: ManifestType;
+  /** The discovered package info from python-analysis. */
+  pythonPackage: PythonPackage;
+}
+
+export function detectInstallSource(
+  pythonPackage: PythonPackage,
+  rootDir: string
+): InstallSourceInfo {
   // Determine effective manifest type based on lock file and manifest presence
   let manifestType: ManifestType = null;
   let manifestPath: string | null = null;
@@ -199,7 +215,7 @@ export async function createPyprojectToml({
   dependencies: string[];
   pythonVersion?: string;
 }) {
-  const version = pythonVersion ?? DEFAULT_PYTHON_VERSION;
+  const version = pythonVersion ?? DEFAULT_PYTHON_VERSION_STRING;
   const requiresPython = `~=${version}.0`;
 
   const manifest = createMinimalManifest({
@@ -221,37 +237,38 @@ export interface UvProjectInfo {
 
 interface EnsureUvProjectParams {
   workPath: string;
-  entryDirectory: string;
-  repoRootPath?: string;
-  pythonVersion: string;
+  rootDir: string;
+  venvPath: string;
+  pythonPackage: PythonPackage;
+  pythonVersion: string | undefined;
   uv: UvRunner;
-  generateLockFile?: boolean;
   /**
    * When true, generate lock files with --no-build --upgrade to ensure
    * all packages have pre-built binary wheels available. This is required
    * for runtime dependency installation.
    */
   requireBinaryWheels?: boolean;
+  /**
+   * Path to a cached uv.lock from a previous build.  When set and no
+   * user-provided lock file exists, the cached lock is restored to the
+   * project directory before running `uv lock` so that uv can validate
+   * it instead of re-resolving all packages from PyPI.
+   */
+  cachedLockPath?: string;
 }
 
 export async function ensureUvProject({
   workPath,
-  entryDirectory,
-  repoRootPath,
+  rootDir,
+  venvPath,
+  pythonPackage,
   pythonVersion,
   uv,
-  generateLockFile = false,
   requireBinaryWheels = false,
+  cachedLockPath,
 }: EnsureUvProjectParams): Promise<UvProjectInfo> {
-  const rootDir = repoRootPath ?? workPath;
-
-  const installInfo = await detectInstallSource({
-    workPath,
-    entryDirectory,
-    repoRootPath,
-  });
-  const { manifestType, pythonPackage } = installInfo;
-  const manifest = pythonPackage?.manifest;
+  const { manifestType } = detectInstallSource(pythonPackage, rootDir);
+  const manifest = pythonPackage.manifest;
 
   let projectDir: string;
   let pyprojectPath: string;
@@ -263,7 +280,7 @@ export async function ensureUvProject({
     lockFileProvidedByUser = true;
     // Lock file exists - use it directly
     const lockFile =
-      pythonPackage?.manifest?.lockFile ?? pythonPackage?.workspaceLockFile;
+      pythonPackage.manifest?.lockFile ?? pythonPackage.workspaceLockFile;
     if (!lockFile) {
       throw new Error(
         `Expected lock file path to be resolved, but it was null`
@@ -304,9 +321,11 @@ export async function ensureUvProject({
 
     // If this is a converted manifest, write the pyproject.toml to disk
     if (manifest.origin) {
-      // Inject requires-python for the target version if not already set,
+      // Override requires-python to match the builder's selected Python version
       // so that `uv lock` and `uv sync` agree on the Python constraint.
-      if (manifest.data.project && !manifest.data.project['requires-python']) {
+      // For converted manifests the original constraint (e.g. from Pipfile.lock)
+      // may specify an older version that the builder has auto-upgraded.
+      if (manifest.data.project && pythonVersion !== undefined) {
         manifest.data.project['requires-python'] = `~=${pythonVersion}.0`;
       }
       const content = stringifyManifest(manifest.data);
@@ -316,26 +335,22 @@ export async function ensureUvProject({
     }
 
     // Check for workspace lock file
-    const workspaceLockFile = pythonPackage?.workspaceLockFile;
+    const workspaceLockFile = pythonPackage.workspaceLockFile;
     if (workspaceLockFile) {
       lockPath = join(rootDir, workspaceLockFile.path);
     } else {
+      // Restore a cached lock file so `uv lock` can validate it
+      // instead of re-resolving all packages from PyPI.
+      await restoreCachedLock(cachedLockPath, projectDir);
       // Generate a lock file
       // When requireBinaryWheels is true, use --no-build --upgrade to ensure
       // all resolved packages have pre-built wheels available.
-      await uv.lock(
+      await uv.lock({
         projectDir,
-        requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
-      );
-    }
-
-    // For runtime install, we may need to regenerate the lock file
-    // even if a workspace lock exists, to ensure we have a local copy
-    if (generateLockFile && !lockPath) {
-      await uv.lock(
-        projectDir,
-        requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
-      );
+        venvPath,
+        ...(requireBinaryWheels ? { noBuild: true, upgrade: true } : {}),
+      });
+      lockPath = join(projectDir, 'uv.lock');
     }
   } else {
     // No manifest detected – create a minimal uv project at the workPath so
@@ -346,7 +361,10 @@ export async function ensureUvProject({
       'No Python manifest found; creating an empty pyproject.toml and uv.lock...'
     );
 
-    const requiresPython = `~=${pythonVersion}.0`;
+    const requiresPython =
+      pythonVersion !== undefined
+        ? `~=${pythonVersion}.0`
+        : `>=${DEFAULT_PYTHON_VERSION_STRING}`;
     const minimalManifest = createMinimalManifest({
       name: 'app',
       requiresPython,
@@ -354,12 +372,16 @@ export async function ensureUvProject({
     });
     const content = stringifyManifest(minimalManifest);
     await fs.promises.writeFile(pyprojectPath, content);
+    // Restore a cached lock file so `uv lock` can validate it
+    // instead of re-resolving all packages from PyPI.
+    await restoreCachedLock(cachedLockPath, projectDir);
     // When requireBinaryWheels is true, use --no-build --upgrade to ensure
     // all resolved packages have pre-built wheels available.
-    await uv.lock(
+    await uv.lock({
       projectDir,
-      requireBinaryWheels ? { noBuild: true, upgrade: true } : undefined
-    );
+      venvPath,
+      ...(requireBinaryWheels ? { noBuild: true, upgrade: true } : {}),
+    });
   }
 
   // Re-resolve lockfile in case earlier operations (uv add/lock) wrote it at a
@@ -411,7 +433,7 @@ async function pipInstall(
     try {
       await execa(uvPath!, uvArgs, {
         cwd: workPath,
-        env: getProtectedUvEnv(),
+        env: getProtectedUvEnv(process.env, getUvCacheDir(workPath)),
       });
       return;
     } catch (err) {

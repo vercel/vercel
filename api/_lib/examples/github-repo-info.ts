@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+import nodeFetch from 'node-fetch';
 import { Repo } from '../types';
 import { getExampleList } from './example-list';
 
@@ -7,14 +7,17 @@ import { getExampleList } from './example-list';
  * @param {object} repo parsed by the `parse-github-url` package
  */
 export async function getGitHubRepoInfo(repo: Repo) {
-  const response = await fetch(`https://api.github.com/repos/${repo.repo}`, {
-    headers: {
-      Accept: 'application/vnd.github.machine-man-preview+json',
-      // If we don't use a personal access token,
-      // it will get rate limited very easily.
-      Authorization: `Bearer ${process.env.GITHUB_ACCESS_TOKEN}`,
-    },
-  });
+  const response = await nodeFetch(
+    `https://api.github.com/repos/${repo.repo}`,
+    {
+      headers: {
+        Accept: 'application/vnd.github.machine-man-preview+json',
+        // If we don't use a personal access token,
+        // it will get rate limited very easily.
+        Authorization: `Bearer ${process.env.GITHUB_ACCESS_TOKEN}`,
+      },
+    }
+  );
 
   if (response.status !== 200) {
     console.log(`Non-200 response code from GitHub: ${response.status}`);

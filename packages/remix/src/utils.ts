@@ -88,7 +88,7 @@ export const require_ = createRequire(__filename);
 export interface ResolvedNodeRouteConfig {
   runtime: 'nodejs';
   regions?: string[];
-  maxDuration?: number;
+  maxDuration?: number | 'max';
   memory?: number;
 }
 
@@ -279,6 +279,122 @@ export function getRegExpFromPath(rePath: string): RegExp | false {
   const keys: Key[] = [];
   const re = pathToRegexp('923', rePath, keys);
   return keys.length > 0 ? re : false;
+}
+
+/**
+ * React Router v7 single-fetch rewrites loader/action requests from
+ * `<path>` to `<path>.data` for client-side navigations. For most routes
+ * the `.data` URL mirrors the document path, but the root index route is
+ * special: its single-fetch URL is `/_root.data`, not `/index.data`.
+ *
+ * Returns the list of `output` keys (relative to the Build Output `output`
+ * map) that should resolve to the same function as the given `path`, so
+ * that single-fetch requests hit the dedicated route bundle and preserve
+ * any per-route `runtime` / `memory` / `regions` overrides instead of
+ * falling through to the SSR catch-all.
+ */
+export function getReactRouterDataPaths(path: string): string[] {
+  const paths = [`${path}.data`];
+  // `getPathFromRoute()` resolves the root index route (and any
+  // layout-nested index without an intermediate path segment) to
+  // `path === 'index'`. React Router uses `/_root.data` for that route's
+  // single-fetch URL, so register that variant as well.
+  if (path === 'index') {
+    paths.push('_root.data');
+  }
+  return paths;
+}
+
+/**
+ * React Router v7 `prerender()` writes static HTML + `.data` files to the
+ * client build directory at build time. For a route at URL path `/about`
+ * it emits `build/client/about.html` and `build/client/about.data`; for
+ * the root it emits `build/client/index.html` and `build/client/_root.data`.
+ *
+ * Given a route path (as returned by `getPathFromRoute()`) and the set of
+ * file keys present in the static client output, returns the relative key
+ * of the prerendered HTML file if one exists, or `undefined` if the route
+ * was not prerendered.
+ *
+ * Detecting prerender artifacts from the emitted files (rather than from
+ * the user's `prerender` config) keeps this resilient to the various
+ * config shapes — `true`, `string[]`, async function — that React Router
+ * accepts.
+ */
+export function findPrerenderedHtmlFile(
+  path: string,
+  staticFileKeys: Set<string>
+): string | undefined {
+  // For the root index route, `getPathFromRoute()` returns `path === 'index'`,
+  // and React Router emits the document as `index.html` at the client root.
+  const candidates =
+    path === 'index' ? ['index.html'] : [`${path}.html`, `${path}/index.html`];
+  return candidates.find(c => staticFileKeys.has(c));
+}
+
+/**
+ * Pre-filesystem rewrite that maps a prerendered document URL to its static
+ * HTML artifact (e.g. `/about` -> `/about.html`, `/` -> `/index.html`).
+ */
+export function getPrerenderDocumentRewrite(
+  path: string,
+  htmlFile: string
+): { src: string; dest: string } {
+  return {
+    src: path === 'index' ? '^/$' : `^/${path}/?$`,
+    dest: `/${htmlFile}`,
+  };
+}
+
+/**
+ * When a route was prerendered to static HTML, the SSR function override is
+ * normally skipped so the filesystem can serve the artifact. The index route
+ * is an exception: its SSR function must remain registered so runtime-only
+ * paths like `/__manifest` reach the handler via the catch-all route.
+ */
+export function shouldRegisterSsrForPrerenderedRoute(path: string): boolean {
+  return path === 'index';
+}
+
+/** Catch-all destination for React Router SSR apps. */
+export function getReactRouterCatchAllDest(): 'index' {
+  return 'index';
+}
+
+/**
+ * When Skew Protection is enabled for the project, returns a route that
+ * makes Vercel's routing layer stamp the `__vdpl` deployment ID cookie
+ * onto every outgoing document response (`continue: true` keeps route
+ * matching going afterwards). Setting the cookie at the routing layer —
+ * rather than in the rendering function's response — keeps the origin
+ * response free of `Set-Cookie`, which would otherwise prevent the CDN
+ * from caching documents (silently defeating `Cache-Control: s-maxage`
+ * from route `headers()` exports). The cookie is applied to CDN cache
+ * HITs and prerendered static files as well.
+ *
+ * Returns `undefined` when Skew Protection is not enabled or no
+ * deployment ID is available.
+ */
+export function getSkewProtectionRoute(env: NodeJS.ProcessEnv = process.env):
+  | {
+      src: string;
+      has: { type: 'header'; key: string; value: string }[];
+      headers: Record<string, string>;
+      continue: true;
+    }
+  | undefined {
+  const deploymentId = env.VERCEL_DEPLOYMENT_ID;
+  if (env.VERCEL_SKEW_PROTECTION_ENABLED !== '1' || !deploymentId) {
+    return undefined;
+  }
+  return {
+    src: '/(.*)',
+    has: [{ type: 'header', key: 'Sec-Fetch-Dest', value: 'document' }],
+    headers: {
+      'Set-Cookie': `__vdpl=${deploymentId}; Path=/; SameSite=Strict; Secure; HttpOnly`,
+    },
+    continue: true,
+  };
 }
 
 /**

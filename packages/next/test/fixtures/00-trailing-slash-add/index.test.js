@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+const nodeFetch = require('node-fetch');
 const path = require('path');
 const { deployAndTest, waitFor } = require('../../utils');
 
@@ -16,7 +16,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     // request _next/data until we get the revalidated content
     for (let i = 0; i < 10; i++) {
-      const dataRes = await fetch(
+      const dataRes = await nodeFetch(
         `${ctx.deploymentUrl}/_next/data/build-TfctsWXpff2fKS/index.json`
       );
       expect(dataRes.status).toBe(200);
@@ -34,7 +34,7 @@ describe(`${__dirname.split(path.sep).pop()}`, () => {
 
     // ensure the HTML response is actually HTML after revalidating
     // via the _next/data endpoint
-    const htmlRes = await fetch(ctx.deploymentUrl);
+    const htmlRes = await nodeFetch(ctx.deploymentUrl);
     expect(htmlRes.status).toBe(200);
     expect(htmlRes.headers.get('content-type')).toContain('text/html');
 

@@ -1,11 +1,20 @@
+import { createHelpTheme } from '../../util/output/help-theme';
+import { helpColumns } from '../../util/output/help-format';
 import type Client from '../../util/client';
-import type { Command } from '../help';
+import {
+  buildCommandDocumentationLines,
+  type Command,
+  type HelpOptions,
+} from '../help';
 import output from '../../output-manager';
 import { fetchIntegration } from '../../util/integration/fetch-integration';
 import { formatProductHelp } from '../../util/integration/format-product-help';
 import { formatBillingPlansHelp } from '../../util/integration/format-billing-plans-help';
 import { formatDynamicExamples } from '../../util/integration/format-dynamic-examples';
-import { formatMetadataSchemaHelp } from '../../util/integration/format-schema-help';
+import {
+  formatMetadataSchemaHelp,
+  mergeMetadataSchemas,
+} from '../../util/integration/format-schema-help';
 import { fetchBillingPlans } from '../../util/integration/fetch-billing-plans';
 
 /**
@@ -18,13 +27,15 @@ export async function printAddDynamicHelp(
   client: Client,
   rawArg: string | undefined,
   baseCommand: Command,
-  printHelp: (command: Command) => void,
+  printHelp: (command: Command, options?: HelpOptions) => void,
   commandName: string
 ): Promise<boolean> {
   if (!rawArg) {
     return false;
   }
 
+  const columns = helpColumns(client.stdout.columns);
+  const theme = createHelpTheme(client.stdout);
   const integrationSlug = rawArg.split('/')[0];
   const productSlug = rawArg.includes('/') ? rawArg.split('/')[1] : undefined;
 
@@ -33,25 +44,52 @@ export async function printAddDynamicHelp(
     const products = integration.products ?? [];
 
     // Print help without static examples — we'll show dynamic ones instead
-    printHelp({ ...baseCommand, examples: [] });
-    output.print(formatDynamicExamples(integrationSlug, products, commandName));
+    printHelp(
+      { ...baseCommand, examples: [] },
+      { theme, stream: client.stdout, columns, omitDocumentation: true }
+    );
+    client.stdout.write(
+      formatDynamicExamples(
+        integrationSlug,
+        products,
+        commandName,
+        columns,
+        theme
+      )
+    );
 
     if (products.length > 1) {
-      output.print(formatProductHelp(integrationSlug, products, commandName));
+      client.stdout.write(
+        formatProductHelp(
+          integrationSlug,
+          products,
+          commandName,
+          columns,
+          theme
+        )
+      );
     }
 
-    // Show metadata schema for ALL products
+    // Show metadata schema for ALL products (and integration-level schema)
     for (const product of products) {
-      if (product.metadataSchema) {
+      // Merge integration-level metadata (e.g. org name, region) with
+      // product-level metadata (e.g. platform) so all fields appear in --help
+      const mergedSchema = mergeMetadataSchemas(
+        product.metadataSchema,
+        integration.metadataSchema
+      );
+      if (mergedSchema) {
         // For single-product integrations, don't show product slug
         // For multi-product integrations, show product slug for slash syntax
         const metadataProductSlug =
           products.length > 1 ? product.slug : undefined;
-        output.print(
+        client.stdout.write(
           formatMetadataSchemaHelp(
-            product.metadataSchema,
+            mergedSchema,
             integrationSlug,
-            metadataProductSlug
+            metadataProductSlug,
+            columns,
+            theme
           )
         );
       }
@@ -69,7 +107,9 @@ export async function printAddDynamicHelp(
           product,
           {}
         );
-        output.print(formatBillingPlansHelp(product.name, plans));
+        client.stdout.write(
+          formatBillingPlansHelp(product.name, plans, columns, theme)
+        );
       } catch (err: unknown) {
         output.debug(
           `Failed to fetch billing plans for ${product.slug}: ${err}`
@@ -77,6 +117,11 @@ export async function printAddDynamicHelp(
       }
     }
 
+    const documentation = buildCommandDocumentationLines(baseCommand, {
+      columns,
+      theme,
+    });
+    if (documentation) client.stdout.write(`\n${documentation}\n`);
     return true;
   } catch (err: unknown) {
     output.debug(`Failed to fetch integration for dynamic help: ${err}`);

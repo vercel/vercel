@@ -16,16 +16,23 @@ interface JSONSchema {
   maximum?: number;
   oneOf?: any[];
   anyOf?: any[];
+  dependencies?: Record<string, string[] | any>;
   allOf?: any[];
   additionalProperties?: boolean | any;
   patternProperties?: Record<string, any>;
   $ref?: string;
+  const?: string | number | boolean;
   private?: boolean;
 }
 
 const HEADER = `/**
- * Vercel configuration type that mirrors the vercel.json schema
- * https://openapi.vercel.sh/vercel.json
+ * AUTO-GENERATED — DO NOT EDIT
+ *
+ * This file is generated from the vercel.json OpenAPI schema.
+ * To modify, update scripts/generate-types.ts and re-run:
+ *   pnpm generate-types
+ *
+ * Schema: https://openapi.vercel.sh/vercel.json
  */
 `;
 
@@ -70,6 +77,11 @@ function generateJSDoc(schema: JSONSchema, indent = ''): string {
 function convertSchemaType(schema: JSONSchema, depth = 0): string {
   const indent = '  '.repeat(depth);
 
+  if (schema.const !== undefined) {
+    if (typeof schema.const === 'string') return `'${schema.const}'`;
+    return String(schema.const);
+  }
+
   if (schema.enum) {
     return schema.enum.map(v => (v === null ? 'null' : `'${v}'`)).join(' | ');
   }
@@ -85,6 +97,13 @@ function convertSchemaType(schema: JSONSchema, depth = 0): string {
   if (schema.type === 'array') {
     if (schema.items) {
       const itemType = convertSchemaType(schema.items, depth);
+      const isUnion =
+        schema.items.oneOf ||
+        schema.items.anyOf ||
+        (schema.items.enum && schema.items.enum.length > 1);
+      if (isUnion) {
+        return `(${itemType})[]`;
+      }
       return `${itemType}[]`;
     }
     return 'any[]';
@@ -162,6 +181,116 @@ function convertSchemaType(schema: JSONSchema, depth = 0): string {
   }
 }
 
+function generateRoutingTypes(schema: JSONSchema): string[] {
+  const output: string[] = [];
+
+  const redirectsItemSchema = schema.properties?.redirects?.items;
+  const rewritesItemSchema = schema.properties?.rewrites?.items;
+  const headersItemSchema = schema.properties?.headers?.items;
+  const hasVariants = redirectsItemSchema?.properties?.has?.items?.anyOf;
+
+  if (!hasVariants) return output;
+
+  const hostVariant = hasVariants.find(
+    (v: any) => v.properties?.type?.enum?.[0] === 'host'
+  );
+  const valueSchema = hostVariant?.properties?.value;
+  if (valueSchema) {
+    output.push(
+      `/**\n * Value for condition matching - can be a string or an operator object\n */`
+    );
+    output.push(
+      `export type MatchableValue = ${convertSchemaType(valueSchema, 0)};`
+    );
+    output.push('');
+  }
+
+  output.push(
+    `/**\n * Condition for matching in redirects, rewrites, and headers\n */`
+  );
+  output.push('export type Condition =');
+  for (const variant of hasVariants) {
+    const types = variant.properties?.type?.enum;
+    const required = variant.required || [];
+    const typeStr = types.map((t: string) => `'${t}'`).join(' | ');
+    const parts: string[] = [`type: ${typeStr}`];
+    for (const key of Object.keys(variant.properties || {})) {
+      if (key === 'type') continue;
+      const optional = !required.includes(key) ? '?' : '';
+      parts.push(
+        `${key}${optional}: ${key === 'value' ? 'MatchableValue' : 'string'}`
+      );
+    }
+    output.push(`  | { ${parts.join('; ')} }`);
+  }
+  output.push(';');
+  output.push('');
+
+  output.push(
+    `/**\n * The object form of MatchableValue (excludes the plain string shorthand)\n */`
+  );
+  output.push(
+    'export type MatchableValueObject = Exclude<MatchableValue, string>;'
+  );
+  output.push('');
+
+  const typeOverrides: Record<string, string> = {
+    has: 'Condition[]',
+    missing: 'Condition[]',
+    headers: 'Header[]',
+  };
+
+  function generateInterface(
+    name: string,
+    itemSchema: JSONSchema,
+    doc: string
+  ) {
+    if (!itemSchema?.properties) return;
+    output.push(`/**\n * ${doc}\n */`);
+    output.push(`export interface ${name} {`);
+    for (const [key, propSchema] of Object.entries(
+      itemSchema.properties as Record<string, JSONSchema>
+    )) {
+      const jsdoc = generateJSDoc(propSchema, '  ');
+      if (jsdoc) output.push(jsdoc);
+      const optional = !itemSchema.required?.includes(key) ? '?' : '';
+      const propType = typeOverrides[key] || convertSchemaType(propSchema, 1);
+      output.push(`  ${key}${optional}: ${propType};`);
+    }
+    output.push('}');
+    output.push('');
+  }
+
+  generateInterface(
+    'Header',
+    headersItemSchema?.properties?.headers?.items,
+    'HTTP header key/value pair'
+  );
+  generateInterface(
+    'Redirect',
+    redirectsItemSchema,
+    'Redirect definition matching vercel.json schema'
+  );
+  generateInterface(
+    'Rewrite',
+    rewritesItemSchema,
+    'Rewrite definition matching vercel.json schema'
+  );
+  generateInterface(
+    'HeaderRule',
+    headersItemSchema,
+    'Header rule definition matching vercel.json schema'
+  );
+
+  output.push(`/**\n * Union type for all routing helper outputs\n */`);
+  output.push(
+    'export type RouteType = Redirect | Rewrite | HeaderRule | any; // Route is internal to router'
+  );
+  output.push('');
+
+  return output;
+}
+
 function generateTypes(schema: JSONSchema): string {
   const output: string[] = [HEADER];
 
@@ -215,6 +344,77 @@ function generateTypes(schema: JSONSchema): string {
       }
     }
     output.push('}');
+    output.push('');
+  }
+
+  // Generate ScheduleDefinition: shared fields plus exactly one target field.
+  // `schedules` keys them by name.
+  const schedulesProp = schema.properties?.schedules;
+  if (schedulesProp?.additionalProperties) {
+    const scheduleSchema = schedulesProp.additionalProperties as JSONSchema;
+    const properties = scheduleSchema.properties ?? {};
+    const targetKeys: string[] = (scheduleSchema.oneOf ?? []).flatMap(
+      (branch: JSONSchema) => branch.required ?? []
+    );
+    // Properties that depend on a target key are emitted inside its branch.
+    const targetOptions = new Map<string, string[]>();
+    for (const [key, required] of Object.entries(
+      scheduleSchema.dependencies ?? {}
+    )) {
+      if (!Array.isArray(required) || required.length !== 1) continue;
+      const [targetKey] = required;
+      if (!targetKeys.includes(targetKey)) continue;
+      targetOptions.set(targetKey, [
+        ...(targetOptions.get(targetKey) ?? []),
+        key,
+      ]);
+    }
+    const dependentKeys = [...targetOptions.values()].flat();
+
+    output.push(
+      '/**\n * A schedule without its name, which is its key in `schedules`.\n */'
+    );
+    output.push('export type ScheduleDefinition = {');
+    for (const [key, propSchema] of Object.entries(properties)) {
+      if (targetKeys.includes(key) || dependentKeys.includes(key)) continue;
+      const jsdoc = generateJSDoc(propSchema, '  ');
+      if (jsdoc) {
+        output.push(jsdoc);
+      }
+      const optional = !scheduleSchema.required?.includes(key) ? '?' : '';
+      const propType = convertSchemaType(propSchema, 1);
+      output.push(`  ${key}${optional}: ${propType};`);
+    }
+    if (targetKeys.length === 0) {
+      output.push('};');
+    } else {
+      output.push('} & (');
+      for (const key of targetKeys) {
+        const propSchema = properties[key];
+        const jsdoc = generateJSDoc(propSchema, '      ');
+        output.push('  | {');
+        if (jsdoc) {
+          output.push(jsdoc);
+        }
+        output.push(`      ${key}: ${convertSchemaType(propSchema, 3)};`);
+        for (const optionKey of targetOptions.get(key) ?? []) {
+          const optionJsdoc = generateJSDoc(properties[optionKey], '      ');
+          if (optionJsdoc) {
+            output.push(optionJsdoc);
+          }
+          output.push(
+            `      ${optionKey}?: ${convertSchemaType(properties[optionKey], 3)};`
+          );
+        }
+        for (const otherKey of targetKeys) {
+          if (otherKey !== key) {
+            output.push(`      ${otherKey}?: never;`);
+          }
+        }
+        output.push('    }');
+      }
+      output.push(');');
+    }
     output.push('');
   }
 
@@ -295,78 +495,7 @@ function generateTypes(schema: JSONSchema): string {
     output.push('');
   }
 
-  // Keep existing routing types (Header, Condition, Redirect, Rewrite, HeaderRule)
-  output.push(`/**
- * HTTP header key/value pair
- */
-export interface Header {
-  key: string;
-  value: string;
-}
-
-/**
- * Condition for matching in redirects, rewrites, and headers
- */
-export interface Condition {
-  type: 'header' | 'cookie' | 'host' | 'query' | 'path';
-  key?: string;
-  value?: string | number;
-  eq?: string | number;
-  neq?: string;
-  inc?: string[];
-  ninc?: string[];
-  pre?: string;
-  suf?: string;
-  re?: string;
-  gt?: number;
-  gte?: number;
-  lt?: number;
-  lte?: number;
-}
-
-/**
- * Redirect matching vercel.json schema
- * Returned by routes.redirect()
- */
-export interface Redirect {
-  source: string;
-  destination: string;
-  permanent?: boolean;
-  statusCode?: number;
-  has?: Condition[];
-  missing?: Condition[];
-}
-
-/**
- * Rewrite matching vercel.json schema
- * Returned by routes.rewrite()
- */
-export interface Rewrite {
-  source: string;
-  destination: string;
-  has?: Condition[];
-  missing?: Condition[];
-  respectOriginCacheControl?: boolean;
-}
-
-/**
- * Header rule matching vercel.json schema
- * Returned by routes.header() and routes.cacheControl()
- */
-export interface HeaderRule {
-  source: string;
-  headers: Header[];
-  has?: Condition[];
-  missing?: Condition[];
-}
-
-/**
- * Union type for all routing helper outputs
- * Can be simple schema objects (Redirect, Rewrite, HeaderRule) or Routes with transforms
- * Note: Route type is defined in router.ts (uses src/dest instead of source/destination)
- */
-export type RouteType = Redirect | Rewrite | HeaderRule | any; // Route is internal to router
-`);
+  output.push(...generateRoutingTypes(schema));
 
   // Generate other helper types
   const wildcardProp = schema.properties?.wildcard;
@@ -438,6 +567,9 @@ export type RouteType = Redirect | Rewrite | HeaderRule | any; // Route is inter
         case 'crons':
           propType = 'CronJob[]';
           break;
+        case 'schedules':
+          propType = 'Record<string, ScheduleDefinition>';
+          break;
         case 'git':
           propType = 'GitConfig';
           break;
@@ -460,8 +592,14 @@ export type RouteType = Redirect | Rewrite | HeaderRule | any; // Route is inter
           propType = 'BuildItem[]';
           break;
         case 'headers':
+          propType = 'HeaderRule[]';
+          break;
         case 'redirects':
+          propType = 'Redirect[]';
+          break;
         case 'rewrites':
+          propType = 'Rewrite[]';
+          break;
         case 'routes':
           propType = 'RouteType[]';
           break;
@@ -484,14 +622,25 @@ export const VercelConfig = {};`);
   return output.join('\n');
 }
 
-function main() {
+const SCHEMA_URL = 'https://openapi.vercel.sh/vercel.json';
+
+async function loadSchema(source: string): Promise<JSONSchema> {
+  if (!/^https?:\/\//.test(source)) {
+    console.log(`Reading schema from: ${source}`);
+    return JSON.parse(readFileSync(resolve(source), 'utf-8'));
+  }
+  console.log(`Fetching schema from: ${source}`);
+  const res = await fetch(source);
+  if (!res.ok) throw new Error(`Failed to fetch schema: ${res.status}`);
+  return res.json();
+}
+
+async function main() {
   try {
-    const schemaPath = process.argv[2] || '/tmp/vercel-schema.json';
     const outputPath = resolve(__dirname, '../src/types.ts');
 
-    console.log(`Reading schema from: ${schemaPath}`);
-    const schemaContent = readFileSync(schemaPath, 'utf-8');
-    const schema: JSONSchema = JSON.parse(schemaContent);
+    // An optional local path or URL, e.g. to generate from an unreleased schema.
+    const schema = await loadSchema(process.argv[2] ?? SCHEMA_URL);
 
     console.log('Generating TypeScript types...');
     const types = generateTypes(schema);

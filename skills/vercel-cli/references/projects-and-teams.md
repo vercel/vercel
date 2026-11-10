@@ -1,39 +1,7 @@
 # Projects & Teams
 
-## Projects
+Use supplied account context or scoped discovery to identify the intended team/project. An authentication check does not establish the project target. Prefer explicit one-command targeting when available rather than changing a local link for an unrelated lookup.
 
-```bash
-vercel project ls                    # list projects
-vercel project add my-project        # create project
-vercel project inspect my-app        # inspect project
-vercel project rm my-app             # remove project
-```
+A single page or one checked scope does not prove that no projects or deployments exist. Follow pagination and investigate relevant candidate scopes; avoid enumerating unrelated teams. If several plausible targets remain, ask the user to choose from the candidates found.
 
-## Deployments
-
-```bash
-vercel list                          # list deployments
-vercel list --status READY           # filter by status
-vercel list -m gitBranch=main        # filter by metadata
-vercel inspect <url>                 # deployment details
-vercel remove <name|id>              # remove deployments
-vercel remove my-app --safe          # skip aliased deployments
-```
-
-## Teams
-
-```bash
-vercel whoami                        # current user and team
-vercel teams ls                      # list teams
-vercel teams switch                  # interactive team picker
-vercel teams switch my-team          # switch by slug
-vercel teams invite user@example.com # invite member
-```
-
-## Scoping
-
-Use `--scope` or `--team` on any command to target a specific team:
-
-```bash
-vercel deploy --scope my-team
-```
+Project deletion is permanent and requires the CLI's confirmation. Renaming a Vercel project does not rename its linked GitHub repository. Verify the resulting project identity and Git connection when either changes.

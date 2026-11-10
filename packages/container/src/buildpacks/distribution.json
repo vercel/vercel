@@ -1,0 +1,25 @@
+{
+  "$comment": "Pinned lifecycle and buildpack archives",
+  "baseUrl": "https://lwnhvkbwb2b5igkl.public.blob.vercel-storage.com",
+  "lifecycle": {
+    "version": "0.21.18",
+    "sha256": "45e4ac394fe8194b909002571c25479dcb39f2ecabecad4105621369c279c78e"
+  },
+  "buildpacks": {
+    "ruby": {
+      "id": "vercel/ruby",
+      "version": "0.3.2",
+      "sha256": "c0e8439800b9354f24028168869315e714650275ecdd4a8a85bd4e7659890a64"
+    },
+    "go": {
+      "id": "vercel/go",
+      "version": "0.3.0",
+      "sha256": "748ac1fad8164467dfee92face04b2d5bf2942d8762624625f473fb41bfa2bdb"
+    },
+    "rust": {
+      "id": "vercel/rust",
+      "version": "0.3.0",
+      "sha256": "624fd0cddecd31197eef634342d3ea0e77ce0d5d8e10bbb582aa143edc88ca3e"
+    }
+  }
+}

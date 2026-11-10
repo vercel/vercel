@@ -36,6 +36,11 @@ export default async function startRollingRelease({
   if (deployment.target !== 'production') {
     if (yes) {
       promoteByCreation = true;
+    } else if (client.nonInteractive) {
+      output.error(
+        'This deployment is not a production deployment. In non-interactive mode use --yes to create a new production deployment and start the rolling release.'
+      );
+      return 1;
     } else {
       const question =
         'This deployment is not a production deployment and cannot be directly promoted. A new deployment will be built using your production environment. Are you sure you want to continue?';
@@ -65,19 +70,19 @@ export default async function startRollingRelease({
     )) as DeploymentCreateResponsePartial;
 
     output.log(
-      `Successfully created new deployment at ${newDeployment.inspectorUrl}`
+      `Created production deployment ${newDeployment.id}: ${newDeployment.inspectorUrl}`
     );
     return 0;
   }
-  // request the promotion
+  // request the rolling release start
   await client.fetch(
-    `/v10/projects/${projectId}/promote/${deployment.id}?teamId=${teamId}`,
+    `/v1/projects/${projectId}/rolling-release/start?teamId=${teamId}`,
     {
-      body: {}, // required
-      json: false,
+      body: { canaryDeploymentId: deployment.id }, // required
+      json: true,
       method: 'POST',
     }
   );
-  output.log('Successfully started rolling release');
+  output.log(`Requested rolling release start for ${deployment.id}`);
   return 0;
 }

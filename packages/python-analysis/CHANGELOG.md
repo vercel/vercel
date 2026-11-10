@@ -1,5 +1,121 @@
 # @vercel/python-analysis
 
+## 0.15.2
+
+### Patch Changes
+
+- 7fea9e0: Pin the Rust toolchain to 1.96.1 and make the `build:wasm` Turbo task cacheable. Its hash covers the Rust sources, the wasm build script, the output-affecting Rust env vars, and the build host's OS and CPU.
+
+## 0.15.1
+
+### Patch Changes
+
+- bdb4ecb: Bundle `@renovatebot/pep440` instead of installing it, so installing the Vercel CLI no longer prints an `EBADENGINE` warning on Node versions outside that package's `engines` range, such as Node 25.
+
+## 0.15.0
+
+### Minor Changes
+
+- 3d616ad: Normalize dependency group names when loading manifest.
+
+## 0.14.0
+
+### Minor Changes
+
+- ac3120d: Exclude fastapi static files from build output and add tool.vercel.fastapi.static.exclude setting to pyproject.toml.
+
+## 0.13.2
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 0.13.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
+## 0.13.0
+
+### Minor Changes
+
+- 08a2618: Rank precompiled bytecode by cold-start value instead of size. On every bytecode fill path (standard, runtime-install knapsack, bytecode-first, large functions), when `.pyc` files overflow the zip's fill capacity, selection is now per file: bytecode for modules the app actually imports at startup first (from a new static AST import closure in `@vercel/python-analysis` — no user code runs at build time), ranked by measured compile cost per byte, then everything else by the same ranking. Compile timings are now measured per file during `compileall`. Falls back to density-only, then per-file size ordering, so no build is worse than the old per-package size knapsack. When all bytecode fits, everything ships with no analysis. The import closure is bounded by a 30s timeout, and setting `VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS=1` disables the closure and timing-based ranking entirely, reverting selection to per-file size ordering.
+
+## 0.12.0
+
+### Minor Changes
+
+- 6aa29e5: Add [tool.vercel.fastapi.static] cdn opt-out flag.
+
+## 0.11.1
+
+### Patch Changes
+
+- 8e999cb: Render a valid pyproject.toml for empty requirements.txt files.
+
+## 0.11.0
+
+### Minor Changes
+
+- Simplify python runtime by always passing in app variable ([#15635](https://github.com/vercel/vercel/pull/15635))
+
+### Patch Changes
+
+- Fix env marker-excluded deps erroneously flagged as lacking wheels ([#15668](https://github.com/vercel/vercel/pull/15668))
+
+## 0.10.1
+
+### Patch Changes
+
+- Add `diagnostics` callback to produce package-manifest.json ([#15373](https://github.com/vercel/vercel/pull/15373))
+
+## 0.10.0
+
+### Minor Changes
+
+- Add requirements.txt parsing via `uv-requirements-txt` ([#15498](https://github.com/vercel/vercel/pull/15498))
+
+### Patch Changes
+
+- Stub unicode/IDNA crates to reduce WASM binary size ([#15499](https://github.com/vercel/vercel/pull/15499))
+
+- Force-bundle packages without compatible wheels instead of failing ([#15587](https://github.com/vercel/vercel/pull/15587))
+
+- replace `pip-requirements-js` with WASM-based uv parser ([#15513](https://github.com/vercel/vercel/pull/15513))
+
+## 0.9.1
+
+### Patch Changes
+
+- Update `pip-requirements-js` to include fixes for grouped `requirements.txt` environment markers and add regression coverage for Poetry-style marker expressions. ([#15422](https://github.com/vercel/vercel/pull/15422))
+
+## 0.9.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+- For the django frontend, dynamically load settings.py instead of parsing it ([#15367](https://github.com/vercel/vercel/pull/15367))
+
+## 0.8.2
+
+### Patch Changes
+
+- Consolidate Python version resolution into `python-analysis` ([#15368](https://github.com/vercel/vercel/pull/15368))
+
+## 0.8.1
+
+### Patch Changes
+
+- Add `prisma-client-py` support and the quirks system ([#15289](https://github.com/vercel/vercel/pull/15289))
+
+## 0.8.0
+
+### Minor Changes
+
+- Find entrypoints for django projects. ([#15167](https://github.com/vercel/vercel/pull/15167))
+
 ## 0.7.0
 
 ### Minor Changes
