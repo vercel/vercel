@@ -1,7 +1,7 @@
 import type { Context, LoggerServer, Dictionary } from './types';
 import type { IncomingMessage } from 'http';
 
-import { testDeployment } from '../../../test/lib/deployment/test-deployment';
+import { testDeployment } from '../../../test/lib/deployment/test-deployment.js';
 
 import fs from 'fs-extra';
 import http from 'http';

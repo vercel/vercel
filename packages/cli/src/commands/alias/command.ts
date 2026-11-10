@@ -1,8 +1,9 @@
 import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
+  jsonOption,
   limitOption,
-  nextOption,
+  nextCursorOption,
   yesOption,
 } from '../../util/arg-common';
 
@@ -30,7 +31,7 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'Show all aliases',
   arguments: [],
-  options: [limitOption, nextOption, formatOption],
+  options: [limitOption, nextCursorOption, formatOption, jsonOption],
   examples: [],
 } as const;
 

@@ -24,10 +24,29 @@ export class IntegrationAddTelemetryClient
     }
   }
 
+  trackCliOptionMeta(v: string[] | undefined) {
+    if (v?.length) {
+      this.trackCliOption({
+        option: 'meta',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated names keep their own keys, to measure who still uses them.
   trackCliOptionMetadata(v: string[] | undefined) {
     if (v?.length) {
       this.trackCliOption({
         option: 'metadata',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionBillingPlan(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'billing-plan',
         value: this.redactedValue,
       });
     }
@@ -63,6 +82,15 @@ export class IntegrationAddTelemetryClient
     }
   }
 
+  trackCliOptionInstallation(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionInstallationId(v: string | undefined) {
     if (v) {
       this.trackCliOption({
@@ -85,6 +113,24 @@ export class IntegrationAddTelemetryClient
         option: 'prefix',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagClaim(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('claim');
+    }
+  }
+
+  trackCliFlagNoClaim(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('no-claim');
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

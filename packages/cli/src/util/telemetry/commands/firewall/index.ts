@@ -6,6 +6,19 @@ export class FirewallTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof firewallCommand>
 {
+  trackCliFlagTeamLevel(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('team-level');
+    }
+  }
+
+  trackCliSubcommandStatus(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'status',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandOverview(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'overview',
@@ -62,9 +75,9 @@ export class FirewallTelemetryClient
     });
   }
 
-  trackCliSubcommandRulesEdit(actual: string) {
+  trackCliSubcommandRulesUpdate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'rules:edit',
+      subcommand: 'rules:update',
       value: actual,
     });
   }
@@ -93,6 +106,13 @@ export class FirewallTelemetryClient
   trackCliSubcommandRulesReorder(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rules:reorder',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesMove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:move',
       value: actual,
     });
   }
@@ -191,6 +211,76 @@ export class FirewallTelemetryClient
   trackCliSubcommandSystemMitigationsResume(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'system-mitigations:resume',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAlerts(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'alerts',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAlertsList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'alerts:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandAlertsInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'alerts:inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPersistentActions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'persistent-actions',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPersistentActionsList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'persistent-actions:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPersistentActionsInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'persistent-actions:inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTraffic(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'traffic',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTrafficList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'traffic:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTrafficInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'traffic:inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandBotManagement(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'bot-management',
       value: actual,
     });
   }

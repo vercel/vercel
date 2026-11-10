@@ -8,7 +8,10 @@ import type {
 import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import {
+  getEnvTargetPlaceholder,
+  resolveEnvTargetInput,
+} from '../../util/env/env-target';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
@@ -22,10 +25,13 @@ import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContextWithEnvRequests } from './linked-env-requests';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
+import { isGuidanceEnabled } from '../../util/guidance/is-enabled';
 import { validateLsArgs } from '../../util/validate-ls-args';
+import { outputAgentError, withGlobalFlags } from '../../util/agent-output';
+import { isSecretEnvVar } from '../../util/env/env-var-config-secret-ui';
 
 export default async function ls(client: Client, argv: string[]) {
   const telemetryClient = new EnvLsTelemetryClient({
@@ -40,7 +46,7 @@ export default async function ls(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags } = parsedArgs;
 
@@ -50,32 +56,70 @@ export default async function ls(client: Client, argv: string[]) {
     maxArgs: 2,
     exitCode: 1,
     usageString: getCommandName(
-      `env ls ${getEnvTargetPlaceholder()} <gitbranch>`
+      `env ls --environment ${getEnvTargetPlaceholder()} --git-branch <BRANCH>`
     ),
   });
   if (validationResult !== 0) {
     return validationResult;
   }
 
-  const [envTarget, envGitBranch] = args;
+  telemetryClient.trackCliArgumentEnvironment(args[0]);
+  telemetryClient.trackCliArgumentGitBranch(args[1]);
+  telemetryClient.trackCliOptionEnvironment(flags['--environment']);
+  telemetryClient.trackCliOptionGitBranch(flags['--git-branch']);
+
+  const envTargetInput = resolveEnvTargetInput(client, {
+    environment: flags['--environment'],
+    gitBranch: flags['--git-branch'],
+    legacyEnvironment: args[0],
+    legacyGitBranch: args[1],
+  });
+  if ('error' in envTargetInput) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: envTargetInput.error,
+        },
+        2
+      );
+    }
+    output.error(envTargetInput.error);
+    return 2;
+  }
+  const { environment: envTarget, gitBranch: envGitBranch } = envTargetInput;
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
-  telemetryClient.trackCliArgumentEnvironment(envTarget);
-  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagGuidance(flags['--guidance']);
   telemetryClient.trackCliOptionFormat(flags['--format']);
+  const projectName = flags['--project'];
+  telemetryClient.trackCliOptionProject(projectName);
 
-  const link = await getLinkedProject(client);
+  const sendEnvRequests = (client: Client, projectId: string) =>
+    Promise.all([
+      getEnvRecords(client, projectId, 'vercel-cli:env:ls', {
+        target: envTarget,
+        gitBranch: envGitBranch,
+      }),
+      getCustomEnvironments(client, projectId),
+    ]);
+  const { link, early } = await resolveProjectContextWithEnvRequests(
+    client,
+    { projectNameOrId: projectName, commandName: 'env ls' },
+    sendEnvRequests
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn’t linked to a project on Vercel. ${client.nonInteractive ? `Run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `Run ${getCommandName('link')} to begin.`}`
+      `Your codebase isn’t linked to a project on Vercel. Pass --project <name>, or ${client.nonInteractive ? `run ${getCommandName('link --yes --team <team-id> --project <project-id>')} to link non-interactively.` : `run ${getCommandName('link')} to begin.`}`
     );
     return 1;
   }
@@ -84,15 +128,10 @@ export default async function ls(client: Client, argv: string[]) {
 
   const { project, org } = link;
 
-  const lsStamp = stamp();
+  const lsStamp = stamp(early?.sentAt);
 
-  const [envsResult, customEnvs] = await Promise.all([
-    getEnvRecords(client, project.id, 'vercel-cli:env:ls', {
-      target: envTarget,
-      gitBranch: envGitBranch,
-    }),
-    getCustomEnvironments(client, project.id),
-  ]);
+  const [envsResult, customEnvs] = await (early?.result() ??
+    sendEnvRequests(client, project.id));
   const { envs } = envsResult;
 
   const projectSlugLink = formatProject(org.slug, project.name);
@@ -102,8 +141,9 @@ export default async function ls(client: Client, argv: string[]) {
     const jsonOutput = {
       envs: envs.map(env => ({
         key: env.key,
-        value: env.type === 'plain' ? env.value : undefined,
+        value: isSecretEnvVar(env) ? undefined : env.value,
         type: env.type,
+        visibility: env.visibility,
         target: env.target,
         gitBranch: env.gitBranch,
         configurationId: env.configurationId,
@@ -125,12 +165,31 @@ export default async function ls(client: Client, argv: string[]) {
 
   if (!asJson) {
     const { isAgent } = await determineAgent();
-    const guidanceMode = parsedArgs.flags['--guidance'] ?? isAgent;
+    const guidanceMode = isGuidanceEnabled(
+      client,
+      parsedArgs.flags['--guidance'],
+      isAgent
+    );
     if (guidanceMode) {
       suggestNextCommands([
-        getCommandName(`env add`),
-        getCommandName('env rm'),
-        getCommandName(`env pull`),
+        {
+          description: 'Add an Environment Variable',
+          command: withGlobalFlags(client, 'env add', {
+            preserveProject: true,
+          }),
+        },
+        {
+          description: 'Remove an Environment Variable',
+          command: withGlobalFlags(client, 'env remove', {
+            preserveProject: true,
+          }),
+        },
+        {
+          description: 'Pull Development Environment Variables into .env.local',
+          command: withGlobalFlags(client, 'env pull', {
+            preserveProject: true,
+          }),
+        },
       ]);
     }
   }
@@ -147,7 +206,7 @@ function getTable(
     ? 'environments (git branch)'
     : 'environments';
   return formatTable(
-    ['name', 'value', label, 'created'],
+    ['name', 'value', 'type', label, 'created'],
     ['l', 'l', 'l', 'l', 'l'],
     [
       {
@@ -164,23 +223,36 @@ function getRow(
   customEnvironments: CustomEnvironment[]
 ) {
   let value: string;
-  if (env.type === 'plain') {
+  if (isSecretEnvVar(env)) {
+    value = chalk.gray.italic('Hidden');
+  } else if (env.type === 'system') {
+    value = chalk.gray.italic(env.value);
+  } else {
     // replace space characters (line-break, etc.) with simple spaces
     // to make sure the displayed value is a single line
     const singleLineValue = env.value.replace(/\s/g, ' ');
 
     value = chalk.gray(ellipsis(singleLineValue, 19));
-  } else if (env.type === 'system') {
-    value = chalk.gray.italic(env.value);
-  } else {
-    value = chalk.gray.italic('Encrypted');
   }
 
   const now = Date.now();
   return [
     chalk.bold(env.key),
     value,
+    getEnvironmentVariableTypeLabel(env),
     formatEnvironments(link, env, customEnvironments),
     env.createdAt ? `${ms(now - env.createdAt)} ago` : '',
   ];
+}
+
+function getEnvironmentVariableTypeLabel(
+  env: ProjectEnvVariable
+): 'Config' | 'Secret' | 'System' {
+  if (isSecretEnvVar(env)) {
+    return 'Secret';
+  }
+  if (env.type === 'system') {
+    return 'System';
+  }
+  return 'Config';
 }

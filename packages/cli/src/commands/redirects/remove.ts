@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import {
   outputActionRequired,
@@ -14,14 +15,14 @@ import {
 import { removeSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
-  validateRequiredArgs,
   confirmAction,
   buildRedirectsSuggestionFlags,
   getArgsAfterRedirectsSubcommand,
   getRedirectGlobalFlagsOnly,
   getRedirectPromoteSuggestionFlags,
+  withGlobalFlags,
 } from './shared';
+import { validateRequiredArguments } from '../../util/command-arguments';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import deleteRedirects from '../../util/redirects/delete-redirects';
 import getRedirects from '../../util/redirects/get-redirects';
@@ -33,7 +34,7 @@ export default async function remove(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, removeSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const error = validateRequiredArgs(parsed.args, ['source']);
+  const error = validateRequiredArguments(parsed.args, ['source']);
   if (error) {
     if (client.nonInteractive) {
       const flagParts = buildRedirectsSuggestionFlags(
@@ -52,14 +53,18 @@ export default async function remove(client: Client, argv: string[]) {
           message: `${error} Run: ${cmd}`,
           next: [{ command: cmd, when: 'to remove a redirect' }],
         },
-        1
+        2
       );
     }
     output.error(error);
-    return 1;
+    return 2;
   }
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -178,7 +183,7 @@ export default async function remove(client: Client, argv: string[]) {
         ],
       }),
       ...(existingStagingVersion && {
-        hint: `Review staged changes with ${getCommandNamePlain('redirects list --staging')} before promoting.`,
+        hint: `Review staged changes with ${withGlobalFlags(client, 'redirects list --staging')} before promoting.`,
       }),
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);

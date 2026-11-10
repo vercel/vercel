@@ -13,9 +13,9 @@ export class IntegrationResourceTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'remove',
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -23,6 +23,27 @@ export class IntegrationResourceTelemetryClient
   trackCliSubcommandDisconnect(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'disconnect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandClaim(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'claim',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandConnect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'connect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inspect',
       value: actual,
     });
   }

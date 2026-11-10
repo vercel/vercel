@@ -1,44 +1,88 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
 import getRedirects from '../../util/redirects/get-redirects';
 import getRedirectVersions from '../../util/redirects/get-redirect-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import {
+  INVALID_NEXT_MESSAGE,
+  parseNumericCursor,
+} from '../../util/get-pagination-opts';
+import {
+  getNextPageCommand,
+  printNextPageCommand,
+} from '../../util/pagination';
+import { warnDeprecatedOption } from '../../util/warn-deprecated-subcommand';
+import { getTypedOptionName } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import {
+  getRenamedOption,
+  renameOptionInArgs,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 
 export default async function list(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, listSubcommand);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const asJson = Boolean(parsed.flags['--json']);
+  const query = getRenamedOption(parsed.flags, '--query', '--search', {
+    json: asJson,
+    typedName: getTypedOptionName(
+      argv,
+      getFlagsSpecification(listSubcommand.options),
+      '--search'
+    ),
+  });
+  if ('error' in query) {
+    return reportRenamedOptionError(client, query.error, { json: asJson });
+  }
+
+  // The cursor is a page number.
+  const nextPage = parseNumericCursor(parsed.flags['--next']);
+  if (Number.isNaN(nextPage)) {
+    output.error(INVALID_NEXT_MESSAGE);
+    return 2;
+  }
+
+  const link = await requireProjectContext(
+    client,
+    'redirects',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const { flags } = parsed;
   const teamId = org.type === 'team' ? org.id : undefined;
-  const search = flags['--search'];
-  const page = flags['--page'];
-  const perPage = flags['--per-page'];
+  const search = query.value;
+  const page = nextPage ?? flags['--page'];
+  if (flags['--page'] !== undefined) {
+    warnDeprecatedOption(client.argv, '--page', '--next');
+  }
+  const perPage = flags['--limit'] ?? flags['--per-page'];
   const staging = flags['--staging'];
-  const versionIdFlag = flags['--version'];
+  const versionIdFlag = flags['--redirects-version'];
 
   let versionId: string | undefined;
   let versionName: string | undefined;
 
   let useDiff = false;
   if (staging) {
-    output.spinner('Fetching staging version');
+    if (!asJson) output.spinner('Fetching staging version');
     const { versions } = await getRedirectVersions(client, project.id, teamId);
     const stagingVersion = versions.find(v => v.isStaging);
 
     if (!stagingVersion) {
       output.error(
         `No staging version found for ${chalk.bold(project.name)}. Run ${chalk.cyan(
-          'vercel redirects list-versions'
+          withGlobalFlags(client, 'redirects list-versions')
         )} to see available versions.`
       );
       return 1;
@@ -54,11 +98,13 @@ export default async function list(client: Client, argv: string[]) {
 
   if (versionIdFlag) {
     if (staging) {
-      output.error('Cannot use both --staging and --version flags together');
-      return 1;
+      output.error(
+        'Cannot use both --staging and --redirects-version options together'
+      );
+      return 2;
     }
 
-    output.spinner('Fetching version');
+    if (!asJson) output.spinner('Fetching version');
     const { versions } = await getRedirectVersions(client, project.id, teamId);
     const version = versions.find(
       v => v.id === versionIdFlag || v.name === versionIdFlag
@@ -67,7 +113,7 @@ export default async function list(client: Client, argv: string[]) {
     if (!version) {
       output.error(
         `Version "${versionIdFlag}" not found. Run ${chalk.cyan(
-          'vercel redirects list-versions'
+          withGlobalFlags(client, 'redirects list-versions')
         )} to see available versions.`
       );
       return 1;
@@ -86,7 +132,7 @@ export default async function list(client: Client, argv: string[]) {
   if (search) {
     spinnerMessage += ` matching "${search}"`;
   }
-  output.spinner(spinnerMessage);
+  if (!asJson) output.spinner(spinnerMessage);
 
   const { redirects, pagination } = await getRedirects(client, project.id, {
     teamId,
@@ -96,6 +142,21 @@ export default async function list(client: Client, argv: string[]) {
     versionId,
     diff: useDiff,
   });
+
+  if (asJson) {
+    const next =
+      pagination && pagination.page < pagination.numPages
+        ? pagination.page + 1
+        : null;
+    client.stdout.write(
+      `${JSON.stringify(
+        withWarnings({ redirects, pagination: { next } }, [query.warning]),
+        null,
+        2
+      )}\n`
+    );
+    return 0;
+  }
 
   if (useDiff) {
     const added = redirects.filter(r => r.action === '+');
@@ -153,8 +214,8 @@ export default async function list(client: Client, argv: string[]) {
       !versionIdFlag
     ) {
       output.log(
-        `  ${getCommandNamePlain('redirects list')} shows production redirects only. ` +
-          `If you added redirects but do not see them here, they may still be staged only—run ${getCommandNamePlain('redirects list --staging')} to view staged changes.`
+        `  ${withGlobalFlags(client, 'redirects list')} shows production redirects only. ` +
+          `If you added redirects but do not see them here, they may still be staged only—run ${withGlobalFlags(client, 'redirects list --staging')} to view staged changes.`
       );
     }
 
@@ -165,15 +226,15 @@ export default async function list(client: Client, argv: string[]) {
   }
 
   if (pagination && pagination.page < pagination.numPages) {
-    const nextPage = pagination.page + 1;
-    let command = `redirects list --page ${nextPage}`;
-    if (search) {
-      command += ` --search "${search}"`;
-    }
-    if (perPage) {
-      command += ` --per-page ${perPage}`;
-    }
-    output.log(`To display the next page, run ${getCommandName(command)}`);
+    // Built from argv so --staging, --redirects-version, --query, and --limit
+    // carry over to the next page.
+    printNextPageCommand(
+      getNextPageCommand(
+        renameOptionInArgs(client.argv, '--search', '--query'),
+        String(pagination.page + 1),
+        ['--page']
+      )
+    );
   }
 
   return 0;

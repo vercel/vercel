@@ -1,5 +1,17 @@
 # @vercel/cli-exec
 
+## 1.0.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
+## 1.0.0
+
+### Major Changes
+
+- 3f21605: Improve project-local `vercel` binary lookup fidelity by resolving only through the local `vercel` package, stopping lookup at project boundaries, and skipping directories that have unsafe ownership or access mode. Major bump, because `findVercelCli` has been made async and `clearVercelCliCache` renamed to `clearVercelCliLookupCache`. It is also substantially a complete rewrite.
+
 ## 0.1.1
 
 ### Patch Changes

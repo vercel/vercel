@@ -5,7 +5,7 @@ import { invalidateSubcommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandName } from '../../util/pkg-name';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import { emoji, prependEmoji } from '../../util/emoji';
 import { CacheInvalidateTelemetryClient } from '../../util/telemetry/commands/cache/invalidate';
 import plural from 'pluralize';
@@ -28,10 +28,16 @@ export default async function invalidate(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
-  const link = await getLinkedProject(client);
+  const projectName = parsedArgs.flags['--project'];
+  telemetry.trackCliOptionProject(projectName);
+
+  const link = await resolveProjectContext({
+    client,
+    projectNameOrId: projectName,
+  });
 
   if (link.status === 'not_linked') {
     output.error(
@@ -55,7 +61,7 @@ export default async function invalidate(
 
   if (tag && srcimg) {
     output.error(`Cannot use both --tag and --srcimg options`);
-    return 1;
+    return 2;
   }
 
   let itemName = '';
@@ -77,15 +83,16 @@ export default async function invalidate(
     postBody = { srcImages: [srcimg] };
   } else {
     output.error(`The --tag or --srcimg option is required`);
-    return 1;
+    return 2;
   }
 
   const msg = `You are about to invalidate all cached content associated with ${itemName} ${itemValue} for project ${project.name}`;
 
   if (!yes) {
     if (!process.stdin.isTTY) {
+      const projectFlag = projectName ? ` --project ${projectName}` : '';
       output.print(
-        `${msg}. To continue, run ${getCommandName(`cache invalidate ${flag} ${itemValue} --yes`)}.`
+        `${msg}. To continue, run ${getCommandName(`cache invalidate ${flag} ${itemValue}${projectFlag} --yes`)}.`
       );
       return 1;
     }

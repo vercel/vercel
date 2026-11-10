@@ -1,0 +1,10 @@
+{
+  "projectSettings": {
+    "framework": "ruby"
+  },
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_BUILDPACK_RUBY": "1"
+    }
+  }
+}

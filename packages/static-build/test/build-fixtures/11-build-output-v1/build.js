@@ -9,6 +9,7 @@ fs.writeFileSync(
     {
       about: {
         memory: 3009,
+        maxConcurrency: 8,
       },
     },
     null,

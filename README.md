@@ -25,6 +25,28 @@ Vercel’s AI Cloud is a unified platform for building modern applications, givi
 
 Get started by [importing a project](https://vercel.com/new), [choosing a template](https://vercel.com/templates), or using the [Vercel CLI](https://vercel.com/docs/cli). Then, `git push` to deploy.
 
+## Native CLI binaries
+
+The standard npm installation remains unchanged:
+
+```bash
+npm i -g vercel
+```
+
+Native CLI binaries are distributed separately and do not affect the `vercel` npm package. To opt into the native binary and replace existing global `vercel` and `vc` commands, install the native package explicitly:
+
+```bash
+npm i -g @vercel/vc-native --force
+```
+
+The `--force` flag allows npm to replace existing global `vercel` and `vc` bin links. Users who do not install `@vercel/vc-native` continue using the regular Node.js-based CLI from `npm i -g vercel`.
+
+Platform-specific packages are also available for direct installation when a specific binary is needed:
+
+```bash
+npm i -g @vercel/vc-native-darwin-x64 --force
+```
+
 ## Documentation
 
 For details on how to use Vercel, check out our [documentation](https://vercel.com/docs).
@@ -66,7 +88,7 @@ cd ./packages/cli
 pnpm vercel <cli-commands...>
 ```
 
-See [CLI Local Development](../packages/cli#local-development) for more details.
+See [CLI Local Development](./packages/cli#local-development) for more details.
 
 ### Verifying your change
 
@@ -80,6 +102,27 @@ from the root of the project.
 
 If any test fails, make sure to fix it along with your changes. See [Interpreting test errors](#Interpreting-test-errors) for more information about how the tests are executed, especially the integration tests.
 
+#### Reproducing affected builds and type-checks
+
+CI compares the pull request head with the base and head commits recorded by GitHub. To inspect the same affected Turborepo task plan locally, commit your changes, check out the pull request head, and set the explicit SCM range:
+
+```bash
+export TURBO_SCM_BASE=$(gh pr view --json baseRefOid --jq .baseRefOid)
+export TURBO_SCM_HEAD=$(gh pr view --json headRefOid --jq .headRefOid)
+git fetch origin "$TURBO_SCM_BASE" "$TURBO_SCM_HEAD"
+test "$(git rev-parse HEAD)" = "$TURBO_SCM_HEAD"
+node utils/gen.js
+pnpm exec turbo run ci:checks --affected --dry=json
+```
+
+To execute the selected tasks as CI does, replace the final command with:
+
+```bash
+pnpm exec turbo run ci:checks --affected --output-logs=errors-only --summarize --continue
+```
+
+Both commits must be available in the local clone; CI uses a full-history checkout and fails rather than treating a missing commit as an empty change. Lint, formatting, dependency checks, and generated asset validation remain repository-wide.
+
 ### Pull Request Process
 
 Once you are confident that your changes work properly, open a pull request on the main repository.
@@ -88,11 +131,11 @@ The pull request will be reviewed by the maintainers and the tests will be check
 
 ### Interpreting test errors
 
-There are 2 kinds of tests in this repository – Unit tests and Integration tests.
+There are two primary kinds of tests in this repository: unit tests and end-to-end (E2E) tests.
 
-Unit tests are run locally with `jest` and execute quickly because they are testing the smallest units of code.
+Unit tests are primarily run with Vitest and execute quickly because they test isolated behavior.
 
-#### Integration tests
+#### End-to-end tests
 
 Integration tests create deployments to your Vercel account using the `test` project name. After each test is deployed, the `probes` key is used to check if the response is the expected value. If the value doesn't match, you'll see a message explaining the difference. If the deployment failed to build, you'll see a more generic message like the following:
 

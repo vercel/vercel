@@ -59,9 +59,9 @@ export class RoutesTelemetryClient
     });
   }
 
-  trackCliSubcommandDelete(actual: string) {
+  trackCliSubcommandRemove(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'delete',
+      subcommand: 'remove',
       value: actual,
     });
   }
@@ -94,9 +94,16 @@ export class RoutesTelemetryClient
     });
   }
 
-  trackCliSubcommandEdit(actual: string) {
+  trackCliSubcommandMove(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'edit',
+      subcommand: 'move',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
       value: actual,
     });
   }
@@ -127,6 +134,13 @@ export class RoutesAddTelemetryClient
     }
   }
 
+  trackCliFlagNoEnable(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('no-enable');
+    }
+  }
+
+  /** The old name of `--no-enable`. */
   trackCliFlagDisabled(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('disabled');
@@ -345,7 +359,7 @@ export class RoutesAddTelemetryClient
 }
 
 /**
- * Telemetry client for the `routes edit` subcommand.
+ * Telemetry client for the `routes update` subcommand.
  */
 export class RoutesEditTelemetryClient
   extends TelemetryClient

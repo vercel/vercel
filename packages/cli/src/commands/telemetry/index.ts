@@ -5,7 +5,7 @@ import { type Command, help } from '../help';
 import status from './status';
 import enable from './enable';
 import disable from './disable';
-import flush from './flush';
+import flush, { TELEMETRY_FLUSH_TIMEOUT_MS } from './flush';
 import {
   disableSubcommand,
   enableSubcommand,
@@ -35,13 +35,25 @@ export default async function telemetry(client: Client) {
   });
   let parsedArguments;
 
-  const flagsSpecification = getFlagsSpecification(telemetryCommand.options);
-
   try {
-    parsedArguments = parseArguments(client.argv.slice(2), flagsSpecification);
+    // A subcommand's own options are accepted only after that subcommand.
+    const argv = client.argv.slice(2);
+    const { subcommand: typed } = getSubcommand(
+      parseArguments(argv, getFlagsSpecification(telemetryCommand.options), {
+        permissive: true,
+      }).args.slice(1),
+      COMMAND_CONFIG
+    );
+    parsedArguments = parseArguments(
+      argv,
+      getFlagsSpecification([
+        ...telemetryCommand.options,
+        ...(typed === 'status' ? statusSubcommand.options : []),
+      ])
+    );
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(
@@ -54,6 +66,7 @@ export default async function telemetry(client: Client) {
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         columns: client.stderr.columns,
         parent: telemetryCommand,
       })
@@ -62,8 +75,13 @@ export default async function telemetry(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetryClient.trackCliFlagHelp('telemetry', subcommand);
-    output.print(help(telemetryCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(telemetryCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   switch (subcommand) {
@@ -71,17 +89,28 @@ export default async function telemetry(client: Client) {
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
         printHelp(statusSubcommand);
-        return 2;
+        return 0;
       }
       telemetryClient.trackCliSubcommandStatus(subcommandOriginal);
-      return status(client);
-    case 'flush':
-      return flush(client, args);
+      return status(client, Boolean(parsedArguments.flags['--json']));
+    case 'flush': {
+      // Bound the worker even if initialization or a response body never settles.
+      const deadline = setTimeout(
+        () => process.exit(1),
+        TELEMETRY_FLUSH_TIMEOUT_MS + 1_000
+      );
+      deadline.unref();
+      try {
+        return await flush(client, args);
+      } finally {
+        clearTimeout(deadline);
+      }
+    }
     case 'enable':
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
         printHelp(enableSubcommand);
-        return 2;
+        return 0;
       }
       telemetryClient.trackCliSubcommandEnable(subcommandOriginal);
       return enable(client);
@@ -89,7 +118,7 @@ export default async function telemetry(client: Client) {
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('telemetry', subcommandOriginal);
         printHelp(disableSubcommand);
-        return 2;
+        return 0;
       }
       return disable(client);
     default: {
@@ -100,7 +129,12 @@ export default async function telemetry(client: Client) {
       output.print(
         `${chalk.red('Error')}: ${errorMessage}. See help instructions for usage:\n`
       );
-      output.print(help(telemetryCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(telemetryCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
     }
   }

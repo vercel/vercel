@@ -1,0 +1,10 @@
+source "https://rubygems.org"
+
+gem "railties", "8.1.3.1", require: false
+gem "puma", "8.0.2"
+gem "propshaft", "1.3.2"
+gem "jsbundling-rails", "1.3.1"
+
+group :development, :test do
+  gem "debug", "1.11.1", platforms: %i[ mri windows ], require: "debug/prelude"
+end

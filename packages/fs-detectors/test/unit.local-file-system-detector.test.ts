@@ -109,7 +109,6 @@ describe('LocalFileSystemDetector', () => {
 
   it('should call chdir correctly', async () => {
     const a = localFileSystem.chdir('a');
-    expect(a instanceof LocalFileSystemDetector);
     const readdirResult = await a.readdir('');
     expect(readdirResult.map(stat => stat.name).sort()).toEqual([
       'b',

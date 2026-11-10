@@ -39,7 +39,7 @@ export default async function main(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(1);
@@ -52,14 +52,23 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp(cacheCommand.name);
-    output.print(help(cacheCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(cacheCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 
   function printHelp(command: Command) {
     telemetry.trackCliFlagHelp(command.name, subcommandOriginal);
     output.print(
-      help(command, { parent: cacheCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: cacheCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -67,27 +76,32 @@ export default async function main(client: Client) {
     case 'purge':
       if (needHelp) {
         printHelp(purgeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandPurge(subcommandOriginal);
       return purge(client, args);
     case 'invalidate':
       if (needHelp) {
         printHelp(invalidateSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandInvalidate(subcommandOriginal);
       return invalidate(client, args);
     case 'dangerously-delete':
       if (needHelp) {
         printHelp(dangerouslyDeleteSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandDangerouslyDelete(subcommandOriginal);
       return dangerouslyDelete(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(cacheCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(cacheCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

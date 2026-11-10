@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'path';
 import fs, { readlink } from 'fs-extra';
 import { strict as assert, strictEqual } from 'assert';
-import { download, glob, FileBlob } from '../src';
+import {
+  download,
+  glob,
+  FileBlob,
+  isExternalSymlink,
+  isExternalSymlinkTarget,
+  getSymlinkTarget,
+} from '../src';
 
 // File mode constants (octal) used by FileBlob to indicate file type
 const S_IFREG = 33188; // 0o100644 - regular file
@@ -159,6 +166,30 @@ describe('download()', () => {
     ]);
   });
 
+  it('should detect external symlink targets', () => {
+    expect(isExternalSymlinkTarget('../../node_modules/.pnpm/next')).toBe(true);
+    expect(isExternalSymlinkTarget('./a.txt')).toBe(false);
+    expect(isExternalSymlinkTarget('a.txt')).toBe(false);
+    expect(isExternalSymlinkTarget('/absolute/path')).toBe(true);
+
+    const externalSymlink = new FileBlob({
+      mode: S_IFLNK,
+      contentType: undefined,
+      data: '../../node_modules/.pnpm/next',
+    });
+    const internalSymlink = new FileBlob({
+      mode: S_IFLNK,
+      contentType: undefined,
+      data: './a.txt',
+    });
+
+    expect(getSymlinkTarget(externalSymlink)).toBe(
+      '../../node_modules/.pnpm/next'
+    );
+    expect(isExternalSymlink(externalSymlink)).toBe(true);
+    expect(isExternalSymlink(internalSymlink)).toBe(false);
+  });
+
   it('should not fail when symlink already exists with same target', async () => {
     if (process.platform === 'win32') {
       console.log('Skipping test on windows');
@@ -247,6 +278,34 @@ describe('download()', () => {
 
     const linkTarget = await readlink(path.join(outDir, 'link.txt'));
     strictEqual(linkTarget, 'b.txt');
+  });
+
+  it('should preserve 4-byte UTF-8 characters at the 16KiB stream boundary', async () => {
+    // into-stream@5 slices string FileBlob data at highWaterMark (~16384
+    // UTF-16 code units). A surrogate pair starting at offset 16383 is
+    // split across chunks and each half becomes U+FFFD when encoded.
+    const astral = '\u{10437}';
+    const source = `${'a'.repeat(16383)}${astral}b`;
+    const expected = Buffer.from(source, 'utf8');
+    expect(expected.includes(Buffer.from('efbfbd', 'hex'))).toBe(false);
+
+    const outDir = path.join(__dirname, 'utf8-stream-out');
+    await fs.remove(outDir);
+
+    await download(
+      {
+        'index.js': new FileBlob({
+          mode: S_IFREG,
+          contentType: 'application/javascript',
+          data: source,
+        }),
+      },
+      outDir
+    );
+
+    const written = await fs.readFile(path.join(outDir, 'index.js'));
+    expect(written.equals(expected)).toBe(true);
+    expect(written.includes(Buffer.from('efbfbd', 'hex'))).toBe(false);
   });
 
   it('should create empty directory entries', async () => {

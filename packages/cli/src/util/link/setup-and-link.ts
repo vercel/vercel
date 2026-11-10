@@ -1,11 +1,12 @@
-import chalk from 'chalk';
 import { remove } from 'fs-extra';
-import { join, basename } from 'path';
+import slugify from '@sindresorhus/slugify';
+import { join, basename, extname } from 'path';
+import { getPlatformEnv } from '@vercel/build-utils';
+import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
   ProjectLinkResult,
   ProjectSettings,
   Org,
-  Team,
 } from '@vercel-internals/types';
 import {
   getLinkedProject,
@@ -16,19 +17,27 @@ import {
 } from '../projects/link';
 import { linkRepoProject } from './repo';
 import createProject from '../projects/create-project';
+import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
+import { singleFileProjectSettings } from '../deploy/single-file';
 import type Client from '../client';
 import { printError } from '../error';
 import pull from '../../commands/env/pull';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
+import { getGitConfigPath } from '../git-helpers';
 import {
   selectAndParseRemoteUrl,
+  parseRepoUrl,
   checkExistsAndConnect,
+  type RepoInfo,
 } from '../git/connect-git-provider';
 
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../fs';
 import selectOrg from '../input/select-org';
-import inputProject from '../input/input-project';
+import inputProject, {
+  BACK_TO_TEAM_SELECTION,
+  SWITCH_GIT_REMOTE,
+} from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
 import {
@@ -36,7 +45,7 @@ import {
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import type { EmojiLabel } from '../emoji';
-import { CantParseJSONFile, isAPIError } from '../errors-ts';
+import { CantParseJSONFile, isAPIError, ProjectNotFound } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
@@ -47,6 +56,7 @@ import {
   type VercelAuthSetting,
   DEFAULT_VERCEL_AUTH_SETTING,
 } from '../input/vercel-auth';
+import { printAlignedLabel } from '../output/print-aligned-label';
 import {
   displayConfiguredServicesSetup,
   getServicesSetupState,
@@ -54,61 +64,148 @@ import {
   toProjectRootDirectory,
   type InferredServicesChoice,
 } from './services-setup';
-import searchProjectAcrossTeams from '../projects/search-project-across-teams';
+import { searchProjectsByRepoRoot } from '../projects/search-project-across-teams';
 import type { CrossTeamMatch } from '../projects/search-project-across-teams';
+import { isPromptCanceledError } from '../input/prompt-cancellation';
+import { findRepoRoot, resolveGitRemote } from './repo';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
   forceDelete?: boolean;
   link?: ProjectLinkResult;
+  /** Team selected by the caller before project discovery. */
+  selectedOrg?: Org;
   successEmoji?: EmojiLabel;
-  setupMsg?: string;
   projectName?: string;
+  /** Deploy only this file; use static settings without inspecting its parent. */
+  singleFile?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
   pullEnv?: boolean;
   /** When true, indicates the project is being created from v0 (grants V0Builder permissions) */
   v0?: boolean;
-  /** When true, search matching projects across teams before standard linking flow */
-  searchAcrossTeams?: boolean;
+  /**
+   * When true with an explicit `projectName`, bail out instead of running
+   * `setupAndLink`. Use for user-supplied `--project <NAME_OR_ID>` so typos
+   * fail fast rather than creating a new project.
+   */
+  failIfNotFound?: boolean;
+  /**
+   * With `failIfNotFound`, create a missing `projectName` in the selected team
+   * instead of failing. The name resolves exactly, and the project (found or
+   * created) is not written to `.vercel/`, like any other explicit `--project`.
+   */
+  createIfNotFound?: boolean;
 }
 
-function formatMatchReason(match: CrossTeamMatch): string {
-  if (match.reason === 'repo-root') {
-    return chalk.gray('(linked by git)');
-  }
-  return chalk.gray('(folder name)');
+export type ProjectLinkResultWithGitGuidance = ProjectLinkResult & {
+  /** The user was already asked about Git during this command invocation. */
+  gitConnectOffered?: boolean;
+};
+
+function isCrossTeamMatch(value: unknown): value is CrossTeamMatch {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'project' in value &&
+    'org' in value &&
+    'reason' in value
+  );
 }
 
-function formatCrossTeamMatch(match: CrossTeamMatch): string {
-  return `${chalk.blue(match.org.slug)}/${match.project.name} ${formatMatchReason(
-    match
-  )}`;
-}
-
-function formatTeamList(slugs: string[]): string {
-  const shown = slugs.slice(0, 5);
-  const suffix =
-    slugs.length > shown.length
-      ? `, and ${slugs.length - shown.length} more`
-      : '';
-  return `${shown.join(', ')}${suffix}`;
-}
-
-function printCrossTeamSearchScope({
-  searchedTeamSlugs,
-  skippedLimitedTeamSlugs,
-}: {
-  searchedTeamSlugs: string[];
-  skippedLimitedTeamSlugs: string[];
-}): void {
-  if (searchedTeamSlugs.length > 0) {
-    output.log(`Searched teams: ${formatTeamList(searchedTeamSlugs)}`);
-  }
-  if (skippedLimitedTeamSlugs.length > 0) {
-    output.log(
-      `Skipped ${skippedLimitedTeamSlugs.length} SSO-protected ${skippedLimitedTeamSlugs.length === 1 ? 'team' : 'teams'}`
+/**
+ * Resolves the team via `selectOrg`, mapping known API errors to link error
+ * results. Returns an `Org` on success, or a `ProjectLinkResult` error.
+ */
+async function selectOrgForLink(
+  client: Client,
+  autoConfirm: boolean,
+  searchable = false,
+  meta?: { choiceCount?: number }
+): Promise<Org | ProjectLinkResult> {
+  try {
+    return await selectOrg(
+      client,
+      'Which team?',
+      autoConfirm,
+      searchable,
+      meta
     );
+  } catch (err: unknown) {
+    if (isAPIError(err)) {
+      if (err.code === 'NOT_AUTHORIZED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
+      }
+
+      if (err.code === 'TEAM_DELETED') {
+        output.prettyError(err);
+        return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
+      }
+    }
+
+    throw err;
+  }
+}
+
+function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
+  return (
+    err instanceof Error && typeof (err as { code?: unknown }).code === 'string'
+  );
+}
+
+// Detect whether `cwd` is a workspace root (monorepo with multiple packages).
+// If the filesystem can't be read (ENOENT/EACCES/ENOTDIR), treat it as a
+// single-app project rather than crashing the CLI.
+async function hasWorkspaces(cwd: string): Promise<boolean> {
+  try {
+    const fs = new LocalFileSystemDetector(cwd);
+    const workspaces = await getWorkspaces({ fs });
+    return workspaces.length > 0;
+  } catch (err) {
+    if (
+      isErrnoException(err) &&
+      err.code &&
+      ['ENOENT', 'EACCES', 'ENOTDIR'].includes(err.code)
+    ) {
+      output.debug(`getWorkspaces failed for ${cwd}: ${err}`);
+      return false;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Decides whether to prompt the user for a project root directory.
+ *
+ * Returns true if any of:
+ *  - the user explicitly chose "Choose a different root directory" via the
+ *    inferred-services picker
+ *  - the directory is a workspace (monorepo with multiple packages)
+ *  - framework detection at the root finds nothing — covers nested-monolith
+ *    layouts like `repo/app/package.json` where the app lives in a subdir
+ *
+ * Returns false only for single-app projects with a framework detected at
+ * the root — that's the fast-path the no-prompt optimization targets.
+ */
+export async function shouldPromptForRootDirectory(opts: {
+  path: string;
+  servicesChoice: InferredServicesChoice | null;
+}): Promise<boolean> {
+  if (opts.servicesChoice?.type === 'project-directory') {
+    return true;
+  }
+  if (await hasWorkspaces(opts.path)) {
+    return true;
+  }
+  try {
+    const detected = await detectProjects(opts.path);
+    const frameworksAtRoot = detected.get('') ?? [];
+    return frameworksAtRoot.length === 0;
+  } catch (err) {
+    output.debug(`detectProjects failed at root: ${err}`);
+    // Safer to prompt than to silently misconfigure.
+    return true;
   }
 }
 
@@ -122,10 +219,12 @@ async function maybePullEnvAfterLink(
     return;
   }
 
+  output.print('\n');
+
   const pullEnvConfirmed =
     autoConfirm ||
     (await client.input.confirm(
-      'Would you like to pull environment variables now?',
+      'Pull development environment variables into .env.local?',
       true
     ));
 
@@ -201,162 +300,6 @@ async function linkCrossTeamMatch({
   return { status: 'linked', org: match.org, project: match.project };
 }
 
-async function promptForLimitedTeams(
-  client: Client,
-  teams: Team[]
-): Promise<Team[]> {
-  if (teams.length === 0) {
-    return [];
-  }
-
-  return await client.input.checkbox<Team>({
-    message: 'Which SSO-protected teams should be searched?',
-    choices: teams.map(team => ({
-      name: team.name ? `${team.name} (${team.slug})` : team.slug,
-      value: team,
-    })),
-  });
-}
-
-async function searchSelectedLimitedTeams({
-  client,
-  path,
-  projectName,
-  gitProjectName,
-  teams,
-}: {
-  client: Client;
-  path: string;
-  projectName: string;
-  gitProjectName?: string;
-  teams: Team[];
-}): Promise<CrossTeamMatch[]> {
-  const selectedTeams = await promptForLimitedTeams(client, teams);
-  if (selectedTeams.length === 0) {
-    return [];
-  }
-
-  output.spinner('Searching selected SSO-protected teams…', 1000);
-  try {
-    const result = await searchProjectAcrossTeams(client, projectName, path, {
-      teams: selectedTeams,
-      skipLimited: false,
-      gitProjectName,
-    });
-    printCrossTeamSearchScope({
-      searchedTeamSlugs: result.searchedTeamSlugs,
-      skippedLimitedTeamSlugs: [],
-    });
-    return result.matches;
-  } catch (err) {
-    output.debug(`Selected SSO-protected team search failed: ${err}`);
-    return [];
-  } finally {
-    output.stopSpinner();
-  }
-}
-
-async function linkCrossTeamMatches({
-  client,
-  path,
-  matches,
-  successEmoji,
-  autoConfirm,
-  nonInteractive,
-  pullEnv,
-}: {
-  client: Client;
-  path: string;
-  matches: CrossTeamMatch[];
-  successEmoji: EmojiLabel;
-  autoConfirm: boolean;
-  nonInteractive: boolean;
-  pullEnv: boolean;
-}): Promise<ProjectLinkResult | null> {
-  if (matches.length === 0) {
-    return null;
-  }
-
-  if (matches.length === 1) {
-    const match = matches[0];
-
-    if (autoConfirm || nonInteractive) {
-      return await linkCrossTeamMatch({
-        client,
-        path,
-        match,
-        successEmoji,
-        autoConfirm,
-        pullEnv,
-      });
-    }
-
-    const confirmed = await client.input.confirm(
-      `Found project ${formatCrossTeamMatch(match)}. Link to it?`,
-      true
-    );
-    if (confirmed) {
-      return await linkCrossTeamMatch({
-        client,
-        path,
-        match,
-        successEmoji,
-        autoConfirm,
-        pullEnv,
-      });
-    }
-    return null;
-  }
-
-  const currentTeamMatch = matches.find(
-    match => match.org.id === client.config.currentTeam
-  );
-
-  if (autoConfirm && currentTeamMatch) {
-    return await linkCrossTeamMatch({
-      client,
-      path,
-      match: currentTeamMatch,
-      successEmoji,
-      autoConfirm,
-      pullEnv,
-    });
-  }
-
-  if (nonInteractive) {
-    return null;
-  }
-
-  const choices = matches.map(match => ({
-    name: formatCrossTeamMatch(match),
-    value: match as CrossTeamMatch | null,
-  }));
-  choices.push({
-    name: 'Not one of these projects',
-    value: null,
-  });
-
-  const selected = await client.input.select<CrossTeamMatch | null>({
-    message:
-      'Found matching projects across teams. Which one do you want to link?',
-    choices,
-    default: currentTeamMatch ?? undefined,
-  });
-
-  if (!selected) {
-    return null;
-  }
-
-  return await linkCrossTeamMatch({
-    client,
-    path,
-    match: selected,
-    successEmoji,
-    autoConfirm,
-    pullEnv,
-  });
-}
-
 export default async function setupAndLink(
   client: Client,
   path: string,
@@ -364,33 +307,88 @@ export default async function setupAndLink(
     autoConfirm = false,
     forceDelete = false,
     link,
+    selectedOrg,
     successEmoji = 'link',
-    setupMsg = 'Set up',
     projectName,
+    singleFile,
     nonInteractive = false,
     pullEnv = true,
     v0,
-    searchAcrossTeams = false,
+    createIfNotFound = false,
   }: SetupAndLinkOptions
-): Promise<ProjectLinkResult> {
+): Promise<ProjectLinkResultWithGitGuidance> {
   const { config } = client;
   const gitProjectName = projectName;
-  projectName = projectName ?? basename(path);
+  projectName =
+    projectName ??
+    (singleFile
+      ? slugify(basename(singleFile, extname(singleFile))) || 'file'
+      : basename(path));
 
   if (!isDirectory(path)) {
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   if (!link) {
-    link = await getLinkedProject(client, path);
+    link = await getLinkedProject(client, {
+      cwd: path,
+      skipProjectRootResolution: Boolean(singleFile),
+    });
   }
   const isTTY = client.stdin.isTTY;
   let rootDirectory: string | null = null;
   let newProjectName: string;
-  let org;
+  let org = selectedOrg;
 
   if (!forceDelete && link.status === 'linked') {
     return link;
+  }
+
+  // `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` form an explicit project-owner
+  // pair, so resolve and confirm exactly that pair without prompting (and
+  // without requiring `--yes`). The env link itself is what makes commands
+  // work here, so leave local link files untouched.
+  if (getPlatformEnv('ORG_ID') && getPlatformEnv('PROJECT_ID')) {
+    const envLink = await getLinkedProject(client, {
+      cwd: path,
+      skipProjectRootResolution: Boolean(singleFile),
+    });
+    if (envLink.status === 'error') {
+      return envLink;
+    }
+    if (envLink.status === 'linked') {
+      config.currentTeam =
+        envLink.org.type === 'team' ? envLink.org.id : undefined;
+      output.print('\n');
+      printAlignedLabel(
+        singleFile ? 'File' : 'Directory',
+        toHumanPath(singleFile ?? path)
+      );
+      printAlignedLabel('Source', 'VERCEL_ORG_ID and VERCEL_PROJECT_ID');
+      output.print('\n');
+      printAlignedLabel(
+        'Linked',
+        `${envLink.org.slug}/${envLink.project.name}`,
+        { gutter: '✓' }
+      );
+      return envLink;
+    }
+  }
+
+  if (!isTTY && !autoConfirm && !nonInteractive) {
+    return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+  }
+
+  // Without a TTY the team must come from an explicit signal (`--scope`,
+  // `--team`, `vercel.json` `scope`, `VERCEL_ORG_ID`) or be the only choice.
+  // Resolve it before deleting the existing link and before any project
+  // discovery, so a missing scope fails fast without breaking local state.
+  if (!org && (nonInteractive || !isTTY)) {
+    const resolved = await selectOrgForLink(client, autoConfirm);
+    if ('status' in resolved) {
+      return resolved;
+    }
+    org = resolved;
   }
 
   if (forceDelete) {
@@ -399,184 +397,183 @@ export default async function setupAndLink(
     remove(join(vercelDir, VERCEL_DIR_PROJECT));
   }
 
-  if (!isTTY && !autoConfirm && !nonInteractive) {
-    return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
-  }
+  // The command invocation carries setup intent; show the local target as state.
+  output.print('\n');
+  printAlignedLabel(
+    singleFile ? 'File' : 'Directory',
+    toHumanPath(singleFile ?? path)
+  );
+  output.print('\n');
 
-  const shouldStartSetup =
-    autoConfirm ||
-    nonInteractive ||
-    (await client.input.confirm(
-      `${setupMsg} ${chalk.cyan(`“${toHumanPath(path)}”`)}?`,
-      true
-    ));
-
-  if (!shouldStartSetup) {
-    output.print(`Canceled. Project not set up.\n`);
-    return { status: 'not_linked', org: null, project: null };
-  }
-
-  let skipAutoDetect = false;
-  if (searchAcrossTeams) {
-    // Search for existing projects across all teams
-    let crossTeamMatches: CrossTeamMatch[] = [];
-    let searchedTeamSlugs: string[] = [];
-    let skippedLimitedTeamSlugs: string[] = [];
-    let skippedLimitedTeams: Team[] = [];
-    output.spinner('Searching for existing projects…', 1000);
-    try {
-      const searchResult = await searchProjectAcrossTeams(
-        client,
-        projectName,
-        path,
-        {
-          autoConfirm,
-          nonInteractive,
-          gitProjectName,
-        }
-      );
-      crossTeamMatches = searchResult.matches;
-      searchedTeamSlugs = searchResult.searchedTeamSlugs;
-      skippedLimitedTeamSlugs = searchResult.skippedLimitedTeamSlugs;
-      skippedLimitedTeams = searchResult.skippedLimitedTeams;
-    } catch (err) {
-      output.debug(`Cross-team search failed: ${err}`);
-    } finally {
-      output.stopSpinner();
-    }
-
-    if (crossTeamMatches.length > 0 && !autoConfirm && !nonInteractive) {
-      printCrossTeamSearchScope({
-        searchedTeamSlugs,
-        skippedLimitedTeamSlugs,
-      });
-    }
-
-    const linkedMatch = await linkCrossTeamMatches({
-      client,
-      path,
-      matches: crossTeamMatches,
-      successEmoji,
-      autoConfirm,
-      nonInteractive,
-      pullEnv,
-    });
-    if (linkedMatch) {
-      return linkedMatch;
-    }
-
-    if (!autoConfirm && !nonInteractive && skippedLimitedTeams.length > 0) {
-      if (crossTeamMatches.length === 0) {
-        output.log(
-          `No matching projects found in the ${searchedTeamSlugs.length} ${searchedTeamSlugs.length === 1 ? 'team' : 'teams'} available in your current session.`
-        );
-      }
-      const limitedTeamMatches = await searchSelectedLimitedTeams({
-        client,
-        path,
-        projectName,
-        gitProjectName,
-        teams: skippedLimitedTeams,
-      });
-      const linkedLimitedMatch = await linkCrossTeamMatches({
-        client,
-        path,
-        matches: limitedTeamMatches,
-        successEmoji,
-        autoConfirm,
-        nonInteractive,
-        pullEnv,
-      });
-      if (linkedLimitedMatch) {
-        return linkedLimitedMatch;
-      }
-      if (limitedTeamMatches.length === 0) {
-        output.log(
-          'No matching projects found in the selected SSO-protected teams.'
-        );
-      }
-      skipAutoDetect =
-        skipAutoDetect ||
-        crossTeamMatches.length > 0 ||
-        limitedTeamMatches.length > 0;
-    } else if (crossTeamMatches.length > 0) {
-      skipAutoDetect = true;
-    }
-  }
-
-  try {
-    org = await selectOrg(
-      client,
-      'Which scope should contain your project?',
-      autoConfirm
-    );
-  } catch (err: unknown) {
-    if (isAPIError(err)) {
-      if (err.code === 'NOT_AUTHORIZED') {
-        output.prettyError(err);
-        return { status: 'error', exitCode: 1, reason: 'NOT_AUTHORIZED' };
-      }
-
-      if (err.code === 'TEAM_DELETED') {
-        output.prettyError(err);
-        return { status: 'error', exitCode: 1, reason: 'TEAM_DELETED' };
-      }
-    }
-
-    throw err;
-  }
+  // Every command that establishes a link gets the same interactive flow:
+  // searchable team picker, then Git/folder project suggestions scoped to
+  // the chosen team. An explicit project name skips the suggestions and is
+  // resolved directly.
+  const interactive = isTTY && !nonInteractive;
+  const searchableTeamPicker = interactive;
+  const showProjectSuggestions = interactive && !gitProjectName && !singleFile;
 
   let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
-  try {
-    projectOrNewProjectName = await inputProject(
-      client,
-      org,
-      projectName,
-      autoConfirm,
-      skipAutoDetect
-    );
-  } catch (err) {
-    if (
-      err instanceof Error &&
-      (err as NodeJS.ErrnoException).code === 'HEADLESS'
-    ) {
-      return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+  // When the team was auto-selected as the only choice, there is no other
+  // team to go back to, so the project picker hides that option.
+  let teamAutoSelected = false;
+  // Remembers a remote chosen via "Switch Git remote" across picker loops.
+  let selectedGitRemoteName: string | undefined;
+  for (;;) {
+    if (!org) {
+      const orgMeta: { choiceCount?: number } = {};
+      const resolved = await selectOrgForLink(
+        client,
+        autoConfirm,
+        searchableTeamPicker,
+        orgMeta
+      );
+      if ('status' in resolved) {
+        return resolved;
+      }
+      org = resolved;
+      teamAutoSelected = orgMeta.choiceCount === 1;
     }
-    throw err;
+
+    if (createIfNotFound) {
+      const existing = await getProjectByIdOrName(client, projectName, org.id);
+      projectOrNewProjectName =
+        existing instanceof ProjectNotFound ? projectName : existing;
+      break;
+    }
+
+    let repoMatches: CrossTeamMatch[] = [];
+    let gitRemoteNames: string[] = [];
+    let currentGitRemoteName: string | undefined;
+    if (showProjectSuggestions) {
+      output.spinner('Searching for existing projects…', 1000);
+      try {
+        const repoSearch = await searchProjectsByRepoRoot({
+          client,
+          cwd: path,
+          gitProjectName,
+          orgs: [org],
+          remoteName: selectedGitRemoteName,
+        });
+        repoMatches = repoSearch.matches;
+        gitRemoteNames = repoSearch.remoteNames;
+        currentGitRemoteName = repoSearch.remote?.remoteName;
+      } catch (err) {
+        if (isPromptCanceledError(err)) {
+          throw err;
+        }
+        output.debug(`Git-linked project search failed: ${err}`);
+      } finally {
+        output.stopSpinner();
+      }
+    }
+
+    try {
+      projectOrNewProjectName = await inputProject(
+        client,
+        org,
+        projectName,
+        autoConfirm,
+        false,
+        showProjectSuggestions,
+        searchableTeamPicker && !selectedOrg && !teamAutoSelected,
+        repoMatches,
+        {
+          remoteNames: gitRemoteNames,
+          currentRemoteName: currentGitRemoteName,
+        }
+      );
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err as NodeJS.ErrnoException).code === 'HEADLESS'
+      ) {
+        return { status: 'error', exitCode: 1, reason: 'HEADLESS' };
+      }
+      throw err;
+    }
+
+    if (projectOrNewProjectName === BACK_TO_TEAM_SELECTION) {
+      org = undefined;
+      selectedGitRemoteName = undefined;
+      continue;
+    }
+    if (projectOrNewProjectName === SWITCH_GIT_REMOTE) {
+      const rootPath = await findRepoRoot(path);
+      if (!rootPath) {
+        continue;
+      }
+      try {
+        const remote = await resolveGitRemote(client, rootPath, {
+          yes: false,
+        });
+        selectedGitRemoteName = remote?.remoteName;
+      } catch (err) {
+        if (isPromptCanceledError(err)) {
+          throw err;
+        }
+        output.debug(`Failed to switch Git remote: ${err}`);
+      }
+      continue;
+    }
+    break;
   }
 
   if (typeof projectOrNewProjectName === 'string') {
     newProjectName = projectOrNewProjectName;
+  } else if (isCrossTeamMatch(projectOrNewProjectName)) {
+    return await linkCrossTeamMatch({
+      client,
+      path,
+      match: projectOrNewProjectName,
+      successEmoji,
+      autoConfirm,
+      pullEnv,
+    });
   } else {
     const project = projectOrNewProjectName;
 
-    await linkFolderToProject(
-      client,
-      path,
-      {
-        projectId: project.id,
-        orgId: org.id,
-      },
-      project.name,
-      org.slug,
-      successEmoji,
-      autoConfirm,
-      pullEnv
-    );
+    if (!createIfNotFound) {
+      await linkFolderToProject(
+        client,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug,
+        successEmoji,
+        autoConfirm,
+        pullEnv
+      );
+    }
     return { status: 'linked', org, project };
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-  const rootServicesSetup = await getServicesSetupState(path);
+
+  // Ask before settings/create so the transcript is questions then results,
+  // and the connect prompt does not follow the `Created` row. A project made
+  // for one `--project` deploy is never connected: every push would deploy it.
+  const gitConnectIntent =
+    singleFile || createIfNotFound
+      ? null
+      : await resolveGitConnectIntent(client, path, autoConfirm);
+
+  const rootServicesSetup = singleFile
+    ? null
+    : await getServicesSetupState(path);
   const configFileName =
-    (await findSourceVercelConfigFile(path)) ?? 'vercel.json';
+    (singleFile ? undefined : await findSourceVercelConfigFile(path)) ??
+    'vercel.json';
 
   try {
     let settings: ProjectSettings = {};
     let pathWithRootDirectory = path;
     let rootInferredServicesChoice: InferredServicesChoice | null = null;
 
-    if (!rootServicesSetup.hasConfiguredServices) {
+    if (rootServicesSetup && !rootServicesSetup.hasConfiguredServices) {
       rootInferredServicesChoice = await promptForInferredServicesSetup({
         client,
         autoConfirm,
@@ -592,11 +589,10 @@ export default async function setupAndLink(
     // 1. Explicit services config at the repo root.
     // 2. Inferred services layout at the repo root -> prompt for deployment mode.
     // 3. Standard framework setup flow.
-    if (rootServicesSetup.hasConfiguredServices) {
-      displayConfiguredServicesSetup(
-        rootServicesSetup.detectServicesResult,
-        configFileName
-      );
+    if (singleFile) {
+      settings = { ...singleFileProjectSettings };
+    } else if (rootServicesSetup?.hasConfiguredServices) {
+      displayConfiguredServicesSetup(rootServicesSetup, configFileName);
       settings.framework = 'services';
     } else if (rootInferredServicesChoice?.type === 'services') {
       settings.framework = 'services';
@@ -613,16 +609,28 @@ export default async function setupAndLink(
           rootInferredServicesChoice.selectedPath
         );
       } else {
-        rootDirectory = await inputRootDirectory(client, path, autoConfirm);
-        if (
-          rootDirectory &&
-          !(await validateRootDirectory(path, join(path, rootDirectory)))
-        ) {
-          return {
-            status: 'error',
-            exitCode: 1,
-            reason: 'INVALID_ROOT_DIRECTORY',
-          };
+        // Prompt for a root directory when the user explicitly asked for one
+        // via the inferred-services picker, or — in the standard flow — when
+        // this is a workspace (monorepo with multiple packages), or when no
+        // framework is detected at the root (nested monolith layouts like
+        // `repo/app/package.json`). For single-app projects with a framework
+        // at the root we skip the prompt entirely.
+        const shouldPromptRoot = await shouldPromptForRootDirectory({
+          path,
+          servicesChoice: rootInferredServicesChoice,
+        });
+        if (shouldPromptRoot) {
+          rootDirectory = await inputRootDirectory(client, path, autoConfirm);
+          if (
+            rootDirectory &&
+            !(await validateRootDirectory(path, join(path, rootDirectory)))
+          ) {
+            return {
+              status: 'error',
+              exitCode: 1,
+              reason: 'INVALID_ROOT_DIRECTORY',
+            };
+          }
         }
       }
 
@@ -648,7 +656,7 @@ export default async function setupAndLink(
 
       if (selectedRootServicesSetup?.hasConfiguredServices) {
         displayConfiguredServicesSetup(
-          selectedRootServicesSetup.detectServicesResult,
+          selectedRootServicesSetup,
           configFileName
         );
         settings.framework = 'services';
@@ -710,14 +718,8 @@ export default async function setupAndLink(
       }
     }
 
-    // Support for changing additional, less frequently used project settings.
-    let changeAdditionalSettings = false;
-    if (!autoConfirm) {
-      changeAdditionalSettings = await client.input.confirm(
-        'Do you want to change additional project settings?',
-        false
-      );
-    }
+    // Keep the advanced settings wiring available without prompting for it.
+    const changeAdditionalSettings = false;
 
     let vercelAuthSetting: VercelAuthSetting = DEFAULT_VERCEL_AUTH_SETTING;
     if (changeAdditionalSettings) {
@@ -737,24 +739,46 @@ export default async function setupAndLink(
       v0,
     });
 
-    await linkFolderToProject(
+    if (createIfNotFound) {
+      output.print('\n');
+      printAlignedLabel('Created', `${org.slug}/${project.name}`, {
+        gutter: '✓',
+      });
+    } else {
+      await linkFolderToProject(
+        client,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug,
+        successEmoji,
+        autoConfirm,
+        false, // don't prompt to pull env for newly created projects
+        'Created'
+      );
+    }
+
+    await applyGitConnectIntent(
       client,
-      path,
-      {
-        projectId: project.id,
-        orgId: org.id,
-      },
-      project.name,
-      org.slug,
-      successEmoji,
+      gitConnectIntent,
+      project,
       autoConfirm,
-      false // don't prompt to pull env for newly created projects
+      org
     );
 
-    await connectGitRepository(client, path, project, autoConfirm, org);
-
-    return { status: 'linked', org, project };
+    return {
+      status: 'linked',
+      org,
+      project,
+      ...(gitConnectIntent?.offered && { gitConnectOffered: true }),
+    };
   } catch (err) {
+    if (isPromptCanceledError(err)) {
+      throw err;
+    }
     if (isAPIError(err) && err.code === 'too_many_projects') {
       output.prettyError(err);
       return { status: 'error', exitCode: 1, reason: 'TOO_MANY_PROJECTS' };
@@ -771,41 +795,84 @@ export default async function setupAndLink(
   }
 }
 
-export async function connectGitRepository(
+/** A remote the user agreed to connect, resolved before the project exists. */
+type GitConnectIntent = { repoInfo?: RepoInfo; offered: boolean } | null;
+
+/**
+ * Asks whether to connect a detected Git remote. Runs before `createProject`
+ * so the question never follows the `✓ Created` row; `applyGitConnectIntent`
+ * does the connecting once a project id exists.
+ *
+ * Default is No (`y/N`) until connect preflight lands — connecting mutates
+ * the project for every future push. `--yes` / non-interactive still connect
+ * without prompting, preferring `origin`.
+ */
+export async function resolveGitConnectIntent(
   client: Client,
   path: string,
-  project: { id: string; link?: any },
-  autoConfirm: boolean,
-  org: Org
-): Promise<void> {
+  autoConfirm: boolean
+): Promise<GitConnectIntent> {
   try {
-    const gitConfig = await parseGitConfig(join(path, '.git/config'));
+    const gitConfigPath =
+      getGitConfigPath({ cwd: path }) ?? join(path, '.git/config');
+    const gitConfig = await parseGitConfig(gitConfigPath);
 
     if (!gitConfig) {
-      return;
+      return null;
     }
 
     const remoteUrls = pluckRemoteUrls(gitConfig);
     if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
-      return;
+      return null;
     }
 
+    const skipPrompts = autoConfirm || client.nonInteractive;
+
     const shouldConnect =
-      autoConfirm ||
+      skipPrompts ||
       (await client.input.confirm(
-        `Detected a repository. Connect it to this project?`,
-        true
+        `Connect this Git repository to automatically deploy changes on every push?`,
+        false
       ));
 
     if (!shouldConnect) {
-      return;
+      return { offered: true };
     }
 
-    const repoInfo = await selectAndParseRemoteUrl(client, remoteUrls);
+    // Multiple remotes would otherwise prompt, so prefer `origin`.
+    const repoInfo = skipPrompts
+      ? parseRepoUrl(remoteUrls.origin ?? Object.values(remoteUrls)[0])
+      : await selectAndParseRemoteUrl(client, remoteUrls);
+
     if (!repoInfo) {
-      return;
+      return null;
     }
 
+    return { repoInfo, offered: !skipPrompts };
+  } catch (error) {
+    if (isPromptCanceledError(error)) {
+      throw error;
+    }
+    // Silently ignore git detection errors to not disrupt the main flow
+    output.debug(`Failed to detect git repository: ${error}`);
+    return null;
+  }
+}
+
+/** Connects the remote resolved by `resolveGitConnectIntent`. */
+export async function applyGitConnectIntent(
+  client: Client,
+  intent: GitConnectIntent,
+  project: { id: string; link?: any },
+  autoConfirm: boolean,
+  org: Org
+): Promise<void> {
+  if (!intent?.repoInfo) {
+    return;
+  }
+
+  const { repoInfo } = intent;
+  try {
     await checkExistsAndConnect({
       client,
       confirm: autoConfirm,
@@ -818,7 +885,35 @@ export async function connectGitRepository(
       repoPath: `${repoInfo.org}/${repoInfo.repo}`,
     });
   } catch (error) {
+    if (isPromptCanceledError(error)) {
+      return;
+    }
     // Silently ignore git connection errors to not disrupt the main flow
     output.debug(`Failed to connect git repository: ${error}`);
   }
+}
+
+/**
+ * Detects, prompts, and connects in one step.
+ *
+ * `setupAndLink` uses the split `resolveGitConnectIntent` /
+ * `applyGitConnectIntent` pair so the prompt lands before project creation.
+ */
+export async function connectGitRepository(
+  client: Client,
+  path: string,
+  project: { id: string; link?: any },
+  autoConfirm: boolean,
+  org: Org
+): Promise<void> {
+  let intent: GitConnectIntent;
+  try {
+    intent = await resolveGitConnectIntent(client, path, autoConfirm);
+  } catch (error) {
+    if (isPromptCanceledError(error)) {
+      return;
+    }
+    throw error;
+  }
+  await applyGitConnectIntent(client, intent, project, autoConfirm, org);
 }

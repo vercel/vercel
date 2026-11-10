@@ -1,9 +1,15 @@
 import type Client from '../../util/client';
+import chalk from 'chalk';
+import { join } from 'path';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
-import { addRepoLink, ensureRepoLink } from '../../util/link/repo';
+import {
+  addRepoLink,
+  ensureRepoLink,
+  findRepoRoot,
+} from '../../util/link/repo';
 import { type Command, help } from '../help';
 import { addSubcommand, linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -11,14 +17,57 @@ import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { LinkTelemetryClient } from '../../util/telemetry/commands/link';
 import { getCommandAliases } from '..';
-import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 import getScope, { detectExplicitScope } from '../../util/get-scope';
+import { isPromptCanceledError } from '../../util/input/prompt-cancellation';
+import pull from '../env/pull';
+import { resolveProjectCwd } from '../../util/projects/find-project-root';
+import { promptExperimentalServicesMigration } from '../../util/services/migrate-experimental-services';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
 };
 
+function warnOidcRefreshFailed(): void {
+  output.print(
+    `${chalk.yellow('!')} Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local. Rerun the link command to retry.\n`
+  );
+}
+
+async function refreshOidcTokenAfterLink(
+  client: Client,
+  cwd: string
+): Promise<void> {
+  const originalCwd = client.cwd;
+  try {
+    client.cwd = await resolveProjectCwd(cwd);
+    output.print('\n');
+    const exitCode = await pull(client, ['--yes'], 'vercel-cli:link', {
+      oidcTokenOnly: true,
+    });
+
+    if (exitCode !== 0) {
+      warnOidcRefreshFailed();
+    }
+  } catch (_error) {
+    warnOidcRefreshFailed();
+  } finally {
+    client.cwd = originalCwd;
+  }
+}
+
 export default async function link(client: Client) {
+  try {
+    return await client.withEscapePromptCancellation(() => linkProject(client));
+  } catch (error) {
+    if (isPromptCanceledError(error)) {
+      output.print('  Canceled.\n');
+      return 0;
+    }
+    throw error;
+  }
+}
+
+async function linkProject(client: Client) {
   let parsedArgs = null;
 
   const flagsSpecification = getFlagsSpecification(linkCommand.options);
@@ -30,7 +79,7 @@ export default async function link(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { subcommand, subcommandOriginal } = getSubcommand(
@@ -46,7 +95,11 @@ export default async function link(client: Client) {
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: linkCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: linkCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -56,7 +109,7 @@ export default async function link(client: Client) {
     if (parsedArgs.flags['--help']) {
       telemetry.trackCliFlagHelp('link', subcommandOriginal);
       printHelp(addSubcommand);
-      return 2;
+      return 0;
     }
 
     telemetry.trackCliSubcommandAdd(subcommandOriginal);
@@ -66,13 +119,12 @@ export default async function link(client: Client) {
     try {
       await addRepoLink(client, client.cwd, { yes });
     } catch (err) {
+      if (isPromptCanceledError(err)) {
+        throw err;
+      }
       output.prettyError(err);
       return 1;
     }
-
-    await autoInstallVercelPlugin(client, {
-      autoConfirm: yes,
-    });
 
     return 0;
   }
@@ -83,13 +135,18 @@ export default async function link(client: Client) {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('link');
-    output.print(help(linkCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(linkCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
@@ -117,18 +174,23 @@ export default async function link(client: Client) {
   }
 
   if (parsedArgs.flags['--repo']) {
-    output.warn(`The ${cmd('--repo')} flag is in alpha, please report issues`);
+    output.warn(
+      `The ${cmd('--repo')} option is in alpha, please report issues`
+    );
     try {
       await ensureRepoLink(client, cwd, { yes, overwrite: true });
     } catch (err) {
+      if (isPromptCanceledError(err)) {
+        throw err;
+      }
       output.prettyError(err);
       return 1;
     }
   } else {
     const explicitScopeProvided = detectExplicitScope(client);
-    if (explicitScopeProvided) {
-      await getScope(client, { resolveLocalScope: true });
-    }
+    const selectedOrg = explicitScopeProvided
+      ? (await getScope(client, { resolveLocalScope: true })).org
+      : undefined;
 
     // Non-interactive when flag is passed or when agent (e.g. no TTY) so JSON is output when confirmation needed
     const linkNonInteractive =
@@ -137,20 +199,34 @@ export default async function link(client: Client) {
     const link = await ensureLink('link', client, cwd, {
       autoConfirm: yes,
       forceDelete: true,
+      selectedOrg,
       projectName: parsedArgs.flags['--project'],
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
-      searchAcrossTeams: !explicitScopeProvided,
+      pullEnv: false,
     });
 
     if (typeof link === 'number') {
       return link;
     }
-  }
 
-  await autoInstallVercelPlugin(client, {
-    autoConfirm: yes,
-  });
+    const projectCwd = await resolveProjectCwd(cwd);
+    const rootDirectory = link.project.rootDirectory;
+    const repoRoot =
+      link.repoRoot ??
+      (rootDirectory ? await findRepoRoot(projectCwd) : undefined);
+    await promptExperimentalServicesMigration({
+      client,
+      cwd: rootDirectory
+        ? join(repoRoot ?? projectCwd, rootDirectory)
+        : (link.repoRoot ?? projectCwd),
+      autoConfirm: yes,
+      nonInteractive: linkNonInteractive,
+      allowConfigExecution: false,
+    });
+
+    await refreshOidcTokenAfterLink(client, cwd);
+  }
 
   return 0;
 }

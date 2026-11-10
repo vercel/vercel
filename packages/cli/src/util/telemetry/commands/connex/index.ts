@@ -1,11 +1,27 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { connexCommand } from '../../../../commands/connex/command';
+import { serviceTelemetryValue } from '../../../connex/service-telemetry-value';
+import { isValidHexColor } from '../../../connex/validate-hex';
 
 export class ConnexTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof connexCommand>
 {
+  trackCliSubcommandDiscover(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'discover',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandCategories(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'categories',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandCreate(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'create',
@@ -27,9 +43,9 @@ export class ConnexTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'remove',
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -41,9 +57,37 @@ export class ConnexTelemetryClient
     });
   }
 
+  trackCliSubcommandContacts(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'contacts',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandAttach(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'attach',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDetach(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'detach',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRevokeTokens(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'revoke-tokens',
       value: actual,
     });
   }
@@ -57,6 +101,198 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliArgumentId(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({
+        arg: 'id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliArgumentService(v: string | undefined) {
+    if (v) {
+      // Either a service slug (e.g. `slack`, `github`) or the host of an
+      // OAuth/MCP server (e.g. `mcp.linear.app`), both of which we want. Keep
+      // only the host so credentials embedded in a URL's userinfo or query
+      // string are never recorded.
+      const value = serviceTelemetryValue(v);
+      this.trackCliArgument({
+        arg: 'service',
+        value: value ?? this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionName(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'name',
+        // User-authored connector name can carry team/product names, hence redact.
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionSubject(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'subject',
+        // Closed enum. Emit raw when valid so the `user` vs `app` token split
+        // is visible; redact anything else
+        value: v === 'user' || v === 'app' ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionInstallation(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
+  trackCliOptionInstallationId(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation-id',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionScopes(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'scopes',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagNoDefaultScopes(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('no-default-scopes');
+    }
+  }
+
+  trackCliOptionIcon(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'icon',
+        // Path can leak username/repo location — redact.
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionBackgroundColor(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'background-color',
+        // Hex colors are not sensitive; arbitrary text might be. Only emit
+        // the raw value when it parses as #RRGGBB, otherwise redact so a
+        // rejected value isn't sent verbatim before validation runs.
+        value: isValidHexColor(v) ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionAccentColor(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'accent-color',
+        value: isValidHexColor(v) ? v : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionData(v: string | undefined) {
+    if (v !== undefined) {
+      this.trackCliOption({
+        option: 'data',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionConnectorType(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'connector-type',
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionConnectionMethod(v: string | string[] | undefined) {
+    for (const value of [v ?? []].flat()) {
+      if (value) {
+        this.trackCliOption({
+          option: 'connection-method',
+          // Registry slugs are a finite, non-sensitive set.
+          value,
+        });
+      }
+    }
+  }
+
+  trackCliOptionTarget(v: string | string[] | undefined) {
+    for (const value of [v ?? []].flat()) {
+      if (value) {
+        this.trackCliOption({
+          option: 'target',
+          // Registry target slugs are a finite, non-sensitive set.
+          value,
+        });
+      }
+    }
+  }
+
+  trackCliArgumentQuery(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({
+        arg: 'query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionCategory(v: string[] | undefined) {
+    for (const raw of v ?? []) {
+      for (const category of raw.split(',')) {
+        const trimmed = category.trim();
+        if (trimmed) {
+          this.trackCliOption({
+            option: 'category',
+            value: this.redactedValue,
+          });
+        }
+      }
+    }
+  }
+
+  trackCliFlagSupportsTriggers(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('supports-triggers');
+    }
+  }
+
+  trackCliOptionParam(v: string[] | undefined) {
+    if (!v || v.length === 0) {
+      return;
+    }
+    // Template values can embed tenant hostnames, so record how many were
+    // passed rather than the keys or values.
+    this.trackCliOption({
+      option: 'param',
+      value: String(v.length),
+    });
+  }
+
   trackCliFlagYes(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('yes');
@@ -66,6 +302,79 @@ export class ConnexTelemetryClient
   trackCliFlagDisconnectAll(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('disconnect-all');
+    }
+  }
+
+  trackCliFlagTriggers(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('triggers');
+    }
+  }
+
+  trackCliOptionTriggerEvent(v: string[] | undefined) {
+    if (v && v.length > 0) {
+      this.trackCliOption({
+        option: 'trigger-event',
+        value: String(v.length),
+      });
+    }
+  }
+
+  trackCliOptionGitBranch(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
+  trackCliOptionTriggerBranch(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionTriggerEnvironment(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-environment',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionTriggerPath(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-path',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionTriggerProject(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'trigger-project',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagMyTokens(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('my-tokens');
+    }
+  }
+
+  trackCliFlagAllTokens(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('all-tokens');
     }
   }
 
@@ -93,6 +402,61 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliOptionQuery(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
+  trackCliOptionSearch(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'search',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionService(v: string[] | undefined) {
+    if (!v || v.length === 0) {
+      return;
+    }
+    for (const raw of v) {
+      for (const svc of raw.split(',')) {
+        const trimmed = svc.trim();
+        if (!trimmed) {
+          continue;
+        }
+        this.trackCliOption({
+          option: 'service',
+          value: this.redactedValue,
+        });
+      }
+    }
+  }
+
+  trackCliOptionType(v: string[] | undefined) {
+    if (!v || v.length === 0) {
+      return;
+    }
+    for (const raw of v) {
+      for (const t of raw.split(',')) {
+        const trimmed = t.trim();
+        if (!trimmed) {
+          continue;
+        }
+        this.trackCliOption({
+          option: 'type',
+          value: trimmed,
+        });
+      }
+    }
+  }
+
   trackCliOptionFormat(v: string | undefined) {
     if (v) {
       this.trackCliOption({
@@ -117,15 +481,6 @@ export class ConnexTelemetryClient
           value: this.redactedTargetName(trimmed),
         });
       }
-    }
-  }
-
-  trackCliOptionProject(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'project',
-        value: this.redactedValue,
-      });
     }
   }
 }

@@ -1,14 +1,42 @@
 export {
+  builderToFrameworks,
   detectBuilders,
   detectOutputDirectory,
   detectApiDirectory,
   detectApiExtensions,
+  getProxyBuilder,
+  validateProxyConfig,
+  validateProxy,
   type Options as DetectBuildersOptions,
+  type ProxyConfig,
 } from './detect-builders';
 export {
   detectServices,
+  generateServiceRewrites,
   generateServicesRoutes,
 } from './services/detect-services';
+export { detectDaemons } from './services/detect-daemons';
+export {
+  resolveAllConfiguredServicesV2,
+  resolveConfiguredServiceV2,
+  validateServiceConfigV2,
+} from './services/resolve-v2';
+export { resolveAllConfiguredServices } from './services/resolve';
+export {
+  hasLegacyServicesConfig,
+  migrateExperimentalServices,
+  planExperimentalServicesMigration,
+} from './services/migrate';
+export type {
+  ExperimentalServicesMigrationPlan,
+  LegacyServicesConfig,
+  MigrateExperimentalServicesOptions,
+  ServicesMigrationNote,
+} from './services/migrate';
+export {
+  isExperimentalService,
+  isExperimentalServiceV2,
+} from '@vercel/build-utils';
 export { autoDetectServices } from './services/auto-detect';
 export type {
   AutoDetectOptions,
@@ -24,18 +52,29 @@ export {
   getInternalServiceWorkerPath,
   getInternalServiceWorkerPathPrefix,
 } from './services/utils';
-export { getServicesBuilders } from './services/get-services-builders';
 export type {
   DetectServicesOptions,
   DetectServicesResult,
   DetectServicesSource,
+  InferredServiceConfig,
   InferredServicesConfig,
   ResolvedServicesResult,
   InferredServicesResult,
   ResolvedService,
   Service,
+  ExperimentalService,
+  ExperimentalServiceV2,
+  ExperimentalServiceV2Config,
+  ExperimentalServicesV2,
+  ExperimentalServiceV2Binding,
+  ServiceBinding,
+  ServiceConfig,
+  Services,
   ServicesRoutes,
   ServiceDetectionError,
+  ConfiguredServices,
+  ConfiguredServicesType,
+  DetectedDaemon,
 } from './services/types';
 export { detectFileSystemAPI } from './detect-file-system-api';
 export {
@@ -58,6 +97,10 @@ export {
   getWorkspacePackagePaths,
   GetWorkspacePackagePathsOptions,
 } from './workspaces/get-workspace-package-paths';
+export {
+  resolveWorkspacePackageTargets,
+  type WorkspacePackageTarget,
+} from './workspaces/resolve-workspace-package-targets';
 export { monorepoManagers } from './monorepos/monorepo-managers';
 export { isOfficialRuntime, isStaticRuntime } from './is-official-runtime';
 export { packageManagers } from './package-managers/package-managers';

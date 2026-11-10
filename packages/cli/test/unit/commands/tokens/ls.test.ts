@@ -35,4 +35,25 @@ describe('tokens ls', () => {
     const jsonOutput = JSON.parse(client.stdout.getFullOutput());
     expect(jsonOutput.tokens).toEqual([]);
   });
+
+  it('continues from --next and prints the next command', async () => {
+    useUser();
+    client.scenario.get('/v6/user/tokens', (req, res) => {
+      expect(req.query.limit).toBe('5');
+      expect(req.query.until).toBe('cursor+one');
+      expect(req.query.next).toBeUndefined();
+      res.json({
+        tokens: [{ id: 'tok_1', name: 'CLI', type: 'classic', active: true }],
+        pagination: { next: 'cursor+two' },
+      });
+    });
+    client.setArgv('tokens', 'ls', '--limit', '5', '--next', 'cursor+one');
+
+    const exitCode = await tokens(client);
+
+    expect(exitCode).toBe(0);
+    await expect(client.stderr).toOutput(
+      "tokens ls --limit 5 --next 'cursor+two'"
+    );
+  });
 });

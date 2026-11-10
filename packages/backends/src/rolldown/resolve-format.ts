@@ -43,7 +43,10 @@ export const resolveEntrypointAndFormat = async (
     }
   }
   if (!resolvedFormat) {
-    throw new Error(`Unable to resolve format for ${args.entrypoint}`);
+    // No `package.json` (and no explicit `defaultFormat`) to infer the module
+    // format from. Default to ESM so a bare `server.ts`/`server.js` works out
+    // of the box without requiring a `package.json` with `"type": "module"`.
+    resolvedFormat = 'esm';
   }
   const resolvedExtension = resolvedFormat === 'esm' ? 'mjs' : 'cjs';
   return { format: resolvedFormat, extension: resolvedExtension };

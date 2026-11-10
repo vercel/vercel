@@ -4,12 +4,7 @@ export const loginCommand = {
   name: 'login',
   aliases: [],
   description: 'Sign in to your Vercel account.',
-  arguments: [
-    {
-      name: 'email or team id',
-      required: false,
-    },
-  ],
+  arguments: [],
   options: [
     {
       name: 'github',

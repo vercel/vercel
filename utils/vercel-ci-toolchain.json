@@ -1,0 +1,17 @@
+{
+  "$comment": "Tool pins for utils/vercel-ci-install.sh (Vercel CI bootstrap). utils/vercel-ci-toolchain.test.js checks go, uv, and yarn against .github/workflows. Bump sha256 with version. Rust comes from packages/python-analysis/rust-toolchain.toml.",
+  "go": {
+    "version": "1.23.12",
+    "sha256": "d3847fef834e9db11bf64e3fb34db9c04db14e068eeb064f49af747010454f90"
+  },
+  "uv": {
+    "version": "0.13.5",
+    "sha256": "f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f"
+  },
+  "python": {
+    "version": "3.12"
+  },
+  "yarn": {
+    "version": "1.22.19"
+  }
+}

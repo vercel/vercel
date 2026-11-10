@@ -1,0 +1,17 @@
+{
+  "probes": [
+    { "logMustContain": "Using uv " },
+    { "logMustNotContain": "falling back to pip" },
+    {
+      "path": "/api",
+      "mustContain": "pip:RANDOMNESS_PLACEHOLDER",
+      "responseHeaders": { "content-type": "text/plain" }
+    },
+    {
+      "path": "/api/werkzeug_version.py",
+      "mustContain": "2.0.1",
+      "responseHeaders": { "content-type": "text/html; charset=utf-8" }
+    },
+    { "logMustContain": "Using python version: 3.12" }
+  ]
+}

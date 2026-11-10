@@ -63,7 +63,7 @@ describe('firewall attack-mode', () => {
     it('tracks help telemetry', async () => {
       client.setArgv('firewall', 'attack-mode', 'enable', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
     });
   });
 

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "plugin": ["typedoc-plugin-markdown", "typedoc-plugin-mdn-links"],
+  "out": "docs",
+  "githubPages": false,
+  "gitRevision": "main",
+  "sourceLinkTemplate": "https://github.com/vercel/vercel/blob/{gitRevision}/{path}#L{line}",
+  "hideBreadcrumbs": true,
+  "readme": "none"
+}

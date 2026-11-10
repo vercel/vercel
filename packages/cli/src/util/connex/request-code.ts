@@ -4,14 +4,14 @@ import type Client from '../client';
 import sleep from '../sleep';
 
 export interface ConnexResult {
-  status: 'pending' | 'partial' | 'success' | 'error';
+  status: 'pending' | 'partial' | 'success' | 'error' | 'canceled';
   progress?: string;
   data?: Record<string, unknown>;
   error?: { code: string; message: string };
 }
 
 const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_DURATION_MS = 30 * 60 * 1000;
+const MAX_POLL_DURATION_MS = 115 * 60 * 1000;
 const MAX_EARLY_404_COUNT = 3;
 
 /**
@@ -29,7 +29,7 @@ export function generateRequestCode(): {
 }
 
 /**
- * Polls `GET /v1/connex/result/{verifier}` until the request code resolves
+ * Polls `GET /v1/connect/result/{verifier}` until the request code resolves
  * to success or error, or the timeout is reached.
  *
  * Returns the result data on success, or null on failure (error is
@@ -47,7 +47,7 @@ export async function awaitConnexResult(
     await sleep(POLL_INTERVAL_MS);
     try {
       const result = await client.fetch<ConnexResult>(
-        `/v1/connex/result/${encodeURIComponent(verifier)}`
+        `/v1/connect/result/${encodeURIComponent(verifier)}`
       );
 
       if (result.status === 'success' && result.data) {
@@ -60,7 +60,7 @@ export async function awaitConnexResult(
           output.stopSpinner();
           const clientId = result.data.clientId as string | undefined;
           if (clientId) {
-            output.log(`Client created: ${clientId}`);
+            output.log(`Connector created: ${clientId}`);
           }
           output.spinner(`${result.progress}...`);
         }
@@ -71,6 +71,11 @@ export async function awaitConnexResult(
         output.error(
           `Setup failed: ${result.error.message} (${result.error.code})`
         );
+        return null;
+      }
+
+      if (result.status === 'canceled') {
+        output.error('Setup was canceled in the browser.');
         return null;
       }
     } catch (err: unknown) {

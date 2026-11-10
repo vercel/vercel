@@ -3,15 +3,15 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
-  realpathSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from 'node:fs';
+import { realpath } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import {
-  clearVercelCliCache,
+  clearVercelCliLookupCache,
   execVercelCli,
   findVercelCli,
   VercelCliError,
@@ -20,7 +20,7 @@ import {
 const directories: string[] = [];
 
 afterEach(() => {
-  clearVercelCliCache();
+  clearVercelCliLookupCache();
   vi.unstubAllEnvs();
   for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
@@ -31,6 +31,14 @@ function createDirectory(): string {
   const directory = mkdtempSync(path.join(tmpdir(), 'cli-exec-'));
   directories.push(directory);
   return directory;
+}
+
+async function expectedRealPath(filePath: string): Promise<string> {
+  try {
+    return await realpath(filePath);
+  } catch {
+    return path.resolve(filePath);
+  }
 }
 
 function writeExecutable(
@@ -48,37 +56,74 @@ function writeExecutable(
   }
 }
 
-const windowsOnlyTest = process.platform === 'win32' ? test : test.skip;
+function getVercelBinName(): string {
+  return process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
+}
 
-test('finds a local node_modules bin via the prepended PATH', () => {
-  const root = createDirectory();
-  const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+function writeProjectRoot(root: string) {
+  mkdirSync(root, { recursive: true });
+  mkdirSync(path.join(root, '.git'), { recursive: true });
+}
 
-  mkdirSync(cwd, { recursive: true });
-  mkdirSync(path.dirname(binPath), { recursive: true });
+function writePackageJson(root: string) {
+  mkdirSync(root, { recursive: true });
   writeFileSync(
-    binPath,
-    process.platform === 'win32'
-      ? '@echo off\r\nnode -e "process.stdout.write(JSON.stringify({args:process.argv.slice(1)}))" %*\r\n'
-      : '#!/bin/sh\nnode -e "process.stdout.write(JSON.stringify({args:process.argv.slice(1)}))" "$@"\n'
+    path.join(root, 'package.json'),
+    JSON.stringify({ private: true })
   );
-  if (process.platform !== 'win32') {
-    chmodSync(binPath, 0o755);
+}
+
+function writeLocalVercelPackage(
+  root: string,
+  contents = 'process.stdout.write(JSON.stringify({args:process.argv.slice(2)}));\n',
+  options: { writeProjectRoot?: boolean } = {}
+): { binPath: string; cliPath: string } {
+  const binPath = path.join(root, 'node_modules', '.bin', getVercelBinName());
+  const packageDirectory = path.join(root, 'node_modules', 'vercel');
+  const cliPath = path.join(packageDirectory, 'dist', 'vc.js');
+
+  if (options.writeProjectRoot !== false) {
+    writeProjectRoot(root);
+  }
+  mkdirSync(path.dirname(binPath), { recursive: true });
+  mkdirSync(path.dirname(cliPath), { recursive: true });
+  writeFileSync(
+    path.join(packageDirectory, 'package.json'),
+    JSON.stringify({ name: 'vercel', bin: { vercel: './dist/vc.js' } })
+  );
+  writeFileSync(cliPath, contents);
+
+  if (process.platform === 'win32') {
+    writeFileSync(binPath, '@echo off\r\n');
+  } else {
+    chmodSync(cliPath, 0o755);
+    symlinkSync(cliPath, binPath);
   }
 
-  expect(findVercelCli({ cwd })).toEqual({
-    command: realpathSync(binPath),
-    commandArgs: [],
+  return { binPath, cliPath };
+}
+
+const windowsOnlyTest = process.platform === 'win32' ? test : test.skip;
+const posixOnlyTest = process.platform === 'win32' ? test.skip : test;
+
+test('finds a local node_modules bin via the prepended PATH', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const { cliPath } = writeLocalVercelPackage(root);
+
+  mkdirSync(cwd, { recursive: true });
+
+  expect(await findVercelCli({ cwd })).toEqual({
+    command: process.execPath,
+    commandArgs: [await expectedRealPath(cliPath)],
     source: 'local-bin',
   });
 
-  const invocation = findVercelCli({ cwd });
+  const invocation = await findVercelCli({ cwd });
 
   expect(invocation).toEqual({
-    command: realpathSync(binPath),
-    commandArgs: [],
+    command: process.execPath,
+    commandArgs: [await expectedRealPath(cliPath)],
     source: 'local-bin',
   });
 
@@ -86,41 +131,863 @@ test('finds a local node_modules bin via the prepended PATH', () => {
     execVercelCli(['project', 'token', 'my-project'], { cwd })
   ).resolves.toMatchObject({
     invocation: {
-      command: realpathSync(binPath),
+      command: process.execPath,
+      commandArgs: [await expectedRealPath(cliPath)],
       source: 'local-bin',
     },
     stdout: JSON.stringify({ args: ['project', 'token', 'my-project'] }),
   });
 });
 
-test('prefers the installed package bin over node_modules/.bin shims', () => {
+test('prefers the installed package bin over node_modules/.bin shims', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const shimPath = path.join(root, 'node_modules', '.bin', binName);
+  const { binPath: shimPath, cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('official');\n"
+  );
 
   mkdirSync(cwd, { recursive: true });
-  mkdirSync(path.dirname(shimPath), { recursive: true });
+  rmSync(shimPath, { force: true });
   writeFileSync(
     shimPath,
     process.platform === 'win32'
-      ? '@echo off\r\nnode -e "process.stdout.write("ok")"\r\n'
-      : '#!/bin/sh\necho ok\n'
+      ? '@echo off\r\nnode -e "process.stdout.write(\'shim\')"\r\n'
+      : '#!/bin/sh\necho shim\n'
   );
   if (process.platform !== 'win32') {
     chmodSync(shimPath, 0o755);
   }
 
-  const invocation = findVercelCli({ cwd });
+  const invocation = await findVercelCli({ cwd });
 
   expect(invocation).toEqual({
-    command: realpathSync(shimPath),
-    commandArgs: [],
+    command: process.execPath,
+    commandArgs: [await expectedRealPath(cliPath)],
     source: 'local-bin',
   });
 });
 
-test('falls back to PATH when no local binary exists', () => {
+test('skips a local vercel bin that is not from the vercel package', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const globalBinDir = createDirectory();
+  const localBinPath = path.join(
+    root,
+    'node_modules',
+    '.bin',
+    getVercelBinName()
+  );
+  const globalBinPath = path.join(globalBinDir, getVercelBinName());
+
+  mkdirSync(cwd, { recursive: true });
+  writeExecutable(localBinPath, {
+    win32: '@echo off\r\nnode -e "process.stdout.write(\'local\')"\r\n',
+    posix: '#!/bin/sh\necho local\n',
+  });
+  writeExecutable(globalBinPath, {
+    win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+    posix: '#!/bin/sh\necho global\n',
+  });
+
+  expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+    command: await expectedRealPath(globalBinPath),
+    commandArgs: [],
+    source: 'path',
+  });
+});
+
+test('does not walk past the nearest project root marker', async () => {
+  const parent = createDirectory();
+  const project = path.join(parent, 'project');
+  const cwd = path.join(project, 'apps', 'web');
+  const { cliPath: parentCliPath } = writeLocalVercelPackage(
+    parent,
+    "process.stdout.write('parent');\n"
+  );
+
+  writeProjectRoot(project);
+  mkdirSync(cwd, { recursive: true });
+
+  expect(await findVercelCli({ cwd, path: '' })).toBeNull();
+
+  const { cliPath: projectCliPath } = writeLocalVercelPackage(
+    project,
+    "process.stdout.write('project');\n"
+  );
+
+  clearVercelCliLookupCache();
+
+  expect(await findVercelCli({ cwd, path: '' })).toEqual({
+    command: process.execPath,
+    commandArgs: [await expectedRealPath(projectCliPath)],
+    source: 'local-bin',
+  });
+  expect(parentCliPath).not.toBe(projectCliPath);
+});
+
+test('keeps walking up when no project root marker is found', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const { cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('root');\n"
+  );
+
+  rmSync(path.join(root, '.git'), { recursive: true, force: true });
+  mkdirSync(cwd, { recursive: true });
+
+  expect(await findVercelCli({ cwd, path: '' })).toEqual({
+    command: process.execPath,
+    commandArgs: [await expectedRealPath(cliPath)],
+    source: 'local-bin',
+  });
+});
+
+test('does walk past package.json files inside a project', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const { cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('root');\n"
+  );
+
+  writePackageJson(path.join(root, 'apps'));
+  writePackageJson(cwd);
+
+  expect(await findVercelCli({ cwd, path: '' })).toEqual({
+    command: process.execPath,
+    commandArgs: [await expectedRealPath(cliPath)],
+    source: 'local-bin',
+  });
+});
+
+test('does not use an out-of-bound node_modules bin listed in PATH', async () => {
+  const parent = createDirectory();
+  const project = path.join(parent, 'project');
+  const cwd = path.join(project, 'apps', 'web');
+  const globalBinDir = createDirectory();
+  const parentBinDirectory = path.join(parent, 'node_modules', '.bin');
+  const { cliPath: parentCliPath } = writeLocalVercelPackage(
+    parent,
+    "process.stdout.write('parent');\n"
+  );
+  const globalBinPath = path.join(globalBinDir, getVercelBinName());
+
+  writeProjectRoot(project);
+  mkdirSync(cwd, { recursive: true });
+  writeExecutable(globalBinPath, {
+    win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+    posix: '#!/bin/sh\necho global\n',
+  });
+
+  expect(
+    await findVercelCli({
+      cwd,
+      path: [parentBinDirectory, globalBinDir].join(path.delimiter),
+    })
+  ).toEqual({
+    command: await expectedRealPath(globalBinPath),
+    commandArgs: [],
+    source: 'path',
+  });
+
+  await expect(
+    execVercelCli([], { cwd, env: { PATH: parentBinDirectory } })
+  ).rejects.toMatchObject({
+    code: 'VERCEL_CLI_NOT_FOUND',
+    message: expect.stringContaining(
+      'local bin is outside project lookup boundary'
+    ),
+  });
+  expect(parentCliPath).toBeTruthy();
+});
+
+posixOnlyTest(
+  'skips world-writable ancestor node_modules directories',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const globalBinDir = createDirectory();
+    const { cliPath } = writeLocalVercelPackage(
+      root,
+      "process.stdout.write('local');\n"
+    );
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    chmodSync(path.join(root, 'node_modules'), 0o777);
+
+    try {
+      expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+        command: await expectedRealPath(globalBinPath),
+        commandArgs: [],
+        source: 'path',
+      });
+    } finally {
+      chmodSync(path.join(root, 'node_modules'), 0o755);
+    }
+
+    expect(cliPath).toBeTruthy();
+  }
+);
+
+posixOnlyTest(
+  'skips group-writable ancestor node_modules directories',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const globalBinDir = createDirectory();
+    const { cliPath } = writeLocalVercelPackage(
+      root,
+      "process.stdout.write('local');\n"
+    );
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    chmodSync(path.join(root, 'node_modules'), 0o775);
+
+    try {
+      expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+        command: await expectedRealPath(globalBinPath),
+        commandArgs: [],
+        source: 'path',
+      });
+    } finally {
+      chmodSync(path.join(root, 'node_modules'), 0o755);
+    }
+
+    expect(cliPath).toBeTruthy();
+  }
+);
+
+posixOnlyTest(
+  'skips local bins when the node_modules parent directory is unsafe',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const globalBinDir = createDirectory();
+    const { cliPath } = writeLocalVercelPackage(
+      root,
+      "process.stdout.write('local');\n"
+    );
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    chmodSync(root, 0o777);
+
+    try {
+      expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+        command: await expectedRealPath(globalBinPath),
+        commandArgs: [],
+        source: 'path',
+      });
+
+      await expect(
+        execVercelCli([], { cwd, env: { PATH: '' } })
+      ).rejects.toMatchObject({
+        code: 'VERCEL_CLI_NOT_FOUND',
+        message: expect.stringContaining('world-writable'),
+      });
+    } finally {
+      chmodSync(root, 0o700);
+    }
+
+    expect(cliPath).toBeTruthy();
+  }
+);
+
+posixOnlyTest(
+  'skips nested local bins when an intermediate parent directory is unsafe',
+  async () => {
+    const root = createDirectory();
+    const workspace = path.join(root, 'packages', 'web');
+    const cwd = path.join(workspace, 'src');
+    const globalBinDir = createDirectory();
+    const { cliPath } = writeLocalVercelPackage(
+      workspace,
+      "process.stdout.write('local');\n",
+      { writeProjectRoot: false }
+    );
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+
+    writeProjectRoot(root);
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    chmodSync(path.join(root, 'packages'), 0o777);
+
+    try {
+      expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+        command: await expectedRealPath(globalBinPath),
+        commandArgs: [],
+        source: 'path',
+      });
+
+      await expect(
+        execVercelCli([], { cwd, env: { PATH: '' } })
+      ).rejects.toMatchObject({
+        code: 'VERCEL_CLI_NOT_FOUND',
+        message: expect.stringContaining('packages'),
+      });
+    } finally {
+      chmodSync(path.join(root, 'packages'), 0o755);
+    }
+
+    expect(cliPath).toBeTruthy();
+  }
+);
+
+posixOnlyTest(
+  'skips nested local bins without a project marker when an intermediate parent directory is unsafe',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'packages', 'web', 'src');
+    const globalBinDir = createDirectory();
+    const { cliPath } = writeLocalVercelPackage(
+      root,
+      "process.stdout.write('local');\n",
+      { writeProjectRoot: false }
+    );
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    chmodSync(path.join(root, 'packages'), 0o777);
+
+    try {
+      expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+        command: await expectedRealPath(globalBinPath),
+        commandArgs: [],
+        source: 'path',
+      });
+
+      await expect(
+        execVercelCli([], { cwd, env: { PATH: '' } })
+      ).rejects.toMatchObject({
+        code: 'VERCEL_CLI_NOT_FOUND',
+        message: expect.stringContaining('packages'),
+      });
+    } finally {
+      chmodSync(path.join(root, 'packages'), 0o755);
+    }
+
+    expect(cliPath).toBeTruthy();
+  }
+);
+
+posixOnlyTest(
+  'does not prepend unsafe local bin directories to the child PATH',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const globalBinDir = createDirectory();
+    const { cliPath } = writeLocalVercelPackage(
+      root,
+      "process.stdout.write(process.env.PATH || '');\n"
+    );
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+    const localBinDirectory = path.join(root, 'node_modules', '.bin');
+
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(globalBinPath, {
+      win32:
+        '@echo off\r\nnode -e "process.stdout.write(process.env.PATH || process.env.Path || \'\')"\r\n',
+      posix:
+        '#!/bin/sh\nnode -e "process.stdout.write(process.env.PATH || \'\')"\n',
+    });
+    chmodSync(localBinDirectory, 0o777);
+
+    try {
+      const result = await execVercelCli([], {
+        cwd,
+        env: { PATH: globalBinDir },
+      });
+
+      expect(result).toMatchObject({
+        invocation: {
+          command: await expectedRealPath(globalBinPath),
+          commandArgs: [],
+          source: 'path',
+        },
+      });
+
+      expect(result.stdout?.split(path.delimiter)).not.toContain(
+        localBinDirectory
+      );
+      expect(result.stdout?.split(path.delimiter)).toContain(globalBinDir);
+    } finally {
+      chmodSync(localBinDirectory, 0o755);
+    }
+
+    expect(cliPath).toBeTruthy();
+  }
+);
+
+posixOnlyTest(
+  'skips local vercel package bins in unsafe subdirectories',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const globalBinDir = createDirectory();
+    const { cliPath } = writeLocalVercelPackage(
+      root,
+      "process.stdout.write('local');\n"
+    );
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+    const packageDistDirectory = path.dirname(cliPath);
+
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    chmodSync(packageDistDirectory, 0o777);
+
+    try {
+      expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+        command: await expectedRealPath(globalBinPath),
+        commandArgs: [],
+        source: 'path',
+      });
+    } finally {
+      chmodSync(packageDistDirectory, 0o755);
+    }
+  }
+);
+
+posixOnlyTest(
+  'skips local vercel package bins in group-writable subdirectories',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const globalBinDir = createDirectory();
+    const { cliPath } = writeLocalVercelPackage(
+      root,
+      "process.stdout.write('local');\n"
+    );
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+    const packageDistDirectory = path.dirname(cliPath);
+
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    chmodSync(packageDistDirectory, 0o775);
+
+    try {
+      expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+        command: await expectedRealPath(globalBinPath),
+        commandArgs: [],
+        source: 'path',
+      });
+    } finally {
+      chmodSync(packageDistDirectory, 0o755);
+    }
+  }
+);
+
+posixOnlyTest('skips local vercel packages in unsafe directories', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const globalBinDir = createDirectory();
+  const { cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('local');\n"
+  );
+  const globalBinPath = path.join(globalBinDir, getVercelBinName());
+  const packageDirectory = path.dirname(path.dirname(cliPath));
+
+  mkdirSync(cwd, { recursive: true });
+  writeExecutable(globalBinPath, {
+    win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+    posix: '#!/bin/sh\necho global\n',
+  });
+  chmodSync(packageDirectory, 0o777);
+
+  try {
+    expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+      command: await expectedRealPath(globalBinPath),
+      commandArgs: [],
+      source: 'path',
+    });
+
+    await expect(
+      execVercelCli([], { cwd, env: { PATH: '' } })
+    ).rejects.toMatchObject({
+      code: 'VERCEL_CLI_NOT_FOUND',
+      message: expect.stringContaining('local vercel package is unsafe'),
+    });
+  } finally {
+    chmodSync(packageDirectory, 0o755);
+  }
+});
+
+posixOnlyTest('skips unsafe local vercel package.json files', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const globalBinDir = createDirectory();
+  const { cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('local');\n"
+  );
+  const globalBinPath = path.join(globalBinDir, getVercelBinName());
+  const packageJsonPath = path.join(
+    path.dirname(path.dirname(cliPath)),
+    'package.json'
+  );
+
+  mkdirSync(cwd, { recursive: true });
+  writeExecutable(globalBinPath, {
+    win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+    posix: '#!/bin/sh\necho global\n',
+  });
+  chmodSync(packageJsonPath, 0o777);
+
+  try {
+    expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+      command: await expectedRealPath(globalBinPath),
+      commandArgs: [],
+      source: 'path',
+    });
+
+    await expect(
+      execVercelCli([], { cwd, env: { PATH: '' } })
+    ).rejects.toMatchObject({
+      code: 'VERCEL_CLI_NOT_FOUND',
+      message: expect.stringContaining('local vercel package.json is unsafe'),
+    });
+  } finally {
+    chmodSync(packageJsonPath, 0o644);
+  }
+});
+
+posixOnlyTest(
+  'reports inaccessible local bin path candidates as skipped candidates',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const globalBinDir = createDirectory();
+    const { cliPath } = writeLocalVercelPackage(
+      root,
+      "process.stdout.write('local');\n"
+    );
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    chmodSync(cliPath, 0o644);
+
+    expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+      command: await expectedRealPath(globalBinPath),
+      commandArgs: [],
+      source: 'path',
+    });
+
+    await expect(
+      execVercelCli([], { cwd, env: { PATH: '' } })
+    ).rejects.toMatchObject({
+      code: 'VERCEL_CLI_NOT_FOUND',
+      message: expect.stringContaining(
+        `Skipped ${JSON.stringify(
+          path.join(
+            await expectedRealPath(root),
+            'node_modules',
+            '.bin',
+            getVercelBinName()
+          )
+        )}`
+      ),
+    });
+    await expect(
+      execVercelCli([], { cwd, env: { PATH: '' } })
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('local bin is not accessible'),
+    });
+  }
+);
+
+posixOnlyTest(
+  'reports non-executable declared local vercel package bins as skipped candidates',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const globalBinDir = createDirectory();
+    const { binPath, cliPath: nodeCliPath } = writeLocalVercelPackage(
+      root,
+      '#!/bin/sh\necho local\n'
+    );
+    const packageDirectory = path.dirname(path.dirname(nodeCliPath));
+    const cliPath = path.join(packageDirectory, 'dist', 'vc');
+    const globalBinPath = path.join(globalBinDir, getVercelBinName());
+
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(packageDirectory, 'package.json'),
+      JSON.stringify({ name: 'vercel', bin: { vercel: './dist/vc' } })
+    );
+    writeFileSync(cliPath, '#!/bin/sh\necho local\n');
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    rmSync(binPath, { force: true });
+    writeExecutable(binPath, {
+      win32: '@echo off\r\n',
+      posix: '#!/bin/sh\necho shim\n',
+    });
+    chmodSync(cliPath, 0o644);
+
+    expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+      command: await expectedRealPath(globalBinPath),
+      commandArgs: [],
+      source: 'path',
+    });
+
+    await expect(
+      execVercelCli([], { cwd, env: { PATH: '' } })
+    ).rejects.toMatchObject({
+      code: 'VERCEL_CLI_NOT_FOUND',
+      message: expect.stringContaining(
+        `Skipped ${JSON.stringify(
+          path.join(
+            await expectedRealPath(root),
+            'node_modules',
+            '.bin',
+            getVercelBinName()
+          )
+        )}`
+      ),
+    });
+    await expect(
+      execVercelCli([], { cwd, env: { PATH: '' } })
+    ).rejects.toMatchObject({
+      message: expect.stringContaining(
+        'local vercel package bin is not executable'
+      ),
+    });
+  }
+);
+
+posixOnlyTest(
+  'skips local vercel packages that resolve outside local node_modules',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const externalPackageDirectory = path.join(
+      createDirectory(),
+      'vercel-package'
+    );
+    const cliPath = path.join(externalPackageDirectory, 'dist', 'vc.js');
+    const localPackageDirectory = path.join(root, 'node_modules', 'vercel');
+    const localBinPath = path.join(root, 'node_modules', '.bin', 'vercel');
+    const globalBinDir = createDirectory();
+    const globalBinPath = path.join(globalBinDir, 'vercel');
+
+    writeProjectRoot(root);
+    mkdirSync(cwd, { recursive: true });
+    mkdirSync(path.dirname(localBinPath), { recursive: true });
+    mkdirSync(path.dirname(cliPath), { recursive: true });
+    writeFileSync(
+      path.join(externalPackageDirectory, 'package.json'),
+      JSON.stringify({ name: 'vercel', bin: { vercel: './dist/vc.js' } })
+    );
+    writeFileSync(cliPath, "process.stdout.write('external');\n");
+    chmodSync(cliPath, 0o755);
+    symlinkSync(externalPackageDirectory, localPackageDirectory, 'dir');
+    symlinkSync(cliPath, localBinPath);
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+
+    expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+      command: await expectedRealPath(globalBinPath),
+      commandArgs: [],
+      source: 'path',
+    });
+  }
+);
+
+posixOnlyTest(
+  'skips local vercel package bins under unsafe realpath ancestors',
+  async () => {
+    const root = createDirectory();
+    const cwd = path.join(root, 'apps', 'web');
+    const storePackageDirectory = path.join(
+      root,
+      'node_modules',
+      '.pnpm',
+      'vercel@1.0.0',
+      'node_modules',
+      'vercel'
+    );
+    const cliPath = path.join(storePackageDirectory, 'dist', 'vc.js');
+    const localPackageDirectory = path.join(root, 'node_modules', 'vercel');
+    const localBinPath = path.join(root, 'node_modules', '.bin', 'vercel');
+    const globalBinDir = createDirectory();
+    const globalBinPath = path.join(globalBinDir, 'vercel');
+
+    writeProjectRoot(root);
+    mkdirSync(cwd, { recursive: true });
+    mkdirSync(path.dirname(localBinPath), { recursive: true });
+    mkdirSync(path.dirname(cliPath), { recursive: true });
+    writeFileSync(
+      path.join(storePackageDirectory, 'package.json'),
+      JSON.stringify({ name: 'vercel', bin: { vercel: './dist/vc.js' } })
+    );
+    writeFileSync(cliPath, "process.stdout.write('local');\n");
+    chmodSync(cliPath, 0o755);
+    symlinkSync(storePackageDirectory, localPackageDirectory, 'dir');
+    symlinkSync(cliPath, localBinPath);
+    writeExecutable(globalBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'global\')"\r\n',
+      posix: '#!/bin/sh\necho global\n',
+    });
+    chmodSync(path.join(root, 'node_modules', '.pnpm'), 0o777);
+
+    try {
+      expect(await findVercelCli({ cwd, path: globalBinDir })).toEqual({
+        command: await expectedRealPath(globalBinPath),
+        commandArgs: [],
+        source: 'path',
+      });
+    } finally {
+      chmodSync(path.join(root, 'node_modules', '.pnpm'), 0o755);
+    }
+  }
+);
+
+posixOnlyTest(
+  'includes local lookup diagnostics when no CLI can be resolved',
+  async () => {
+    const parent = createDirectory();
+    const project = path.join(parent, 'project');
+    const cwd = path.join(project, 'apps', 'web');
+    const unverifiedBinPath = path.join(
+      project,
+      'node_modules',
+      '.bin',
+      getVercelBinName()
+    );
+
+    writeLocalVercelPackage(parent, "process.stdout.write('parent');\n");
+    writeProjectRoot(project);
+    mkdirSync(cwd, { recursive: true });
+    writeExecutable(unverifiedBinPath, {
+      win32: '@echo off\r\nnode -e "process.stdout.write(\'unverified\')"\r\n',
+      posix: '#!/bin/sh\necho unverified\n',
+    });
+    chmodSync(path.join(project, 'node_modules'), 0o777);
+
+    try {
+      const expectedProjectPath = await expectedRealPath(project);
+
+      await expect(
+        execVercelCli([], { cwd, env: { PATH: '' } })
+      ).rejects.toMatchObject({
+        code: 'VERCEL_CLI_NOT_FOUND',
+        message: expect.stringContaining('Unable to find a usable Vercel CLI'),
+      });
+
+      await expect(
+        execVercelCli([], { cwd, env: { PATH: '' } })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining(
+          `Local bin lookup stopped at ${JSON.stringify(expectedProjectPath)}`
+        ),
+      });
+      await expect(
+        execVercelCli([], { cwd, env: { PATH: '' } })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('world-writable'),
+      });
+    } finally {
+      chmodSync(path.join(project, 'node_modules'), 0o755);
+    }
+  }
+);
+
+test('includes skipped local bin diagnostics when local bin verification fails', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const unverifiedBinPath = path.join(
+    root,
+    'node_modules',
+    '.bin',
+    getVercelBinName()
+  );
+
+  writeProjectRoot(root);
+  mkdirSync(cwd, { recursive: true });
+  writeExecutable(unverifiedBinPath, {
+    win32: '@echo off\r\nnode -e "process.stdout.write(\'unverified\')"\r\n',
+    posix: '#!/bin/sh\necho unverified\n',
+  });
+  const expectedUnverifiedBinPath = await expectedRealPath(unverifiedBinPath);
+
+  await expect(
+    execVercelCli([], { cwd, env: { PATH: '' } })
+  ).rejects.toMatchObject({
+    code: 'VERCEL_CLI_NOT_FOUND',
+    message: expect.stringContaining(
+      `Skipped ${JSON.stringify(expectedUnverifiedBinPath)}`
+    ),
+  });
+  await expect(
+    execVercelCli([], { cwd, env: { PATH: '' } })
+  ).rejects.toMatchObject({
+    message: expect.stringContaining('could not validate local vercel package'),
+  });
+});
+
+test('ignores overwritten local shims when the vercel package is installed', async () => {
+  const root = createDirectory();
+  const cwd = path.join(root, 'apps', 'web');
+  const { binPath: shimPath, cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('official');\n"
+  );
+
+  mkdirSync(cwd, { recursive: true });
+  rmSync(shimPath, { force: true });
+  writeExecutable(shimPath, {
+    win32: '@echo off\r\nnode -e "process.stdout.write(\'spoofed\')"\r\n',
+    posix: '#!/bin/sh\necho spoofed\n',
+  });
+
+  await expect(execVercelCli([], { cwd })).resolves.toMatchObject({
+    invocation: {
+      command: process.execPath,
+      commandArgs: [await expectedRealPath(cliPath)],
+      source: 'local-bin',
+    },
+    stdout: 'official',
+  });
+});
+
+test('falls back to PATH when no local binary exists', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
   const globalBinDir = createDirectory();
@@ -134,14 +1001,14 @@ test('falls back to PATH when no local binary exists', () => {
   });
   vi.stubEnv('PATH', globalBinDir);
 
-  expect(findVercelCli({ cwd })).toEqual({
-    command: realpathSync(binPath),
+  expect(await findVercelCli({ cwd })).toEqual({
+    command: await expectedRealPath(binPath),
     commandArgs: [],
     source: 'path',
   });
 });
 
-windowsOnlyTest('falls back to Path when PATH is unset', () => {
+windowsOnlyTest('falls back to Path when PATH is unset', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
   const globalBinDir = createDirectory();
@@ -160,8 +1027,8 @@ windowsOnlyTest('falls back to Path when PATH is unset', () => {
     delete process.env.PATH;
     process.env.Path = globalBinDir;
 
-    expect(findVercelCli({ cwd })).toEqual({
-      command: realpathSync(binPath),
+    expect(await findVercelCli({ cwd })).toEqual({
+      command: await expectedRealPath(binPath),
       commandArgs: [],
       source: 'path',
     });
@@ -208,13 +1075,13 @@ test('uses the provided PATH for resolution and caching', async () => {
   const firstEnv = { PATH: firstBinDir };
   const secondEnv = { PATH: secondBinDir };
 
-  expect(findVercelCli({ cwd, path: firstEnv.PATH })).toEqual({
-    command: realpathSync(firstBinPath),
+  expect(await findVercelCli({ cwd, path: firstEnv.PATH })).toEqual({
+    command: await expectedRealPath(firstBinPath),
     commandArgs: [],
     source: 'path',
   });
-  expect(findVercelCli({ cwd, path: secondEnv.PATH })).toEqual({
-    command: realpathSync(secondBinPath),
+  expect(await findVercelCli({ cwd, path: secondEnv.PATH })).toEqual({
+    command: await expectedRealPath(secondBinPath),
     commandArgs: [],
     source: 'path',
   });
@@ -224,7 +1091,7 @@ test('uses the provided PATH for resolution and caching', async () => {
   ).resolves.toMatchObject({
     stdout: 'first',
     invocation: {
-      command: realpathSync(firstBinPath),
+      command: await expectedRealPath(firstBinPath),
       source: 'path',
     },
   });
@@ -233,7 +1100,7 @@ test('uses the provided PATH for resolution and caching', async () => {
   ).resolves.toMatchObject({
     stdout: 'second',
     invocation: {
-      command: realpathSync(secondBinPath),
+      command: await expectedRealPath(secondBinPath),
       source: 'path',
     },
   });
@@ -261,7 +1128,7 @@ test('inherits process PATH when the provided env omits it', async () => {
   ).resolves.toMatchObject({
     stdout: 'inherited-path',
     invocation: {
-      command: realpathSync(binPath),
+      command: await expectedRealPath(binPath),
       source: 'path',
     },
   });
@@ -292,39 +1159,30 @@ windowsOnlyTest('uses the provided Path when env casing differs', async () => {
   ).resolves.toMatchObject({
     stdout: 'case-insensitive-path',
     invocation: {
-      command: realpathSync(binPath),
+      command: await expectedRealPath(binPath),
       source: 'path',
     },
   });
 });
 
-test('caches the resolved CLI lookup', () => {
+test('caches the resolved CLI lookup', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  writeLocalVercelPackage(root);
 
   mkdirSync(cwd, { recursive: true });
-  mkdirSync(path.dirname(binPath), { recursive: true });
-  writeFileSync(
-    binPath,
-    process.platform === 'win32' ? '@echo off\r\n' : '#!/bin/sh\n'
-  );
-  if (process.platform !== 'win32') {
-    chmodSync(binPath, 0o755);
-  }
 
-  const first = findVercelCli({ cwd });
+  const first = await findVercelCli({ cwd });
   rmSync(path.join(root, 'node_modules'), { recursive: true, force: true });
-  const second = findVercelCli({ cwd });
+  const second = await findVercelCli({ cwd });
 
   expect(second).toEqual(first);
 });
 
-test('skips directory entries while resolving the CLI', () => {
+test('skips directory entries while resolving the CLI', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
+  const binName = getVercelBinName();
   const blockedBinPath = path.join(
     root,
     'apps',
@@ -333,44 +1191,41 @@ test('skips directory entries while resolving the CLI', () => {
     '.bin',
     binName
   );
-  const fallbackBinPath = path.join(root, 'node_modules', '.bin', binName);
+  const { cliPath } = writeLocalVercelPackage(root);
 
   mkdirSync(cwd, { recursive: true });
   mkdirSync(blockedBinPath, { recursive: true });
-  writeExecutable(fallbackBinPath, {
-    win32: '@echo off\r\n',
-    posix: '#!/bin/sh\n',
-  });
 
-  expect(findVercelCli({ cwd, path: '' })).toEqual({
-    command: realpathSync(fallbackBinPath),
-    commandArgs: [],
+  expect(await findVercelCli({ cwd, path: '' })).toEqual({
+    command: process.execPath,
+    commandArgs: [await expectedRealPath(cliPath)],
     source: 'local-bin',
   });
 });
 
-test('caches negative CLI lookups until the cache is cleared', () => {
+test('caches negative CLI lookups until the cache is cleared', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  const binPath = path.join(root, 'node_modules', '.bin', getVercelBinName());
 
   mkdirSync(cwd, { recursive: true });
 
-  expect(findVercelCli({ cwd, path: '' })).toBeNull();
+  expect(await findVercelCli({ cwd, path: '' })).toBeNull();
 
   writeExecutable(binPath, {
     win32: '@echo off\r\n',
     posix: '#!/bin/sh\n',
   });
 
-  expect(findVercelCli({ cwd, path: '' })).toBeNull();
+  expect(await findVercelCli({ cwd, path: '' })).toBeNull();
 
-  clearVercelCliCache();
+  clearVercelCliLookupCache();
+  rmSync(binPath, { force: true });
+  const { cliPath } = writeLocalVercelPackage(root);
 
-  expect(findVercelCli({ cwd, path: '' })).toEqual({
-    command: realpathSync(binPath),
-    commandArgs: [],
+  expect(await findVercelCli({ cwd, path: '' })).toEqual({
+    command: process.execPath,
+    commandArgs: [await expectedRealPath(cliPath)],
     source: 'local-bin',
   });
 });
@@ -378,21 +1233,9 @@ test('caches negative CLI lookups until the cache is cleared', () => {
 test('can execute the locally installed vercel package bin', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  writeLocalVercelPackage(root);
 
   mkdirSync(cwd, { recursive: true });
-  mkdirSync(path.dirname(binPath), { recursive: true });
-  writeFileSync(
-    binPath,
-    process.platform === 'win32'
-      ? '@echo off\r\nnode -e "process.stdout.write(JSON.stringify({args:process.argv.slice(1)}))" %*\r\n'
-      : '#!/bin/sh\nnode -e "process.stdout.write(JSON.stringify({args:process.argv.slice(1)}))" "$@"\n'
-  );
-  if (process.platform !== 'win32') {
-    chmodSync(binPath, 0o755);
-  }
-
   const result = await execVercelCli(['project', 'token', 'my-project'], {
     cwd,
   });
@@ -406,23 +1249,20 @@ test('can execute the locally installed vercel package bin', async () => {
 test('passes input through to execa', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  const { cliPath } = writeLocalVercelPackage(
+    root,
+    "let data='';process.stdin.on('data',chunk=>data+=chunk);process.stdin.on('end',()=>process.stdout.write(data.toUpperCase()))\n"
+  );
 
   mkdirSync(cwd, { recursive: true });
-  writeExecutable(binPath, {
-    win32:
-      "@echo off\r\nnode -e \"let data='';process.stdin.on('data',chunk=>data+=chunk);process.stdin.on('end',()=>process.stdout.write(data.toUpperCase()))\"\r\n",
-    posix:
-      "#!/bin/sh\nnode -e \"let data='';process.stdin.on('data',chunk=>data+=chunk);process.stdin.on('end',()=>process.stdout.write(data.toUpperCase()))\"\n",
-  });
 
   await expect(
     execVercelCli([], { cwd, input: 'hello', stdin: 'pipe' })
   ).resolves.toMatchObject({
     stdout: 'HELLO',
     invocation: {
-      command: realpathSync(binPath),
+      command: process.execPath,
+      commandArgs: [await expectedRealPath(cliPath)],
       source: 'local-bin',
     },
   });
@@ -431,16 +1271,12 @@ test('passes input through to execa', async () => {
 test('passes stdout and stderr options through to execa', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  const { cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('out');process.stderr.write('err')\n"
+  );
 
   mkdirSync(cwd, { recursive: true });
-  writeExecutable(binPath, {
-    win32:
-      "@echo off\r\nnode -e \"process.stdout.write('out');process.stderr.write('err')\"\r\n",
-    posix:
-      "#!/bin/sh\nnode -e \"process.stdout.write('out');process.stderr.write('err')\"\n",
-  });
 
   await expect(
     execVercelCli([], {
@@ -452,7 +1288,8 @@ test('passes stdout and stderr options through to execa', async () => {
     stdout: undefined,
     stderr: 'err',
     invocation: {
-      command: realpathSync(binPath),
+      command: process.execPath,
+      commandArgs: [await expectedRealPath(cliPath)],
       source: 'local-bin',
     },
   });
@@ -461,23 +1298,19 @@ test('passes stdout and stderr options through to execa', async () => {
 test('passes stdio through to execa', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  const { cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('out');process.stderr.write('err')\n"
+  );
 
   mkdirSync(cwd, { recursive: true });
-  writeExecutable(binPath, {
-    win32:
-      "@echo off\r\nnode -e \"process.stdout.write('out');process.stderr.write('err')\"\r\n",
-    posix:
-      "#!/bin/sh\nnode -e \"process.stdout.write('out');process.stderr.write('err')\"\n",
-  });
 
   await expect(execVercelCli([], { cwd, stdio: 'ignore' })).resolves.toEqual({
     stdout: undefined,
     stderr: undefined,
     invocation: {
-      command: realpathSync(binPath),
-      commandArgs: [],
+      command: process.execPath,
+      commandArgs: [await expectedRealPath(cliPath)],
       source: 'local-bin',
     },
   });
@@ -485,24 +1318,46 @@ test('passes stdio through to execa', async () => {
 
 test('passes timeout through to execa', async () => {
   const root = createDirectory();
-  const cwd = path.join(root, 'apps', 'web');
   const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  const cwd = tmpdir();
+  const binPath = path.join(root, binName);
+  let invocation: {
+    command: string;
+    commandArgs: string[];
+    source: 'path';
+  };
 
   mkdirSync(cwd, { recursive: true });
-  writeExecutable(binPath, {
-    win32: '@echo off\r\nnode -e "setTimeout(() => {}, 1000)"\r\n',
-    posix: '#!/bin/sh\nnode -e "setTimeout(() => {}, 1000)"\n',
-  });
 
-  await expect(execVercelCli([], { cwd, timeout: 10 })).rejects.toEqual(
+  if (process.platform === 'win32') {
+    writeExecutable(binPath, {
+      win32: '@echo off\r\n:loop\r\ngoto loop\r\n',
+      posix: '#!/bin/sh\nnode -e "setTimeout(() => {}, 5000)"\n',
+    });
+    invocation = {
+      command: await expectedRealPath(binPath),
+      commandArgs: [],
+      source: 'path',
+    };
+  } else {
+    const cliPath = path.join(root, 'vercel.js');
+
+    writeFileSync(cliPath, 'setTimeout(() => {}, 5000);\n');
+    chmodSync(cliPath, 0o755);
+    symlinkSync(cliPath, binPath);
+    invocation = {
+      command: process.execPath,
+      commandArgs: [await expectedRealPath(binPath)],
+      source: 'path',
+    };
+  }
+
+  await expect(
+    execVercelCli([], { cwd, env: { PATH: root }, timeout: 100 })
+  ).rejects.toEqual(
     expect.objectContaining<VercelCliError>({
       code: 'VERCEL_CLI_TIMED_OUT',
-      invocation: {
-        command: realpathSync(binPath),
-        commandArgs: [],
-        source: 'local-bin',
-      },
+      invocation,
     })
   );
 });
@@ -510,21 +1365,20 @@ test('passes timeout through to execa', async () => {
 test('adds node to PATH when executing a local bin with a sanitized env', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  const { cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('ok')\n"
+  );
 
   mkdirSync(cwd, { recursive: true });
-  writeExecutable(binPath, {
-    win32: '@echo off\r\nnode -e "process.stdout.write(\'ok\')"\r\n',
-    posix: '#!/bin/sh\nnode -e "process.stdout.write(\'ok\')"\n',
-  });
 
   await expect(
     execVercelCli([], { cwd, env: { PATH: '' } })
   ).resolves.toMatchObject({
     stdout: 'ok',
     invocation: {
-      command: realpathSync(binPath),
+      command: process.execPath,
+      commandArgs: [await expectedRealPath(cliPath)],
       source: 'local-bin',
     },
   });
@@ -556,7 +1410,7 @@ test('does not resolve a global CLI next to node when PATH is empty', async () =
       writable: true,
     });
 
-    expect(findVercelCli({ cwd, path: '' })).toBeNull();
+    expect(await findVercelCli({ cwd, path: '' })).toBeNull();
 
     await expect(
       execVercelCli([], { cwd, env: { PATH: '' } })
@@ -572,7 +1426,7 @@ test('does not resolve a global CLI next to node when PATH is empty', async () =
   }
 });
 
-test('resolves relative PATH entries from the provided cwd', () => {
+test('resolves relative PATH entries from the provided cwd', async () => {
   const cwd = createDirectory();
   const relativeBinDir = path.join(cwd, 'tools');
   const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
@@ -583,33 +1437,30 @@ test('resolves relative PATH entries from the provided cwd', () => {
     posix: '#!/bin/sh\n',
   });
 
-  expect(findVercelCli({ cwd, path: path.join('.', 'tools') })).toEqual({
-    command: realpathSync(binPath),
+  expect(await findVercelCli({ cwd, path: path.join('.', 'tools') })).toEqual({
+    command: await expectedRealPath(binPath),
     commandArgs: [],
     source: 'path',
   });
 });
-
-const posixOnlyTest = process.platform === 'win32' ? test.skip : test;
 
 posixOnlyTest('finds a local bin from a symlinked cwd', async () => {
   const root = createDirectory();
   const linkRoot = createDirectory();
   const realCwd = path.join(root, 'apps', 'web');
   const symlinkedCwd = path.join(linkRoot, 'apps', 'web');
-  const binPath = path.join(root, 'node_modules', '.bin', 'vercel');
+  const { cliPath } = writeLocalVercelPackage(
+    root,
+    "process.stdout.write('ok')\n"
+  );
 
   mkdirSync(realCwd, { recursive: true });
   mkdirSync(path.dirname(symlinkedCwd), { recursive: true });
-  writeExecutable(binPath, {
-    win32: '@echo off\r\nnode -e "process.stdout.write(\'ok\')"\r\n',
-    posix: '#!/bin/sh\nnode -e "process.stdout.write(\'ok\')"\n',
-  });
   symlinkSync(realCwd, symlinkedCwd, 'dir');
 
-  expect(findVercelCli({ cwd: symlinkedCwd, path: '' })).toEqual({
-    command: realpathSync(binPath),
-    commandArgs: [],
+  expect(await findVercelCli({ cwd: symlinkedCwd, path: '' })).toEqual({
+    command: process.execPath,
+    commandArgs: [await expectedRealPath(cliPath)],
     source: 'local-bin',
   });
 
@@ -618,7 +1469,8 @@ posixOnlyTest('finds a local bin from a symlinked cwd', async () => {
   ).resolves.toMatchObject({
     stdout: 'ok',
     invocation: {
-      command: realpathSync(binPath),
+      command: process.execPath,
+      commandArgs: [await expectedRealPath(cliPath)],
       source: 'local-bin',
     },
   });
@@ -631,7 +1483,10 @@ posixOnlyTest(
     const linkRoot = createDirectory();
     const realCwd = path.join(root, 'apps', 'web');
     const symlinkedCwd = path.join(linkRoot, 'apps', 'web');
-    const realBinPath = path.join(root, 'node_modules', '.bin', 'vercel');
+    const { cliPath } = writeLocalVercelPackage(
+      root,
+      "process.stdout.write('real')\n"
+    );
     const symlinkBinPath = path.join(
       linkRoot,
       'node_modules',
@@ -641,19 +1496,15 @@ posixOnlyTest(
 
     mkdirSync(realCwd, { recursive: true });
     mkdirSync(path.dirname(symlinkedCwd), { recursive: true });
-    writeExecutable(realBinPath, {
-      win32: '@echo off\r\nnode -e "process.stdout.write(\'real\')"\r\n',
-      posix: '#!/bin/sh\nnode -e "process.stdout.write(\'real\')"\n',
-    });
     writeExecutable(symlinkBinPath, {
       win32: '@echo off\r\nnode -e "process.stdout.write(\'fake\')"\r\n',
       posix: '#!/bin/sh\nnode -e "process.stdout.write(\'fake\')"\n',
     });
     symlinkSync(realCwd, symlinkedCwd, 'dir');
 
-    expect(findVercelCli({ cwd: symlinkedCwd, path: '' })).toEqual({
-      command: realpathSync(realBinPath),
-      commandArgs: [],
+    expect(await findVercelCli({ cwd: symlinkedCwd, path: '' })).toEqual({
+      command: process.execPath,
+      commandArgs: [await expectedRealPath(cliPath)],
       source: 'local-bin',
     });
 
@@ -662,7 +1513,8 @@ posixOnlyTest(
     ).resolves.toMatchObject({
       stdout: 'real',
       invocation: {
-        command: realpathSync(realBinPath),
+        command: process.execPath,
+        commandArgs: [await expectedRealPath(cliPath)],
         source: 'local-bin',
       },
     });
@@ -686,6 +1538,11 @@ posixOnlyTest(
     mkdirSync(cwd, { recursive: true });
     mkdirSync(path.dirname(binPath), { recursive: true });
     mkdirSync(path.dirname(cliPath), { recursive: true });
+    writeProjectRoot(root);
+    writeFileSync(
+      path.join(root, 'node_modules', 'vercel', 'package.json'),
+      JSON.stringify({ name: 'vercel', bin: { vercel: './dist/index.js' } })
+    );
     writeFileSync(
       cliPath,
       'process.stdout.write(JSON.stringify({args:process.argv.slice(2)}));\n'
@@ -693,9 +1550,9 @@ posixOnlyTest(
     chmodSync(cliPath, 0o755);
     symlinkSync(cliPath, binPath);
 
-    expect(findVercelCli({ cwd })).toEqual({
+    expect(await findVercelCli({ cwd })).toEqual({
       command: process.execPath,
-      commandArgs: [realpathSync(binPath)],
+      commandArgs: [await expectedRealPath(binPath)],
       source: 'local-bin',
     });
 
@@ -705,7 +1562,7 @@ posixOnlyTest(
       stdout: JSON.stringify({ args: ['project', 'token', 'my-project'] }),
       invocation: {
         command: process.execPath,
-        commandArgs: [realpathSync(binPath)],
+        commandArgs: [await expectedRealPath(binPath)],
         source: 'local-bin',
       },
     });
@@ -734,31 +1591,27 @@ test('throws an invalid-cwd error when cwd does not exist', async () => {
   );
 });
 
+test('returns null from lookup when cwd cannot be inspected', async () => {
+  const cwd = path.join(createDirectory(), 'missing');
+
+  await expect(findVercelCli({ cwd, path: '' })).resolves.toBeNull();
+  await expect(findVercelCli({ cwd, path: '' })).resolves.toBeNull();
+});
+
 test('throws an exit-code error when the CLI exits non-zero', async () => {
   const root = createDirectory();
   const cwd = path.join(root, 'apps', 'web');
-  const binName = process.platform === 'win32' ? 'vercel.cmd' : 'vercel';
-  const binPath = path.join(root, 'node_modules', '.bin', binName);
+  const { cliPath } = writeLocalVercelPackage(root, 'process.exit(7);\n');
 
   mkdirSync(cwd, { recursive: true });
-  mkdirSync(path.dirname(binPath), { recursive: true });
-  writeFileSync(
-    binPath,
-    process.platform === 'win32'
-      ? '@echo off\r\nexit /b 7\r\n'
-      : '#!/bin/sh\nexit 7\n'
-  );
-  if (process.platform !== 'win32') {
-    chmodSync(binPath, 0o755);
-  }
 
   await expect(execVercelCli(['project', 'token'], { cwd })).rejects.toEqual(
     expect.objectContaining<VercelCliError>({
       code: 'VERCEL_CLI_ERRORED',
       exitCode: 7,
       invocation: {
-        command: realpathSync(binPath),
-        commandArgs: [],
+        command: process.execPath,
+        commandArgs: [await expectedRealPath(cliPath)],
         source: 'local-bin',
       },
     })

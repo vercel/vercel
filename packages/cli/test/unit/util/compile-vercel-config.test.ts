@@ -151,6 +151,30 @@ describe('normalizeConfig', () => {
     expect(result.rewrites).toEqual([{ source: '/c', destination: '/d' }]);
   });
 
+  it('should preserve high-level rewrites with request path transforms', () => {
+    const config = {
+      rewrites: [
+        {
+          source: '/api/:path*',
+          destination: {
+            type: 'service',
+            service: 'my_backend',
+            path: '/:path*',
+          },
+          transforms: [
+            {
+              type: 'request.path',
+              op: 'set',
+              args: '/:path*',
+            },
+          ],
+        },
+      ],
+    } as unknown as VercelConfig;
+
+    expect(normalizeConfig(config)).toEqual(config);
+  });
+
   it('should throw helpful error when rewrites with transforms conflict with redirects', () => {
     const config = {
       rewrites: [{ src: '/with-transform', dest: '/dest', transforms: [] }],

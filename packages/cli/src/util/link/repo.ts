@@ -1,8 +1,6 @@
 import chalk from 'chalk';
-import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
-import slugify from '@sindresorhus/slugify';
 import { basename, join } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
@@ -10,18 +8,14 @@ import toHumanPath from '../humanize-path';
 import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
-import { emoji, prependEmoji, type EmojiLabel } from '../emoji';
-import selectOrg from '../input/select-org';
+import type { EmojiLabel } from '../emoji';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
 import type { Framework } from '@vercel/frameworks';
 import type { Project } from '@vercel-internals/types';
-import createProject from '../projects/create-project';
-import { detectProjects } from '../projects/detect-projects';
-import { repoInfoToUrl } from '../git/repo-info-to-url';
-import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
+import { printAlignedLabel } from '../output/print-aligned-label';
 
 const home = homedir();
 
@@ -122,28 +116,30 @@ export async function resolveGitRemote(
       );
     }
   } else {
-    const remoteNames = Object.keys(remoteUrls).sort();
-    if (remoteNames.length === 1) {
-      remoteName = remoteNames[0];
-    } else {
-      const defaultRemote = remoteNames.includes('origin')
-        ? 'origin'
-        : remoteNames[0];
-      if (yes) {
-        remoteName = defaultRemote;
-      } else {
-        remoteName = await client.input.select({
-          message: 'Which Git remote should be used?',
-          choices: remoteNames.map(name => {
-            return { name: name, value: name };
-          }),
-          default: defaultRemote,
-        });
-      }
-    }
+    remoteName = await selectGitRemote(client, Object.keys(remoteUrls), yes);
   }
 
   return { rootPath, remoteName, repoUrl: remoteUrls[remoteName] };
+}
+
+/** Selects from a non-empty list of local Git remote names. */
+export async function selectGitRemote(
+  client: Client,
+  names: string[],
+  yes = false
+): Promise<string> {
+  const remoteNames = [...names].sort();
+  const defaultRemote = remoteNames.includes('origin')
+    ? 'origin'
+    : remoteNames[0];
+  if (remoteNames.length === 1 || yes) {
+    return defaultRemote;
+  }
+  return client.input.select({
+    message: 'Which Git remote should be used?',
+    choices: remoteNames.map(name => ({ name, value: name })),
+    default: defaultRemote,
+  });
 }
 
 export async function fetchProjectsForRepoUrl(
@@ -203,18 +199,10 @@ export async function linkRepoProject(
 
   await outputJSON(repoLink.repoConfigPath, repoConfig, { spaces: 2 });
   await writeReadme(repoLink.rootPath);
-  const isGitIgnoreUpdated = await addToGitIgnore(repoLink.rootPath);
+  await addToGitIgnore(repoLink.rootPath);
 
-  output.print(
-    prependEmoji(
-      `Linked to ${chalk.bold(
-        `${orgSlug}/${project.name}`
-      )} (created ${VERCEL_DIR}${
-        isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-      })`,
-      emoji(successEmoji)
-    ) + '\n'
-  );
+  output.print('\n');
+  printAlignedLabel('Linked', `${orgSlug}/${project.name}`, { gutter: '✓' });
 
   return {
     repoConfig,
@@ -253,35 +241,41 @@ async function discoverRepoProjects(
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
   | undefined
 > {
+  const { Separator } = await import('@inquirer/checkbox');
+  const { default: slugify } = await import('@sindresorhus/slugify');
+  const { default: selectOrg } = await import('../input/select-org');
+  const { default: createProject } = await import('../projects/create-project');
+  const { repoInfoToUrl } = await import('../git/repo-info-to-url');
+  const { connectGitProvider, parseRepoUrl } = await import(
+    '../git/connect-git-provider'
+  );
   // Detect the projects on the filesystem out of band, so that
   // they will be ready by the time the projects are listed
-  const detectedProjectsPromise = detectProjects(rootPath).catch(err => {
-    output.debug(`Failed to detect local projects: ${err}`);
-    return new Map<string, Framework[]>();
-  });
+  const detectedProjectsPromise = import('../projects/detect-projects')
+    .then(({ detectProjects }) => detectProjects(rootPath))
+    .catch(err => {
+      output.debug(`Failed to detect local projects: ${err}`);
+      return new Map<string, Framework[]>();
+    });
 
   const promptAction = existingRemoteName ? 'add' : 'link';
   const confirmMessage =
     promptAction === 'add'
-      ? `Add Project(s) for Git repository at ${chalk.cyan(
+      ? `Add Project(s) for Git repository at ${chalk.dim(
           `"${toHumanPath(rootPath)}"`
         )}?`
-      : `Link Git repository at ${chalk.cyan(
+      : `Link Git repository at ${chalk.dim(
           `"${toHumanPath(rootPath)}"`
         )} to your Project(s)?`;
 
   const shouldLink = yes || (await client.input.confirm(confirmMessage, true));
 
   if (!shouldLink) {
-    output.print(`Canceled. Repository not linked.\n`);
+    output.print(`  Canceled. Repository not linked.\n`);
     return;
   }
 
-  const org = await selectOrg(
-    client,
-    'Which scope should contain your Project(s)?',
-    yes
-  );
+  const org = await selectOrg(client, 'Which team?', yes);
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
 
   const remote = await resolveGitRemote(client, rootPath, {
@@ -316,16 +310,16 @@ async function discoverRepoProjects(
   }
 
   if (projects.length === 0) {
-    output.log(
-      `No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.`
+    output.print(
+      `  No Projects are linked to ${repoUrlLink} under ${chalk.bold(org.slug)}.\n`
     );
   } else {
-    output.log(
-      `Found ${pluralize(
+    output.print(
+      `  Found ${pluralize(
         'Project',
         projects.length,
         true
-      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}`
+      )} linked to ${repoUrlLink} under ${chalk.bold(org.slug)}\n`
     );
   }
 
@@ -349,12 +343,12 @@ async function discoverRepoProjects(
     0
   );
   if (detectedProjectsCount > 0) {
-    output.log(
-      `Detected ${pluralize(
+    output.print(
+      `  Detected ${pluralize(
         'new Project',
         detectedProjectsCount,
         true
-      )} that may be created.`
+      )} that may be created.\n`
     );
   }
 
@@ -411,7 +405,7 @@ async function discoverRepoProjects(
   }
 
   if (selected.length === 0) {
-    output.print(`No Projects were selected. Repository not linked.\n`);
+    output.print(`  No Projects were selected. Repository not linked.\n`);
     return;
   }
 
@@ -432,12 +426,12 @@ async function discoverRepoProjects(
       parsedRepoUrl.provider,
       `${parsedRepoUrl.org}/${parsedRepoUrl.repo}`
     );
-    output.log(
-      `Created new Project: ${output.link(
+    output.print(
+      `  Created new Project: ${output.link(
         orgAndName,
         `https://vercel.com/${orgAndName}`,
         { fallback: false }
-      )}`
+      )}\n`
     );
   }
 
@@ -484,20 +478,12 @@ export async function ensureRepoLink(
 
     await writeReadme(rootPath);
 
-    // update .gitignore
-    const isGitIgnoreUpdated = await addToGitIgnore(rootPath);
+    await addToGitIgnore(rootPath);
 
-    output.print(
-      prependEmoji(
-        `Linked to ${pluralize(
-          'Project',
-          result.projects.length,
-          true
-        )} under ${chalk.bold(result.orgSlug)} (created ${VERCEL_DIR}${
-          isGitIgnoreUpdated ? ' and added it to .gitignore' : ''
-        })`,
-        emoji('link')
-      ) + '\n'
+    printAlignedLabel(
+      'Linked',
+      `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`,
+      { gutter: '✓' }
     );
   }
 
@@ -551,7 +537,7 @@ export async function addRepoLink(
   }
 
   if (result.projects.length === 0) {
-    output.print(`No new Projects were added.\n`);
+    output.print(`  No new Projects were added.\n`);
     return { repoConfig, repoConfigPath, rootPath };
   }
 
@@ -570,15 +556,10 @@ export async function addRepoLink(
 
   await outputJSON(repoConfigPath, updatedConfig, { spaces: 2 });
 
-  output.print(
-    prependEmoji(
-      `Added ${pluralize(
-        'Project',
-        result.projects.length,
-        true
-      )} under ${chalk.bold(result.orgSlug)}`,
-      emoji('link')
-    ) + '\n'
+  printAlignedLabel(
+    'Added',
+    `${pluralize('Project', result.projects.length, true)} under ${result.orgSlug}`,
+    { gutter: '✓' }
   );
 
   return {

@@ -1,7 +1,9 @@
 export type { Request, Geo } from './headers';
 export { geolocation, ipAddress } from './headers';
 export { getEnv } from './get-env';
+export { getDeadline } from './deadline';
 export { waitUntil } from './wait-until';
+export { metric } from './metric';
 export { rewrite, next } from './middleware';
 export { getCache } from './cache';
 export {
@@ -18,3 +20,6 @@ export {
 export type { PurgeApi, DangerouslyDeleteOptions } from './purge/types';
 export { addCacheTag } from './addcachetag';
 export type { AddCacheTagApi } from './addcachetag/types';
+export { upgradeWebSocket, experimental_upgradeWebSocket } from './websocket';
+export type { UpgradeWebSocketOptions } from './websocket';
+export type { WebSocket, RawData as WebSocketData } from 'ws';

@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import createWebhook from '../../util/webhooks/create-webhook';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
@@ -34,7 +34,7 @@ export default async function create(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   let [url] = args;
@@ -61,7 +61,7 @@ export default async function create(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     url = await client.input.text({
@@ -115,14 +115,14 @@ export default async function create(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
 
     const availableEvents = (await getWebhookEvents()) ?? [];
     if (availableEvents.length === 0) {
       output.error(
-        'Could not fetch available webhook events. Please specify events using --event flags.'
+        'Could not fetch available webhook events. Please specify events using --event options.'
       );
       return 1;
     }
@@ -156,14 +156,14 @@ export default async function create(client: Client, argv: string[]) {
             hint: `See available events: ${WEBHOOKS_EVENTS_DOCS_URL}`,
             next: [{ command: suggested, when: 'use a valid --event value' }],
           },
-          1
+          2
         );
-        return 1;
+        return 2;
       }
       output.error(
         `Invalid event type${invalidEvents.length > 1 ? 's' : ''}: ${invalidEvents.join(', ')}`
       );
-      return 1;
+      return 2;
     }
     events = eventFlags;
   }
@@ -172,7 +172,7 @@ export default async function create(client: Client, argv: string[]) {
   telemetry.trackCliOptionEvent(events);
   telemetry.trackCliOptionProject(projectIds);
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   const createStamp = stamp();
 
@@ -201,7 +201,7 @@ export default async function create(client: Client, argv: string[]) {
         message: `Webhook ${webhook.id} created.`,
         next: [
           {
-            command: getCommandNamePlain(`webhooks get ${webhook.id}`),
+            command: getCommandNamePlain(`webhooks inspect ${webhook.id}`),
             when: 'Inspect the webhook',
           },
         ],

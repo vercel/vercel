@@ -1,5 +1,7 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
+import { getGitExecutable } from './git-executable';
+import { execFileAsync } from './exec-file';
 
 /** Defines the options for executing Git commands */
 export type GitExecOptions = Readonly<{
@@ -35,7 +37,7 @@ function getGitDirectory(opts: GitExecOptions): string | null {
   const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
 
   try {
-    const gitDir = execSync('git rev-parse --git-dir', {
+    const gitDir = execFileSync('git', ['rev-parse', '--git-dir'], {
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -69,7 +71,7 @@ export function getGitRootDirectory(opts: GitExecOptions): string | null {
   const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
 
   try {
-    const gitRoot = execSync('git rev-parse --show-toplevel', {
+    const gitRoot = execFileSync('git', ['rev-parse', '--show-toplevel'], {
       cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -81,6 +83,26 @@ export function getGitRootDirectory(opts: GitExecOptions): string | null {
       throw error;
     }
 
+    return null;
+  }
+}
+
+/** Nonblocking repository discovery for callers already doing async work. */
+export async function getGitRootDirectoryAsync(
+  opts: GitExecOptions
+): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      await getGitExecutable(opts.cwd),
+      ['rev-parse', '--show-toplevel'],
+      {
+        cwd: opts.cwd,
+        encoding: 'utf8',
+      }
+    );
+    return stdout.trim();
+  } catch (error) {
+    if (opts.unsafe) throw error;
     return null;
   }
 }
@@ -101,11 +123,15 @@ function getGitCommonDirectory(opts: GitExecOptions): string | null {
   const { cwd, unsafe } = { ...DEFAULT_GIT_EXEC_OPTS, ...opts };
 
   try {
-    const gitCommonDir = execSync('git rev-parse --git-common-dir', {
-      cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
+    const gitCommonDir = execFileSync(
+      'git',
+      ['rev-parse', '--git-common-dir'],
+      {
+        cwd,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }
+    );
 
     return gitCommonDir.trim();
   } catch (error) {

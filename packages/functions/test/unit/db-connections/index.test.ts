@@ -191,18 +191,17 @@ describe('db-connections', () => {
       expect(waitUntilMock).toHaveBeenCalledTimes(2);
     });
 
-    test('respects maximum duration limit', () => {
+    test('uses the invocation deadline to limit the wait time', () => {
       const waitUntilMock = vi.fn();
+      const now = Date.now();
       globalThis[SYMBOL_FOR_REQ_CONTEXT] = {
-        get: () => ({ waitUntil: waitUntilMock }),
+        get: () => ({
+          deadline: new Date(now + 5000).toISOString(),
+          waitUntil: waitUntilMock,
+        }),
       };
 
-      const originalDateNow = Date.now;
-      const mockBootTime = 0;
-      Date.now = vi
-        .fn()
-        .mockReturnValueOnce(mockBootTime)
-        .mockReturnValue(14 * 60 * 1000);
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
 
       const pgPool = {
         options: { idleTimeoutMillis: 10 * 60 * 1000 },
@@ -214,18 +213,23 @@ describe('db-connections', () => {
       const releaseCallback = pgPool.on.mock.calls[0][1];
       releaseCallback();
 
-      expect(waitUntilMock).toHaveBeenCalled();
-
-      Date.now = originalDateNow;
+      expect(setTimeoutSpy).toHaveBeenLastCalledWith(
+        expect.any(Function),
+        4000
+      );
     });
 
-    test('ensures minimum wait time of 100ms when process exceeds maximum duration', () => {
-      // This test verifies the fix for TimeoutNegativeWarning in Node.js v24
-      // When the process runs longer than 15 minutes, the remaining duration calculation
-      // would become negative, causing setTimeout to receive a negative delay
+    test('uses the pool idle timeout on a long-lived process', () => {
       const waitUntilMock = vi.fn();
+      const processAge = 20 * 60 * 1000;
+      vi.setSystemTime(Date.now() + processAge);
+      const now = Date.now();
+
       globalThis[SYMBOL_FOR_REQ_CONTEXT] = {
-        get: () => ({ waitUntil: waitUntilMock }),
+        get: () => ({
+          deadline: new Date(now + 15 * 60 * 1000).toISOString(),
+          waitUntil: waitUntilMock,
+        }),
       };
 
       const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
@@ -237,20 +241,57 @@ describe('db-connections', () => {
 
       attachDatabasePool(pgPool);
 
-      // Simulate that 20 minutes have passed (well beyond the 15 minute maximum)
-      // This would make maximumDuration - (Date.now() - bootTime) negative
-      vi.setSystemTime(Date.now() + 20 * 60 * 1000);
-
       const releaseCallback = pgPool.on.mock.calls[0][1];
       releaseCallback();
 
-      // Verify setTimeout was called with a delay of at least 100ms (the minimum)
-      const lastSetTimeoutCall =
-        setTimeoutSpy.mock.calls[setTimeoutSpy.mock.calls.length - 1];
-      const timeoutDelay = lastSetTimeoutCall[1];
-      expect(timeoutDelay).toBeGreaterThanOrEqual(100);
+      expect(setTimeoutSpy).toHaveBeenLastCalledWith(
+        expect.any(Function),
+        5100
+      );
+    });
 
-      setTimeoutSpy.mockRestore();
+    test('ensures a minimum wait time of 100ms after the deadline', () => {
+      const waitUntilMock = vi.fn();
+      globalThis[SYMBOL_FOR_REQ_CONTEXT] = {
+        get: () => ({
+          deadline: new Date(Date.now() - 1000).toISOString(),
+          waitUntil: waitUntilMock,
+        }),
+      };
+
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+      const pgPool = {
+        options: { idleTimeoutMillis: 5000 },
+        on: vi.fn(),
+      };
+
+      attachDatabasePool(pgPool);
+      const releaseCallback = pgPool.on.mock.calls[0][1];
+      releaseCallback();
+
+      expect(setTimeoutSpy).toHaveBeenLastCalledWith(expect.any(Function), 100);
+    });
+
+    test('falls back to the maximum duration without a deadline', () => {
+      const waitUntilMock = vi.fn();
+      globalThis[SYMBOL_FOR_REQ_CONTEXT] = {
+        get: () => ({ waitUntil: waitUntilMock }),
+      };
+
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+      const pgPool = {
+        options: { idleTimeoutMillis: 20 * 60 * 1000 },
+        on: vi.fn(),
+      };
+
+      attachDatabasePool(pgPool);
+      const releaseCallback = pgPool.on.mock.calls[0][1];
+      releaseCallback();
+
+      expect(setTimeoutSpy).toHaveBeenLastCalledWith(
+        expect.any(Function),
+        15 * 60 * 1000 - 1000
+      );
     });
 
     test('timeout expires and logs message', async () => {

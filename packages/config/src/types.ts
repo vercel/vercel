@@ -56,7 +56,7 @@ export type Framework =
   | 'flask'
   | 'fasthtml'
   | 'django'
-  | 'sanity-v3'
+  | 'sanity-v2'
   | 'sanity'
   | 'storybook'
   | 'nitro'
@@ -90,6 +90,16 @@ export interface FunctionConfig {
    */
   maxDuration?: number | 'max';
   /**
+   * Controls how requests are assigned to instances of this Serverless Function.
+   */
+  affinity?: {
+    mode: 'strict';
+  };
+  /**
+   * The maximum number of requests that one instance of your Serverless Function can process concurrently.
+   */
+  maxConcurrency?: number;
+  /**
    * An integer defining the memory your Serverless Function should be provided with (between 128 and 10240).
    */
   memory?: number;
@@ -110,7 +120,7 @@ export interface FunctionConfig {
    */
   supportsCancellation?: boolean;
   /**
-   * An array of experimental triggers for this Serverless Function. Currently only supports queue triggers.
+   * An array of experimental triggers for this Serverless Function. Supports queue and schedule triggers.
    */
   experimentalTriggers?: (
     | {
@@ -169,6 +179,12 @@ export interface FunctionConfig {
          */
         maxConcurrency?: number;
       }
+    | {
+        /**
+         * Event type pattern this trigger handles
+         */
+        type: 'schedule/v1beta';
+      }
   )[];
 }
 
@@ -176,6 +192,57 @@ export interface CronJob {
   schedule: string;
   path: string;
 }
+
+/**
+ * A schedule without its name, which is its key in `schedules`.
+ */
+export type ScheduleDefinition = {
+  schedule: string;
+  /**
+   * IANA timezone for cron evaluation. Defaults to UTC.
+   */
+  timezone?: string;
+  jitter?: number;
+} & (
+  | {
+      /**
+       * Deployment path to invoke over HTTP, like `crons[].path`. Must start with `/`.
+       */
+      path: string;
+      /**
+       * HTTP method used to invoke `path`. Only valid with `path`. Defaults to `POST`.
+       */
+      requestMethod?: 'GET' | 'POST';
+      function?: never;
+      topic?: never;
+      entrypoint?: never;
+    }
+  | {
+      function: string;
+      /**
+       * Service that owns `function`, from `services`
+       */
+      service?: string;
+      path?: never;
+      topic?: never;
+      entrypoint?: never;
+    }
+  | {
+      /**
+       * Queue topic name. Must contain only letters, numbers, underscores, and hyphens.
+       */
+      topic: string;
+      path?: never;
+      function?: never;
+      entrypoint?: never;
+    }
+  | {
+      entrypoint: string;
+      path?: never;
+      function?: never;
+      topic?: never;
+    }
+);
 
 export interface ServiceQueueTopic {
   topic: string;
@@ -456,15 +523,18 @@ export interface VercelConfig {
    */
   builds?: BuildItem[];
   /**
+   * Opt in to omitting the request body from customer routing middleware. The destination request body is preserved. Defaults to false.
+   */
+  skipMiddlewareRequestBody?: boolean;
+  /**
    * When set to `true`, all HTML files and Serverless Functions will have their extension removed. When visiting a path that ends with the extension, a 308 response will redirect the client to the extensionless path.
    */
   cleanUrls?: boolean;
   /**
-   * Environment variables to expose to the deployment. Either a flat
-   * `Record<string, string>` of literal values (the deprecated shape, kept for
-   * back-compat) or an `EnvVar` record
+   * An object containing the deployment's environment variable names and values. Secrets can be referenced by prefixing the value with `@`
+   * @deprecated
    */
-  env?: Record<string, string> | Record<string, EnvVar>;
+  env?: Record<string, string>;
   /**
    * An array of the passive regions the deployment's Serverless Functions should be deployed to that can be failed over to during a lambda outage
    */
@@ -491,10 +561,6 @@ export interface VercelConfig {
    * A name for the deployment
    */
   name?: string;
-  /**
-   * Whether a deployment's source and logs are available publicly
-   */
-  public?: boolean;
   /**
    * A list of redirect definitions.
    */
@@ -557,6 +623,10 @@ export interface VercelConfig {
    * An array of cron jobs that should be created for production Deployments.
    */
   crons?: CronJob[];
+  /**
+   * Schedules that should be created for production Deployments, keyed by schedule name.
+   */
+  schedules?: Record<string, ScheduleDefinition>;
   /**
    * An array of projectIds to associate with the current project.
    */
@@ -636,6 +706,12 @@ export interface VercelConfig {
        * Install command for the service.
        */
       installCommand?: string;
+      /**
+       * Command to run after build process succeed but before the deployment's
+       * output is uploaded. Runs during `vercel build` including local builds
+       * and builds on Vercel.
+       */
+      preDeployCommand?: string;
       /**
        * Memory allocation in MB (128-10240).
        */

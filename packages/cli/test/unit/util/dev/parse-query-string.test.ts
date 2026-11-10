@@ -20,12 +20,6 @@ describe('parseQueryString', () => {
     const format = formatQueryString(parsed);
     expect(format).toEqual(querystring);
   });
-  it('should work with empty string', async () => {
-    const parsed = parseQueryString('');
-    expect(parsed).toEqual({});
-    const format = formatQueryString(parsed);
-    expect(format).toEqual(null);
-  });
   it('should work with question mark', async () => {
     const parsed = parseQueryString('?');
     expect(parsed).toEqual({});

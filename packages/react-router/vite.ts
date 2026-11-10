@@ -61,7 +61,6 @@ export function vercelPreset(): Preset {
     const route = branch[index];
     let config = routeConfigs.get(route.id);
     if (!config) {
-      // @ts-expect-error TODO: figure out why TypeScript is complaining here…
       config = getConfig(project, route.file) || {};
       if (index > 0) {
         Object.setPrototypeOf(config, getRouteConfig(branch, index - 1));

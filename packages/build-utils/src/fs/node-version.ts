@@ -10,6 +10,11 @@ export type NodeVersionMajor = ReturnType<typeof getOptions>[number]['major'];
 // with the newest supported version first
 export const NODE_VERSIONS: NodeVersion[] = [
   new NodeVersion({
+    major: 26,
+    range: '26.x',
+    runtime: 'nodejs26.x',
+  }),
+  new NodeVersion({
     major: 24,
     range: '24.x',
     runtime: 'nodejs24.x',
@@ -23,6 +28,7 @@ export const NODE_VERSIONS: NodeVersion[] = [
     major: 20,
     range: '20.x',
     runtime: 'nodejs20.x',
+    discontinueDate: new Date('2026-10-01'),
   }),
   new NodeVersion({
     major: 18,
@@ -65,6 +71,12 @@ export const NODE_VERSIONS: NodeVersion[] = [
 export const BUN_VERSIONS: BunVersion[] = [
   new BunVersion({
     major: 1,
+    minor: 4,
+    range: '1.4.x',
+    runtime: 'bun1.4.x',
+  }),
+  new BunVersion({
+    major: 1,
     range: '1.x',
     runtime: 'bun1.x',
   }),
@@ -75,7 +87,21 @@ export function getNodeVersionByMajor(major: number): NodeVersion | undefined {
 }
 
 function getOptions(): NodeVersion[] {
-  return NODE_VERSIONS;
+  let versions = NODE_VERSIONS;
+
+  if (process.env.VERCEL_ALLOW_DISCONTINUED_NODEJS20 === '1') {
+    // Temporary customer escape hatch; remove after the hard end date on 2026-11-01.
+    versions = versions.map(version =>
+      version.major === 20
+        ? new NodeVersion({
+            ...version,
+            discontinueDate: new Date('2026-11-01'),
+          })
+        : version
+    );
+  }
+
+  return versions;
 }
 
 function isNodeVersionAvailable(version: NodeVersion): boolean {
@@ -101,7 +127,10 @@ function getHint(isAuto = false, availableVersions?: NodeVersionMajor[]) {
 }
 
 export function getLatestNodeVersion(availableVersions?: NodeVersionMajor[]) {
-  const all = getOptions();
+  const all = getOptions().filter(
+    version =>
+      version.major !== 26 || process.env.VERCEL_DEFAULT_NODE_26 === '1'
+  );
   if (availableVersions) {
     // Return the first node version that is definitely
     // available in the build-container.
@@ -127,7 +156,8 @@ export function getDiscontinuedNodeVersions(): NodeVersion[] {
 export async function getSupportedNodeVersion(
   engineRange: string | undefined,
   isAuto = false,
-  availableVersions?: NodeVersionMajor[]
+  availableVersions?: NodeVersionMajor[],
+  configuredNodeVersion?: string
 ): Promise<NodeVersion> {
   let selection: NodeVersion | undefined;
 
@@ -138,7 +168,13 @@ export async function getSupportedNodeVersion(
         // the array is already in order so return the first
         // match which will be the newest version of node
         selection = o;
+        const canSelectNode26 =
+          o.major !== 26 ||
+          process.env.VERCEL_DEFAULT_NODE_26 === '1' ||
+          configuredNodeVersion === '26.x' ||
+          !intersects(engineRange, '<26.0.0');
         return (
+          canSelectNode26 &&
           intersects(o.range, engineRange) &&
           (availableVersions?.length
             ? availableVersions.includes(o.major)
@@ -199,12 +235,21 @@ export async function getSupportedNodeVersion(
 export function getSupportedBunVersion(engineRange: string): BunVersion {
   if (validRange(engineRange)) {
     const selected = BUN_VERSIONS.find(version => {
-      return intersects(version.range, engineRange);
+      if (!intersects(version.range, engineRange)) {
+        return false;
+      }
+
+      // Minor-specific runtimes require an explicit opt-in because Bun minor
+      // releases can contain breaking changes.
+      return version.minor === undefined
+        ? true
+        : !intersects(`<${version.major}.${version.minor}.0`, engineRange);
     });
 
     if (selected) {
       return new BunVersion({
         major: selected.major,
+        minor: selected.minor,
         range: selected.range,
         runtime: selected.runtime,
       });

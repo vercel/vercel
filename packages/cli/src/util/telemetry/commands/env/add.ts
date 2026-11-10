@@ -19,13 +19,13 @@ export class EnvAddTelemetryClient
 
   trackCliArgumentEnvironment(environment: string | undefined) {
     if (environment) {
+      const allStandard = environment
+        .split(',')
+        .map(t => t.trim())
+        .every(t => STANDARD_ENVIRONMENTS.includes(t as CustomEnvironmentType));
       this.trackCliArgument({
         arg: 'environment',
-        value: STANDARD_ENVIRONMENTS.includes(
-          environment as CustomEnvironmentType
-        )
-          ? environment
-          : this.redactedValue,
+        value: allStandard ? environment : this.redactedValue,
       });
     }
   }
@@ -39,11 +39,55 @@ export class EnvAddTelemetryClient
     }
   }
 
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
+    if (gitBranch) {
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionEnvironment(environments: string[] | undefined) {
+    if (environments && environments.length > 0) {
+      const allStandard = environments
+        .flatMap(environment => environment.split(','))
+        .map(t => t.trim())
+        .every(t => STANDARD_ENVIRONMENTS.includes(t as CustomEnvironmentType));
+      this.trackCliOption({
+        option: 'environment',
+        value: allStandard ? environments.join(',') : this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionValue(value: string | undefined) {
     if (value) {
       this.trackCliOption({
         option: 'value',
         value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionVisibility(visibility: string | undefined) {
+    if (visibility) {
+      const validVisibilities = ['config', 'secret'];
+      this.trackCliOption({
+        option: 'visibility',
+        value: validVisibilities.includes(visibility)
+          ? visibility
+          : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionType(type: string | undefined) {
+    if (type) {
+      const validTypes = ['config', 'secret'];
+      this.trackCliOption({
+        option: 'type',
+        value: validTypes.includes(type) ? type : this.redactedValue,
       });
     }
   }

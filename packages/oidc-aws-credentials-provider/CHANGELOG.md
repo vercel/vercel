@@ -1,5 +1,163 @@
 # @vercel/oidc
 
+## 3.3.16
+
+### Patch Changes
+
+- @vercel/oidc@4.0.4
+
+## 3.3.15
+
+### Patch Changes
+
+- @vercel/oidc@4.0.3
+
+## 3.3.14
+
+### Patch Changes
+
+- @vercel/oidc@4.0.2
+
+## 3.3.13
+
+### Patch Changes
+
+- Updated dependencies [d032cfb]
+  - @vercel/oidc@4.0.1
+
+## 3.3.12
+
+### Patch Changes
+
+- Updated dependencies [baad6f5]
+  - @vercel/oidc@5.0.0
+
+## 3.3.11
+
+### Patch Changes
+
+- Updated dependencies [ec76b68]
+  - @vercel/oidc@4.0.0
+
+## 3.3.10
+
+### Patch Changes
+
+- @vercel/oidc@3.8.10
+
+## 3.3.9
+
+### Patch Changes
+
+- @vercel/oidc@3.8.9
+
+## 3.3.8
+
+### Patch Changes
+
+- @vercel/oidc@3.8.8
+
+## 3.3.7
+
+### Patch Changes
+
+- @vercel/oidc@3.8.7
+
+## 3.3.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.6
+
+## 3.3.5
+
+### Patch Changes
+
+- @vercel/oidc@3.8.5
+
+## 3.3.4
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/oidc@3.8.4
+
+## 3.3.3
+
+### Patch Changes
+
+- @vercel/oidc@3.8.3
+
+## 3.3.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc@3.8.2
+
+## 3.3.1
+
+### Patch Changes
+
+- @vercel/oidc@3.8.1
+
+## 3.3.0
+
+### Minor Changes
+
+- d29a8f9: Cache exchanged OIDC tokens in memory, keyed by a hash of the source token, audience, and jti, so repeated exchanges reuse the result instead of calling the token-exchange endpoint every time. Cached tokens are evicted when the API-provided expiry passes, and the cache is bounded with least-recently-used eviction to avoid unbounded growth. Add a `skipCache` option (surfaced as `skipTokenCache` on `awsCredentialsProvider`) to bypass the cache. `jti` and the cache-skip flags are now only accepted alongside an `audience`, since they only take effect during a token exchange.
+
+### Patch Changes
+
+- Updated dependencies [d29a8f9]
+  - @vercel/oidc@3.8.0
+
+## 3.2.1
+
+### Patch Changes
+
+- Updated dependencies [fb93ff6]
+  - @vercel/oidc@3.7.1
+
+## 3.2.0
+
+### Minor Changes
+
+- 415fde0: Add optional `audience` and `jti` parameters to exchange Vercel OIDC tokens for use with AWS STS and other providers.
+
+### Patch Changes
+
+- Updated dependencies [415fde0]
+  - @vercel/oidc@3.7.0
+
+## 3.1.5
+
+### Patch Changes
+
+- @vercel/oidc@3.6.2
+
+## 3.1.4
+
+### Patch Changes
+
+- Updated dependencies [01cf6c2]
+  - @vercel/oidc@3.6.1
+
+## 3.1.3
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/oidc@3.6.0
+
+## 3.1.2
+
+### Patch Changes
+
+- Updated dependencies [5a700dc]
+  - @vercel/oidc@3.5.0
+
 ## 3.1.1
 
 ### Patch Changes

@@ -1,0 +1,34 @@
+{
+  "probes": [
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "\"service\":\"api\""
+    },
+    {
+      "path": "/api",
+      "status": 200,
+      "mustContain": "\"go\":\"go1.27.0\""
+    },
+    {
+      "path": "/api/users/123",
+      "status": 200,
+      "mustContain": "\"path\":\"/users/123\""
+    },
+    {
+      "path": "/api-bis",
+      "status": 200,
+      "mustContain": "\"service\":\"api-bis\""
+    },
+    {
+      "path": "/api-bis",
+      "status": 200,
+      "mustContain": "\"go\":\"go1.27.0\""
+    },
+    {
+      "path": "/api-bis/items/7",
+      "status": 200,
+      "mustContain": "\"path\":\"/items/7\""
+    }
+  ]
+}

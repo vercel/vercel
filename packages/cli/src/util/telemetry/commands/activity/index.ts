@@ -51,15 +51,6 @@ export class ActivityTelemetryClient
     }
   }
 
-  trackCliOptionProject(v: string | undefined) {
-    if (v) {
-      this.trackCliOption({
-        option: 'project',
-        value: this.redactedValue,
-      });
-    }
-  }
-
   trackCliFlagAll(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('all');
@@ -75,12 +66,18 @@ export class ActivityTelemetryClient
     }
   }
 
-  trackCliOptionNext(v: number | undefined) {
-    if (typeof v === 'number') {
+  trackCliOptionNext(v: string | undefined) {
+    if (v !== undefined) {
       this.trackCliOption({
         option: 'next',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

@@ -18,21 +18,15 @@ test('build completed successfully', () => {
     path.join(fixtureFolder.name, '.vercel/project.json')
   );
   expect(projectJsonExists).toBe(true);
-  const projectInspect = spawnSync(
-    'vercel',
-    [
-      'project',
-      'inspect',
-      '--scope',
-      'agentic-zero-conf',
-      '--token',
-      process.env.VERCEL_TOKEN ?? '',
-    ],
-    {
-      cwd: fixtureFolder.name,
-      env: process.env,
-      encoding: 'utf-8',
-    }
-  );
+  const args = ['project', 'inspect', '--scope', 'agentic-zero-conf'];
+  const token = process.env.VERCEL_TOKEN;
+  if (token) {
+    args.push('--token', token);
+  }
+  const projectInspect = spawnSync('vercel', args, {
+    cwd: fixtureFolder.name,
+    env: process.env,
+    encoding: 'utf-8',
+  });
   expect(projectInspect.stderr).toContain('Hono');
 });

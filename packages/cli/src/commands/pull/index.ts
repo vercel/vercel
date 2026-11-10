@@ -17,12 +17,11 @@ import humanizePath from '../../util/humanize-path';
 
 import { help } from '../help';
 import { pullCommand, type PullCommandFlags } from './command';
-import parseTarget from '../../util/parse-target';
+import parseTarget, { warnDeprecatedProdFlag } from '../../util/parse-target';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
 import { PullTelemetryClient } from '../../util/telemetry/commands/pull';
-import { autoInstallVercelPlugin } from '../../util/agent/auto-install-agentic';
 
 async function pullAllEnvFiles(
   environment: string,
@@ -68,7 +67,7 @@ export default async function main(client: Client) {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetryClient = new PullTelemetryClient({
@@ -79,13 +78,19 @@ export default async function main(client: Client) {
 
   if (parsedArgs.flags['--help']) {
     telemetryClient.trackCliFlagHelp('pull');
-    output.print(help(pullCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(pullCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   const cwd = parsedArgs.args[1] || client.cwd;
   const autoConfirm = Boolean(parsedArgs.flags['--yes']);
   const isProduction = Boolean(parsedArgs.flags['--prod']);
+  warnDeprecatedProdFlag(client, parsedArgs.flags);
   const environment =
     parseTarget({
       flagName: 'environment',
@@ -97,18 +102,16 @@ export default async function main(client: Client) {
   telemetryClient.trackCliFlagProd(isProduction);
   telemetryClient.trackCliOptionGitBranch(parsedArgs.flags['--git-branch']);
   telemetryClient.trackCliOptionEnvironment(parsedArgs.flags['--environment']);
+  telemetryClient.trackCliOptionProject(parsedArgs.flags['--project']);
 
   const returnCode = await pullCommandLogic(
     client,
     cwd,
     autoConfirm,
     environment,
-    parsedArgs.flags
+    parsedArgs.flags,
+    parsedArgs.flags['--project']
   );
-
-  if (returnCode === 0 && !autoConfirm) {
-    await autoInstallVercelPlugin(client);
-  }
 
   return returnCode;
 }
@@ -118,11 +121,15 @@ export async function pullCommandLogic(
   cwd: string,
   autoConfirm: boolean,
   environment: string,
-  flags: PullCommandFlags
+  flags: PullCommandFlags,
+  projectNameOrId?: string
 ): Promise<number> {
   const link = await ensureLink('pull', client, cwd, {
     autoConfirm,
     pullEnv: false,
+    projectName: projectNameOrId,
+    failIfNotFound: !!projectNameOrId,
+    skipOwnerLookup: true,
   });
   if (typeof link === 'number') {
     return link;

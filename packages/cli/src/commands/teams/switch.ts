@@ -16,18 +16,11 @@ import { getCommandNamePlain } from '../../util/pkg-name';
 import {
   outputActionRequired,
   outputAgentError,
+  withGlobalFlags,
 } from '../../util/agent-output';
-import {
-  getGlobalFlagsOnlyFromArgs,
-  getSameSubcommandSuggestionFlags,
-} from '../../util/arg-common';
+import { getSameSubcommandSuggestionFlags } from '../../util/arg-common';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 import { getLinkFromDir, getVercelDirectory } from '../../util/projects/link';
-
-/** Append global argv flags (--cwd, --non-interactive, etc.) so agents can re-run with same context. */
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 const updateCurrentTeam = (config: GlobalConfig, team?: Team) => {
   if (team) {
@@ -77,15 +70,39 @@ export default async function change(client: Client, argv: string[]) {
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
   let {
     args: [desiredSlug],
   } = parsedArgs;
+
+  // These runs never use the saved team, so switching from one would only
+  // change the human's team behind their back.
+  if (client.ignoresSavedTeam) {
+    const message =
+      "Agents can't change the saved team. Pass --scope <team> to each command, or link the directory with --scope.";
+    outputAgentError(client, {
+      status: 'error',
+      reason: AGENT_REASON.AGENT_CANNOT_SWITCH,
+      message,
+      next: [
+        {
+          command: withGlobalFlags(client, 'teams ls'),
+          when: 'to list teams, then ask the user which one to use',
+        },
+        {
+          command: getCommandNamePlain('link --scope <team>'),
+          when: 'to set the team for this directory (replace <team> with the team the user chose)',
+        },
+      ],
+    });
+    output.error(message);
+    return 1;
+  }
 
   // Non-interactive requires a slug (or username) as first positional. Handle
   // this before fetching teams so a stale currentTeam does not surface as
@@ -121,9 +138,9 @@ export default async function change(client: Client, argv: string[]) {
           },
         ],
       },
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
   const { config, telemetryEventStore } = client;
@@ -146,31 +163,13 @@ export default async function change(client: Client, argv: string[]) {
     ? teams.find(team => team.id === currentTeamId)
     : undefined;
 
+  // The persisted team can be stale (deleted, or membership revoked). Never
+  // hard-fail on it: this command is the way to switch away from it, so warn
+  // and continue with no current selection.
   if (!personalScopeSelected && !currentTeam) {
-    if (client.nonInteractive) {
-      outputAgentError(
-        client,
-        {
-          status: 'error',
-          reason: 'current_team_invalid',
-          message:
-            'You are not a member of the current team anymore. Switch to a valid team or personal scope.',
-          next: [
-            {
-              command: withGlobalFlags(client, 'teams list'),
-              when: 'to list teams and slugs you can switch to',
-            },
-            {
-              command: withGlobalFlags(client, 'login'),
-              when: 'to re-authenticate if your session or team membership changed',
-            },
-          ],
-        },
-        1
-      );
-    }
-    output.error(`You are not a member of the current team anymore.`);
-    return 1;
+    output.warn(
+      'You are no longer a member of the previously selected team. Choose another scope to continue.'
+    );
   }
 
   if (!desiredSlug) {
@@ -262,9 +261,9 @@ export default async function change(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
 
     desiredSlug = await listInput(client, {
