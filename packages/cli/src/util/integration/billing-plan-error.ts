@@ -1,6 +1,7 @@
 import type Client from '../client';
 import { withGlobalFlags } from '../agent-output';
 import { isAPIError } from '../errors-ts';
+import { formatHelpSelector } from './format-help-selector';
 import type { Integration, IntegrationProduct } from './types';
 
 /** Auto-provision error codes that are about which billing plan to use. */
@@ -15,13 +16,6 @@ const BILLING_PLAN_ERROR_CODES = new Set([
  * `Billing plan is disabled: <id>`.
  */
 const BILLING_PLAN_ERROR_MESSAGE = /^Billing plan (?:not found|is disabled)\b/;
-
-/** An integration or product slug that is safe to print in a command. */
-const SLUG = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-
-export function isSlug(value: string | undefined): value is string {
-  return value !== undefined && SLUG.test(value);
-}
 
 export function isBillingPlanError(error: unknown): boolean {
   if (!isAPIError(error)) {
@@ -45,13 +39,11 @@ export function getProductArgument(
   integration: Pick<Integration, 'slug' | 'products'>,
   product: Pick<IntegrationProduct, 'slug'>
 ): string {
-  const integrationSlug = isSlug(integration.slug)
-    ? integration.slug
-    : '<INTEGRATION>';
+  const integrationSlug = formatHelpSelector(integration.slug, '<INTEGRATION>');
   if ((integration.products?.length ?? 0) <= 1) {
     return integrationSlug;
   }
-  return `${integrationSlug}/${isSlug(product.slug) ? product.slug : '<PRODUCT>'}`;
+  return `${integrationSlug}/${formatHelpSelector(product.slug, '<PRODUCT>')}`;
 }
 
 /**

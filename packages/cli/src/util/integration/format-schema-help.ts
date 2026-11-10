@@ -42,13 +42,18 @@ export function getVisibleOptions(
   return options.length > 0 ? options : undefined;
 }
 
+/** Whether a metadata key is safe to print in a suggested `--meta`. */
+export function isSafeMetadataKey(key: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_.-]*$/.test(key);
+}
+
 /** Remote schema data must never introduce shell syntax into a suggestion. */
 export function formatMetadataExample(
   key: string,
   value: string,
   array = false
 ): string {
-  const safeKey = /^[A-Za-z_][A-Za-z0-9_.-]*$/.test(key) ? key : '<KEY>';
+  const safeKey = isSafeMetadataKey(key) ? key : '<KEY>';
   const safeValue = /^[A-Za-z0-9_][A-Za-z0-9_.,:/@+-]*$/.test(value)
     ? value
     : '<VALUE>';

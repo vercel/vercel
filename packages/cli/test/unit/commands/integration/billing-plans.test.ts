@@ -1,8 +1,20 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import integrationCommand from '../../../../src/commands/integration';
+import { fetchBillingPlans } from '../../../../src/util/integration/fetch-billing-plans';
 import { client } from '../../../mocks/client';
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
+
+vi.mock(
+  '../../../../src/util/integration/fetch-billing-plans',
+  async importOriginal => {
+    const actual =
+      await importOriginal<
+        typeof import('../../../../src/util/integration/fetch-billing-plans')
+      >();
+    return { fetchBillingPlans: vi.fn(actual.fetchBillingPlans) };
+  }
+);
 
 const emptySchema = { type: 'object', properties: {} };
 
@@ -71,6 +83,39 @@ const integrations: Record<string, unknown> = {
         id: 'iap_neon_empty',
         slug: 'neon-empty',
         name: 'Neon Empty',
+        metadataSchema: emptySchema,
+      },
+    ],
+  },
+  'no-list': {
+    id: 'oac_no_list',
+    slug: 'no-list',
+    name: 'No List',
+    products: [
+      {
+        id: 'iap_no_list',
+        slug: 'no-list',
+        name: 'No List',
+        metadataSchema: emptySchema,
+      },
+    ],
+  },
+  // Both products' plans requests fail.
+  'all-down': {
+    id: 'oac_all_down',
+    slug: 'all-down',
+    name: 'All Down',
+    products: [
+      {
+        id: 'iap_down_a',
+        slug: 'down-a',
+        name: 'Down A',
+        metadataSchema: emptySchema,
+      },
+      {
+        id: 'iap_down_b',
+        slug: 'down-b',
+        name: 'Down B',
         metadataSchema: emptySchema,
       },
     ],
@@ -146,17 +191,19 @@ function plan(overrides: Record<string, unknown> & { id: string }) {
   };
 }
 
-const plansByProductId: Record<string, unknown[]> = {
-  iap_neon: [
-    plan({
-      id: 'free_v3',
-      name: 'Free',
-      description: 'For side projects',
-      paymentMethodRequired: false,
-    }),
-    plan({ id: 'launch', name: 'Launch', cost: '$19/month' }),
-    plan({ id: 'legacy', name: 'Legacy', disabled: true }),
-  ],
+const neonPlans = [
+  plan({
+    id: 'free_v3',
+    name: 'Free',
+    description: 'For side projects',
+    paymentMethodRequired: false,
+  }),
+  plan({ id: 'launch', name: 'Launch', cost: '$19/month' }),
+  plan({ id: 'legacy', name: 'Legacy', disabled: true }),
+];
+
+const plansByProductId: Record<string, unknown> = {
+  iap_neon: neonPlans,
   iap_s3: [
     plan({
       id: 's3-plan',
@@ -169,6 +216,7 @@ const plansByProductId: Record<string, unknown[]> = {
     plan({ id: 'dynamodb-plan', name: 'DynamoDB', type: 'prepayment' }),
   ],
   iap_neon_empty: [],
+  iap_no_list: null,
 };
 
 function usePlans() {
@@ -197,6 +245,10 @@ function usePlans() {
         return;
       }
       const plans = plansByProductId[req.params.productId];
+      if (plans === null) {
+        res.json({});
+        return;
+      }
       if (!plans) {
         res
           .status(400)
@@ -337,36 +389,9 @@ describe('integration billing-plans', () => {
             name: 'Neon Postgres',
             argument: 'neon',
             plans: [
-              {
-                id: 'free_v3',
-                name: 'Free',
-                description: 'For side projects',
-                type: 'subscription',
-                cost: null,
-                details: [],
-                free: true,
-                available: true,
-              },
-              {
-                id: 'launch',
-                name: 'Launch',
-                description: '',
-                type: 'subscription',
-                cost: '$19/month',
-                details: [],
-                free: false,
-                available: true,
-              },
-              {
-                id: 'legacy',
-                name: 'Legacy',
-                description: '',
-                type: 'subscription',
-                cost: null,
-                details: [],
-                free: false,
-                available: false,
-              },
+              { ...neonPlans[0], free: true, available: true },
+              { ...neonPlans[1], free: false, available: true },
+              { ...neonPlans[2], free: false, available: false },
             ],
           },
         ],
@@ -416,17 +441,33 @@ describe('integration billing-plans', () => {
       expect(requests[0].path).toContain('/products/iap_dynamodb/plans');
     });
 
-    it('keeps pricing details and drops a blank cost', async () => {
+    it("passes the API's plan fields through", async () => {
       usePlans();
       client.setArgv('integration', 'billing-plans', 'aws/aws-s3', '--json');
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(0);
       const payload = JSON.parse(client.stdout.getFullOutput());
-      expect(payload.products[0].plans[0]).toMatchObject({
+      expect(payload.products[0].plans[0]).toEqual({
         id: 's3-plan',
-        cost: null,
+        name: 'S3',
+        type: 'subscription',
+        scope: 'resource',
+        description: '',
+        paymentMethodRequired: true,
+        cost: ' ',
         details: [{ label: 'Storage', value: '$0.023 per GB/month' }],
+        free: false,
+        available: true,
       });
+    });
+
+    it('treats a response without a plan list as no plans', async () => {
+      usePlans();
+      client.setArgv('integration', 'billing-plans', 'no-list', '--json');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload.products[0].plans).toEqual([]);
     });
 
     it('reports a product whose plans request failed next to the others, and exits 1', async () => {
@@ -458,11 +499,81 @@ describe('integration billing-plans', () => {
     expect(exitCode).toEqual(1);
     expect(client.stdout.getFullOutput()).toMatch(/mixed\/mixed-ok\s+free_v3/);
     expect(client.stderr.getFullOutput()).toContain(
-      "Couldn't list the billing plans for Mixed Down (mixed/mixed-down).\n  Vercel API: Partner error"
+      "✗ Couldn't list the billing plans for Mixed Down (mixed/mixed-down).\n  Vercel API: Partner error"
     );
   });
 
+  it('reports a product whose request never got a response next to the others', async () => {
+    usePlans();
+    const { fetchBillingPlans: actual } = await vi.importActual<
+      typeof import('../../../../src/util/integration/fetch-billing-plans')
+    >('../../../../src/util/integration/fetch-billing-plans');
+    vi.mocked(fetchBillingPlans)
+      .mockImplementationOnce(actual)
+      .mockImplementationOnce(async () => {
+        throw Object.assign(new Error('socket hang up'), {
+          code: 'ECONNRESET',
+        });
+      });
+    client.setArgv('integration', 'billing-plans', 'aws', '--json');
+    const exitCode = await integrationCommand(client);
+    expect(exitCode).toEqual(1);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.products).toMatchObject([
+      { argument: 'aws/aws-s3', plans: [{ id: 's3-plan' }] },
+      {
+        argument: 'aws/aws-dynamodb',
+        plans: [],
+        error: "Couldn't reach the Vercel API. The connection failed.",
+      },
+    ]);
+  });
+
+  it('reports every product when all plans requests fail', async () => {
+    usePlans();
+    client.setArgv('integration', 'billing-plans', 'all-down');
+    const exitCode = await integrationCommand(client);
+    expect(exitCode).toEqual(1);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain("✗ Couldn't list the billing plans for all-down.");
+    expect(stderr).toContain('all-down/down-a: Vercel API: Partner error');
+    expect(stderr).toContain('all-down/down-b: Vercel API: Partner error');
+    expect(client.stdout.getFullOutput()).toBe('');
+  });
+
   describe('--meta', () => {
+    it('keeps the --meta in the suggested install command', async () => {
+      usePlans();
+      client.setArgv(
+        'integration',
+        'billing-plans',
+        'cloud',
+        '--meta',
+        'region=sfo1'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'vercel integration add cloud --billing-plan <BILLING_PLAN> --meta region=sfo1'
+      );
+    });
+
+    it('keeps the passed --meta in the metadata retry', async () => {
+      usePlans();
+      client.setArgv(
+        'integration',
+        'billing-plans',
+        'cloud',
+        '--meta',
+        'org=acme'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'vercel integration billing-plans cloud --meta org=acme --meta region=<VALUE>'
+      );
+    });
+
     it('sends the product metadata with the plans request', async () => {
       const { requests } = usePlans();
       client.setArgv(
@@ -535,6 +646,33 @@ describe('integration billing-plans', () => {
       expect(stderr).toContain('Metadata "region" must be one of: iad1, sfo1');
       expect(stderr).toContain('vercel integration add cloud --help');
       expect(requests).toHaveLength(0);
+    });
+
+    it('reports invalid metadata as issues in JSON', async () => {
+      usePlans();
+      client.setArgv(
+        'integration',
+        'billing-plans',
+        'cloud',
+        '--meta',
+        'region=mars',
+        '--json'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(2);
+      expect(stderrError()).toMatchObject({
+        reason: 'invalid_arguments',
+        message: 'Invalid --meta.',
+        data: {
+          issues: [
+            {
+              field: 'meta',
+              reason: 'invalid_arguments',
+              message: 'Metadata "region" must be one of: iad1, sfo1',
+            },
+          ],
+        },
+      });
     });
 
     it('needs a single product', async () => {
@@ -610,6 +748,23 @@ describe('integration billing-plans', () => {
       );
     });
 
+    it('writes a JSON error document for an unknown option with --json', async () => {
+      client.setArgv(
+        'integration',
+        'billing-plans',
+        'neon',
+        '--json',
+        '--not-an-option'
+      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(2);
+      expect(client.stdout.getFullOutput()).toBe('');
+      expect(stderrError()).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+      });
+    });
+
     it('rejects more than one integration', async () => {
       client.setArgv('integration', 'billing-plans', 'neon', 'aws');
       const exitCode = await integrationCommand(client);
@@ -680,7 +835,9 @@ describe('integration billing-plans', () => {
       expect(stderrError()).toMatchObject({
         reason: 'api_error',
         message: "Couldn't list the billing plans for partner-down.",
-        data: { remoteMessage: 'Partner error' },
+        data: {
+          products: [{ argument: 'partner-down', error: 'Partner error' }],
+        },
       });
     });
   });
