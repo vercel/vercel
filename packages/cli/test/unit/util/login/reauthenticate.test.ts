@@ -9,18 +9,21 @@ import {
 } from 'vitest';
 import reauthenticate from '../../../../src/util/login/reauthenticate';
 import { client } from '../../../mocks/client';
-import _fetch, { type Response } from 'node-fetch';
+import _fetch, { type Response } from '../../../../src/util/fetch';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 
 const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
+vi.mock('../../../../src/util/fetch', async () => ({
+  ...(await vi.importActual('../../../../src/util/fetch')),
   default: vi.fn(),
 }));
 
-vi.mock('../../../../src/util/agent/auto-install-agentic', () => ({
-  autoInstallVercelPlugin: vi.fn().mockResolvedValue(undefined),
+// The device flow tests delete `CI`, so `login/future.ts` would open a real
+// browser. `open` resolves to a ChildProcess; `future.ts` calls `.on('error')`.
+// Passing the implementation to `vi.fn` keeps it through `vi.resetAllMocks()`.
+vi.mock('open', () => ({
+  default: vi.fn(() => Promise.resolve({ on: vi.fn() })),
 }));
 
 function mockResponse(data: unknown, ok = true): Response {

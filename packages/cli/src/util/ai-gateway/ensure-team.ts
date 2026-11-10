@@ -3,28 +3,27 @@ import selectOrg from '../input/select-org';
 import output from '../../output-manager';
 
 export async function ensureTeam(client: Client): Promise<boolean> {
-  if (client.config.currentTeam) {
+  if (await client.resolveCurrentTeam()) {
     return true;
   }
 
-  if (!client.stdin.isTTY) {
+  // Three separate conditions: `nonInteractive` misses an agent attached to a
+  // pty, and neither covers a plain piped invocation.
+  if (client.nonInteractive || client.isAgent || !client.stdin.isTTY) {
     output.error(
-      'No team selected. Use `vercel --scope <team-slug> ai-gateway rules …` or run `vercel switch` first.'
+      'No team selected. Use `vercel --scope <team-slug> ai-gateway …` or run `vercel switch` first.'
     );
     return false;
   }
 
-  const org = await selectOrg(
-    client,
-    'Which team owns these AI Gateway rules?'
-  );
+  const org = await selectOrg(client, 'Which team?');
   if (org.type === 'team') {
     client.config.currentTeam = org.id;
     return true;
   }
 
   output.error(
-    'AI Gateway rules are managed per team. Switch to a team scope and try again.'
+    'AI Gateway resources are managed per team. Switch to a team scope and try again.'
   );
   return false;
 }

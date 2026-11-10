@@ -39,12 +39,18 @@ import {
 } from 'eve/connections';
 
 import { startAuthorization } from '../authorization.js';
+import {
+  experimental_connectEventsAdapter,
+  type Experimental_ConnectEventOperations,
+} from '../ai-sdk/connect-events-adapter.js';
+import { verifyMcpEvent, type McpEventDelivery } from '../mcp/verify-event.js';
 import type {
   ConnectOptions,
   ConnectTokenParams,
   ConnectTokenSubject,
 } from '../token.js';
 import {
+  ConnectError,
   ConnectorInstallationRequiredError,
   deleteTokenCacheEntry,
   getTokenResponse,
@@ -52,6 +58,7 @@ import {
   revokeToken,
   UserAuthorizationRequiredError,
 } from '../token.js';
+import { provisionEveOAuthConnector } from './provision-oauth-connector.js';
 
 /**
  * Authorization phase passed to {@link EveAuthorizationOptions.onError}
@@ -99,6 +106,17 @@ interface CompleteAuthorizationOptions {
   readonly connection: EveConnectionAuthorizationContext;
 }
 
+/**
+ * `displayName` is being added to Eve's
+ * `ConnectionAuthorizationChallenge` (in-flight upstream PR); this
+ * intersection can be dropped in favour of the plain challenge type
+ * once the `eve` dependency picks it up.
+ */
+type ConnectionAuthorizationChallengeWithDisplayName =
+  ConnectionAuthorizationChallenge & {
+    readonly displayName?: string;
+  };
+
 /** Options accepted by {@link connect}. */
 export interface EveAuthorizationOptions {
   /**
@@ -125,6 +143,13 @@ export interface EveAuthorizationOptions {
    *   Vercel Connect app.
    */
   readonly principalType?: 'app' | 'user';
+
+  /**
+   * Stable service identifier included in eve's external-resource snapshot.
+   * Set this when the connection should participate in Connect manifest
+   * generation; connector-only runtime usage may leave it unset.
+   */
+  readonly service?: string;
 
   /**
    * Extra parameters forwarded to every `getTokenResponse` /
@@ -174,6 +199,24 @@ export interface EveAuthorizationOptions {
   readonly connectOptions?: ConnectOptions;
 
   /**
+   * Create or link the declared connector against the deploying Vercel
+   * project when a token / authorization call reports that the connector
+   * is missing or not linked. Defaults to `false`; set this to `true` to
+   * opt in to runtime provisioning.
+   *
+   * The provision request is authenticated with the deployment OIDC token
+   * and carries the eve connection's `url` plus this connector UID. Connect
+   * creates the managed OAuth connector when missing, links an existing
+   * OAuth connector when the UID already exists, and scopes the new project
+   * link to the OIDC token's authenticated environment.
+   *
+   * Existing linked connectors are always used directly without a
+   * provisioning request. Opaque connector ids (`scl_...`) and connections
+   * without a URL are skipped automatically.
+   */
+  readonly autoProvision?: boolean;
+
+  /**
    * Re-validate the grant against Vercel Connect on every `getToken`
    * instead of trusting the in-process token cache.
    *
@@ -202,6 +245,15 @@ export interface EveAuthorizationOptions {
   readonly instructions?: string;
 
   /**
+   * Manual override for the human-readable provider name channels
+   * render on the authorization affordance (eg. a
+   * `Sign in with Salesforce` button). When omitted, the connector's
+   * service display name reported by Vercel Connect is used, falling
+   * back to the connector's own name for unknown services.
+   */
+  readonly displayName?: string;
+
+  /**
    * Escape hatch for turning an unexpected Vercel Connect / network
    * error into an Eve-recognizable error. Called once per failure
    * with the raw error and the phase that produced it.
@@ -220,6 +272,19 @@ export interface EveAuthorizationOptions {
 /** Input accepted by {@link connect}. */
 export type EveAuthorizationInput = string | EveAuthorizationOptions;
 
+/** Runtime bridge consumed only by event-enabled eve connections. */
+export interface Experimental_EveEventsBackend {
+  createAdapter(input: {
+    principal: ConnectionPrincipal;
+    connection: EveConnectionAuthorizationContext;
+    destination: { path: string };
+  }): Promise<Experimental_ConnectEventOperations>;
+  verify(
+    request: Request,
+    options: { path: string }
+  ): Promise<McpEventDelivery>;
+}
+
 /**
  * Structurally-readable marker exposed on every {@link connect} return
  * value so downstream tooling can detect Vercel Connect-backed
@@ -234,13 +299,29 @@ export type EveAuthorizationInput = string | EveAuthorizationOptions;
  * URL) can resolve UID → `scl_...` against the Vercel Connect API;
  * both forms address the same connector.
  *
- * The marker is purely metadata — it does not influence the runtime
- * token-fetching behaviour, which continues to be driven by the
+ * Newer helpers may include a complete external-resource requirement for
+ * Eve's build tooling. It remains optional so existing connector-only metadata
+ * assignments stay source-compatible.
+ *
+ * The connector and requirement are serializable metadata. The optional
+ * events bridge is a live runtime capability and must not be serialized.
+ * Token-fetching identity continues to be driven by the
  * `getToken` / `startAuthorization` / `completeAuthorization`
- * callbacks.
+ * callbacks. When auto-provisioning is enabled, the same connector value is
+ * also sent as the managed OAuth UID.
  */
 export interface VercelConnectMetadata {
+  /** Live capability; compilers must omit this from serializable metadata. */
+  readonly experimental_events?: Experimental_EveEventsBackend;
+  /** Raw connector UID or service-connector key passed to the helper. */
   readonly connector: string;
+  /** Complete credential requirement consumed by eve build tooling. */
+  readonly requirement?: {
+    readonly method?: string;
+    readonly reference: string;
+    readonly service: string;
+    readonly subjectTypes: readonly ('app' | 'user')[];
+  };
 }
 
 /**
@@ -329,12 +410,35 @@ export function connect(
   InteractiveAuthorizationDefinition | NonInteractiveAuthorizationDefinition
 > {
   const options = normalizeAuthorizationOptions(input);
-  const vercelConnect: VercelConnectMetadata = { connector: options.connector };
+  const requirement =
+    options.service === undefined
+      ? undefined
+      : {
+          reference: `connector:${options.connector}`,
+          service: options.service,
+          subjectTypes: [options.principalType ?? 'user'] as const,
+        };
+  const vercelConnect: VercelConnectMetadata =
+    requirement === undefined
+      ? { connector: options.connector }
+      : { connector: options.connector, requirement };
+  const eventMetadata = {
+    ...vercelConnect,
+    experimental_events: buildEventsBackend(options),
+  };
   const evict = makeEvict(options);
   if (options.principalType === 'app') {
-    return { ...buildNonInteractiveDefinition(options), vercelConnect, evict };
+    return {
+      ...buildNonInteractiveDefinition(options),
+      vercelConnect: eventMetadata,
+      evict,
+    };
   }
-  return { ...buildInteractiveDefinition(options), vercelConnect, evict };
+  return {
+    ...buildInteractiveDefinition(options),
+    vercelConnect: eventMetadata,
+    evict,
+  };
 }
 
 /**
@@ -380,6 +484,40 @@ function makeEvict(
   };
 }
 
+function buildEventsBackend(
+  options: EveAuthorizationOptions
+): Experimental_EveEventsBackend {
+  return {
+    verify: verifyMcpEvent,
+    async createAdapter({ principal, connection, destination }) {
+      // Apply the same error translation to subject resolution and requests.
+      async function call<T>(operation: () => Promise<T>): Promise<T> {
+        try {
+          return await operation();
+        } catch (error) {
+          throw translate(error, 'getToken', options);
+        }
+      }
+      const adapter = await call(async () =>
+        experimental_connectEventsAdapter({
+          connector: options.connector,
+          tokenParams: await buildTokenParams(options, principal, connection),
+          destination,
+        }).createAdapter({
+          transport: { type: 'http', url: connection.url },
+        })
+      );
+      return {
+        subscribe: input => call(() => adapter.subscribe(input)),
+        getSubscription: input => call(() => adapter.getSubscription(input)),
+        listSubscriptions: input =>
+          call(() => adapter.listSubscriptions(input)),
+        unsubscribe: input => call(() => adapter.unsubscribe(input)),
+      };
+    },
+  };
+}
+
 function normalizeAuthorizationOptions(
   input: EveAuthorizationInput
 ): EveAuthorizationOptions {
@@ -400,10 +538,16 @@ function buildInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
-        const response = await getTokenResponse(
-          options.connector,
-          await buildTokenParams(options, principal, connection),
-          getTokenConnectOptions(options)
+        const params = await buildTokenParams(options, principal, connection);
+        const response = await withConnectorProvisioningFallback(
+          options,
+          connection,
+          () =>
+            getTokenResponse(
+              options.connector,
+              params,
+              getTokenConnectOptions(options)
+            )
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -417,39 +561,49 @@ function buildInteractiveDefinition(
       callbackUrl,
       webhook,
     }: StartAuthorizationOptions): Promise<{
-      challenge: ConnectionAuthorizationChallenge;
+      challenge: ConnectionAuthorizationChallengeWithDisplayName;
     }> {
       try {
-        // Eve's `webhook` parameter is semantically a browser-redirect
-        // target — the orchestrator mints it via `createWebhook({
-        // respondWith: buildAuthorizationCompletePage() })` so the
-        // user lands on a friendly "you can close this tab" page after
-        // consent. That maps to Vercel Connect's `callbackUrl:`
-        // semantics, which accepts both `https://` (prod) and
-        // `http://localhost` (vercel dev) — one field covers both.
+        // eve's `webhook` parameter is also the browser-redirect
+        // target when `callbackUrl` is absent — the orchestrator mints
+        // it via `createWebhook({ respondWith:
+        // buildAuthorizationCompletePage() })` so the user lands on a
+        // friendly "you can close this tab" page after consent. That
+        // maps to Vercel Connect's `callbackUrl:` semantics, which
+        // accepts both `https://` (prod) and `http://localhost`
+        // (vercel dev).
+        //
+        // When the eve webhook is HTTPS, also pass it as Vercel
+        // Connect's server-side completion webhook. That lets Connect
+        // resume the eve session even when the OAuth callback fails
+        // before the browser can be redirected back, such as a token
+        // exchange error after provider consent.
+        //
         // Vercel Connect authenticates the calling Vercel project via
         // OIDC, which is what lets per-workflow dynamic webhook URLs
         // work without an OAuth-style redirect-URI allowlist.
-        //
-        // We don't route `https://` URLs into Vercel Connect's
-        // `webhook:` (server-POST) field, even though it would
-        // survive the user closing the consent tab right after IdP
-        // callback. That mode shows the user Vercel Connect's
-        // generic "close this window" page instead of Eve's branded
-        // landing page, and the helper would need to grow
-        // protocol-aware logic that diverges from the simple "Eve
-        // mints one URL, Vercel Connect redirects there" mental
-        // model. Revisit if tab-close timeouts become a real problem
-        // in production.
-        const response = await startAuthorization(
-          options.connector,
-          await buildTokenParams(options, principal, connection),
-          {
-            ...options.connectOptions,
-            callbackUrl: callbackUrl ?? webhook,
-            deviceCode: true,
-          }
+        const completionWebhook = connectCompletionWebhook(webhook);
+        const params = await buildTokenParams(options, principal, connection);
+        const response = await withConnectorProvisioningFallback(
+          options,
+          connection,
+          () =>
+            startAuthorization(options.connector, params, {
+              ...options.connectOptions,
+              callbackUrl: callbackUrl ?? webhook,
+              ...(completionWebhook ? { webhook: completionWebhook } : null),
+              deviceCode: true,
+            })
         );
+        // Sign-in buttons name the destination service ("Sign in with
+        // Salesforce"), matching the OAuth idiom — the consent screen
+        // names the specific requesting app. The connector's own name is
+        // the fallback for custom connectors on unknown services, and an
+        // author-provided override wins over both.
+        const displayName =
+          options.displayName ??
+          response.connector?.serviceName ??
+          response.connector?.name;
         return {
           challenge: {
             url: response.url,
@@ -460,7 +614,8 @@ function buildInteractiveDefinition(
             ...(options.instructions
               ? { instructions: options.instructions }
               : null),
-          } satisfies ConnectionAuthorizationChallenge,
+            ...(displayName ? { displayName } : null),
+          } satisfies ConnectionAuthorizationChallengeWithDisplayName,
         };
       } catch (error) {
         throw translate(error, 'startAuthorization', options);
@@ -472,10 +627,12 @@ function buildInteractiveDefinition(
       connection,
     }: CompleteAuthorizationOptions): Promise<TokenResult> {
       try {
-        const response = await getTokenResponse(
-          options.connector,
-          await buildTokenParams(options, principal, connection),
-          options.connectOptions
+        const params = await buildTokenParams(options, principal, connection);
+        const response = await withConnectorProvisioningFallback(
+          options,
+          connection,
+          () =>
+            getTokenResponse(options.connector, params, options.connectOptions)
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -483,6 +640,17 @@ function buildInteractiveDefinition(
       }
     },
   };
+}
+
+function connectCompletionWebhook(webhook: string | undefined): string | null {
+  if (!webhook) {
+    return null;
+  }
+  try {
+    return new URL(webhook).protocol === 'https:' ? webhook : null;
+  } catch {
+    return null;
+  }
 }
 
 function buildNonInteractiveDefinition(
@@ -495,10 +663,16 @@ function buildNonInteractiveDefinition(
       connection,
     }: GetTokenOptions): Promise<TokenResult> {
       try {
-        const response = await getTokenResponse(
-          options.connector,
-          await buildTokenParams(options, principal, connection),
-          getTokenConnectOptions(options)
+        const params = await buildTokenParams(options, principal, connection);
+        const response = await withConnectorProvisioningFallback(
+          options,
+          connection,
+          () =>
+            getTokenResponse(
+              options.connector,
+              params,
+              getTokenConnectOptions(options)
+            )
         );
         return { token: response.token, expiresAt: response.expiresAt };
       } catch (error) {
@@ -506,6 +680,46 @@ function buildNonInteractiveDefinition(
       }
     },
   };
+}
+
+async function withConnectorProvisioningFallback<T>(
+  options: EveAuthorizationOptions,
+  connection: EveConnectionAuthorizationContext,
+  operation: () => Promise<T>
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (
+      options.autoProvision !== true ||
+      !isMissingConnectorOrProjectLink(error)
+    ) {
+      throw error;
+    }
+  }
+
+  await provisionEveOAuthConnector({
+    connector: options.connector,
+    connection,
+    connectOptions: options.connectOptions,
+  });
+  return operation();
+}
+
+function isMissingConnectorOrProjectLink(error: unknown): boolean {
+  if (!(error instanceof ConnectError)) {
+    return false;
+  }
+
+  if (error.status === 404 && error.code === 'not_found') {
+    return true;
+  }
+
+  return (
+    error.status === 403 &&
+    error.code === 'forbidden' &&
+    /connector is not linked to this project/i.test(error.message)
+  );
 }
 
 /**

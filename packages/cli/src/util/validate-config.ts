@@ -1,4 +1,3 @@
-import Ajv from 'ajv';
 import {
   routesSchema,
   cleanUrlsSchema,
@@ -11,12 +10,16 @@ import type { VercelConfig } from './dev/types';
 import {
   getFunctionsSchema,
   buildsSchema,
-  getMaxDurationLimit,
   getMaxDurationSchema,
   NowBuildError,
   getPrettyError,
+  DAEMON_NAME_PATTERN,
+  type ServiceConfig,
+  SERVICE_NAME_PATTERN,
 } from '@vercel/build-utils';
-import { fileNameSymbol } from '@vercel/client';
+import { fileNameSymbol } from '@vercel/client/dist/types';
+import { validateProxyConfig } from '@vercel/fs-detectors';
+import { getConfigValidator } from './config-validator';
 
 const imagesSchema = {
   type: 'object',
@@ -155,6 +158,111 @@ const cronsSchema = {
       },
     },
   },
+};
+
+const scheduleNameSchema = {
+  type: 'string',
+  minLength: 1,
+  maxLength: 256,
+  pattern: '^[0-9A-Za-z][0-9A-Za-z._-]*$',
+};
+
+// Extends the server-side Build Output API schema with entrypoints that the
+// build resolves to function output paths. The name is the schedule's key.
+const scheduleDefinitionSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['schedule'],
+  properties: {
+    schedule: {
+      type: 'string',
+      minLength: 9,
+      maxLength: 256,
+    },
+    timezone: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 50,
+      description: 'IANA timezone for cron evaluation. Defaults to UTC.',
+    },
+    jitter: {
+      type: 'integer',
+      minimum: 1,
+      maximum: 15,
+    },
+    path: {
+      description:
+        'Deployment path to invoke over HTTP, like `crons[].path`. Must start with `/`.',
+      type: 'string',
+      maxLength: 512,
+      pattern: '^/',
+    },
+    requestMethod: {
+      description:
+        'HTTP method used to invoke `path`. Only valid with `path`. Defaults to `POST`.',
+      enum: ['GET', 'POST'],
+    },
+    function: {
+      type: 'string',
+      minLength: 1,
+    },
+    service: {
+      description:
+        'Service that owns `function`, from `services`. When set, `function` is the path within that service. Only valid with `function`.',
+      type: 'string',
+      minLength: 1,
+      maxLength: 64,
+      pattern: '^[a-z]([a-z_-]*[a-z])?$',
+    },
+    topic: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 256,
+      pattern: '^[A-Za-z0-9_-]+$',
+    },
+    command: {
+      description:
+        'Command to run for each firing. Only valid with a Dockerfile or Containerfile entrypoint.',
+      type: 'array',
+      minItems: 1,
+      items: [{ type: 'string', pattern: '\\S' }],
+      additionalItems: { type: 'string' },
+    },
+    root: {
+      description:
+        'Directory of the service that runs `command`. `entrypoint` is relative to it. Only valid with `command`.',
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
+    entrypoint: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 512,
+    },
+  },
+  dependencies: {
+    requestMethod: ['path'],
+    service: ['function'],
+    command: ['entrypoint', 'root'],
+    root: ['command'],
+  },
+  oneOf: [
+    { required: ['path'] },
+    { required: ['function'] },
+    { required: ['topic'] },
+    { required: ['entrypoint'] },
+  ],
+};
+
+// Matches the API's cap.
+const maxSchedules = 100;
+
+const schedulesSchema = {
+  type: 'object',
+  maxProperties: maxSchedules,
+  propertyNames: scheduleNameSchema,
+  additionalProperties: scheduleDefinitionSchema,
 };
 
 const experimentalServicesMountSchema = {
@@ -502,14 +610,18 @@ const servicesCommandSchema = {
 const servicesBindingSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'service', 'format', 'env'],
+  required: ['service', 'format', 'env'],
   properties: {
-    type: { const: 'service' },
+    type: {
+      description:
+        'Optional binding type marker. Currently the only supported type is `service`. When present this must be `service`.',
+      const: 'service',
+    },
     service: {
       type: 'string',
       minLength: 1,
       maxLength: 64,
-      pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+      pattern: SERVICE_NAME_PATTERN,
     },
     format: { const: 'url' },
     env: {
@@ -561,16 +673,142 @@ const getServicesServiceConfigSchema = () => ({
   },
 });
 
+const daemonConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['root', 'entrypoint'],
+  anyOf: [{ required: ['instances'] }, { required: ['replicas'] }],
+  properties: {
+    root: servicesPathSchema,
+    entrypoint: servicesPathSchema,
+    command: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 128,
+      items: { type: 'string', minLength: 1, maxLength: 4096 },
+    },
+    instances: {
+      type: 'object',
+      additionalProperties: { type: 'integer', minimum: 0 },
+    },
+    replicas: {
+      description:
+        'Deprecated. Use `instances`. Ignored when `instances` is set.',
+      deprecated: true,
+      type: 'object',
+      additionalProperties: { type: 'integer', minimum: 0 },
+    },
+    resources: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['requests'],
+      properties: {
+        requests: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['memory'],
+          properties: { memory: { enum: ['1Gi', '2Gi', '4Gi', '8Gi'] } },
+        },
+      },
+    },
+    terminationGracePeriodSeconds: { type: 'integer', minimum: 0 },
+    livenessProbe: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['httpGet'],
+      properties: {
+        httpGet: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['port'],
+          properties: {
+            path: { type: 'string', minLength: 1 },
+            port: { type: 'integer', minimum: 1, maximum: 65535 },
+            host: { type: 'string', minLength: 1 },
+            scheme: { enum: ['HTTP', 'HTTPS'] },
+            httpHeaders: {
+              type: 'array',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                required: ['name', 'value'],
+                properties: {
+                  name: { type: 'string', minLength: 1 },
+                  value: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        initialDelaySeconds: { type: 'integer', minimum: 0, maximum: 86400 },
+        periodSeconds: { type: 'integer', minimum: 1, maximum: 86400 },
+        timeoutSeconds: { type: 'integer', minimum: 1, maximum: 86400 },
+        successThreshold: { type: 'integer', minimum: 1, maximum: 10 },
+        failureThreshold: { type: 'integer', minimum: 1, maximum: 10 },
+      },
+    },
+    // Unlike on services, the binding type is required, as it is in the API.
+    bindings: {
+      ...servicesBindingsSchema,
+      items: {
+        ...servicesBindingSchema,
+        required: ['type', ...servicesBindingSchema.required],
+      },
+    },
+  },
+};
+
 const getServicesSchema = () => ({
   type: 'object',
   propertyNames: {
-    pattern: '^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$',
+    pattern: SERVICE_NAME_PATTERN,
     maxLength: 64,
   },
   additionalProperties: getServicesServiceConfigSchema(),
 });
 
-function buildVercelConfigSchema() {
+// Matches the API's cap.
+const maxDaemons = 100;
+
+const daemonsSchema = {
+  type: 'object',
+  maxProperties: maxDaemons,
+  propertyNames: {
+    pattern: DAEMON_NAME_PATTERN,
+    maxLength: 64,
+  },
+  additionalProperties: daemonConfigSchema,
+};
+
+const proxySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['entrypoint'],
+  properties: {
+    entrypoint: {
+      type: 'string',
+      minLength: 1,
+    },
+    matcher: {
+      oneOf: [
+        {
+          type: 'string',
+          minLength: 1,
+        },
+        {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+      ],
+    },
+  },
+};
+
+export function buildVercelConfigSchema() {
   return {
     type: 'object',
     // These are not all possibilities because `vc dev`
@@ -587,47 +825,24 @@ function buildVercelConfigSchema() {
       functions: getFunctionsSchema(),
       images: imagesSchema,
       crons: cronsSchema,
+      schedules: schedulesSchema,
       bunVersion: { type: 'string' },
+      proxy: proxySchema,
       experimentalServices: getExperimentalServicesSchema(),
       experimentalServiceGroups: experimentalServiceGroupsSchema,
       services: getServicesSchema(),
       experimentalServicesV2: getServicesSchema(),
+      daemons: daemonsSchema,
     },
   };
 }
 
-const ajv = new Ajv();
-
-/**
- * The `maxDuration` upper bound is gated behind
- * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` (see `getMaxDurationSchema`), which may be
- * set after this module is imported. Compiling the validator once at module load
- * would bake in whatever limit was active at import time and ignore the variable,
- * so instead we build and compile lazily, caching one validator per resolved
- * limit (bounded vs. skipped).
- *
- * TODO: This machinery exists only to honor the runtime
- * `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` toggle. Once the flag is fully rolled out
- * and the client-side bound is dropped (see `max-duration.ts` in
- * `@vercel/build-utils`), revert to a single statically compiled validator.
- */
-const validatorCacheByLimit = new Map<
-  number | 'skipped',
-  ReturnType<typeof ajv.compile>
->();
-
-function getConfigValidator() {
-  const cacheKey = getMaxDurationLimit() ?? 'skipped';
-  let validate = validatorCacheByLimit.get(cacheKey);
-  if (!validate) {
-    validate = ajv.compile(buildVercelConfigSchema());
-    validatorCacheByLimit.set(cacheKey, validate);
-  }
-  return validate;
-}
+// Split on both path separators so the answer doesn't depend on the OS.
+const isDockerfilePath = (path: string) =>
+  /(docker|container)file/i.test(path.split(/[\\/]/).pop() ?? '');
 
 export function validateConfig(config: VercelConfig): NowBuildError | null {
-  const validate = getConfigValidator();
+  const validate = getConfigValidator(buildVercelConfigSchema);
   if (!validate(config)) {
     if (validate.errors && validate.errors[0]) {
       const error = validate.errors[0];
@@ -638,12 +853,99 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     }
   }
 
+  const serviceNames = new Set([
+    ...Object.keys(config.services ?? {}),
+    ...Object.keys(config.daemons ?? {}),
+  ]);
+  const invalidCommand = (message: string) =>
+    new NowBuildError({
+      code: 'INVALID_SCHEDULE_COMMAND',
+      message: `Invalid ${config[fileNameSymbol] || 'vercel.json'} - ${message}`,
+    });
+  for (const [name, schedule] of Object.entries(config.schedules ?? {})) {
+    const path = `schedules.${name}`;
+    if ('command' in schedule) {
+      if (!isDockerfilePath(schedule.entrypoint)) {
+        return invalidCommand(
+          `\`${path}.command\` requires a Dockerfile or Containerfile \`entrypoint\`.`
+        );
+      }
+      // A command schedule is built as a service named after the schedule.
+      if (name.length > 64 || !new RegExp(SERVICE_NAME_PATTERN).test(name)) {
+        return invalidCommand(
+          `\`${path}\` runs a command, so its name must be a valid service name: lowercase letters, \`-\` and \`_\`, at most 64 characters.`
+        );
+      }
+      if (serviceNames.has(name)) {
+        return invalidCommand(
+          `\`${path}\` runs a command as service "${name}", which is already the name of a service or daemon.`
+        );
+      }
+    }
+    if (schedule.timezone === undefined) continue;
+    try {
+      // Intl also accepts numeric UTC offsets on newer Node.js versions.
+      if (!/^[A-Za-z][A-Za-z0-9_+/-]*$/.test(schedule.timezone)) {
+        throw new RangeError('Expected a named timezone');
+      }
+      new Intl.DateTimeFormat('en-US', { timeZone: schedule.timezone });
+    } catch {
+      return new NowBuildError({
+        code: 'INVALID_SCHEDULE_TIMEZONE',
+        message: `Invalid ${config[fileNameSymbol] || 'vercel.json'} - \`schedules.${name}.timezone\` must be a valid IANA timezone, such as "America/New_York". Omit it to use UTC.`,
+      });
+    }
+  }
+
+  const functionMaps = [
+    config.functions,
+    ...Object.values(config.services ?? {}).map(service => service.functions),
+    ...Object.values(config.experimentalServicesV2 ?? {}).map(
+      service => service.functions
+    ),
+  ];
+  for (const functions of functionMaps) {
+    for (const [pattern, fn] of Object.entries(functions ?? {})) {
+      const regions = [...new Set(fn.regions)];
+      if (
+        fn.affinity?.mode === 'strict' &&
+        (regions.includes('all') || regions.length > 1)
+      ) {
+        return new NowBuildError({
+          code: 'INVALID_FUNCTION_AFFINITY_REGIONS',
+          message: `Function affinity mode "strict" requires at most one statically configured region. Update \`functions[${JSON.stringify(
+            pattern
+          )}].regions\` to contain a single region.`,
+          link: 'https://vercel.com/docs/concepts/projects/project-configuration#functions',
+        });
+      }
+    }
+  }
+
+  if (config.proxy) {
+    const proxyError = validateProxyConfig(config.proxy);
+    if (proxyError) {
+      return new NowBuildError({
+        code: proxyError.code.toUpperCase(),
+        message: proxyError.message,
+      });
+    }
+  }
+
   if (config.functions && config.builds) {
     return new NowBuildError({
       code: 'FUNCTIONS_AND_BUILDS',
       message:
         'The `functions` property cannot be used in conjunction with the `builds` property. Please remove one of them.',
       link: 'https://vercel.link/functions-and-builds',
+    });
+  }
+
+  if (config.proxy && config.builds) {
+    return new NowBuildError({
+      code: 'PROXY_AND_BUILDS',
+      message:
+        'The `proxy` property cannot be used with the `builds` property. Remove `builds` to use an explicit proxy entrypoint.',
     });
   }
 
@@ -742,6 +1044,15 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
     }
   }
 
+  // Before the service binding checks, so a binding to a daemon gets the
+  // daemon error rather than an unknown-service one.
+  if (config.daemons) {
+    const daemonError = validateDaemons(config, config.daemons);
+    if (daemonError) {
+      return daemonError;
+    }
+  }
+
   if (servicesConfig) {
     const serviceNames = new Set(Object.keys(servicesConfig));
     for (const [serviceName, serviceConfig] of Object.entries(servicesConfig)) {
@@ -755,6 +1066,87 @@ export function validateConfig(config: VercelConfig): NowBuildError | null {
           });
         }
       }
+    }
+  }
+
+  return null;
+}
+
+function validateDaemons(
+  config: VercelConfig,
+  daemons: NonNullable<VercelConfig['daemons']>
+): NowBuildError | null {
+  const invalid = (message: string) =>
+    new NowBuildError({
+      code: 'INVALID_DAEMON',
+      message,
+    });
+  const daemonNames = new Set(Object.keys(daemons));
+
+  for (const [name, daemon] of Object.entries(daemons)) {
+    // The container builder only builds Dockerfiles for daemons today.
+    if (!isDockerfilePath(daemon.entrypoint)) {
+      return invalid(
+        `Daemon "${name}" must set \`entrypoint\` to a Dockerfile or Containerfile.`
+      );
+    }
+  }
+
+  const services: Record<string, ServiceConfig> = {
+    ...config.experimentalServicesV2,
+    ...config.services,
+  };
+  // Daemons and services have separate namespaces, so `{ service: "x" }`
+  // only targets a daemon when no service is named "x".
+  const isDaemonTarget = (name: string) =>
+    daemonNames.has(name) &&
+    !Object.prototype.hasOwnProperty.call(services, name);
+
+  for (const [name, service] of Object.entries(services)) {
+    const binding = service.bindings?.find(binding =>
+      isDaemonTarget(binding.service)
+    );
+    if (binding) {
+      return invalid(
+        `Service "${name}" cannot bind to daemon "${binding.service}" because daemons do not receive traffic.`
+      );
+    }
+  }
+
+  for (const [name, daemon] of Object.entries(daemons)) {
+    const envs = new Set<string>();
+    for (const binding of daemon.bindings ?? []) {
+      if (!Object.prototype.hasOwnProperty.call(services, binding.service)) {
+        return invalid(
+          `Daemon "${name}" declares a binding to unknown service "${binding.service}". Add "${binding.service}" to \`services\` or fix the binding.`
+        );
+      }
+      if (envs.has(binding.env)) {
+        return invalid(
+          `Daemon "${name}" declares more than one binding for the environment variable "${binding.env}".`
+        );
+      }
+      envs.add(binding.env);
+    }
+  }
+
+  const destinations = [
+    ...(config.rewrites ?? []),
+    ...(config.routes ?? []),
+    ...Object.values(services).flatMap(service => [
+      ...(service.rewrites ?? []),
+      ...(service.routes ?? []),
+    ]),
+  ].map(entry => ('destination' in entry ? entry.destination : undefined));
+  for (const destination of destinations) {
+    if (
+      typeof destination === 'object' &&
+      destination !== null &&
+      isDaemonTarget(destination.service)
+    ) {
+      return invalid(
+        `Rewrites and routes cannot target daemon "${destination.service}" because daemons do not receive traffic.`
+      );
     }
   }
 

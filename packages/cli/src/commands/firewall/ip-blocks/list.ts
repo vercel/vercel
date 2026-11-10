@@ -4,16 +4,16 @@ import output from '../../../output-manager';
 import { ipBlocksListSubcommand } from '../command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   outputJson,
   withGlobalFlags,
+  resolveFirewallScope,
+  mapFirewallApiError,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import {
   annotateIpRules,
   formatIpBlocksTable,
 } from '../../../util/firewall/format';
-import { getCommandName } from '../../../util/pkg-name';
 import { outputAgentError } from '../../../util/agent-output';
 
 export default async function list(client: Client, argv: string[]) {
@@ -25,18 +25,15 @@ export default async function list(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
-  if (typeof link === 'number') return link;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
-
-  output.spinner(`Fetching IP blocking rules for ${chalk.bold(project.name)}`);
+  output.spinner(
+    `Fetching IP blocking rules for ${chalk.bold(scope.displayName)}`
+  );
 
   try {
-    const { active, draft } = await listFirewallConfigs(client, project.id, {
-      teamId,
-    });
+    const { active, draft } = await listFirewallConfigs(client, scope);
 
     const activeIps = active?.ips || [];
     const draftIps = draft?.ips || null;
@@ -67,7 +64,7 @@ export default async function list(client: Client, argv: string[]) {
     const ipChanges = changes.filter(c => c.action.startsWith('ip.')).length;
     if (ipChanges > 0) {
       output.print(
-        `\n  ${chalk.yellow(`${ipChanges} unpublished IP block change${ipChanges !== 1 ? 's' : ''}.`)} Run ${chalk.cyan(getCommandName('firewall publish'))} to publish.\n`
+        `\n  ${chalk.yellow(`${ipChanges} unpublished IP block change${ipChanges !== 1 ? 's' : ''}.`)} Run ${chalk.cyan(withGlobalFlags(client, 'firewall publish', scope))} to publish.\n`
       );
     } else {
       output.print(`\n  ${chalk.dim('Showing live configuration.')}\n`);
@@ -76,8 +73,11 @@ export default async function list(client: Client, argv: string[]) {
     output.print('\n');
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to fetch IP blocking rules';
+    const msg = mapFirewallApiError(
+      e,
+      scope,
+      'Failed to fetch IP blocking rules'
+    );
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -85,7 +85,7 @@ export default async function list(client: Client, argv: string[]) {
         message: msg,
         next: [
           {
-            command: withGlobalFlags(client, 'firewall ip-blocks list'),
+            command: withGlobalFlags(client, 'firewall ip-blocks list', scope),
           },
         ],
       });

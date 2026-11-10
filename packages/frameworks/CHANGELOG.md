@@ -1,5 +1,124 @@
 # @vercel/frameworks
 
+## 3.35.0
+
+### Minor Changes
+
+- 3520d5c: Detect Dockerfile and Containerfile projects with the Container framework preset while keeping plain filenames lower priority than other framework matches.
+
+## 3.34.0
+
+### Minor Changes
+
+- f2c588f: Detect projects with both `eve` and `@vercel/factory` dependencies as the new Factory (Eve) framework instead of Eve.
+
+## 3.33.0
+
+### Minor Changes
+
+- 359a57c: Mark the Rust framework as stable. Detection stays keyed on `src/main.rs` so `api/**/*.rs` function projects (which declare a `[[bin]]` per handler) remain framework-less and build zero-config; `[[bin]]`-only servers and cargo workspaces are supported by setting the Rust preset manually. Projects with an explicit output directory (e.g. wasm frontends built with Trunk) keep the static-build path instead of the Rust runtime, while preserving `api/**/*.rs` functions, and committed prebuilt output is served directly when no build command is configured.
+
+## 3.32.0
+
+### Minor Changes
+
+- bd5f1a7: Add standalone server mode for Rust, matching the Go framework preset. A project
+  that is not an `api/**` handler and does not depend on the `vercel_runtime` crate
+  now deploys as a plain HTTP server listening on `$PORT`, adapted to the
+  executable runtime by the shared IPC proxy. The binary comes from `Cargo.toml`;
+  for a multi-binary crate or workspace, point the entrypoint at the binary or set
+  `default-run`.
+
+  Projects using `vercel_runtime` are unaffected. `waitUntil` and request-scoped
+  logs still require `vercel_runtime`. Cargo's `target` directory is now excluded
+  from the files the builder downloads.
+
+## 3.31.0
+
+### Minor Changes
+
+- a7fc7e8: Expose the resolved rewrite destination as the request path observed by standalone Go servers, and warn affected Go projects about the behavior change.
+
+## 3.30.9
+
+### Patch Changes
+
+- b82e2a8: Serve the Dojo, Parcel, Scully, VuePress, Zola and FastHTML preset logos as SVG
+  These were the only six presets still pointing at raster logos. `next/image`
+  skips image optimization for `.svg` sources unless `dangerouslyAllowSVG` is
+  enabled, so these six were the only preset logos routed through the optimizer in
+  consumers such as the project settings framework picker, which made them the only
+  ones that could fail to render. Serving them as vectors puts all presets on the
+  same direct-load path and cuts the six logos from 373 KB to 33 KB.
+
+## 3.30.8
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/error-utils@2.2.1
+
+## 3.30.7
+
+### Patch Changes
+
+- fa14ee9: Mark the Services framework preset as stable.
+
+## 3.30.6
+
+### Patch Changes
+
+- 7bc4db0: [frameworks] Add Lovable platform framework and platform attribute
+
+## 3.30.5
+
+### Patch Changes
+
+- 85c897e: Run framework detection during `vc build` (opt-in via `VERCEL_FRAMEWORK_DETECTION=1`): detect the framework on a project's first deployment (`VERCEL_FIRST_DEPLOYMENT=1`) when none is configured and record it as `detectedFramework` in `builds.json`, cross-check the configured framework against the source code in the background without slowing the build, and validate the build output after it is written. Adds a `detectionConfidence` annotation to framework definitions for detections that are commonly incidental (e.g. Storybook as a devDependency) so they are never suggested as a framework override.
+
+## 3.30.4
+
+### Patch Changes
+
+- d19dbc5: Use circle icons for dark mode and light mode for services and containers
+
+## 3.30.3
+
+### Patch Changes
+
+- 02d8bab: Add services logo
+
+## 3.30.2
+
+### Patch Changes
+
+- acddddf: Update the Container framework logo to use the Box icon.
+
+## 3.30.1
+
+### Patch Changes
+
+- 66be3e0: [services] Refine container detection for `services` / `experimentalServicesV2`.
+
+  - A supplied `entrypoint` infers `runtime: "container"` when it names one of the
+    blessed Dockerfile names: `Dockerfile`, `Containerfile`, `Dockerfile.vercel`,
+    or `Containerfile.vercel`. A suffixed name like `Dockerfile.prod` is not a
+    container entrypoint.
+  - `runtime: "container"` without an `entrypoint` auto-detects one of those same
+    four blessed names in the service root, probing `Dockerfile.vercel`,
+    `Containerfile.vercel`, `Dockerfile`, `Containerfile` (in that order, so a
+    `.vercel` opt-in marker takes precedence over a plain `Dockerfile`).
+  - Removed the prebuilt OCI image reference entrypoint: an `entrypoint` must now
+    name a Dockerfile/Containerfile, otherwise the service errors.
+  - `@vercel/container` recognizes the same blessed set (via a shared
+    `isDockerfileRef`), keeping the builder and the services resolver in sync so
+    the configured Dockerfile entrypoint is honored instead of being ignored in
+    favor of a default `Dockerfile` or treated as a prebuilt image reference.
+  - The `container` framework preset is no longer experimental: a project with a
+    `Dockerfile.vercel` / `Containerfile.vercel` marker is detected as a
+    container without `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`.
+
 ## 3.30.0
 
 ### Minor Changes

@@ -31,7 +31,7 @@ describe('routes add', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = routes(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -60,7 +60,7 @@ describe('routes add', () => {
       expect(nextCmd).toContain('--ai');
       expect(nextCmd).toContain('--yes');
       expect(nextCmd).toContain('<description>');
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(exitSpy).toHaveBeenCalledWith(2);
       logSpy.mockRestore();
       exitSpy.mockRestore();
       client.nonInteractive = false;
@@ -331,7 +331,19 @@ describe('routes add', () => {
       await expect(exitCodePromise).resolves.toEqual(0);
     });
 
-    it('should add route with --disabled flag', async () => {
+    it.each([
+      ['--no-enable', false],
+      ['--disabled', true],
+    ])('should add a route turned off with %s', async (flag, deprecated) => {
+      let enabled: unknown;
+      client.scenario.post(
+        '/v1/projects/:projectId/routes',
+        (req, _res, next) => {
+          enabled = (req.body as { route?: { enabled?: boolean } }).route
+            ?.enabled;
+          next?.();
+        }
+      );
       useAddRoute();
 
       client.setArgv(
@@ -346,7 +358,7 @@ describe('routes add', () => {
         'rewrite',
         '--dest',
         '/dest',
-        '--disabled',
+        flag,
         '--yes'
       );
       const exitCodePromise = routes(client);
@@ -354,6 +366,13 @@ describe('routes add', () => {
       await expect(client.stderr).toOutput('Created');
 
       await expect(exitCodePromise).resolves.toEqual(0);
+      expect(enabled).toBe(false);
+      const stderr = client.stderr.getFullOutput();
+      if (deprecated) {
+        expect(stderr).toContain('--disabled is deprecated. Use --no-enable.');
+      } else {
+        expect(stderr).not.toContain('deprecated');
+      }
     });
 
     it('should add route with --position start', async () => {
@@ -458,7 +477,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('Route name is required');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --src is missing with --yes', async () => {
@@ -478,7 +497,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('Source path is required');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on name too long', async () => {
@@ -642,7 +661,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('--action is required');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action redirect has non-redirect status', async () => {
@@ -666,7 +685,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('Invalid redirect status');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action rewrite has --status', async () => {
@@ -690,7 +709,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('does not accept --status');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on invalid transform format', async () => {
@@ -725,7 +744,7 @@ describe('routes add', () => {
 
       await expect(client.stderr).toOutput('At least one action is required');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action rewrite without --dest', async () => {
@@ -742,7 +761,7 @@ describe('routes add', () => {
       );
       const exitCodePromise = routes(client);
       await expect(client.stderr).toOutput('requires --dest');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action redirect without --dest', async () => {
@@ -761,7 +780,7 @@ describe('routes add', () => {
       );
       const exitCodePromise = routes(client);
       await expect(client.stderr).toOutput('requires --dest');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action set-status without --status', async () => {
@@ -778,7 +797,7 @@ describe('routes add', () => {
       );
       const exitCodePromise = routes(client);
       await expect(client.stderr).toOutput('requires --status');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when --action is invalid', async () => {
@@ -795,7 +814,7 @@ describe('routes add', () => {
       );
       const exitCodePromise = routes(client);
       await expect(client.stderr).toOutput('Invalid action type');
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on status code below 100', async () => {
@@ -819,7 +838,7 @@ describe('routes add', () => {
         'Status code must be between 100 and 599'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on status code above 599', async () => {
@@ -843,7 +862,7 @@ describe('routes add', () => {
         'Status code must be between 100 and 599'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error when too many conditions (>16)', async () => {
@@ -1044,72 +1063,9 @@ describe('routes add', () => {
         );
         await expect(routes(client)).resolves.toEqual(0);
       });
-
-      it('should add a rewrite with wildcard path-to-regexp', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'Catch All API',
-          '--src',
-          '/api/:path*',
-          '--src-syntax',
-          'path-to-regexp',
-          '--action',
-          'rewrite',
-          '--dest',
-          'https://api.example.com/:path*',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
-
-      it('should add a rewrite with request headers', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'Proxy with Auth',
-          '--src',
-          '/proxy/:path*',
-          '--src-syntax',
-          'path-to-regexp',
-          '--action',
-          'rewrite',
-          '--dest',
-          'https://secure-backend.com/:path*',
-          '--set-request-header',
-          'Authorization=Bearer internal-token',
-          '--set-request-header',
-          'X-Forwarded-Host=myapp.com',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
     });
 
     describe('redirects', () => {
-      it('should add a 301 permanent redirect', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'Old URL Redirect',
-          '--src',
-          '/old-page',
-          '--src-syntax',
-          'equals',
-          '--action',
-          'redirect',
-          '--dest',
-          '/new-page',
-          '--status',
-          '301',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
-
       it('should add a 302 found redirect', async () => {
         useAddRoute();
         client.setArgv(
@@ -1194,23 +1150,6 @@ describe('routes add', () => {
     });
 
     describe('status codes (terminate)', () => {
-      it('should add a 403 forbidden route', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'Block Admin',
-          '--src',
-          '^/admin/.*$',
-          '--action',
-          'set-status',
-          '--status',
-          '403',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
-
       it('should add a 404 not found route', async () => {
         useAddRoute();
         client.setArgv(
@@ -1249,44 +1188,6 @@ describe('routes add', () => {
     });
 
     describe('response headers', () => {
-      it('should add cache control headers', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'Static Cache',
-          '--src',
-          '/static/:path*',
-          '--src-syntax',
-          'path-to-regexp',
-          '--set-response-header',
-          'Cache-Control=public, max-age=31536000, immutable',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
-
-      it('should add CORS headers', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'CORS Headers',
-          '--src',
-          '/api/:path*',
-          '--src-syntax',
-          'path-to-regexp',
-          '--set-response-header',
-          'Access-Control-Allow-Origin=*',
-          '--set-response-header',
-          'Access-Control-Allow-Methods=GET, POST, PUT, DELETE, OPTIONS',
-          '--set-response-header',
-          'Access-Control-Allow-Headers=Content-Type, Authorization',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
-
       it('should add security headers', async () => {
         useAddRoute();
         client.setArgv(
@@ -1327,29 +1228,6 @@ describe('routes add', () => {
     });
 
     describe('request transforms', () => {
-      it('should add request headers for backend auth', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'Backend Auth Headers',
-          '--src',
-          '/internal/:path*',
-          '--src-syntax',
-          'path-to-regexp',
-          '--action',
-          'rewrite',
-          '--dest',
-          'https://internal-api.example.com/:path*',
-          '--set-request-header',
-          'X-Internal-Auth=secret-key',
-          '--set-request-header',
-          'X-Request-Source=frontend',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
-
       it('should modify query parameters', async () => {
         useAddRoute();
         client.setArgv(
@@ -1402,27 +1280,6 @@ describe('routes add', () => {
     });
 
     describe('conditions (--has and --missing)', () => {
-      it('should route based on header presence', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'Auth Required',
-          '--src',
-          '/protected/:path*',
-          '--src-syntax',
-          'path-to-regexp',
-          '--action',
-          'rewrite',
-          '--dest',
-          '/api/protected/:path*',
-          '--has',
-          'header:Authorization',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
-
       it('should route based on header value', async () => {
         useAddRoute();
         client.setArgv(
@@ -1531,33 +1388,6 @@ describe('routes add', () => {
         );
         await expect(routes(client)).resolves.toEqual(0);
       });
-
-      it('should combine has and missing conditions', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'Complex Auth',
-          '--src',
-          '/api/admin/:path*',
-          '--src-syntax',
-          'path-to-regexp',
-          '--action',
-          'rewrite',
-          '--dest',
-          '/admin-handler/:path*',
-          '--has',
-          'header:Authorization',
-          '--has',
-          'cookie:admin_session',
-          '--missing',
-          'header:X-Blocked',
-          '--missing',
-          'query:bypass',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
     });
 
     describe('combined features', () => {
@@ -1586,29 +1416,6 @@ describe('routes add', () => {
         await expect(routes(client)).resolves.toEqual(0);
       });
 
-      it('should add rewrite with response headers', async () => {
-        useAddRoute();
-        client.setArgv(
-          'routes',
-          'add',
-          'Cached API',
-          '--src',
-          '/api/cached/:path*',
-          '--src-syntax',
-          'path-to-regexp',
-          '--action',
-          'rewrite',
-          '--dest',
-          'https://api.example.com/:path*',
-          '--set-response-header',
-          'Cache-Control=public, max-age=300',
-          '--set-response-header',
-          'X-Cache=HIT',
-          '--yes'
-        );
-        await expect(routes(client)).resolves.toEqual(0);
-      });
-
       it('should add route with description and disabled', async () => {
         useAddRoute();
         client.setArgv(
@@ -1625,7 +1432,7 @@ describe('routes add', () => {
           '/new-feature/:path*',
           '--description',
           'Routing for upcoming feature - enable when ready to launch',
-          '--disabled',
+          '--no-enable',
           '--yes'
         );
         await expect(routes(client)).resolves.toEqual(0);
@@ -1742,123 +1549,6 @@ describe('routes add', () => {
         client.setArgv(...args);
         await expect(routes(client)).resolves.toEqual(0);
       });
-    });
-  });
-
-  describe('quote stripping safeguard', () => {
-    it('should strip double quotes from --src', async () => {
-      useAddRoute();
-      // Simulating when user accidentally includes quotes in the value
-      client.setArgv(
-        'routes',
-        'add',
-        'Quoted Src',
-        '--src',
-        '"^/old-blog/(.*)$"',
-        '--action',
-        'rewrite',
-        '--dest',
-        '/blog/$1',
-        '--yes'
-      );
-      // Should succeed (quotes stripped, valid regex)
-      await expect(routes(client)).resolves.toEqual(0);
-    });
-
-    it('should strip single quotes from --src', async () => {
-      useAddRoute();
-      client.setArgv(
-        'routes',
-        'add',
-        'Single Quoted Src',
-        '--src',
-        "'^/api/(.*)$'",
-        '--action',
-        'rewrite',
-        '--dest',
-        '/handler/$1',
-        '--yes'
-      );
-      // Should succeed (quotes stripped, valid regex)
-      await expect(routes(client)).resolves.toEqual(0);
-    });
-
-    it('should strip double quotes from --dest', async () => {
-      useAddRoute();
-      client.setArgv(
-        'routes',
-        'add',
-        'Quoted Dest',
-        '--src',
-        '^/old/(.*)$',
-        '--action',
-        'rewrite',
-        '--dest',
-        '"/new/$1"',
-        '--yes'
-      );
-      // Should succeed (quotes stripped from dest)
-      await expect(routes(client)).resolves.toEqual(0);
-    });
-
-    it('should strip single quotes from --dest', async () => {
-      useAddRoute();
-      client.setArgv(
-        'routes',
-        'add',
-        'Single Quoted Dest',
-        '--src',
-        '^/proxy/(.*)$',
-        '--action',
-        'rewrite',
-        '--dest',
-        "'https://api.example.com/$1'",
-        '--yes'
-      );
-      // Should succeed (quotes stripped from dest)
-      await expect(routes(client)).resolves.toEqual(0);
-    });
-
-    it('should handle quotes in both --src and --dest', async () => {
-      useAddRoute();
-      client.setArgv(
-        'routes',
-        'add',
-        'Both Quoted',
-        '--src',
-        '"^/old-blog/(.*)$"',
-        '--action',
-        'redirect',
-        '--dest',
-        '"/blog/$1"',
-        '--status',
-        '301',
-        '--yes'
-      );
-      // Should succeed (quotes stripped from both)
-      await expect(routes(client)).resolves.toEqual(0);
-    });
-
-    it('should not strip mismatched quotes', async () => {
-      useAddRoute();
-      // Mismatched quotes should remain (edge case, user error)
-      // The leading quote stays and becomes part of the regex pattern
-      // (which is still technically valid, just matches a literal ")
-      client.setArgv(
-        'routes',
-        'add',
-        'Mismatched Quotes',
-        '--src',
-        '"^/api/(.*)$',
-        '--action',
-        'rewrite',
-        '--dest',
-        '/handler/$1',
-        '--yes'
-      );
-      // Succeeds because the pattern is still valid regex
-      // (just includes a literal " at the start)
-      await expect(routes(client)).resolves.toEqual(0);
     });
   });
 

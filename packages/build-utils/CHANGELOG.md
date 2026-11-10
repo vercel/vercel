@@ -1,5 +1,515 @@
 # @vercel/build-utils
 
+## 15.1.0
+
+### Minor Changes
+
+- 5f55ccc: Add an experimental Buildah image store cache, enabled with `VERCEL_BUILDAH_STORE_CACHE=1`, so builds reuse images and layers from earlier deployments. Concurrent service builds share one `--source-date-epoch` per deployment so their layers stay reusable. `@vercel/build-utils` now exports `resolveBuildConcurrency()`.
+- d0629bd: Remove the deprecated array format for `schedules`. `schedules` in `vercel.json`, in Build Output `config.json`, and from `getDevManifest` must be an object keyed by schedule name. `@vercel/config` no longer exports `Schedule` (use `ScheduleDefinition`), and `@vercel/client` no longer exports `VercelConfigSchedule`.
+
+## 15.0.2
+
+### Patch Changes
+
+- 2f0edaf: Report the runtime preset for services without a framework.
+
+## 15.0.1
+
+### Patch Changes
+
+- 1a379a3: Support `livenessProbe` in `vercel.json#daemons`.
+
+## 15.0.0
+
+### Major Changes
+
+- fec2df1: Remove the legacy BYOC extension's build-output collection and deserialization utilities, Lambda finalization and size validation, and serverless environment/streaming helpers. BYOC function preparation now uses `vercel deploy describe`.
+
+  The removed exports include `deserializeBuildOutput`, `deserializeLambda`, `deserializeEdgeFunction`, `finalizeLambda`, `collectUncompressedSize`, the `validateBuildResult` and `validateLambdaSize` families, `getEncryptedEnv`, `getLambdaEnvironment`, `getLambdaPreloadScripts`, `getLambdaSupportsStreaming`, and the associated collection/deserialization and serverless types. Also remove the unused standalone `md5` helper. Preserve `streamToDigestAsync`, `sha256`, `FileDigest`, and `ExtendedBodyData`, which still have build-container consumers.
+
+  Remove the Node builder's outdated reference to the shared streaming helper; its AWS custom-handler streaming behavior is unchanged.
+
+### Minor Changes
+
+- 9b1b587: Allow explicitly selecting Node.js 26 for local builds without an environment variable.
+
+### Patch Changes
+
+- d123652: Accept a command argument array and `root` with Dockerfile and Containerfile schedule entrypoints. This adds configuration support; building and executing these schedules will follow separately.
+
+## 14.23.0
+
+### Minor Changes
+
+- d39dd61: Require `name` for `schedules` entries in `vercel.json` and Build Output `config.json`. Schedules without a `name` no longer get a derived default name, and `getScheduleName` and `defaultScheduleName` are removed from `@vercel/build-utils`.
+- 5aa1b58: `schedules` in `vercel.json` can now be an object keyed by schedule name, like `"schedules": { "nightly": { "schedule": "0 0 * * *", "path": "/api/cron" } }`. `vercel build` writes `schedules` to Build Output `config.json` in the format it was given, and builders can return it from `getDevManifest`. The array of named schedules still works but is deprecated, and `vercel build` and `vercel dev` warn when it's used.
+
+### Patch Changes
+
+- 9abaa6d: Accept service bindings on daemons in `vercel.json`.
+- 179d4ab: Fix `ENOENT` build failures when daemons are deployed alongside a zero-config server app that has no `public/` directory.
+
+## 14.22.0
+
+### Minor Changes
+
+- a2e9f5d: Add `functions[glob].installCommand`. For matching `@vercel/node` functions, an empty string skips the dependency install and a non-empty value runs instead of the default install. Builds warn when the property matches functions of other runtimes, which ignore it.
+
+### Patch Changes
+
+- a19979c: Use Vercel Flags project activation metadata to detect when to embed flag definitions, including builds without installed SDK packages. Preserve explicit embedding overrides and existing SDK detection for projects without activation metadata.
+
+## 14.21.3
+
+### Patch Changes
+
+- bb42e81: Display the edge middleware deprecation warning in yellow with a bold WARNING! prefix during builds and at `vercel dev` startup. Add an optional builder hook for detecting startup warnings without starting a development server.
+
+## 14.21.2
+
+### Patch Changes
+
+- cd68435: Add opt-in support for Node.js 26.
+
+## 14.21.1
+
+### Patch Changes
+
+- 1336097: Detect Yarn 4 from lockfile versions 9 and 10 (written by Yarn 4.14+), so workspace-scoped installs and the Yarn 3/4 `enableGlobalCache` setup apply to newer Yarn 4 projects.
+
+## 14.21.0
+
+### Minor Changes
+
+- 24a7e04: Accept `instances` for daemons in `vercel.json`. `replicas` is deprecated and ignored when `instances` is set. Daemon build output now writes `instances`.
+
+### Patch Changes
+
+- 7e396f7: Support `terminationGracePeriodSeconds` in `vercel.json#daemons`.
+
+## 14.20.1
+
+### Patch Changes
+
+- 42cc083: Parse `yarn.lock` with js-yaml `safeLoad` so custom JS tags like `!!js/function` are rejected
+
+## 14.20.0
+
+### Minor Changes
+
+- e041037: Add an optional `service` to function-target `schedules`, naming the service that owns `function`. `function` is then the path within that service. `vercel dev` does not run service-hosted schedule targets yet.
+
+## 14.19.0
+
+### Minor Changes
+
+- e58b37a: Breaking (beta): the nested `expression`/`target` `schedules` format is no longer supported in `vercel.json` or Build Output. `schedules` entries use `schedule` plus exactly one of `path`, `function`, `topic`, or `entrypoint`, with optional `name`, `timezone`, and `jitter`. When `name` is omitted, it defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+
+  `Schedule` now has the flat shape. Removed exports: `parseScheduleDefinition`, `formatBuildOutputSchedule`, `FlatBuildOutputSchedule`, `ScheduleExpression`, and `ScheduleTarget` from `@vercel/build-utils`; `FlatScheduleDefinition`, `LegacyScheduleDefinition`, and `ScheduleDefinition` from `@vercel/config`; and `VercelConfigFlatSchedule` from `@vercel/client`.
+
+## 14.18.0
+
+### Minor Changes
+
+- 94f6cea: Flat path `schedules` accept an optional `requestMethod` of `GET` or `POST`, defaulting to `POST`. `vercel build` writes it to Build Output, and `vercel dev` invokes path schedules with it.
+- 3eeaad5: Move static file copying to build utils.
+
+### Patch Changes
+
+- 8ac5320: Add an experimental workspace-scoped install path for Node builds to avoid installing unrelated monorepo workspaces.
+
+## 14.17.0
+
+### Minor Changes
+
+- 28a7ab7: Build top-level `daemons` when `VERCEL_ENABLE_DAEMONS_BOA=1`: `vercel build` builds the project as usual, pushes each daemon's Dockerfile image, and writes a Build Output API descriptor to `daemons/<name>/.vc-config.json`.
+
+### Patch Changes
+
+- 28a7ab7: Prevent static deployments from accidentally publishing daemon source files. Both static builders skip nested daemon roots with a warning and reject publishing a directory that is itself a daemon root. Build scripts can still deliberately publish files through a separate output directory.
+
+## 14.16.0
+
+### Minor Changes
+
+- 20c5940: Make `name` optional for flat `schedules` entries. When omitted, the name defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+
+## 14.15.0
+
+### Minor Changes
+
+- a7ef28c: Accept a top-level `daemons` field in `vercel.json`. `vercel dev` warns that it doesn't run daemons, and `vercel build` doesn't build them yet.
+
+## 14.14.0
+
+### Minor Changes
+
+- deb48cd: Accept a flat `schedules` format in `vercel.json` that is aligned with `crons` (`schedule` plus one of `path`, `function`, `topic`, or `entrypoint`), and emit schedules in the flat format in Build Output API `config.json`. The nested `expression`/`target` format is still accepted.
+
+## 14.13.2
+
+### Patch Changes
+
+- ff3d2f7: Allow projects to temporarily extend Node.js 20 support through November 1, 2026.
+
+## 14.13.1
+
+### Patch Changes
+
+- 5082546: Build Python schedule entrypoints. A `.py` entrypoint such as `jobs/nightly.py` runs as a script once per firing in a private function under `_vercel/schedules/`. Entrypoints with the same `functions` config share one function, which runs the script for the dispatched schedule name, so the project's dependencies are bundled once per distinct config instead of once per script. Entrypoints without `functions` config share `_vercel/schedules/default`; the others' function is named after the `functions` patterns their config came from, such as `_vercel/schedules/jobs/report`. Schedule names must be unique within a shared function.
+
+  Declared schedule entrypoints are not served as static files, but other files follow the normal static rules. When a project with Python schedule entrypoints publishes other `.py` files from its root, through the zero-config static fallback or `outputDirectory: "."`, `vercel build` now warns and lists them.
+
+  Add `findMatchingFunction` to `@vercel/build-utils`, which returns the `functions` entry that applies to a function.
+
+## 14.13.0
+
+### Minor Changes
+
+- 34b2c8e: Support `afterCacheBypass` rules in Build Output API `config.json`, preserving request and cached response header conditions through builds and deserialization.
+
+## 14.12.0
+
+### Minor Changes
+
+- 6e68e60: Add `onMiss` to `Prerender`.
+
+  ```ts
+  onMiss?: 'sync' | 'dynamic';
+  ```
+
+  Declares how a request is served when no prerendered output is available for
+  it yet. Absent means `sync`: block the response on rendering it. `dynamic`
+  serves the request dynamically while the static shell is regenerated in the
+  background. The value is carried unvalidated so an unknown mode cannot fail
+  a deploy.
+
+## 14.11.0
+
+### Minor Changes
+
+- 888f59e: Define an optional builder-owned development manifest for function identities, local invocation targets, trigger metadata, and native schedule definitions. Conventional functions can use host-owned per-entrypoint discovery; frameworks can override it. The host retains ownership of processes, readiness, and registration reconciliation.
+
+### Patch Changes
+
+- 7eb63c0: Accept runtime-specific schedule entrypoints and provide build plumbing for lowering dedicated entrypoints to function targets. All schedule entrypoints must use one runtime, including for static frameworks and `framework: null`. Entrypoints must also match the runtime of frameworks that own one (Next.js, FastAPI, Express). The builder contract still supports multiple entrypoints per function for future runtimes.
+
+## 14.10.2
+
+### Patch Changes
+
+- 53a6086: Remove `payload` from static schedule configuration in `vercel.json`. Static schedules no longer accept or expose a payload field; use dynamic schedules for payload support.
+
+## 14.10.1
+
+### Patch Changes
+
+- f9d0e90: Add experimental Cloud Native Buildpacks lifecycle support with isolated source
+  staging, pinned lifecycle and buildpack archives, and runtime-owned image
+  resolution. Ruby images are selected from `.ruby-version`, `.tool-versions`, or
+  the `tools.ruby` entry in `mise.toml`, then an exact Gemfile declaration,
+  defaulting to Ruby 3.4. Unsupported version declarations fail with configuration
+  guidance. Nothing selects a buildpack yet.
+- 8a277e4: Fix `bun install` silently discarding `bun.lock` files with `lockfileVersion: 2` (written by Bun >= 1.4). The install step now selects the Bun 1.4 binary whenever the lockfile requires it, mirroring how the pnpm version is already inferred from its lockfile version, instead of always running the container's default Bun 1.3.x install.
+- 66e443e: Fix native CLI build/dev worker dispatch, preserve the system Node executable for shell commands, resolve project analytics versions outside the binary snapshot, pair dynamically installed builders with compatible build-utils versions, and lazily materialize the packaged esbuild executable for JavaScript and TypeScript configuration files.
+- 08b0be2: Require maxConcurrency to be an integer from 1 to 8192.
+
+## 14.10.0
+
+### Minor Changes
+
+- 54a6d73: Require schedule jitter to be an integer from 1 to 15 minutes in vercel.json and Build Output API config, matching the maximum SQS message delay. Duration strings are no longer accepted.
+- 3d16792: Add an optional IANA `timezone` to schedules in `vercel.json` and Build Output API config. Omitted timezones use UTC. Validate configured timezones before building.
+
+### Patch Changes
+
+- 2a57243: More robust Next.js framework version detection
+
+## 14.9.3
+
+### Patch Changes
+
+- 55e8d1e: Reduce CLI startup and deployment preparation time through lazy shared dependencies, smaller bundles, parallel Git metadata and file collection, and native executable startup caching. Allow deployment options to resolve asynchronously while the client collects local files.
+
+  Keep startup regression tests compatible with asynchronous prompts and Windows Git paths, and allow the NestJS build fixture sufficient time for cold dependency installation.
+
+## 14.9.2
+
+### Patch Changes
+
+- b174f14: Raise the client-side `maxDuration` validation limit to 3600 seconds.
+
+## 14.9.1
+
+### Patch Changes
+
+- 1817491: Delay the pnpm 11 created-at default so unpinned lockfile 9.0 projects stay on pnpm 10. pnpm 11's default `minimumReleaseAge` of 1 day was breaking installs of freshly published packages. Explicit `packageManager` / `devEngines` pins to pnpm 11 are unchanged.
+
+## 14.9.0
+
+### Minor Changes
+
+- 392c759: Honor pnpm 12 pins without auto-adopting, and stop passing `--unsafe-perm` to `pnpm install`.
+
+  When Corepack is off, a lockfile-compatible `packageManager` / `devEngines.packageManager` / `engines.pnpm` pin for 12.x selects `/pnpm12` if that directory exists. Unpinned lockfile `9.0` still defaults to pnpm 9/10/11 by project creation date. `pnpm install` no longer includes `--unsafe-perm`, which pnpm 12's Rust CLI rejects.
+
+## 14.8.0
+
+### Minor Changes
+
+- a652a99: Propagate top-level `schedules` from vercel.json into the Build Output API `config.json` during `vercel build`, and validate the property against the schedules schema
+
+## 14.7.0
+
+### Minor Changes
+
+- 37ff9da: Add build type to deploy manifest.
+
+### Patch Changes
+
+- 26b891e: Accept `schedule/v1beta` triggers in the `Lambda` runtime validation and the functions config schema
+
+## 14.6.1
+
+### Patch Changes
+
+- aad9541: Run on-disk JavaScript workers with a lazily resolved system Node.js executable in native CLI installations, and install the matching Build Utils preview tarball for dynamically installed Builders.
+
+## 14.6.0
+
+### Minor Changes
+
+- e82de48: Add strict function affinity configuration and serialize it into function outputs.
+
+## 14.5.1
+
+### Patch Changes
+
+- a443e57: Revert dependency install log rewriting that piped pnpm stdout through an unread Transform and could hang large installs.
+
+## 14.5.0
+
+### Minor Changes
+
+- 90afd71: Expose the resolved rewrite destination as the request path observed by Node backend framework applications (express, hono, h3, koa, nestjs, fastify, elysia) and the unified backends builder, and warn affected backend projects about the behavior change.
+
+## 14.4.1
+
+### Patch Changes
+
+- e5b0363: Add `Span.reportChildEvents()` so a tree of trace events produced in another process (e.g. a forked build worker) can be reported under an existing span. Its root events are reparented to that span while links internal to the set are preserved, keeping trace nesting intact.
+
+## 14.4.0
+
+### Minor Changes
+
+- f8add0a: Replace `prerenderClassification` on `Prerender` with `initialMetadata`.
+
+  The platform consumes only the request-time compute mode and the HTML shell
+  size, so the flattened four-field taxonomy (`routeType`, `response`,
+  `compute`, `htmlSize`) is reduced to a single grouped field:
+
+  ```ts
+  initialMetadata?: {
+    compute: 'blocking' | 'resuming' | 'static';
+    htmlSize?: number;
+  }
+  ```
+
+  The group is named `initialMetadata` because the values describe the
+  deployment as it was built: revalidation can regenerate a route's output over
+  the deployment's lifetime, so readers must treat them as initial values, not
+  live state. `@vercel/next` reads `compute` and `htmlSize` off the v4
+  prerender-manifest taxonomy and deliberately ignores `routeType` and
+  `response`; the values are still carried unvalidated so a compute mode added
+  by a future framework release cannot hard-fail a deploy, and they are still
+  set only on the primary output of each prerender group. `htmlSize: 0` is a
+  real size (a shell that postponed everything); `htmlSize` is absent when
+  there is no HTML shell to measure (route handlers, Pages Router). Absence of
+  the whole group remains legitimate (`notFoundRoutes`, Pages Router
+  `fallback: false`, older frameworks).
+
+## 14.3.0
+
+### Minor Changes
+
+- cd6b038: Honor `package.json` pnpm pins without Corepack, and default new projects to pnpm 11.
+
+  When Corepack is off, `devEngines.packageManager` is preferred, then a lockfile-compatible `packageManager` field, then `engines.pnpm` as a selector. Unpinned lockfile `9.0` projects created on or after 2026-08-19 use pnpm 11 (Node 22+) if `/pnpm11` is present in the build image; otherwise they keep pnpm 10.
+
+### Patch Changes
+
+- 0b08df6: Canonicalized internal service contract ownership.
+- 96444ba: Simplify dependency installation logs to show the selected package manager and version.
+
+## 14.2.0
+
+### Minor Changes
+
+- e340c58: Add schedules/v1beta to TriggerEvent types
+
+## 14.1.1
+
+### Patch Changes
+
+- b4f09c1: Support selecting Bun 1.4.x as an explicit runtime and build-time package manager, including local Bun servers.
+
+## 14.1.0
+
+### Minor Changes
+
+- 852e1a0: Move middleware matcher utils from node builder to general build utils.
+
+## 14.0.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/python-analysis@0.13.2
+
+## 14.0.4
+
+### Patch Changes
+
+- 13f81ac: Support pnpm lockfiles containing multiple YAML documents.
+
+## 14.0.3
+
+### Patch Changes
+
+- d72826e: Prevented unit tests and generated outputs from changing Turborepo task inputs during CI, and removed the redundant affected Unit test retry.
+
+## 14.0.2
+
+### Patch Changes
+
+- b7ec19b: Scope the pre-compilation install's `VERCEL_INSTALL_COMPLETED` marker to the `package.json` it installed. Previously, a `vercel.toml`/`vercel.ts` config caused `vc build` to install at the repo root and then silently skip every later default install, so services whose install root is a different workspace (its own `package.json`/lockfile) built without dependencies.
+
+## 14.0.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/python-analysis@0.13.1
+
+## 14.0.0
+
+### Major Changes
+
+- 5c33351: Remove `getOsRelease()`, and stop deriving the provided runtime from the build host.
+
+  `getProvidedRuntime()` is retained and now always resolves to `'provided.al2023'`. It previously read `/etc/os-release` and returned `'provided.al2'` on Amazon Linux 2 hosts, so the emitted runtime depended on where the build ran — a `vercel build` on an AL2 machine produced output that is rejected at deploy time, because `provided.al2` is no longer an accepted Lambda runtime. Custom runtimes calling `getProvidedRuntime()` need no changes and are fixed by this release.
+
+  `getOsRelease()` is removed with no replacement.
+
+  `validateBuildResult()` no longer accepts an `osRelease` option. Its runtime allowlist check was previously skipped unless the caller passed `osRelease.VERSION === '2023'`; it now always runs.
+
+### Minor Changes
+
+- b747ab4: Replace the inferred PPR fields on `Prerender` with the Next.js prerender taxonomy.
+
+  `hasPostponed`, `hasFallback`, `isDynamicRoute` and `htmlSize` were derived by
+  `@vercel/next` from build artifacts (the `.meta` postponed state, which manifest
+  section a route came from, and a `statSync` of the `.html` shell). Next.js
+  `>= 16.3.0-canary.96` publishes its own classification in the prerender
+  manifest, so those four fields are removed in favour of a single optional
+  `prerenderClassification` on `Prerender` / `PrerenderOptions`:
+
+  - `routeType` — `'route' | 'page' | 'shell' | 'fallback'`
+  - `response` — `'empty' | 'initial' | 'complete'`
+  - `compute` — `'blocking' | 'resuming' | 'static'`
+  - `htmlSize` — byte size of the prerendered HTML shell, when the entry has one
+
+  The values are carried through unvalidated so a taxonomy value added by a future
+  Next.js release cannot hard-fail a deploy. `@vercel/next` sets the field only
+  when Next.js supplied the complete group — absence is legitimate for
+  `notFoundRoutes` and Pages Router `fallback: false` templates — and only on the
+  primary output of each prerender group, so a route is classified exactly once.
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- Updated dependencies [08a2618]
+  - @vercel/python-analysis@0.13.0
+
+## 13.36.3
+
+### Patch Changes
+
+- a69c714: Propagate per-function `maxConcurrency` configuration into build outputs and keep every configured Next.js route in its own Lambda group, including routes with the same limit.
+- 654e898: Type shared function settings in container image build outputs.
+
+## 13.36.2
+
+### Patch Changes
+
+- 2c75803: Preserve 4-byte UTF-8 characters when streaming string `FileBlob` contents (fixes Edge Function corruption during `vercel build`).
+
+## 13.36.1
+
+### Patch Changes
+
+- 17ee736: Replace the vercel-workers integration for Python queue subscribers and workflows with the new vercel-queue SDK:
+
+  - `[[tool.vercel.subscribers]]` entrypoints are introspected at build time via `vercel.queue.get_subscriptions()` and served through generated `vercel.queue.asgi_app()` handler modules, with `queue/v2beta` triggers carrying the SDK-registered consumer groups and per-subscription tuning.
+  - Celery and Dramatiq projects get the matching `vercel-celery`/`vercel-dramatiq` integration package injected automatically (bundled variant unless `vercel-queue` is an explicit dependency), in builds and in `vercel dev`.
+  - `[[tool.vercel.workflows]]` entrypoints follow the SDK generation: projects on `vercel` >= 0.8.0 are served through vercel-queue like subscribers; older or undeterminable versions keep the legacy vercel-workers serving (worker env markers, injected pinned `vercel-workers`).
+  - Projects that depend on `vercel-workers` directly keep the legacy integration wholesale: legacy subscriber schema, direct entrypoint serving, worker env markers.
+  - `vercel dev` serves queue sidecars through `vercel.queue.asgi_app()` for new-SDK projects, and its queue broker delivers with the SDK-registered consumer groups introspected at sidecar startup (matching production trigger behavior); legacy projects keep the vercel-workers bootstrap.
+  - The CLI no longer injects `config.hasWorkerServices`; the Python builder makes all queue-serving decisions from project metadata.
+
+## 13.36.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+
+### Patch Changes
+
+- Updated dependencies [6aa29e5]
+  - @vercel/python-analysis@0.12.0
+
+## 13.35.0
+
+### Minor Changes
+
+- 7dd4301: Make service bindings type optional.
+
+## 13.34.0
+
+### Minor Changes
+
+- 238543c: Support Python services that declare their web app and development workflow sidecars through a `pyproject.toml` entrypoint in `vercel dev`.
+
+## 13.33.1
+
+### Patch Changes
+
+- def07fc: Migrate `@vercel/client` and `@vercel/build-utils` from `node-fetch` to native `fetch`. This removes the last `url.parse()` usage from the CLI bundle, which triggered a `DEP0169` DeprecationWarning on Node 24 (visible in the standalone binary during `vercel deploy`).
+
+  BREAKING CHANGE (`@vercel/client`): the `agent?: http.Agent` option was replaced with `dispatcher?: FetchDispatcher` (an undici dispatcher, e.g. `undici.ProxyAgent`), since native `fetch` does not support Node.js HTTP agents. The CLI now threads its proxy-aware dispatcher through automatically, so `HTTP_PROXY`/`HTTPS_PROXY` behavior is unchanged for CLI users.
+
+## 13.33.0
+
+### Minor Changes
+
+- 607f0ef: Add service information to deploy-manifest.
+
+## 13.32.3
+
+### Patch Changes
+
+- 7b30856: Add `vercel dev` support for Python queue subscribers defined in `pyproject.toml`.
+
+## 13.32.2
+
+### Patch Changes
+
+- 6b49a17: Apply per-service `functions` config when building experimental V2 services. Previously, function configuration declared under `services.<name>.functions` in `vercel.json` (`experimentalTriggers`, `maxDuration`, `memory`, `architecture`, `regions`, `functionFailoverRegions`, `supportsCancellation`) was dropped at build time — only the top-level `functions` map was honored. The build now feeds each service's `functions` to its lambdas for both single-lambda builders (`@vercel/node`, etc., via `writeBuildResultV3`) and framework builders that read `config.functions` (e.g. `@vercel/next`, via the builder config). Derived `queue/v2beta` consumer groups are now scoped by the owning service name so two services that declare the same function path + topic no longer collide.
+
 ## 13.32.1
 
 ### Patch Changes

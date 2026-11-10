@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import type { Response } from 'node-fetch';
+import type { Response } from './fetch';
 import linkStyle from './output/link';
 import { emoji, type EmojiLabel, prependEmoji } from './emoji';
 import output from '../output-manager';

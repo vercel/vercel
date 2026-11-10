@@ -27,6 +27,8 @@ export const build: BuildV2 = async ({
   config,
   meta = {},
   service,
+  diagnosticsValues,
+  span,
 }) => {
   const { installCommand, buildCommand } = config;
 
@@ -56,6 +58,7 @@ export const build: BuildV2 = async ({
     lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointDir, true);
 
@@ -63,6 +66,8 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -95,7 +100,7 @@ export const build: BuildV2 = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: config.framework ?? undefined,
+      framework: diagnosticsValues?.framework,
       serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {
@@ -172,7 +177,12 @@ export const build: BuildV2 = async ({
     regions: (() => {
       try {
         const project = new Project();
-        const config = getConfig(project, edgeFunctionFiles['index.js'].fsPath);
+        const config = getConfig(
+          project,
+          edgeFunctionFiles['index.js'].fsPath,
+          undefined,
+          span
+        );
         return config?.regions;
       } catch {
         return undefined;

@@ -28,6 +28,16 @@ export interface FlagSplitOutcome {
   defaultVariantId: string;
 }
 
+export interface FlagExperimentOutcome {
+  type: 'experiment';
+}
+
+export type FlagServingOutcome =
+  | FlagOutcome
+  | FlagSplitOutcome
+  | FlagRolloutOutcome
+  | FlagExperimentOutcome;
+
 export interface FlagRolloutOutcome {
   type: 'rollout';
   base: {
@@ -39,6 +49,8 @@ export interface FlagRolloutOutcome {
   rollFromVariantId: string;
   rollToVariantId: string;
   defaultVariantId: string;
+  /** Traffic after the schedule ends; defaults to 100_000 (100%). */
+  finalPromille?: number;
   slots: Array<{
     durationMs: number;
     promille: number;
@@ -59,7 +71,7 @@ export interface FlagCondition {
 export interface FlagRule {
   id: string;
   conditions: FlagCondition[];
-  outcome: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome;
+  outcome: FlagServingOutcome;
 }
 
 export interface FlagEnvironmentConfig {
@@ -69,7 +81,7 @@ export interface FlagEnvironmentConfig {
     environment: string;
   };
   pausedOutcome?: FlagOutcome;
-  fallthrough: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome;
+  fallthrough: FlagServingOutcome;
   rules: FlagRule[];
   targets?: Record<
     string,
@@ -94,33 +106,79 @@ export interface Flag {
   revision: number;
   seed: number;
   typeName: 'flag';
+  tags?: string[];
+  maintainerIds?: string[];
   metadata?: {
     creator?: {
       id: string;
       name: string;
     };
   };
+  experiment?: {
+    id?: string;
+    base: { type: 'entity'; kind: string; attribute: string };
+    weights?: Record<string, number>;
+    controlVariantId?: string;
+    enrollmentSeed?: number;
+    rampId?: string;
+    rampPercentage?: number;
+  } | null;
 }
 
 export interface FlagsListResponse {
   data: Flag[];
+  pagination?: {
+    next: string | null;
+  };
+}
+
+export type StaleFlagReason = 'unused' | 'redundant';
+
+export interface StaleFlag {
+  slug: string;
+  reason: StaleFlagReason;
+}
+
+export interface StaleFlagsResponse {
+  data: StaleFlag[];
+  pagination: {
+    next: string | null;
+  };
 }
 
 export interface FlagVersion {
   id: string;
+  flagId: string;
   revision: number;
   createdAt: number;
-  createdBy: string;
+  createdBy?: string;
   message?: string;
+  changedEnvironments: string[];
+  metadata?: {
+    creator?: {
+      id: string;
+      name: string;
+    };
+  };
   data: {
     description?: string;
+    maintainerIds?: string[];
+    permanent?: boolean;
+    tags?: string[];
     variants: FlagVariant[];
     environments: Record<string, FlagEnvironmentConfig>;
+    seed?: number;
+    state?: 'active' | 'archived';
   };
 }
 
 export interface FlagVersionsResponse {
   versions: FlagVersion[];
+  pagination?: {
+    next?: string | null;
+    cursor?: string | null;
+    hasNext?: boolean;
+  };
 }
 
 export interface SdkKey {
@@ -150,6 +208,21 @@ export interface CreatedSdkKey extends SdkKey {
 export interface SdkKeysListResponse {
   data: SdkKey[];
 }
+
+// Lets the consumer project read the flags of the source project with its
+// own deployment identity. Both projects belong to the same team.
+export interface FlagsProjectConnection {
+  sourceProjectId: string;
+  consumerProjectId: string;
+  createdBy: string;
+  createdAt: number;
+}
+
+export interface FlagsProjectConnectionsListResponse {
+  data: FlagsProjectConnection[];
+}
+
+export type FlagsProjectConnectionRole = 'source' | 'consumer';
 
 export interface CreateFlagRequest {
   slug: string;
@@ -334,4 +407,10 @@ export interface FlagSettings {
   enabled: boolean;
   environments: string[];
   entities: FlagSettingsEntity[];
+}
+
+export interface UpdateFlagSettingsRequest {
+  enabled?: boolean;
+  environments?: string[];
+  entities?: FlagSettingsEntity[];
 }

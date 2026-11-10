@@ -28,7 +28,7 @@ export default async function activity(client: Client): Promise<number> {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { subcommand, subcommandOriginal } = getSubcommand(
@@ -40,13 +40,22 @@ export default async function activity(client: Client): Promise<number> {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('activity', subcommand);
-    output.print(help(activityCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(activityCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 
   function printSubcommandHelp(command: Command) {
     output.print(
-      help(command, { parent: activityCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: activityCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -65,7 +74,12 @@ export default async function activity(client: Client): Promise<number> {
     default: {
       if (needHelp) {
         telemetry.trackCliFlagHelp('activity', subcommandOriginal);
-        output.print(help(activityCommand, { columns: client.stderr.columns }));
+        output.print(
+          help(activityCommand, {
+            stream: client.stderr,
+            columns: client.stderr.columns,
+          })
+        );
         return 0;
       }
       telemetry.trackCliSubcommandLs(subcommandOriginal);

@@ -56,7 +56,7 @@ export interface PreparedIcon {
  * invalid icon never reaches `selectConnexTeam` or any network call.
  *
  * Relative `filePath` values are resolved against `cwd` so the global
- * `--cwd` flag is honored (matches `alerts/rules/add.ts` and other commands
+ * `--cwd` flag is honored (matches `monitors/add.ts` and other commands
  * in this repo).
  *
  * Throws a user-facing error if the file is unreadable or is not a PNG/JPEG.

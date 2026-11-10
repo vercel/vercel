@@ -145,7 +145,7 @@ describe('normalizeRoutes', () => {
     assert.deepStrictEqual(normalized.routes, routes);
   });
 
-  test('accepts a service `destination` with only type and service', () => {
+  test('accepts an explicit service `destination` with type and service', () => {
     const routes: Route[] = [
       { src: '^/(.*)$', destination: { type: 'service', service: 'web' } },
     ];
@@ -155,6 +155,48 @@ describe('normalizeRoutes', () => {
     const normalized = normalizeRoutes(routes);
     assert.equal(normalized.error, null);
     assert.deepStrictEqual(normalized.routes, routes);
+  });
+
+  test('accepts and preserves short service `destination` routes', () => {
+    const routes: Route[] = [
+      { src: '^/api/health$', destination: { service: 'web' } },
+      { src: '^/api(?:/(.*))?$', destination: { service: 'api', path: '/$1' } },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, [
+      {
+        src: '^/api/health$',
+        destination: { type: 'service', service: 'web' },
+      },
+      {
+        src: '^/api(?:/(.*))?$',
+        destination: { type: 'service', service: 'api', path: '/$1' },
+      },
+    ]);
+  });
+
+  test('accepts short service `destination` in hand-written routes config', () => {
+    const routes: RouteInput[] = [
+      {
+        source: '/api/(.*)',
+        destination: { service: 'api', path: '/api/$1' },
+      },
+    ];
+
+    assertValid(routes);
+
+    const normalized = normalizeRoutes(routes);
+    assert.equal(normalized.error, null);
+    assert.deepStrictEqual(normalized.routes, [
+      {
+        src: '^/api/(.*)$',
+        destination: { type: 'service', service: 'api', path: '/api/$1' },
+      },
+    ]);
   });
 
   test('validates service `destination` names like service config names', () => {
@@ -212,10 +254,15 @@ describe('normalizeRoutes', () => {
     );
   });
 
-  test('rejects a service `destination` missing `type`', () => {
-    const validate = ajv.compile(routesSchema);
+  test('rejects a service rewrite `destination` missing `service`', () => {
+    const validate = ajv.compile(rewritesSchema);
     assert.equal(
-      validate([{ src: '^/(.*)$', destination: { service: 'web' } }]),
+      validate([
+        {
+          source: '/api/:path*',
+          destination: { type: 'service', path: '/api/$1' },
+        },
+      ]),
       false
     );
   });
@@ -264,7 +311,6 @@ describe('normalizeRoutes', () => {
         {
           source: '/api/v1/:path*',
           destination: {
-            type: 'service',
             service: 'my_backend',
             path: '/:path*',
           },

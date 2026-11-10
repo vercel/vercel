@@ -1,5 +1,96 @@
 # @vercel/cli-auth
 
+## 0.3.13
+
+### Patch Changes
+
+- Updated dependencies [bcdc735]
+  - @vercel/cli-config@0.3.4
+
+## 0.3.12
+
+### Patch Changes
+
+- Updated dependencies [b0e01f5]
+  - @vercel/cli-config@0.3.3
+
+## 0.3.11
+
+### Patch Changes
+
+- Updated dependencies [637c7b9]
+  - @vercel/cli-config@0.3.2
+
+## 0.3.10
+
+### Patch Changes
+
+- Updated dependencies [85cfdc3]
+  - @vercel/cli-config@0.3.1
+
+## 0.3.9
+
+### Patch Changes
+
+- Updated dependencies [c610f14]
+  - @vercel/cli-config@0.3.0
+
+## 0.3.8
+
+### Patch Changes
+
+- Updated dependencies [c4c4f3f]
+  - @vercel/cli-config@0.2.7
+
+## 0.3.7
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/cli-config@0.2.6
+
+## 0.3.6
+
+### Patch Changes
+
+- Updated dependencies [38a4acd]
+  - @vercel/cli-config@0.2.5
+
+## 0.3.5
+
+### Patch Changes
+
+- Updated dependencies [7a3a2ef]
+  - @vercel/cli-config@0.2.4
+
+## 0.3.4
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [92dfd87]
+  - @vercel/cli-config@0.2.3
+
+## 0.3.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/cli-config@0.2.2
+
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [6e29745]
+  - @vercel/cli-config@0.2.1
+
 ## 0.3.0
 
 ### Minor Changes

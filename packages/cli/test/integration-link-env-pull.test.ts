@@ -1,5 +1,6 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
+import { getCliPath } from './helpers/get-cli-path';
 import fs from 'fs-extra';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
@@ -13,7 +14,7 @@ import formatOutput from './helpers/format-output';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
-const binaryPath = path.resolve(__dirname, '../scripts/start.js');
+const binaryPath = getCliPath();
 
 beforeAll(async () => {
   try {
@@ -49,10 +50,6 @@ test('[vc link] should refresh OIDC when creating a new project', async () => {
     },
   });
 
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
   await waitForPrompt(vc, 'Project?');
   vc.stdin?.write('\n');
 
@@ -64,9 +61,6 @@ test('[vc link] should refresh OIDC when creating a new project', async () => {
 
   await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, 'Customize advanced settings?');
-  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, /Created\s+/);
 
@@ -99,10 +93,6 @@ test('[vc link] should preserve existing .env.local when refreshing OIDC', async
     },
   });
 
-  await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
   await waitForPrompt(vc, 'Project?');
   vc.stdin?.write('\n');
 
@@ -114,9 +104,6 @@ test('[vc link] should preserve existing .env.local when refreshing OIDC', async
 
   await waitForPrompt(vc, 'Customize settings?');
   vc.stdin?.write('no\n');
-
-  await waitForPrompt(vc, 'Customize advanced settings?');
-  vc.stdin?.write('\n');
 
   await waitForPrompt(vc, /Created\s+/);
 

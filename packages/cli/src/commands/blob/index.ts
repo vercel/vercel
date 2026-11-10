@@ -16,6 +16,7 @@ import {
   deleteStoreSubcommand,
   getStoreInfoSubcommand,
   listStoresSubcommand,
+  putImageSubcommand,
   signedTokenSubcommand,
   emptyStoreSubcommand,
 } from './command';
@@ -24,6 +25,7 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { BlobTelemetryClient } from '../../util/telemetry/commands/blob';
 import put from './put';
+import putImage from './put-image';
 import get from './get';
 import del from './del';
 import copy from './copy';
@@ -36,12 +38,19 @@ import presign from './presign';
 import signedToken from './signed-token';
 import { printError } from '../../util/error';
 import { findFlagValue, getBlobRWToken } from '../../util/blob/token';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+} from '../../util/renamed-option';
+import { wantsMachineReadableOutput } from '../../util/output-format';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   put: getCommandAliases(putSubcommand),
+  'put-image': getCommandAliases(putImageSubcommand),
   get: getCommandAliases(getSubcommand),
-  del: getCommandAliases(delSubcommand),
+  delete: getCommandAliases(delSubcommand),
   copy: getCommandAliases(copySubcommand),
   'signed-token': getCommandAliases(signedTokenSubcommand),
   presign: getCommandAliases(presignSubcommand),
@@ -67,7 +76,7 @@ export default async function main(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(1);
@@ -80,19 +89,37 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('blob', subcommand);
-    output.print(help(blobCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(blobCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: blobCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: blobCommand,
+        columns: client.stderr.columns,
+      })
     );
+  }
+
+  const json = wantsMachineReadableOutput(undefined, client.argv);
+  const store = getRenamedOption(parsedArgs.flags, '--store', '--store-id', {
+    json,
+  });
+  if ('error' in store) {
+    return reportRenamedOptionError(client, store.error, { json });
   }
 
   const token = await getBlobRWToken(client, client.argv);
   telemetry.trackCliOptionRwToken(findFlagValue(client.argv, '--rw-token'));
   telemetry.trackCliOptionOidcToken(findFlagValue(client.argv, '--oidc-token'));
+  telemetry.trackCliOptionStore(findFlagValue(client.argv, '--store'));
   telemetry.trackCliOptionStoreId(findFlagValue(client.argv, '--store-id'));
 
   switch (subcommand) {
@@ -100,7 +127,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandList(subcommandOriginal);
@@ -110,12 +137,12 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return list(client, args, token);
+      return list(client, args, token, [store.warning]);
     case 'put':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(putSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandPut(subcommandOriginal);
@@ -126,11 +153,26 @@ export default async function main(client: Client) {
       }
 
       return put(client, args, token);
+    case 'put-image':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('blob', subcommandOriginal);
+        printHelp(putImageSubcommand);
+        return 0;
+      }
+
+      telemetry.trackCliSubcommandPutImage(subcommandOriginal);
+
+      if (!token.success) {
+        printError(token.error);
+        return 1;
+      }
+
+      return putImage(client, args, token, [store.warning]);
     case 'get':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(getSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandGet(subcommandOriginal);
@@ -141,14 +183,17 @@ export default async function main(client: Client) {
       }
 
       return get(client, args, token);
-    case 'del':
+    case 'delete':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(delSubcommand);
-        return 2;
+        return 0;
       }
 
-      telemetry.trackCliSubcommandDel(subcommandOriginal);
+      telemetry.trackCliSubcommandDelete(subcommandOriginal);
+      if (subcommandOriginal === 'remove') {
+        warnDeprecatedSubcommand(client, 'blob remove', 'blob delete');
+      }
 
       if (!token.success) {
         printError(token.error);
@@ -160,10 +205,13 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(copySubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandCopy(subcommandOriginal);
+      if (subcommandOriginal === 'cp') {
+        warnDeprecatedSubcommand(client, 'blob cp', 'blob copy');
+      }
 
       if (!token.success) {
         printError(token.error);
@@ -175,7 +223,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(signedTokenSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandSignedToken(subcommandOriginal);
@@ -185,12 +233,12 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return signedToken(client, args, token);
+      return signedToken(client, args, token, [store.warning]);
     case 'presign':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(presignSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandPresign(subcommandOriginal);
@@ -200,12 +248,12 @@ export default async function main(client: Client) {
         return 1;
       }
 
-      return presign(client, args, token);
+      return presign(client, args, token, [store.warning]);
     case 'create-store':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(createStoreSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandCreateStore(subcommandOriginal);
@@ -215,7 +263,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(deleteStoreSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandDeleteStore(subcommandOriginal);
@@ -225,7 +273,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(getStoreInfoSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandGetStore(subcommandOriginal);
@@ -235,17 +283,20 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(listStoresSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandListStores(subcommandOriginal);
+      if (subcommandOriginal === 'ls-stores') {
+        warnDeprecatedSubcommand(client, 'blob ls-stores', 'blob list-stores');
+      }
 
       return listStores(client, args);
     case 'empty-store':
       if (needHelp) {
         telemetry.trackCliFlagHelp('blob', subcommandOriginal);
         printHelp(emptyStoreSubcommand);
-        return 2;
+        return 0;
       }
 
       telemetry.trackCliSubcommandEmptyStore(subcommandOriginal);
@@ -258,7 +309,12 @@ export default async function main(client: Client) {
       return emptyStore(client, args, token);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(blobCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(blobCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

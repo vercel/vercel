@@ -25,4 +25,10 @@ export class IntegrationDiscoverTelemetryClient
       }
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

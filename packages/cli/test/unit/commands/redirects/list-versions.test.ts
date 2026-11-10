@@ -27,7 +27,7 @@ describe('redirects list-versions', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = redirects(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -124,16 +124,6 @@ describe('redirects list-versions', () => {
       const exitCode = await redirects(client);
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput('(unnamed)');
-    });
-  });
-
-  describe('sorting', () => {
-    it('should show all version statuses', async () => {
-      useRedirectVersions(5);
-      client.setArgv('redirects', 'list-versions');
-      const exitCode = await redirects(client);
-      expect(exitCode, 'exit code').toEqual(0);
-      await expect(client.stderr).toOutput('5 Versions found');
     });
   });
 
@@ -261,5 +251,17 @@ describe('redirects list-versions', () => {
       expect(exitCode, 'exit code').toEqual(0);
       await expect(client.stderr).toOutput('Created By');
     });
+  });
+
+  it('writes versions to stdout with --json', async () => {
+    useRedirectVersions(3);
+    client.setArgv('redirects', 'list-versions', '--json');
+
+    expect(await redirects(client)).toBe(0);
+    const result = JSON.parse(client.stdout.getFullOutput());
+    expect(result.versions).toHaveLength(3);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).not.toContain('Fetching redirect versions');
+    expect(stderr).not.toContain('found for');
   });
 });

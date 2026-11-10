@@ -10,7 +10,10 @@ import {
   openUrlInBrowserCommand,
   shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
-import { AGENT_REASON } from '../../util/agent-output-constants';
+import {
+  AGENT_REASON,
+  getExitCodeForReason,
+} from '../../util/agent-output-constants';
 import { verifySubcommand } from './command';
 import { DomainsVerifyTelemetryClient } from '../../util/telemetry/commands/domains/verify';
 import {
@@ -62,7 +65,7 @@ export default async function verify(client: Client, argv: string[]) {
             client.argv,
             'domains verify --help'
           ),
-          when: 'See valid arguments and flags',
+          when: 'See valid arguments and options',
         },
       ],
     });
@@ -100,7 +103,7 @@ export default async function verify(client: Client, argv: string[]) {
         {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            `domains verify ${shellQuoteCommandArg(domainName)} --format=json`
+            `domains verify ${shellQuoteCommandArg(domainName)} --json`
           ),
           when: 'Retry with the supported JSON format',
         },
@@ -280,7 +283,7 @@ function buildVerifyCommand(
     parts.push('--strict');
   }
   if (options.outputMode === 'json') {
-    parts.push('--format=json');
+    parts.push('--json');
   }
   if (scopeOverride) {
     parts.push('--scope', scopeOverride);
@@ -323,7 +326,7 @@ function writeCommandError(
   } else {
     output.error(error.humanMessage ?? error.message);
   }
-  return 1;
+  return getExitCodeForReason(error.reason);
 }
 
 function writeHumanOutput(result: HumanVerificationOutput): void {

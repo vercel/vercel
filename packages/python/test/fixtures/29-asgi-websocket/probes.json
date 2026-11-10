@@ -1,0 +1,15 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "asgi-websocket ok"
+    },
+    {
+      "websocket": {
+        "path": "/ws",
+        "send": ["hello", "world"],
+        "receive": ["echo:hello", "echo:world"]
+      }
+    }
+  ]
+}

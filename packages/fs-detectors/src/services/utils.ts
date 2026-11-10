@@ -1,59 +1,32 @@
 import {
-  isBackendFramework,
-  isPythonFramework,
-} from '@vercel/build-utils/dist/framework-helpers';
-import {
   INTERNAL_SERVICE_PREFIX,
   getInternalServiceFunctionPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceCronPath,
+  getInternalServiceWorkerPathPrefix,
+  getInternalServiceWorkerPath,
 } from '@vercel/build-utils';
-import type { Framework } from '@vercel/frameworks';
-import { frameworkList } from '@vercel/frameworks';
 import type { DetectorFilesystem } from '../detectors/filesystem';
+import { STATIC_BUILDERS, ROUTE_OWNING_BUILDERS } from './runtimes/constants';
+import { isFrontendFramework, isBFFFramework } from './runtimes/framework';
 import type {
-  ServiceRuntime,
   ExperimentalServices,
   ExperimentalServicesV2,
+  InferredServicesConfig,
   Services,
   ServiceDetectionError,
   ServiceDetectionWarning,
   ResolvedService,
 } from './types';
-import {
-  RUNTIME_BUILDERS,
-  ENTRYPOINT_EXTENSIONS,
-  STATIC_BUILDERS,
-  ROUTE_OWNING_BUILDERS,
-} from './types';
-
-// Runtime frameworks, e.g. Python, Node, Ruby, etc. are currently marked experimental,
-// but service auto-detection should still consider them.
-export const DETECTION_FRAMEWORKS = frameworkList.filter(
-  (framework: Framework) =>
-    !framework.experimental || framework.runtimeFramework
-);
 
 export {
   INTERNAL_SERVICE_PREFIX,
   getInternalServiceFunctionPath,
   getInternalServiceCronPathPrefix,
   getInternalServiceCronPath,
+  getInternalServiceWorkerPathPrefix,
+  getInternalServiceWorkerPath,
 };
-
-/**
- * Removes a trailing slash from an already-`posixPath.normalize`d path.
- *
- * `posixPath.normalize` preserves trailing slashes (`"frontend/"` stays
- * `"frontend/"`), which double-prefixes builder paths when the value is later
- * used as both `builder.config.workspace` and a `posixPath.join` prefix. Strip
- * it so `"frontend/"` and `"frontend"` resolve identically. An empty result or
- * a lone `"/"` collapses to `"."` (matching `normalizeServiceEntrypoint`).
- */
-export function stripTrailingSlash(p: string): string {
-  const stripped = p.replace(/\/+$/, '');
-  return stripped === '' ? '.' : stripped;
-}
 
 export async function hasFile(
   fs: DetectorFilesystem,
@@ -71,37 +44,6 @@ export async function hasFile(
  */
 export const INTERNAL_QUEUES_PREFIX = '/_svc/_queues';
 
-function normalizeInternalServiceEntrypoint(entrypoint: string): string {
-  const normalized = entrypoint
-    .replace(/\\/g, '/')
-    .replace(/^\/+/, '')
-    .replace(/\.[^/.]+$/, '');
-  return normalized || 'index';
-}
-
-export function getInternalServiceWorkerPathPrefix(
-  serviceName: string
-): string {
-  return `${INTERNAL_SERVICE_PREFIX}/${serviceName}/workers`;
-}
-
-export function getInternalServiceWorkerPath(
-  serviceName: string,
-  entrypoint: string,
-  handler = 'worker'
-): string {
-  const normalizedEntrypoint = normalizeInternalServiceEntrypoint(entrypoint);
-  return `${getInternalServiceWorkerPathPrefix(serviceName)}/${normalizedEntrypoint}/${handler}`;
-}
-
-export function getBuilderForRuntime(runtime: ServiceRuntime): string {
-  const builder = RUNTIME_BUILDERS[runtime];
-  if (!builder) {
-    throw new Error(`Unknown runtime: ${runtime}`);
-  }
-  return builder;
-}
-
 export function isStaticBuild(service: ResolvedService): boolean {
   return STATIC_BUILDERS.has(service.builder.use);
 }
@@ -118,112 +60,13 @@ export function isRouteOwningBuilder(service: ResolvedService): boolean {
   return ROUTE_OWNING_BUILDERS.has(service.builder.use);
 }
 
-/**
- * Infer runtime from a framework slug.
- *
- * Examples:
- * - `python` -> `python`
- * - `fastapi` -> `python`
- * - `express` -> `node`
- */
-export function inferRuntimeFromFramework(
-  framework: string | null | undefined
-): ServiceRuntime | undefined {
-  if (!framework) {
-    return undefined;
-  }
-
-  // Runtime framework slug maps directly to runtime name.
-  if (framework in RUNTIME_BUILDERS) {
-    return framework as ServiceRuntime;
-  }
-
-  if (isPythonFramework(framework)) {
-    return 'python';
-  }
-  if (isBackendFramework(framework)) {
-    return 'node';
-  }
-
-  return undefined;
-}
-
-export function isFrontendFramework(
-  framework: string | null | undefined
-): boolean {
-  if (!framework) {
-    return false;
-  }
-  return !inferRuntimeFromFramework(framework);
-}
-
-export function filterFrameworksByRuntime<T extends { slug?: string | null }>(
-  frameworks: readonly T[],
-  runtime?: ServiceRuntime
-): T[] {
-  if (!runtime) {
-    return [...frameworks];
-  }
-
-  return frameworks.filter(
-    framework => inferRuntimeFromFramework(framework.slug) === runtime
-  );
-}
-
-/**
- * Infer runtime from available service configuration.
- *
- * Priority (highest to lowest):
- * 1. Explicit runtime (user specified in config)
- * 2. Runtime framework slug (ruby → ruby, go → go)
- * 3. Framework detection (fastapi → python, express → node)
- * 4. Builder detection (@vercel/python → python)
- * 5. Entrypoint extension (.py → python, .ts → node)
- *
- * @returns The inferred runtime, or undefined if none can be determined.
- */
-export function inferServiceRuntime(config: {
-  runtime?: string;
-  framework?: string;
-  builder?: string;
-  entrypoint?: string;
-}): ServiceRuntime | undefined {
-  // Explicit runtime takes priority
-  if (config.runtime && config.runtime in RUNTIME_BUILDERS) {
-    return config.runtime as ServiceRuntime;
-  }
-
-  const frameworkRuntime = inferRuntimeFromFramework(config.framework);
-  if (frameworkRuntime) {
-    return frameworkRuntime;
-  }
-
-  // Infer from builder
-  if (config.builder) {
-    for (const [runtime, builderName] of Object.entries(RUNTIME_BUILDERS)) {
-      if (config.builder === builderName) {
-        return runtime as ServiceRuntime;
-      }
-    }
-  }
-
-  // Infer from entrypoint extension
-  if (config.entrypoint) {
-    for (const [ext, runtime] of Object.entries(ENTRYPOINT_EXTENSIONS)) {
-      if (config.entrypoint.endsWith(ext)) {
-        return runtime;
-      }
-    }
-  }
-
-  return undefined;
-}
-
 export interface ReadVercelConfigResult {
   config: {
     experimentalServices?: ExperimentalServices;
     services?: Services;
     experimentalServicesV2?: ExperimentalServicesV2;
+    /** Unvalidated; read by `detectDaemons`. */
+    daemons?: unknown;
   } | null;
   error: ServiceDetectionError | null;
 }
@@ -253,9 +96,7 @@ export async function readVercelConfig(
     }
   }
 
-  const hasVercelToml =
-    process.env.VERCEL_TOML_CONFIG_ENABLED === '1' &&
-    (await fs.hasPath('vercel.toml'));
+  const hasVercelToml = await fs.hasPath('vercel.toml');
   if (hasVercelToml) {
     try {
       const { parse: tomlParse } = await import('smol-toml');
@@ -278,22 +119,27 @@ export async function readVercelConfig(
 }
 
 /**
- * Assign route prefixes to inferred services.
+ * Assign mount paths to inferred services.
  *
- * A frontend service gets `/`, the rest get `/_/{name}`.
- * A single non-frontend service would also get `/`.
- * If no frontend service found, then multiple services get `/_/{name}`.
+ * A frontend service gets `/`, backend services get `/api/...`:
+ * - If the frontend is a BFF (e.g. Next.js, has its own API routes):
+ *   backends get `/api/{name}/(.*)` to avoid shadowing the frontend's API routes.
+ * - If the frontend is client-only (e.g. Vite):
+ *   backends get `/api/(.*)`.
+ *
+ * A single non-frontend service gets `/`.
+ * If no frontend service found, multiple services get `/api/{name}`.
  *
  * Priority for `/`: single service or frontend > name "frontend" or "web" > alphabetical.
  */
-export function assignRoutePrefixes(
-  services: ExperimentalServices
+export function assignMountPaths(
+  services: InferredServicesConfig
 ): ServiceDetectionWarning[] {
   const warnings: ServiceDetectionWarning[] = [];
   const names = Object.keys(services);
 
   if (names.length === 1) {
-    services[names[0]].routePrefix = '/';
+    services[names[0]].mountPath = '/';
     return warnings;
   }
 
@@ -310,12 +156,28 @@ export function assignRoutePrefixes(
       frontendNames.sort()[0];
     warnings.push({
       code: 'MULTIPLE_FRONTENDS',
-      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned routePrefix "/". Adjust manually if a different service should be the root.`,
+      message: `Multiple frontend services detected (${frontendNames.join(', ')}). "${rootName}" was assigned mount path "/". Adjust manually if a different service should be the root.`,
     });
   }
 
+  // BFF frontends (e.g. Next.js) have their own /api routes, so backend
+  // services need a namespaced prefix to avoid conflicts.
+  const rootFramework = rootName ? services[rootName].framework : undefined;
+  const isBFF = rootFramework ? isBFFFramework(rootFramework) : false;
+
+  // Count non-root services to determine if namespacing is needed.
+  const nonRootNames = names.filter(n => n !== rootName);
+  // For client-only frontends with exactly one non-root service, use /api
+  // directly. For BFF frontends or multiple non-root services, namespace
+  // by service name to avoid mount path conflicts.
+  const needsNamespace = isBFF || nonRootNames.length > 1;
+
   for (const name of names) {
-    services[name].routePrefix = name === rootName ? '/' : `/_/${name}`;
+    if (name === rootName) {
+      services[name].mountPath = '/';
+    } else {
+      services[name].mountPath = needsNamespace ? `/api/${name}` : '/api';
+    }
   }
 
   return warnings;

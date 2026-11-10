@@ -10,14 +10,7 @@ import {
   type ChildProcess,
   type SpawnOptions,
 } from 'child_process';
-import {
-  existsSync,
-  readFileSync,
-  statSync,
-  readdirSync,
-  mkdirSync,
-  promises as fsPromises,
-} from 'fs';
+import { existsSync, readFileSync, statSync, readdirSync, mkdirSync } from 'fs';
 import { cpus } from 'os';
 import {
   BuildOptions,
@@ -30,6 +23,7 @@ import {
   PackageJson,
   PrepareCache,
   glob,
+  createDaemonStaticFileFilter,
   download,
   execCommand,
   spawnCommand,
@@ -44,10 +38,8 @@ import {
   generateProjectManifest,
   generateRubyProjectManifest,
   writeProjectManifest,
-  manifestPath,
   MANIFEST_VERSION,
-  FileBlob,
-  Diagnostics,
+  createDiagnostics,
   getReportedServiceType,
   getNodeVersion,
   debug,
@@ -296,15 +288,18 @@ function getFramework(
     }
   }
 
+  return detectFrameworkFromDependencies(pkg);
+}
+
+function detectFrameworkFromDependencies(
+  pkg?: PackageJson | null
+): Framework | undefined {
   if (!pkg) {
     return;
   }
 
   const dependencies = Object.assign({}, pkg.dependencies, pkg.devDependencies);
-  const framework = frameworks.find(
-    ({ dependency }) => dependencies[dependency || '']
-  );
-  return framework;
+  return frameworks.find(({ dependency }) => dependencies[dependency || '']);
 }
 
 async function fetchBinary(
@@ -372,6 +367,8 @@ export const build: BuildV2 = async ({
   config,
   meta = {},
   service,
+  diagnosticsValues,
+  span,
 }) => {
   await download(files, workPath, meta);
 
@@ -379,6 +376,15 @@ export const build: BuildV2 = async ({
   // e.g., routePrefix="/admin" mounts files at "admin/" so they're served at /admin/*
   // Strip leading slash from routePrefix to create valid mountpoint
   const routePrefix = config.routePrefix as string | undefined;
+  if (routePrefix) {
+    const mountpointCandidate = routePrefix.replace(/^\//, '') || '.';
+    if (mountpointCandidate.split(/[/\\]/).some(segment => segment === '..')) {
+      throw new NowBuildError({
+        code: 'STATIC_BUILD_UNSAFE_ROUTE_PREFIX',
+        message: `Invalid routePrefix "${routePrefix}": path traversal segments are not allowed.`,
+      });
+    }
+  }
   const mountpoint = routePrefix
     ? routePrefix.replace(/^\//, '') || '.'
     : path.dirname(entrypoint);
@@ -517,6 +523,7 @@ export const build: BuildV2 = async ({
       lockfilePath,
       lockfileVersion,
       packageJsonPackageManager,
+      packageJsonDevEngines,
       turboSupportsCorepackHome,
     } = await scanParentDirs(entrypointDir, true);
 
@@ -524,6 +531,8 @@ export const build: BuildV2 = async ({
       cliType,
       lockfileVersion,
       packageJsonPackageManager,
+      packageJsonDevEngines,
+      nodeVersion,
       env: process.env,
       turboSupportsCorepackHome,
       projectCreatedAt: config.projectSettings?.createdAt,
@@ -692,7 +701,9 @@ export const build: BuildV2 = async ({
 
     await generateStaticBuildManifest({
       framework,
+      detectedFramework: detectFrameworkFromDependencies(pkg),
       service,
+      diagnosticsValues,
       entrypointDir,
       nodeVersion,
       cliType,
@@ -837,7 +848,7 @@ export const build: BuildV2 = async ({
       const buildOutputPathV2 =
         await BuildOutputV2.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV2) {
-        return await BuildOutputV2.createBuildOutput(workPath);
+        return await BuildOutputV2.createBuildOutput(workPath, span);
       }
 
       const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({
@@ -889,7 +900,13 @@ export const build: BuildV2 = async ({
           ];
           debug(`Using ignore: ${JSON.stringify(ignore)}`);
         }
-        output = await glob('**', { cwd: distPath, ignore }, mountpoint);
+        output = await collectStaticFiles(
+          distPath,
+          meta,
+          mountpoint,
+          ignore,
+          service?.name
+        );
         Object.assign(output, extraOutputs.functions);
       }
     }
@@ -902,7 +919,13 @@ export const build: BuildV2 = async ({
     await runShellScript(path.join(workPath, entrypoint));
     validateDistDir(distPath, workPath);
 
-    const output = await glob('**', distPath, mountpoint);
+    const output = await collectStaticFiles(
+      distPath,
+      meta,
+      mountpoint,
+      [],
+      service?.name
+    );
 
     return {
       output,
@@ -918,6 +941,30 @@ export const build: BuildV2 = async ({
 
   throw new Error(message);
 };
+
+// Keep daemon sources out of automatically collected assets.
+async function collectStaticFiles(
+  distPath: string,
+  meta: BuildOptions['meta'],
+  mountpoint: string,
+  ignore: string[] = [],
+  serviceName?: string
+): Promise<Files> {
+  if (!meta?.daemonContext)
+    return glob('**', { cwd: distPath, ignore }, mountpoint);
+  const canPublish = await createDaemonStaticFileFilter({
+    context: meta.daemonContext,
+    publishPath: distPath,
+    serviceName,
+  });
+  const output = await glob('**', { cwd: distPath, ignore }, mountpoint);
+  for (const [name, file] of Object.entries(output)) {
+    if (file.type === 'FileFsRef' && !(await canPublish(file.fsPath))) {
+      delete output[name];
+    }
+  }
+  return output;
+}
 
 export const prepareCache: PrepareCache = async ({
   entrypoint,
@@ -968,11 +1015,20 @@ export const prepareCache: PrepareCache = async ({
   return cacheFiles;
 };
 
-const STATIC_BUILD_MANIFEST_RUNTIMES = ['node', 'go', 'rust', 'ruby'] as const;
+// Manifest storage slot for this builder. Language builders (@vercel/go,
+// @vercel/rust, @vercel/ruby) write to 'go', 'rust', and 'ruby' slots
+// respectively, so using 'static-build' keeps our manifests in a separate
+// directory and prevents overwrites when both builders run in the same project
+// (e.g. Hugo + api/*.go). This value only appears as a directory name on disk
+// (.vercel/static-build/package-manifest.json) and never in the output
+// manifests, whose keys are derived from the builder name and workspace.
+const STATIC_BUILD_MANIFEST_RUNTIME = 'static-build' as const;
 
 async function generateStaticBuildManifest({
   framework,
+  detectedFramework,
   service,
+  diagnosticsValues,
   entrypointDir,
   nodeVersion,
   cliType,
@@ -980,13 +1036,17 @@ async function generateStaticBuildManifest({
   lockfileVersion,
 }: {
   framework?: Framework;
+  detectedFramework?: Framework;
   service?: BuildOptions['service'];
+  diagnosticsValues?: BuildOptions['diagnosticsValues'];
   entrypointDir: string;
   nodeVersion: NodeVersion | BunVersion;
   cliType: CliType;
   lockfilePath?: string;
   lockfileVersion?: number;
 }): Promise<void> {
+  const reportedFramework =
+    diagnosticsValues?.framework ?? detectedFramework?.slug ?? undefined;
   if (framework?.slug === 'hugo') {
     try {
       const hugoVersionOut = spawnSync('hugo', ['version'], {
@@ -1002,7 +1062,7 @@ async function generateStaticBuildManifest({
         {
           version: MANIFEST_VERSION,
           runtime: 'go',
-          framework: framework.slug,
+          framework: reportedFramework,
           serviceType: service ? getReportedServiceType(service) : undefined,
           dependencies: [
             {
@@ -1014,7 +1074,7 @@ async function generateStaticBuildManifest({
           ],
         },
         entrypointDir,
-        'go'
+        STATIC_BUILD_MANIFEST_RUNTIME
       );
     } catch (err) {
       debug(
@@ -1036,7 +1096,7 @@ async function generateStaticBuildManifest({
         {
           version: MANIFEST_VERSION,
           runtime: 'rust',
-          framework: framework.slug,
+          framework: reportedFramework,
           serviceType: service ? getReportedServiceType(service) : undefined,
           dependencies: [
             {
@@ -1048,7 +1108,7 @@ async function generateStaticBuildManifest({
           ],
         },
         entrypointDir,
-        'rust'
+        STATIC_BUILD_MANIFEST_RUNTIME
       );
     } catch (err) {
       debug(
@@ -1059,8 +1119,9 @@ async function generateStaticBuildManifest({
     await generateRubyProjectManifest({
       workPath: entrypointDir,
       gemfileLockPath: path.join(entrypointDir, 'Gemfile.lock'),
-      framework: framework.slug,
+      framework: reportedFramework,
       serviceType: service ? getReportedServiceType(service) : undefined,
+      outputRuntime: STATIC_BUILD_MANIFEST_RUNTIME,
     });
   } else if (framework?.slug) {
     try {
@@ -1070,8 +1131,9 @@ async function generateStaticBuildManifest({
         cliType,
         lockfilePath,
         lockfileVersion,
-        framework: framework.slug,
+        framework: reportedFramework,
         serviceType: service ? getReportedServiceType(service) : undefined,
+        outputRuntime: STATIC_BUILD_MANIFEST_RUNTIME,
       });
     } catch (err) {
       debug(
@@ -1081,19 +1143,4 @@ async function generateStaticBuildManifest({
   }
 }
 
-export const diagnostics: Diagnostics = async ({ workPath }) => {
-  const files: Files = {};
-  await Promise.all(
-    STATIC_BUILD_MANIFEST_RUNTIMES.map(async runtime => {
-      const relPath = manifestPath(runtime);
-      try {
-        const data = await fsPromises.readFile(
-          path.join(workPath, relPath),
-          'utf-8'
-        );
-        files[relPath] = new FileBlob({ data });
-      } catch {}
-    })
-  );
-  return files;
-};
+export const diagnostics = createDiagnostics(STATIC_BUILD_MANIFEST_RUNTIME);

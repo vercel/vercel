@@ -1,11 +1,13 @@
 import type {
   Deployment,
+  GitMetadata,
   Org,
   Project,
   ProjectRollingRelease,
 } from '@vercel-internals/types';
 import {
   type ArchiveFormat,
+  type DeploymentAliasAssignedEvent,
   type DeploymentOptions,
   type VercelClientOptions,
   createDeployment,
@@ -13,9 +15,9 @@ import {
 import { isErrorLike } from '@vercel/error-utils';
 import bytes from 'bytes';
 import chalk from 'chalk';
-import type { Agent } from 'http';
+import { getFetchDispatcher } from '../fetch';
 import type Now from '../../util';
-import { displayBuildLogs, type BuildLog, parseLogLines } from '../logs';
+import type { BuildLog } from '../logs';
 import { progress } from '../output/progress';
 import ua from '../ua';
 import output from '../../output-manager';
@@ -24,6 +26,8 @@ import getProjectByNameOrId from '../projects/get-project-by-id-or-name';
 import type { ProjectNotFound } from '../errors-ts';
 import printEvents from '../events';
 import { printAlignedLabel } from '../output/print-aligned-label';
+import { printPrebuiltFilePathMapIgnoreWarning } from './print-prebuilt-filepathmap-warning';
+import { DeployTelemetryClient } from '../telemetry/commands/deploy';
 
 function printInspectUrl(inspectorUrl: string | null | undefined) {
   if (!inspectorUrl) {
@@ -42,15 +46,18 @@ export default async function processDeployment({
   skipAutoDetectionConfirmation,
   noWait,
   withFullLogs,
-  agent,
+  anonymous,
   manual,
   jsonOutput,
   linkedProject,
+  linkedProjectIsPartial,
+  gitMetadata,
   ...args
 }: {
   now: Now;
   path: string;
   requestBody: DeploymentOptions;
+  gitMetadata?: GitMetadata | Promise<GitMetadata | undefined>;
   quiet: boolean;
   force?: boolean;
   withCache?: boolean;
@@ -64,11 +71,12 @@ export default async function processDeployment({
   rootDirectory?: string | null;
   noWait?: boolean;
   withFullLogs?: boolean;
-  agent?: Agent;
+  anonymous?: boolean;
   bulkRedirectsPath?: string | null;
   manual?: boolean;
   jsonOutput?: boolean;
   linkedProject?: Project;
+  linkedProjectIsPartial?: boolean;
 }) {
   const {
     now,
@@ -84,6 +92,9 @@ export default async function processDeployment({
   } = args;
 
   const client = now._client;
+  const telemetry = new DeployTelemetryClient({
+    opts: { store: client.telemetryEventStore },
+  });
 
   // The ▲ gutter belongs on the Aliased row, which only prints when we wait
   // for alias assignment and domains are auto-assigned. When that row won't
@@ -92,13 +103,21 @@ export default async function processDeployment({
     !noWait && requestBody.autoAssignCustomDomains !== false;
 
   const { env = {} } = requestBody;
+  // @vercel/client keeps its own token snapshot. Refresh before taking it,
+  // rather than relying on the parallel project lookup to refresh later.
+  await client.ensureAuthorized();
   const token = now._token;
   if (!token) {
     throw new Error('Missing authentication token');
   }
 
+  const aliasAssignedController = new AbortController();
+  const onAliasAssigned = (event: DeploymentAliasAssignedEvent) => {
+    aliasAssignedController.abort(event);
+  };
+
   const clientOptions: VercelClientOptions = {
-    teamId: org.type === 'team' ? org.id : undefined,
+    teamId: now.currentTeam ?? undefined,
     apiUrl: now._apiUrl,
     token,
     debug: output.isDebugEnabled(),
@@ -111,20 +130,33 @@ export default async function processDeployment({
     rootDirectory,
     skipAutoDetectionConfirmation,
     archive,
-    agent,
+    dispatcher: getFetchDispatcher(),
     projectName,
     bulkRedirectsPath,
     manual,
+    aliasAssignedSignal: aliasAssignedController.signal,
   };
 
   const deployingSpinnerVal = isSettingUpProject
     ? 'Setting up project'
-    : `Deploying ${chalk.bold(`${org.slug}/${projectName}`)}`;
+    : `Deploying ${chalk.bold(
+        org.slug ? `${org.slug}/${projectName}` : projectName
+      )}`;
   output.spinner(deployingSpinnerVal, 0);
 
   // collect indications to show the user once
   // the deployment is done
   const indications = [];
+  let prebuiltFilePathMapWarning:
+    | { code: 'PREBUILT_FILEPATHMAP_IGNORED'; message: string }
+    | undefined;
+
+  const attachPrebuiltFilePathMapWarning = <T extends object>(payload: T) => {
+    if (prebuiltFilePathMapWarning) {
+      Object.assign(payload, { warning: prebuiltFilePathMapWarning });
+    }
+    return payload;
+  };
 
   let abortController: AbortController | undefined;
 
@@ -133,13 +165,64 @@ export default async function processDeployment({
     output.stopSpinner();
   }
 
+  const linkedProjectLookup =
+    linkedProjectIsPartial && linkedProject && !noWait
+      ? getProjectByNameOrId(
+          client,
+          linkedProject.id,
+          linkedProject.accountId
+        ).then(
+          project => ({ project }) as const,
+          error => ({ error }) as const
+        )
+      : undefined;
   let rollingRelease: ProjectRollingRelease | undefined =
     linkedProject?.rollingRelease;
-  let project: Project | ProjectNotFound | undefined = linkedProject;
+  let project: Project | ProjectNotFound | undefined = linkedProjectLookup
+    ? undefined
+    : linkedProject;
   let latestLogMessage = '';
 
+  async function resolveProject(): Promise<Project | ProjectNotFound> {
+    if (!linkedProjectLookup) {
+      return getProjectByNameOrId(client, projectName);
+    }
+
+    const result = await linkedProjectLookup;
+    if ('error' in result) {
+      throw result.error;
+    }
+    return result.project;
+  }
+
   try {
-    for await (const event of createDeployment(clientOptions, requestBody)) {
+    const deploymentOptions = Promise.resolve(gitMetadata).then(
+      gitMetadata => ({
+        ...requestBody,
+        ...(gitMetadata === undefined ? {} : { gitMetadata }),
+      })
+    );
+    for await (const event of createDeployment(
+      clientOptions,
+      deploymentOptions
+    )) {
+      if (
+        event.type === 'warning' &&
+        'code' in event &&
+        event.code === 'PREBUILT_FILEPATHMAP_IGNORED'
+      ) {
+        const message = String(event.payload);
+        prebuiltFilePathMapWarning = {
+          code: 'PREBUILT_FILEPATHMAP_IGNORED',
+          message,
+        };
+        printPrebuiltFilePathMapIgnoreWarning(message, telemetry);
+        if (client.stderr.isTTY) {
+          output.spinner(deployingSpinnerVal, 0);
+        }
+        continue;
+      }
+
       if (['tip', 'notice', 'warning'].includes(event.type)) {
         indications.push(event);
       }
@@ -149,7 +232,12 @@ export default async function processDeployment({
         output.debug(`Total files ${total.size}, ${missing.length} changed`);
 
         const missingSize = missing
-          .map((sha: string) => total.get(sha).data.length)
+          .map((sha: string) => {
+            const file = total.get(sha);
+            // Large files are streamed and have no in-memory `data`; fall back
+            // to the recorded `size`.
+            return file?.data?.length ?? file?.size ?? 0;
+          })
           .reduce((a: number, b: number) => a + b, 0);
         const totalSizeHuman = bytes.format(missingSize, { decimalPlaces: 1 });
 
@@ -189,9 +277,10 @@ export default async function processDeployment({
       }
 
       if (event.type === 'file-uploaded') {
+        const { file } = event.payload;
         output.debug(
-          `Uploaded: ${event.payload.file.names.join(' ')} (${bytes(
-            event.payload.file.data.length
+          `Uploaded: ${file.names.join(' ')} (${bytes(
+            file.data?.length ?? file.size ?? 0
           )})`
         );
       }
@@ -203,45 +292,71 @@ export default async function processDeployment({
 
         stopSpinner();
 
-        printInspectUrl(deployment.inspectorUrl);
+        // Anonymous deployment URLs sit behind the pool team's auth wall;
+        // the production alias printed on `alias-assigned` is the only
+        // reachable URL.
+        if (!anonymous) {
+          printInspectUrl(deployment.inspectorUrl);
 
-        const isProdDeployment = deployment.target === 'production';
-        const previewUrl = `https://${deployment.url}`;
+          const isProdDeployment = deployment.target === 'production';
+          const previewUrl = `https://${deployment.url}`;
 
-        printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
-        );
+          // When the user did not explicitly request a production deployment
+          // (no `--prod` / `--target=production`) but the API returned one
+          // anyway, surface a notice. This happens on a project's first
+          // deployment because the API assigns it to production when no prior
+          // production deployment exists.
+          if (isProdDeployment && !requestBody.target) {
+            indications.push({
+              type: 'notice',
+              payload:
+                'This is your project\u2019s first deployment, so it was assigned to production. Future deployments will be preview deployments unless you use --prod.',
+              link: 'https://vercel.com/docs/deployments/environments',
+            });
+          }
 
-        if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
-          process.stdout.write(`https://${event.payload.url}`);
+          printAlignedLabel(
+            isProdDeployment ? 'Production' : 'Preview',
+            chalk.cyan(previewUrl),
+            isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
+          );
+
+          if (!jsonOutput && (quiet || process.env.FORCE_TTY === '1')) {
+            process.stdout.write(`https://${event.payload.url}`);
+          }
         }
 
         if (noWait) {
-          return deployment;
+          (
+            deployment as Deployment & { indications: typeof indications }
+          ).indications = indications;
+          return attachPrebuiltFilePathMapWarning(deployment);
         }
 
         latestLogMessage =
           deployment.readyState === 'QUEUED' ? 'Queued…' : 'Building…';
 
-        if (withFullLogs) {
+        if (withFullLogs && !anonymous) {
+          const { displayBuildLogs } = await import('../logs');
           let promise: Promise<void>;
           ({ abortController, promise } = displayBuildLogs(
             client,
             deployment,
-            true
+            true,
+            onAliasAssigned
           ));
           promise.catch(error =>
             output.warn(`Failed to read build logs: ${error}`)
           );
-        } else {
+        } else if (!anonymous) {
+          const { parseLogLines } = await import('../logs');
           abortController = new AbortController();
           const promise = printEvents(
             client,
             deployment.id,
             {
               mode: 'logs',
+              onAliasAssigned,
               onEvent: (event: BuildLog) => {
                 if (!event.created) return;
                 const lines = parseLogLines(event);
@@ -269,18 +384,22 @@ export default async function processDeployment({
 
       if (event.type === 'canceled') {
         stopSpinner();
-        return event.payload;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
 
-      if (project === undefined) {
-        project = await getProjectByNameOrId(client, projectName);
+      if (
+        project === undefined &&
+        (!linkedProjectLookup || event.type === 'ready')
+      ) {
+        project = await resolveProject();
         rollingRelease = (project as Project)?.rollingRelease;
       }
 
       if (event.type === 'ready' && rollingRelease) {
         output.spinner('Releasing…', 0);
         stopSpinner();
-        return event.payload;
+        event.payload.indications = indications;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
 
       if (event.type === 'ready' && !withFullLogs) {
@@ -290,15 +409,20 @@ export default async function processDeployment({
         const v2ChecksPending =
           event.payload.checks?.['deployment-alias']?.state === 'pending';
 
-        stopSpinner();
-        process.stderr.write(eraseLines(2));
-        const isProdDeployment = event.payload.target === 'production';
-        const previewUrl = `https://${event.payload.url}`;
-        printAlignedLabel(
-          isProdDeployment ? 'Production' : 'Preview',
-          chalk.cyan(previewUrl),
-          isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
-        );
+        // Keep the event stream open while polling waits for alias assignment.
+        output.stopSpinner();
+        // Reprints the URL row below the cleared spinner. Without a spinner
+        // the row is already last, and erasing would remove real output.
+        if (!anonymous && !output.spinnersHidden) {
+          process.stderr.write(eraseLines(2));
+          const isProdDeployment = event.payload.target === 'production';
+          const previewUrl = `https://${event.payload.url}`;
+          printAlignedLabel(
+            isProdDeployment ? 'Production' : 'Preview',
+            chalk.cyan(previewUrl),
+            isProdDeployment && !aliasedRowWillPrint ? { gutter: '▲' } : {}
+          );
+        }
 
         if (v1ChecksPending || v2ChecksPending) {
           output.spinner('Running Checks…', 0);
@@ -315,12 +439,12 @@ export default async function processDeployment({
       // v1 checks failed
       if (event.type === 'checks-conclusion-failed') {
         stopSpinner();
-        return event.payload;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
 
       if (event.type === 'checks-v2-failed') {
         stopSpinner();
-        return event.payload;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
 
       // Handle error events
@@ -360,11 +484,28 @@ export default async function processDeployment({
         ) {
           const primaryDomain = event.payload.alias[0];
           const prodUrl = `https://${primaryDomain}`;
-          printAlignedLabel('Aliased', chalk.cyan(prodUrl), { gutter: '▲' });
+          if (anonymous) {
+            // Separates the URL from whatever the local build just printed.
+            output.print('\n');
+          }
+          printAlignedLabel(
+            anonymous ? 'Temporary' : 'Aliased',
+            chalk.cyan(prodUrl),
+            {
+              gutter: '▲',
+            }
+          );
+          if (
+            anonymous &&
+            !jsonOutput &&
+            (quiet || process.env.FORCE_TTY === '1')
+          ) {
+            process.stdout.write(prodUrl);
+          }
         }
 
         event.payload.indications = indications;
-        return event.payload;
+        return attachPrebuiltFilePathMapWarning(event.payload);
       }
     }
   } catch (err) {
@@ -388,8 +529,14 @@ export function handleErrorSolvableWithArchive(error: unknown) {
       error.errorName.startsWith('api-upload-');
     const isTooManyFilesLimit =
       'code' in error && error.code === 'too_many_files';
+    // A file that exceeds the server's per-request upload limit is rejected
+    // with HTTP 413 "Request Entity Too Large". Archiving uploads the
+    // deployment in smaller chunks, which stays under that limit.
+    const isEntityTooLarge = /entity too large|payload too large/i.test(
+      error.message
+    );
 
-    if (isUploadRateLimit || isTooManyFilesLimit) {
+    if (isUploadRateLimit || isTooManyFilesLimit || isEntityTooLarge) {
       return new UploadErrorMissingArchive(
         `${error.message}\n${archiveSuggestionText}`
       );

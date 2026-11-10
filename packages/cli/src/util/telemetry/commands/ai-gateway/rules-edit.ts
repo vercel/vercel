@@ -18,6 +18,13 @@ export class AiGatewayRulesEditTelemetryClient
     }
   }
 
+  trackCliFlagNoEnable(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('no-enable');
+    }
+  }
+
+  /** The old name of `--no-enable`. */
   trackCliFlagDisable(disable: boolean | undefined) {
     if (disable) {
       this.trackCliFlag('disable');
@@ -48,6 +55,12 @@ export class AiGatewayRulesEditTelemetryClient
   trackCliOptionFormat(format: string | undefined) {
     if (format) {
       this.trackCliOption({ option: 'format', value: format });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

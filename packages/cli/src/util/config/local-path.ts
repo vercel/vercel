@@ -5,19 +5,28 @@ import { InvalidLocalConfig } from '../errors-ts';
 import { ConflictingConfigFiles } from '../errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { VERCEL_DIR } from '../projects/link';
-import { isVercelTomlEnabled } from '../is-vercel-toml-enabled';
 
-export default function getLocalPathConfig(prefix: string) {
+/**
+ * The config file `--local-config` names, resolved against the invocation's
+ * cwd. It's read as is: no vercel.ts is compiled in its place or beside it.
+ */
+export function localConfigFlagPath(): string | undefined {
   const argv = parseArguments(process.argv.slice(2), {}, { permissive: true });
   const customPath = argv.flags['--local-config'];
-
-  // If `--local-config` flag was specified, then that takes priority
-  if (customPath) {
-    if (typeof customPath !== 'string') {
-      throw new InvalidLocalConfig(customPath);
-    }
-    return path.resolve(process.cwd(), customPath);
+  if (!customPath) return undefined;
+  if (typeof customPath !== 'string') {
+    throw new InvalidLocalConfig(customPath);
   }
+  return path.resolve(process.cwd(), customPath);
+}
+
+export default function getLocalPathConfig(
+  prefix: string,
+  useCompiledConfig = true
+) {
+  // If `--local-config` flag was specified, then that takes priority
+  const customPath = localConfigFlagPath();
+  if (customPath) return customPath;
 
   // Otherwise check for `vercel.json` or `vercel.toml`.
   // `now.json` is no longer supported.
@@ -26,7 +35,7 @@ export default function getLocalPathConfig(prefix: string) {
   const nowConfigPath = path.join(prefix, 'now.json');
 
   const vercelConfigExists = existsSync(vercelConfigPath);
-  const vercelTomlExists = isVercelTomlEnabled() && existsSync(vercelTomlPath);
+  const vercelTomlExists = existsSync(vercelTomlPath);
   const nowConfigExists = existsSync(nowConfigPath);
 
   const foundConfigs: string[] = [];
@@ -45,7 +54,7 @@ export default function getLocalPathConfig(prefix: string) {
   const compiledConfigPath = path.join(prefix, VERCEL_DIR, 'vercel.json');
   const compiledConfigExists = existsSync(compiledConfigPath);
 
-  if (compiledConfigExists) {
+  if (useCompiledConfig && compiledConfigExists) {
     return compiledConfigPath;
   }
 

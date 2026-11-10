@@ -1,15 +1,20 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
-import { outputAgentError, buildCommandWithYes } from '../../util/agent-output';
+import {
+  outputAgentError,
+  buildCommandWithYes,
+  withGlobalFlags as withClientGlobalFlags,
+} from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
+import {
+  parseSubcommandArguments,
+  type ParsedSubcommandArguments,
+} from '../../util/command-arguments';
 import {
   getRouteTypeLabel,
   isTargetTransform,
@@ -19,11 +24,6 @@ import {
   type Transform,
 } from '../../util/routes/types';
 
-export interface ParsedSubcommand {
-  args: string[];
-  flags: { [key: string]: any };
-}
-
 /**
  * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
  */
@@ -31,8 +31,9 @@ export function withGlobalFlags(
   client: Client,
   commandTemplate: string
 ): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
+  return withClientGlobalFlags(client, commandTemplate, {
+    preserveProject: true,
+  });
 }
 
 /**
@@ -59,24 +60,24 @@ export async function parseSubcommandArgs(
   argv: string[],
   command: Command,
   client?: Client
-): Promise<ParsedSubcommand | number> {
+): Promise<ParsedSubcommandArguments | number> {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(command.options);
 
   try {
-    // @ts-expect-error - TypeScript complains about the flags specification type
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseSubcommandArguments(argv, command);
   } catch (err) {
     if (client?.nonInteractive) {
       const rawMessage = err instanceof Error ? err.message : String(err);
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+        preserveProject: true,
+      });
       let message = rawMessage;
       let next: Array<{ command: string; when?: string }> = [
         {
           command: getCommandNamePlain(
             `routes ${command.name} ${flags.join(' ')}`.trim()
           ),
-          when: 'fix flags and retry',
+          when: 'fix options and retry',
         },
       ];
 
@@ -93,18 +94,21 @@ export async function parseSubcommandArgs(
           rawMessage
         );
 
-      if (isAiArgError && (command.name === 'add' || command.name === 'edit')) {
+      if (
+        isAiArgError &&
+        (command.name === 'add' || command.name === 'update')
+      ) {
         message =
           command.name === 'add'
             ? '--ai requires a description. Example: routes add --ai <description> --yes --non-interactive. Replace <description> with your text; use shell quotes if it contains spaces (e.g. --ai "Redirect /old to /new").'
-            : '--ai requires a description. Example: routes edit <name-or-id> --ai <description> --yes --non-interactive. Replace placeholders; use shell quotes for <description> if it contains spaces.';
+            : '--ai requires a description. Example: routes update <name-or-id> --ai <description> --yes --non-interactive. Replace placeholders; use shell quotes for <description> if it contains spaces.';
         next = [
           {
             command: withGlobalFlags(
               client,
               command.name === 'add'
                 ? `routes add --ai <description> --yes`
-                : `routes edit <name-or-id> --ai <description> --yes`
+                : `routes update <name-or-id> --ai <description> --yes`
             ),
             when: 'replace <description> with your text (quote it in the shell if it contains spaces), then run',
           },
@@ -112,7 +116,7 @@ export async function parseSubcommandArgs(
             command: getCommandNamePlain(
               `routes ${command.name} --help ${flags.join(' ')}`.trim()
             ),
-            when: 'see all flags',
+            when: 'see all options',
           },
         ];
       }
@@ -125,56 +129,16 @@ export async function parseSubcommandArgs(
           message,
           next,
         },
-        1
+        2
       );
       // Avoid printError if process.exit was mocked (tests).
-      return 1;
+      return 2;
     }
     printError(err);
-    return 1;
+    return 2;
   }
 
   return parsedArgs;
-}
-
-export async function ensureProjectLink(client: Client) {
-  const link = await getLinkedProject(client);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    if (client.nonInteractive) {
-      const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-      const cmd = getCommandNamePlain(`link ${flags.join(' ')}`.trim());
-      outputAgentError(
-        client,
-        {
-          status: AGENT_STATUS.ERROR,
-          reason: AGENT_REASON.NOT_LINKED,
-          userActionRequired: true,
-          message:
-            'Your codebase is not linked to a Vercel project. Run link first, then retry routes commands.',
-          next: [
-            {
-              command: cmd,
-              when: 'to link this directory to a project',
-            },
-          ],
-        },
-        1
-      );
-      return 1;
-    }
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
-    );
-    return 1;
-  }
-
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-
-  return link;
 }
 
 export async function confirmAction(
@@ -207,18 +171,6 @@ export async function confirmAction(
   }
 
   return await client.input.confirm(message, false);
-}
-
-export function validateRequiredArgs(
-  args: string[],
-  required: string[]
-): string | null {
-  for (let i = 0; i < required.length; i++) {
-    if (!args[i]) {
-      return `Missing required argument: ${required[i]}`;
-    }
-  }
-  return null;
 }
 
 /**
@@ -348,7 +300,7 @@ export async function offerAutoPromote(
 
   // Always inform the user that changes are staged
   output.print(
-    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('routes publish'))} to make it live, or ${chalk.cyan(getCommandName('routes discard-staging'))} to undo.`)}\n`
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(withGlobalFlags(client, 'routes publish'))} to make it live, or ${chalk.cyan(withGlobalFlags(client, 'routes discard-staging'))} to undo.`)}\n`
   );
 
   if (!hadExistingStagingVersion && !opts.skipPrompts) {
@@ -379,7 +331,7 @@ export async function offerAutoPromote(
     }
   } else if (hadExistingStagingVersion) {
     output.warn(
-      `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --diff'))} before promoting.`
+      `There are other staged changes. Review with ${chalk.cyan(withGlobalFlags(client, 'routes list --diff'))} before promoting.`
     );
   }
 }
@@ -529,9 +481,7 @@ export async function resolveRoutes(
         return null;
       }
       output.error(
-        `No route found matching "${identifier}". Run ${chalk.cyan(
-          getCommandName('routes list')
-        )} to see all routes.`
+        `No route found matching "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'routes list'))} to see all routes.`
       );
       return null;
     }
@@ -545,6 +495,7 @@ export async function resolveRoutes(
  * Find a version by ID, supporting partial ID matching.
  */
 export function findVersionById(
+  client: Client,
   versions: RouteVersion[],
   identifier: string
 ):
@@ -555,7 +506,7 @@ export function findVersionById(
   if (matchingVersions.length === 0) {
     return {
       error: `Version "${identifier}" not found. Run ${chalk.cyan(
-        getCommandName('routes list-versions')
+        withGlobalFlags(client, 'routes list-versions')
       )} to see available versions.`,
     };
   }

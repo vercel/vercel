@@ -1,0 +1,13 @@
+{
+  "probes": [
+    {
+      "logMustContain": "Detected Rails application"
+    },
+    {
+      "logMustContain": "Default web process: bundle exec rails server"
+    },
+    {
+      "logMustContain": "npm ci --include=dev"
+    }
+  ]
+}

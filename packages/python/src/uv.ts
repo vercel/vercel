@@ -12,7 +12,7 @@ import semver from 'semver';
 import { debug, NowBuildError } from '@vercel/build-utils';
 import { getVenvPythonBin } from './utils';
 
-export const UV_VERSION = '0.10.11';
+export const UV_VERSION = '0.13.5';
 // Minimum uv version we require at runtime. We currently require
 // 0.9.25 at least, since it adds `--exclude-newer-package
 // <pkg>=false`.
@@ -23,7 +23,7 @@ export const UV_CACHE_DIR_SUBPATH = ['.vercel', 'python', 'cache', 'uv'];
 
 // SHA-256 checksum for the Linux x86_64 uv tarball.  Update with UV_VERSION.
 export const UV_BINARY_CHECKSUM =
-  '5a360b0de092ddf4131f5313d0411b48c4e95e8107e40c3f8f2e9fcb636b3583';
+  'f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f';
 
 const isWin = process.platform === 'win32';
 const uvExec = isWin ? 'uv.exe' : 'uv';
@@ -135,6 +135,7 @@ export class UvRunner {
     frozen?: boolean;
     noBuild?: boolean;
     noInstallProject?: boolean;
+    onlyGroup?: string;
     pythonPlatform?: string;
   }): Promise<void> {
     const {
@@ -144,6 +145,7 @@ export class UvRunner {
       frozen,
       noBuild,
       noInstallProject,
+      onlyGroup,
       pythonPlatform,
     } = options;
     const args = ['sync', '--active', '--no-dev', '--link-mode', 'hardlink'];
@@ -157,6 +159,9 @@ export class UvRunner {
     }
     if (noInstallProject) {
       args.push('--no-install-project');
+    }
+    if (onlyGroup) {
+      args.push('--only-group', onlyGroup);
     }
     if (pythonPlatform) {
       args.push('--python-platform', pythonPlatform);
@@ -209,6 +214,11 @@ export class UvRunner {
 
   /**
    * Run a `uv pip` command (e.g., `uv pip install`).
+   *
+   * Only packages the builder adds on top of the user's dependencies are
+   * installed this way. Their pins carry no hashes, so the user's
+   * UV_REQUIRE_HASHES is dropped; uv also rejects `--no-require-hashes`
+   * while it is set.
    */
   async pip(options: {
     venvPath: string;
@@ -217,7 +227,28 @@ export class UvRunner {
   }): Promise<void> {
     const { venvPath, projectDir, args } = options;
     const fullArgs = ['pip', ...args];
-    await this.runUvCmd(fullArgs, projectDir, venvPath);
+    // `undefined` rather than omitted, because execa merges process.env back in.
+    await this.runUvCmd(fullArgs, projectDir, venvPath, {
+      UV_REQUIRE_HASHES: undefined,
+    });
+  }
+
+  /**
+   * Run a command through `uv run` inside the active virtual environment.
+   */
+  async run(options: {
+    venvPath: string;
+    projectDir: string;
+    args: string[];
+    env?: Record<string, string>;
+  }): Promise<{ stdout: string; stderr: string }> {
+    const { venvPath, projectDir, args, env } = options;
+    return this.runUvCmdWithOutput(
+      ['run', '--active', '--no-sync', ...args],
+      projectDir,
+      venvPath,
+      env
+    );
   }
 
   /**
@@ -243,7 +274,8 @@ export class UvRunner {
   private async runUvCmd(
     args: string[],
     cwd: string,
-    venvPath: string
+    venvPath: string,
+    env?: NodeJS.ProcessEnv
   ): Promise<void> {
     const pretty = `uv ${args.join(' ')}`;
     debug(`Running "${pretty}"...`);
@@ -251,13 +283,44 @@ export class UvRunner {
     try {
       await execa(this.uvPath, args, {
         cwd,
-        env: this.getVenvEnv(venvPath),
+        env: { ...this.getVenvEnv(venvPath), ...env },
       });
     } catch (err) {
       const error: Error & { code?: unknown } = new Error(
         `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
       );
       // retain code/signal to ensure it's treated as a build error
+      if (err && typeof err === 'object') {
+        if ('code' in err) {
+          error.code = (err as { code: number | string }).code;
+        } else if ('signal' in err) {
+          error.code = (err as { signal: string }).signal;
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  private async runUvCmdWithOutput(
+    args: string[],
+    cwd: string,
+    venvPath: string,
+    env?: Record<string, string>
+  ): Promise<{ stdout: string; stderr: string }> {
+    const pretty = `uv ${args.join(' ')}`;
+    debug(`Running "${pretty}"...`);
+
+    try {
+      const result = await execa(this.uvPath, args, {
+        cwd,
+        env: { ...this.getVenvEnv(venvPath), ...env },
+      });
+      return { stdout: result.stdout, stderr: result.stderr };
+    } catch (err) {
+      const error: Error & { code?: unknown } = new Error(
+        `Failed to run "${pretty}": ${err instanceof Error ? err.message : String(err)}`
+      );
       if (err && typeof err === 'object') {
         if ('code' in err) {
           error.code = (err as { code: number | string }).code;

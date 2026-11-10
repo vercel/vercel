@@ -2,8 +2,9 @@ import { packageName } from '../../util/pkg-name';
 import {
   forceOption,
   formatOption,
+  jsonOption,
   limitOption,
-  nextOption,
+  nextCursorOption,
   projectOption,
   yesOption,
 } from '../../util/arg-common';
@@ -14,11 +15,12 @@ export const listSubcommand = {
   description: 'Show all domains in a list',
   default: true,
   arguments: [],
-  options: [limitOption, nextOption, formatOption],
+  options: [limitOption, nextCursorOption, formatOption, jsonOption],
   examples: [
     {
-      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: `${packageName} domains ls --next 1584722256178`,
+      name: 'Show the next page, using the cursor from the previous output',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} domains list --next <CURSOR>`,
     },
   ],
 } as const;
@@ -33,22 +35,30 @@ export const inspectSubcommand = {
       required: true,
     },
   ],
-  options: [],
-  examples: [],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'JSON output',
+      value: `${packageName} domains inspect example.com --json`,
+    },
+  ],
 } as const;
 
 export const addSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Add a domain name that you already own to a Vercel Team',
+  description: 'Add a domain you already own to your team or a project',
   arguments: [
     {
       name: 'domain',
       required: true,
+      description: 'Domain name, such as example.com',
     },
     {
       name: 'project',
-      required: true,
+      required: false,
+      description:
+        'Optional project name; omit to add an apex domain to the team',
     },
   ],
   options: [
@@ -56,16 +66,22 @@ export const addSubcommand = {
       ...forceOption,
       shorthand: null,
       description:
-        'Force a domain name for a project and remove it from an existing one',
+        'Remove the current assignment, then add the domain to the requested project (a failed add can leave it unassigned)',
     },
   ],
   examples: [
     {
       name: 'Add a domain that you already own',
-      value: [
-        `${packageName} domains add domain-name.com`,
-        "Make sure the domain's DNS nameservers are at least 2 of the ones listed on https://vercel.com/edge-network",
-        `NOTE: Running ${packageName} alias will automatically register your domain if it's configured with these nameservers (no need to 'domains add')`,
+      value: [`${packageName} domains add domain-name.com`],
+    },
+  ],
+  helpSections: [
+    {
+      title: 'DNS Configuration',
+      body: [
+        "Without a project, adds an apex domain to your team and creates its DNS zone. To use Vercel DNS, configure the domain's nameservers at your registrar.",
+        "With a project, assigns the domain to it. External DNS providers are supported; follow the project's DNS configuration instructions.",
+        '`vercel alias` can add an existing domain to your team while assigning it to a deployment, so a separate `domains add` step may not be needed.',
       ],
     },
   ],
@@ -101,7 +117,7 @@ export const priceSubcommand = {
       multiple: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Price quote for a domain',
@@ -113,7 +129,7 @@ export const priceSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains price example.com --format json`,
+      value: `${packageName} domains price example.com --json`,
     },
   ],
 } as const;
@@ -147,7 +163,7 @@ export const searchSubcommand = {
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       argument: 'NUMBER',
       description:
@@ -171,6 +187,7 @@ export const searchSubcommand = {
       deprecated: false,
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -191,10 +208,30 @@ export const searchSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains search acme --format=json`,
+      value: `${packageName} domains search acme --json`,
     },
   ],
 } as const;
+
+const amountOption = {
+  name: 'amount',
+  shorthand: null,
+  type: String,
+  argument: 'USD',
+  deprecated: false,
+  description:
+    'Price a person approved for this charge, in USD. Required without a terminal; nothing is charged if the price changed',
+} as const;
+
+const contactOption = <Name extends string>(name: Name, description: string) =>
+  ({
+    name,
+    shorthand: null,
+    type: String,
+    argument: 'TEXT',
+    deprecated: false,
+    description,
+  }) as const;
 
 export const buySubcommand = {
   name: 'buy',
@@ -206,14 +243,66 @@ export const buySubcommand = {
       required: true,
     },
   ],
-  options: [],
-  examples: [],
+  options: [
+    amountOption,
+    {
+      name: 'use-billing-details',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      rejectsValue: true,
+      description:
+        "Fill registrant details you don't pass from the team's billing info (email and address). An address option that replaces a billing value skips the whole billing address",
+    },
+    contactOption('first-name', 'Registrant first name'),
+    contactOption('last-name', 'Registrant last name'),
+    contactOption('email', 'Registrant email'),
+    contactOption(
+      'phone',
+      'Registrant phone with country code, such as +11122233344'
+    ),
+    contactOption('address', 'Registrant street address'),
+    contactOption('city', 'Registrant city'),
+    contactOption('state', 'Registrant state or province'),
+    contactOption('zip', 'Registrant postal or ZIP code'),
+    contactOption('country', 'Registrant 2-letter country code, such as US'),
+    contactOption('company', 'Registrant company name (optional)'),
+    {
+      name: 'auto-renew',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      rejectsValue: true,
+      description:
+        'Renew the domain automatically at the end of each term. Without a terminal, pass --auto-renew or --no-auto-renew',
+    },
+    {
+      name: 'no-auto-renew',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      rejectsValue: true,
+      description: "Don't renew the domain automatically",
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Buy a domain (shows the price and asks for contact details)',
+      value: `${packageName} domains buy example.com`,
+    },
+    {
+      name: 'From an agent or script: buy at the price a person approved, with the billing info for the address',
+      value: `${packageName} domains buy example.com --scope my-team --amount 20.00 --use-billing-details --first-name Jane --last-name Doe --phone +11122233344 --no-auto-renew`,
+    },
+  ],
 } as const;
 
 export const checkSubcommand = {
   name: 'check',
   aliases: [],
-  description: 'Check if a domain is available to buy',
+  description: 'Check whether one or more domains are available to buy',
   arguments: [
     {
       name: 'domain',
@@ -221,7 +310,7 @@ export const checkSubcommand = {
       multiple: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Check if a domain is available',
@@ -233,7 +322,7 @@ export const checkSubcommand = {
     },
     {
       name: 'JSON output',
-      value: `${packageName} domains check example.com --format json`,
+      value: `${packageName} domains check example.com --json`,
     },
   ],
 } as const;
@@ -283,6 +372,97 @@ export const transferInSubcommand = {
   examples: [],
 } as const;
 
+export const autoRenewEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description: 'Turn on automatic renewal for a registered domain',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Turn on automatic renewal',
+      value: `${packageName} domains auto-renew enable example.com`,
+    },
+    {
+      name: 'Turn on automatic renewal and print the result as JSON',
+      value: `${packageName} domains auto-renew enable example.com --json`,
+    },
+  ],
+} as const;
+
+export const autoRenewDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Turn off automatic renewal for a registered domain',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Turn off automatic renewal',
+      value: `${packageName} domains auto-renew disable example.com`,
+    },
+  ],
+} as const;
+
+export const autoRenewSubcommand = {
+  name: 'auto-renew',
+  aliases: [],
+  description: 'Turn automatic renewal on or off for a registered domain',
+  arguments: [],
+  subcommands: [autoRenewEnableSubcommand, autoRenewDisableSubcommand],
+  // The old `auto-renew <domain> <on|off>` form reads these too.
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Turn on automatic renewal',
+      value: `${packageName} domains auto-renew enable example.com`,
+    },
+    {
+      name: 'Turn off automatic renewal',
+      value: `${packageName} domains auto-renew disable example.com`,
+    },
+    {
+      name: 'JSON output',
+      value: `${packageName} domains auto-renew enable example.com --json`,
+    },
+  ],
+} as const;
+
+export const renewSubcommand = {
+  descriptionTone: 'normal',
+  name: 'renew',
+  aliases: [],
+  description:
+    'Renew a registered domain before it expires (charges your account)',
+  arguments: [
+    {
+      name: 'domain',
+      required: true,
+    },
+  ],
+  options: [amountOption, formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Renew a domain (shows the renewal price and asks to confirm)',
+      value: `${packageName} domains renew example.com`,
+    },
+    {
+      name: 'Renew at an approved price without prompting, and print the result as JSON',
+      value: `${packageName} domains renew example.com --scope my-team --amount 20.00 --json`,
+    },
+  ],
+} as const;
+
 export const verifySubcommand = {
   name: 'verify',
   aliases: [],
@@ -305,6 +485,7 @@ export const verifySubcommand = {
         'Check DNS for the exact domain only, without falling back to the parent zone configuration',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -317,7 +498,7 @@ export const verifySubcommand = {
     },
     {
       name: 'JSON output (the exit code is non-zero when the domain is misconfigured or unverified)',
-      value: `${packageName} domains verify example.com --format json`,
+      value: `${packageName} domains verify example.com --json`,
     },
     {
       name: 'Agent-friendly output with status, reason, and suggested next commands',
@@ -342,8 +523,21 @@ export const domainsCommand = {
     searchSubcommand,
     transferInSubcommand,
     removeSubcommand,
+    renewSubcommand,
+    autoRenewSubcommand,
     verifySubcommand,
   ],
   options: [],
-  examples: [],
+  examples: [
+    {
+      name: 'Renew a registered domain before it expires',
+      placeholders: ['<DOMAIN>'],
+      value: `${packageName} domains renew <DOMAIN>`,
+    },
+    {
+      name: 'Turn on automatic renewal for a registered domain',
+      placeholders: ['<DOMAIN>'],
+      value: `${packageName} domains auto-renew enable <DOMAIN>`,
+    },
+  ],
 } as const;

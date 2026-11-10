@@ -50,6 +50,10 @@ export interface PassportIdentity {
   environment?: string;
 }
 
+export interface PassportIdentityWithRequiredToken extends PassportIdentity {
+  token: string;
+}
+
 export interface HeadersLike {
   get(name: string): string | null | undefined;
 }
@@ -121,12 +125,24 @@ export interface PassportIdentityOptions {
   verifyOptions?: PassportVerifyOptions;
 }
 
+export type VerifyIdentityInput =
+  | string
+  | RequestLike
+  | HeadersLike
+  | HeaderRecord
+  | PassportIdentityInput;
+
 const PASSPORT_ISSUER = 'https://passport.vercel.com';
 const VERCEL_OIDC_ISSUER = 'https://oidc.vercel.com';
 const PASSPORT_JWKS = createRemoteJWKSet(
   new URL(`${VERCEL_OIDC_ISSUER}/.well-known/jwks`)
 );
 const DEFAULT_ALGORITHMS = ['RS256'];
+const PASSPORT_CHUNKED_COOKIE_V1_PREFIX = '__vc_chunked_v1:';
+const PASSPORT_COOKIE_V1_GENERATION_LENGTH = 32;
+// This is a defensive reader bound, intentionally independent of and higher
+// than Proxy's current writer limit so that limit can evolve independently.
+const PASSPORT_COOKIE_READ_MAX_CHUNKS = 100;
 const SYMBOL_FOR_REQ_CONTEXT = Symbol.for('@vercel/request-context');
 let hasWarnedAboutDevelopmentIdentity = false;
 
@@ -159,11 +175,11 @@ export async function getIdentity(
   const headers = normalized.headers ?? context.headers;
   const tokenFromInput = normalized.token;
   const headerToken = getHeader(headers, PASSPORT_HEADER_NAME);
-  const cookieToken = getCookie(
-    normalized.cookies,
-    normalized.cookieHeader,
-    PASSPORT_COOKIE_NAME
-  );
+  const cookieHeader = normalized.cookieHeader ?? getHeader(headers, 'cookie');
+  const cookieToken =
+    tokenFromInput || headerToken
+      ? undefined
+      : await getCookie(normalized.cookies, cookieHeader, PASSPORT_COOKIE_NAME);
   const token =
     tokenFromInput ?? headerToken ?? cookieToken ?? getEnvToken(options);
   const tokenSource: TokenSource = tokenFromInput
@@ -199,12 +215,70 @@ export async function getIdentity(
   return null;
 }
 
-function createIdentity(
-  token: string | null,
+/**
+ * Read the Passport identity using `getIdentity` and require a non-empty token.
+ *
+ * @throws {PassportIdentityError} If no Passport identity token is available.
+ */
+export async function requireIdentity(
+  input?: RequestLike | HeadersLike | HeaderRecord | PassportIdentityInput,
+  options: PassportIdentityOptions = {}
+): Promise<PassportIdentityWithRequiredToken> {
+  const identity = await getIdentity(input, options);
+  if (!identity?.token) {
+    throw new PassportIdentityError('Passport identity token was not found.');
+  }
+  return identity as PassportIdentityWithRequiredToken;
+}
+
+/**
+ * Verify a Passport identity token and return its identity claims.
+ *
+ * Use this helper when a Passport token is forwarded to another backend, such
+ * as through an `Authorization: Bearer <token>` header. Unlike `getIdentity`,
+ * this helper always verifies the token and never synthesizes a local
+ * development identity.
+ */
+export async function verifyIdentity(
+  input: VerifyIdentityInput,
+  options: PassportVerifyOptions = {}
+): Promise<PassportIdentityWithRequiredToken> {
+  const normalized =
+    typeof input === 'string' ? { token: input } : normalizeInput(input);
+  const headers = normalized.headers;
+  const tokenFromInput = normalized.token;
+  const authorizationToken = getAuthorizationBearer(headers);
+  const headerToken = getHeader(headers, PASSPORT_HEADER_NAME);
+  const cookieHeader = normalized.cookieHeader ?? getHeader(headers, 'cookie');
+  const cookieToken =
+    tokenFromInput || authorizationToken || headerToken
+      ? undefined
+      : await getCookie(normalized.cookies, cookieHeader, PASSPORT_COOKIE_NAME);
+  const token =
+    tokenFromInput ?? authorizationToken ?? headerToken ?? cookieToken;
+
+  if (!token) {
+    throw new PassportIdentityError('Passport identity token was not found.');
+  }
+
+  const tokenSource: TokenSource = tokenFromInput
+    ? 'local'
+    : authorizationToken || headerToken
+      ? 'header'
+      : cookieToken
+        ? 'cookie'
+        : 'local';
+  const payload = await verifyPassportToken(token, options);
+
+  return createIdentity(token, tokenSource, true, payload);
+}
+
+function createIdentity<Token extends string | null>(
+  token: Token,
   tokenSource: TokenSource,
   verified: boolean,
   payload: PassportIdentityPayload
-): PassportIdentity {
+): PassportIdentity & { token: Token } {
   validatePassportPayload(payload);
 
   return {
@@ -299,7 +373,92 @@ function getHeader(
   return Array.isArray(value) ? value[0] : value;
 }
 
-function getCookie(
+function getAuthorizationBearer(
+  headers: HeadersLike | HeaderRecord | undefined
+): string | undefined {
+  const authorization = getHeader(headers, 'authorization');
+  const match = authorization?.match(/^Bearer\s+(.+)$/i);
+
+  return match?.[1];
+}
+
+async function getCookie(
+  cookies: CookieLike | undefined,
+  cookieHeader: string | undefined,
+  name: string
+): Promise<string | undefined> {
+  const storedValue = getCookieValue(cookies, cookieHeader, name);
+  if (!storedValue?.startsWith(PASSPORT_CHUNKED_COOKIE_V1_PREFIX)) {
+    return storedValue;
+  }
+
+  const match = storedValue.match(/^__vc_chunked_v1:([0-9]+):([0-9a-f]{64})$/);
+  const count = Number(match?.[1]);
+  const checksum = match?.[2];
+  if (
+    !Number.isInteger(count) ||
+    count < 1 ||
+    count > PASSPORT_COOKIE_READ_MAX_CHUNKS ||
+    !checksum
+  ) {
+    throw new PassportIdentityError(
+      'Passport session cookie manifest is invalid.'
+    );
+  }
+
+  const generation = checksum.slice(0, PASSPORT_COOKIE_V1_GENERATION_LENGTH);
+  const chunks: string[] = [];
+  for (let index = 1; index <= count; index++) {
+    const chunk = getCookieValue(
+      cookies,
+      cookieHeader,
+      `${name}.${index}.${generation}`
+    );
+    if (chunk === undefined) {
+      throw new PassportIdentityError(
+        `Passport session cookie is missing chunk ${index} of ${count}.`
+      );
+    }
+    chunks.push(chunk);
+  }
+
+  const value = chunks.join('');
+  const actualChecksum = await sha256(value);
+  if (actualChecksum !== checksum) {
+    throw new PassportIdentityError(
+      'Passport session cookie checksum does not match its chunks.'
+    );
+  }
+
+  return value;
+}
+
+async function sha256(value: string): Promise<string> {
+  const runtimeCrypto = (
+    globalThis as typeof globalThis & {
+      crypto?: {
+        subtle: {
+          digest(algorithm: string, data: Uint8Array): Promise<ArrayBuffer>;
+        };
+      };
+    }
+  ).crypto;
+  if (!runtimeCrypto) {
+    throw new PassportIdentityError(
+      'Passport session cookie verification is unavailable in this runtime.'
+    );
+  }
+
+  const digest = await runtimeCrypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(value)
+  );
+  return [...new Uint8Array(digest)]
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+function getCookieValue(
   cookies: CookieLike | undefined,
   cookieHeader: string | undefined,
   name: string

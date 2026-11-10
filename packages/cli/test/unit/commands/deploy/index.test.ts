@@ -5,13 +5,21 @@ import fs from 'fs-extra';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
 import { fileNameSymbol } from '@vercel/client';
+import * as vercelClient from '@vercel/client';
+import * as fetchUtil from '../../../../src/util/fetch';
+import * as oauth from '../../../../src/util/oauth';
+import { Response } from '../../../../src/util/fetch-primitives';
 import { client } from '../../../mocks/client';
 import deploy from '../../../../src/commands/deploy';
 import {
   setupUnitFixture,
   setupTmpDir,
 } from '../../../helpers/setup-unit-fixture';
-import { defaultProject, useProject } from '../../../mocks/project';
+import {
+  defaultProject,
+  useProject,
+  useUnknownProject,
+} from '../../../mocks/project';
 import { useDeployment, useBuildLogs } from '../../../mocks/deployment';
 import { useTeams, createTeam } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
@@ -20,6 +28,7 @@ import sleep from '../../../../src/util/sleep';
 import * as createDeployModule from '../../../../src/util/deploy/create-deploy';
 import { BuildError } from '../../../../src/util/errors-ts';
 import type Now from '../../../../src/util';
+import type { Deployment } from '@vercel-internals/types';
 
 describe('deploy', () => {
   describe('--non-interactive', () => {
@@ -56,7 +65,7 @@ describe('deploy', () => {
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
 
-    it('outputs error JSON when deploy continue is missing --id', async () => {
+    it('outputs error JSON when deploy continue is missing --deployment', async () => {
       vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
         throw new Error('exit');
       });
@@ -74,8 +83,13 @@ describe('deploy', () => {
       expect(payload).toMatchObject({
         status: 'error',
         reason: 'missing_id',
-        message: expect.stringMatching(/--id|required/),
-        next: expect.any(Array),
+        message:
+          'Missing required --deployment option. Provide the deployment ID to continue.',
+        next: [
+          expect.objectContaining({
+            command: 'vercel deploy continue --deployment <DEPLOYMENT>',
+          }),
+        ],
       });
 
       vi.restoreAllMocks();
@@ -89,11 +103,13 @@ describe('deploy', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = deploy(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       const helpOutput = client.stderr.getFullOutput();
       expect(helpOutput).toContain('--dry');
-      expect(helpOutput).toContain('vercel deploy --dry --format=json');
+      expect(helpOutput).toContain('vercel deploy --dry --json');
+      expect(helpOutput).toContain('--turbo');
+      expect(helpOutput).toContain('vercel deploy --turbo');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -103,20 +119,34 @@ describe('deploy', () => {
     });
   });
 
-  it('should reject deploying a single file', async () => {
-    client.setArgv('deploy', __filename);
-    const exitCodePromise = deploy(client);
-    await expect(client.stderr).toOutput(
-      `Error: Support for single file deployments has been removed.\nLearn More: https://vercel.link/no-single-file-deployments\n`
-    );
-    const exitCode = await exitCodePromise;
-    expect(exitCode, 'exit code for "deploy"').toEqual(1);
-    expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      {
-        key: 'argument:project-path',
-        value: '[REDACTED]',
-      },
-    ]);
+  it('sends buildMachine turbo in the deployment creation request', async () => {
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: Record<string, unknown> | undefined;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      body = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_build_machine_test',
+        readyState: 'BUILDING',
+        url: 'build-machine-test.vercel.app',
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv('deploy', '--turbo', '--no-wait');
+
+    expect(await deploy(client)).toEqual(0);
+    expect(body).toMatchObject({ buildMachine: 'turbo' });
   });
 
   it('should reject deploying multiple files', async () => {
@@ -251,6 +281,49 @@ describe('deploy', () => {
         expect.objectContaining({ path: 'api/index.js' }),
         expect.objectContaining({ path: 'public/logo.svg' }),
       ])
+    );
+  });
+
+  it('should include prebuilt filePathMap collisions in dry-run JSON', async () => {
+    const cwd = setupTmpDir('deploy-dry-prebuilt-warning');
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'deploy-dry-prebuilt-warning',
+      name: 'deploy-dry-prebuilt-warning',
+    });
+    await fs.outputFile(join(cwd, 'README.md'), 'ignored source');
+    await fs.outputFile(join(cwd, '.vercelignore'), 'README.md\n');
+    await fs.outputJson(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'deploy-dry-prebuilt-warning',
+    });
+    await fs.outputJson(join(cwd, '.vercel/output/config.json'), {
+      version: 3,
+    });
+    await fs.outputJson(
+      join(cwd, '.vercel/output/functions/api/example.func/.vc-config.json'),
+      {
+        runtime: 'nodejs20.x',
+        handler: 'index.js',
+        filePathMap: {
+          'README.md': 'README.md',
+        },
+      }
+    );
+
+    client.setArgv('deploy', cwd, '--prebuilt', '--dry', '--format=json');
+    const exitCode = await deploy(client);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+
+    expect(exitCode).toEqual(0);
+    expect(payload.warning).toMatchObject({
+      code: 'PREBUILT_FILEPATHMAP_IGNORED',
+      message: expect.stringContaining('README.md'),
+    });
+    expect(client.stderr.getFullOutput()).toContain(
+      '`.vercelignore` excludes 1 file the prebuilt functions need'
     );
   });
 
@@ -586,7 +659,7 @@ describe('deploy', () => {
     client.setArgv(
       'deploy',
       'continue',
-      '--id',
+      '--deployment',
       'dpl_continue',
       '--archive=tgz'
     );
@@ -601,10 +674,49 @@ describe('deploy', () => {
         value: 'continue',
       },
       {
+        key: 'option:deployment',
+        value: '[REDACTED]',
+      },
+      {
         key: 'option:archive',
         value: 'tgz',
       },
     ]);
+  });
+
+  it('passes the configured dispatcher to deploy continue', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({ ...defaultProject, name: 'static', id: 'static' });
+    const dispatcher = { dispatch: vi.fn() };
+    const getDispatcher = vi
+      .spyOn(fetchUtil, 'getFetchDispatcher')
+      .mockReturnValue(dispatcher);
+    const continueDeployment = vi
+      .spyOn(vercelClient, 'continueDeployment')
+      .mockImplementation(async function* () {
+        yield {
+          type: 'created',
+          payload: {
+            id: 'dpl_continue',
+            url: 'continue.vercel.app',
+            readyState: 'READY',
+            aliasAssigned: true,
+            alias: [],
+          },
+        };
+      });
+    try {
+      client.cwd = setupUnitFixture('commands/deploy/static-with-build-output');
+      client.setArgv('deploy', 'continue', '--deployment', 'dpl_continue');
+      expect(await deploy(client)).toBe(0);
+      expect(continueDeployment).toHaveBeenCalledWith(
+        expect.objectContaining({ dispatcher })
+      );
+    } finally {
+      getDispatcher.mockRestore();
+      continueDeployment.mockRestore();
+    }
   });
 
   it('should mark a manual deployment as errored with `deploy continue --error`', async () => {
@@ -637,7 +749,7 @@ describe('deploy', () => {
     client.setArgv(
       'deploy',
       'continue',
-      '--id',
+      '--deployment',
       'dpl_continue',
       '--error',
       'External CI failed'
@@ -646,10 +758,15 @@ describe('deploy', () => {
     expect(exitCode).toEqual(0);
     expect(body).toEqual({ errorMessage: 'External CI failed' });
     expect(teamId).toEqual('team_dummy');
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:continue',
         value: 'continue',
+      },
+      {
+        key: 'option:deployment',
+        value: '[REDACTED]',
       },
     ]);
   });
@@ -681,13 +798,122 @@ describe('deploy', () => {
     client.setArgv(
       'deploy',
       'continue',
-      '--id',
+      '--deployment',
       'dpl_continue',
       '--error=External CI failed'
     );
     const exitCode = await deploy(client);
     expect(exitCode).toEqual(0);
     expect(body).toEqual({ errorMessage: 'External CI failed' });
+  });
+
+  it('still accepts the deprecated `deploy continue --id` with a warning', async () => {
+    useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      name: 'static',
+      id: 'static',
+    });
+
+    let body: any;
+    client.scenario.post(`/deployments/dpl_continue/continue`, (req, res) => {
+      body = req.body;
+      res.json({
+        id: 'dpl_continue',
+        url: 'continue.vercel.app',
+        readyState: 'ERROR',
+        errorCode: 'BUILD_FAILED',
+        errorMessage: body.errorMessage,
+        aliasAssigned: false,
+        alias: [],
+      });
+    });
+
+    client.cwd = setupUnitFixture('commands/deploy/static');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--id',
+      'dpl_continue',
+      '--error',
+      'External CI failed'
+    );
+    const exitCode = await deploy(client);
+    expect(exitCode).toEqual(0);
+    expect(body).toEqual({ errorMessage: 'External CI failed' });
+    expect(client.stderr.getFullOutput()).toContain(
+      '! --id is deprecated. Use --deployment.'
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:continue',
+        value: 'continue',
+      },
+      {
+        key: 'option:id',
+        value: '[REDACTED]',
+      },
+    ]);
+  });
+
+  it('rejects `deploy continue` with both --deployment and --id before any request', async () => {
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--deployment',
+      'dpl_a',
+      '--id',
+      'dpl_b'
+    );
+    expect(await deploy(client)).toEqual(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      "Can't use --deployment with --id."
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    fetch.mockRestore();
+  });
+
+  it('rejects `deploy continue` with an empty --deployment before any request', async () => {
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv('deploy', 'continue', '--deployment=');
+    expect(await deploy(client)).toEqual(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      "--deployment can't be empty."
+    );
+    expect(fetch).not.toHaveBeenCalled();
+    fetch.mockRestore();
+  });
+
+  it('keeps reporting an empty deprecated --id as missing_id', async () => {
+    client.nonInteractive = true;
+    client.setArgv('deploy', 'continue', '--id=');
+    vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    expect(await deploy(client)).toEqual(2);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'error',
+      reason: 'missing_id',
+    });
+    vi.restoreAllMocks();
+  });
+
+  it('writes a JSON error for `deploy continue` with --deployment and --id in non-interactive mode', async () => {
+    client.nonInteractive = true;
+    client.setArgv(
+      'deploy',
+      'continue',
+      '--deployment',
+      'dpl_a',
+      '--id',
+      'dpl_b'
+    );
+    expect(await deploy(client)).toEqual(2);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'error',
+      reason: 'invalid_arguments',
+      message: "Can't use --deployment with --id.",
+    });
   });
 
   it('should pass flag to skip custom domain assignment', async () => {
@@ -848,6 +1074,491 @@ describe('deploy', () => {
     expect(
       uploadingLines[4].startsWith('Uploading [====================]')
     ).toEqual(true);
+  });
+
+  it('should keep passing teamId for normal linked team deploys', async () => {
+    const originalVercelTeamId = process.env.VERCEL_TEAM_ID;
+    delete process.env.VERCEL_TEAM_ID;
+
+    try {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      let createTeamId: unknown;
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        createTeamId = req.query.teamId;
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: 'dpl_normal_team',
+          url: 'normal-team.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: true,
+          alias: [],
+          target: 'preview',
+        });
+      });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+
+      expect(exitCode).toEqual(0);
+      expect(createTeamId).toEqual('team_dummy');
+    } finally {
+      if (originalVercelTeamId === undefined) {
+        delete process.env.VERCEL_TEAM_ID;
+      } else {
+        process.env.VERCEL_TEAM_ID = originalVercelTeamId;
+      }
+    }
+  });
+
+  describe('linked deployment authentication', () => {
+    let deploymentTokens: (string | undefined)[];
+
+    beforeEach(async () => {
+      const cwd = setupUnitFixture('commands/deploy/static');
+      await fs.writeJSON(join(cwd, '.vercel/project.json'), {
+        orgId: 'team_dummy',
+        projectId: 'prj_static',
+        projectName: 'static',
+      });
+      client.cwd = cwd;
+      deploymentTokens = [];
+
+      // Exercise the real refresh logic without using saved credentials or
+      // writing the developer's global config.
+      vi.spyOn(client, 'persistAuthConfig').mockImplementation(() => {});
+      vi.spyOn(client, 'writeToConfigFile').mockImplementation(() => {});
+      vi.spyOn(oauth, 'refreshTokenRequest').mockImplementation(async () => {
+        return new Response(
+          JSON.stringify({
+            access_token: 'refreshed_access_token',
+            token_type: 'Bearer',
+            expires_in: 3600,
+            refresh_token: 'rotated_refresh_token',
+          }),
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+      });
+
+      client.scenario.get('/v9/projects/prj_static', (_req, res) => {
+        res.json({
+          ...defaultProject,
+          accountId: 'team_dummy',
+          id: 'prj_static',
+          name: 'static',
+        });
+      });
+      client.scenario.post('/v13/deployments', (req, res) => {
+        deploymentTokens.push(req.headers.authorization);
+        res.json({
+          creator: { uid: 'user_dummy', username: 'user_dummy' },
+          id: 'dpl_refreshed_token',
+          url: 'refreshed-token.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: true,
+          alias: [],
+          target: 'preview',
+        });
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it.each([
+      false,
+      true,
+    ])('refreshes an expired token before deployment creation (noWait=%s)', async noWait => {
+      client.authConfig = {
+        ...client.authConfig,
+        token: 'expired_access_token',
+        refreshToken: 'saved_refresh_token',
+        expiresAt: 0,
+      };
+      client.setArgv('deploy', ...(noWait ? ['--no-wait'] : []));
+
+      expect(await deploy(client)).toBe(0);
+      expect(deploymentTokens).toEqual(['Bearer refreshed_access_token']);
+      expect(oauth.refreshTokenRequest).toHaveBeenCalledExactlyOnceWith({
+        refresh_token: 'saved_refresh_token',
+      });
+      expect(client.authConfig).toMatchObject({
+        token: 'refreshed_access_token',
+        refreshToken: 'rotated_refresh_token',
+      });
+      expect(client.persistAuthConfig).toHaveBeenCalledOnce();
+      expect(client.stdout.getFullOutput()).not.toContain('access_token');
+      expect(client.stderr.getFullOutput()).not.toContain('access_token');
+    });
+
+    it.each([
+      3600,
+      undefined,
+    ])('does not refresh a usable token (expiresIn=%s)', async expiresIn => {
+      client.authConfig = {
+        ...client.authConfig,
+        expiresAt:
+          expiresIn === undefined
+            ? undefined
+            : Math.floor(Date.now() / 1000) + expiresIn,
+      };
+      client.setArgv('deploy');
+
+      expect(await deploy(client)).toBe(0);
+      expect(deploymentTokens).toEqual(['Bearer token_dummy']);
+      expect(oauth.refreshTokenRequest).not.toHaveBeenCalled();
+      expect(client.persistAuthConfig).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      'flag',
+      'env',
+    ] as const)('uses an explicit %s token without refreshing', async tokenSource => {
+      client.authConfig = {
+        token: 'explicit_access_token',
+        tokenSource,
+        skipWrite: true,
+      };
+      client.setArgv('deploy', '--no-wait');
+
+      expect(await deploy(client)).toBe(0);
+      expect(deploymentTokens).toEqual(['Bearer explicit_access_token']);
+      expect(oauth.refreshTokenRequest).not.toHaveBeenCalled();
+      expect(client.persistAuthConfig).not.toHaveBeenCalled();
+    });
+
+    it('does not create a deployment when an expired login has no refresh token', async () => {
+      client.authConfig = {
+        ...client.authConfig,
+        expiresAt: 0,
+      };
+      client.setArgv('deploy');
+
+      expect(await deploy(client)).toBe(1);
+      expect(deploymentTokens).toEqual([]);
+      expect(oauth.refreshTokenRequest).not.toHaveBeenCalled();
+      expect(client.authConfig.token).toBeUndefined();
+      expect(client.stderr.getFullOutput()).toContain(
+        'Missing authentication token'
+      );
+    });
+
+    it('does not create a deployment when the refresh request throws', async () => {
+      client.authConfig = {
+        ...client.authConfig,
+        token: 'expired_access_token',
+        refreshToken: 'saved_refresh_token',
+        expiresAt: 0,
+      };
+      vi.mocked(oauth.refreshTokenRequest).mockRejectedValueOnce(
+        new Error('Token refresh connection failed')
+      );
+      client.setArgv('deploy');
+
+      expect(await deploy(client)).toBe(1);
+      expect(deploymentTokens).toEqual([]);
+      expect(oauth.refreshTokenRequest).toHaveBeenCalledOnce();
+      expect(client.stderr.getFullOutput()).toContain(
+        'Token refresh connection failed'
+      );
+    });
+
+    it('does not create a deployment when a non-interactive refresh fails', async () => {
+      client.authConfig = {
+        ...client.authConfig,
+        token: 'expired_access_token',
+        refreshToken: 'invalid_refresh_token',
+        expiresAt: 0,
+      };
+      vi.mocked(oauth.refreshTokenRequest).mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: 'invalid_grant',
+            error_description: 'Refresh token is invalid.',
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+      client.nonInteractive = true;
+      client.setArgv('deploy', '--non-interactive', '--no-wait');
+
+      expect(await deploy(client)).toBe(1);
+      expect(deploymentTokens).toEqual([]);
+      expect(client.authConfig.token).toBeUndefined();
+      expect(oauth.refreshTokenRequest).toHaveBeenCalledOnce();
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Starting a new login'
+      );
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        status: 'error',
+        reason: 'deploy_failed',
+        message: 'Missing authentication token',
+      });
+    });
+  });
+
+  it('starts a linked project lookup without delaying deployment creation', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    await fs.writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'prj_static',
+      projectName: 'static',
+    });
+
+    let startProjectLookup!: () => void;
+    const projectLookupStarted = new Promise<void>(resolve => {
+      startProjectLookup = resolve;
+    });
+    let finishProjectLookup!: () => void;
+    const projectLookupFinished = new Promise<void>(resolve => {
+      finishProjectLookup = resolve;
+    });
+    client.scenario.get(`/v9/projects/prj_static`, async (_req, res) => {
+      startProjectLookup();
+      await projectLookupFinished;
+      res.json({
+        ...defaultProject,
+        accountId: 'team_dummy',
+        id: 'prj_static',
+        name: 'static',
+        rollingRelease: {
+          enabled: true,
+          advancementType: 'automatic',
+        },
+      });
+    });
+
+    let startDeploymentRequest!: () => void;
+    const deploymentRequestStarted = new Promise<void>(resolve => {
+      startDeploymentRequest = resolve;
+    });
+    let createTeamId: unknown;
+    let createBody: Record<string, unknown> | undefined;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      startDeploymentRequest();
+      createTeamId = req.query.teamId;
+      createBody = req.body;
+      res.json({
+        creator: {
+          uid: 'user_dummy',
+          username: 'user_dummy',
+        },
+        id: 'dpl_local_link',
+        url: 'local-link.vercel.app',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+        target: 'preview',
+      });
+    });
+
+    client.cwd = cwd;
+    client.setArgv('deploy');
+
+    const originalVercelTeamId = process.env.VERCEL_TEAM_ID;
+    delete process.env.VERCEL_TEAM_ID;
+    let exitCode: number;
+    try {
+      const exitCodePromise = deploy(client);
+
+      await Promise.all([projectLookupStarted, deploymentRequestStarted]);
+      finishProjectLookup();
+      exitCode = await exitCodePromise;
+    } finally {
+      if (originalVercelTeamId === undefined) {
+        delete process.env.VERCEL_TEAM_ID;
+      } else {
+        process.env.VERCEL_TEAM_ID = originalVercelTeamId;
+      }
+    }
+
+    expect(exitCode).toEqual(0);
+    expect(createTeamId).toEqual('team_dummy');
+    expect(createBody?.project).toEqual('prj_static');
+    expect(client.stderr.getFullOutput()).toContain('Deploying static');
+    expect(client.stderr.getFullOutput()).not.toContain('team_dummy/static');
+    expect(client.stderr.getFullOutput()).toContain('Releasing');
+  });
+
+  it('surfaces deployment authorization errors when using local project metadata', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    await fs.writeJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'team_dummy',
+      projectId: 'prj_static',
+      projectName: 'static',
+    });
+    client.scenario.get(`/v9/projects/prj_static`, (_req, res) => {
+      res.json({
+        ...defaultProject,
+        accountId: 'team_dummy',
+        id: 'prj_static',
+        name: 'static',
+      });
+    });
+    client.scenario.post(`/v13/deployments`, (_req, res) => {
+      res.status(403).json({
+        error: {
+          code: 'forbidden',
+          message: 'Not authorized to deploy this project.',
+        },
+      });
+    });
+
+    client.cwd = cwd;
+    client.setArgv('deploy');
+    const exitCodePromise = deploy(client);
+
+    await expect(client.stderr).toOutput(
+      'Error: Not authorized to deploy this project.\n'
+    );
+    expect(await exitCodePromise).toEqual(1);
+  });
+
+  it('does not send a repo root mapping as the Project rootDirectory', async () => {
+    const cwd = setupUnitFixture('commands/deploy/static');
+    await fs.remove(join(cwd, '.vercel'));
+    await fs.outputJSON(join(cwd, '.vercel/repo.json'), {
+      remoteName: 'origin',
+      projects: [
+        {
+          id: 'prj_static',
+          name: 'static',
+          orgId: 'team_dummy',
+          directory: '.',
+        },
+      ],
+    });
+
+    const user = useUser();
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      accountId: 'team_dummy',
+      id: 'prj_static',
+      name: 'static',
+      rootDirectory: null,
+    });
+
+    let createBody: Record<string, unknown> | undefined;
+    client.scenario.post(`/v13/deployments`, (req, res) => {
+      createBody = req.body;
+      res.json({
+        creator: {
+          uid: user.id,
+          username: user.username,
+        },
+        id: 'dpl_local_link',
+        url: 'local-link.vercel.app',
+        readyState: 'READY',
+        aliasAssigned: true,
+        alias: [],
+        target: 'preview',
+      });
+    });
+
+    client.cwd = cwd;
+    client.setArgv('deploy');
+    const exitCode = await deploy(client);
+
+    expect(exitCode).toEqual(0);
+    expect(createBody?.projectSettings).toMatchObject({
+      rootDirectory: null,
+      sourceFilesOutsideRootDirectory: true,
+    });
+  });
+
+  it('should deploy a linked project when owner lookup is unavailable', async () => {
+    const originalVercelTeamId = process.env.VERCEL_TEAM_ID;
+    delete process.env.VERCEL_TEAM_ID;
+
+    try {
+      useTeams('team_dummy', { failNoAccess: true });
+      client.config.currentTeam = 'team_dummy';
+
+      const projectLookupTeamIds: unknown[] = [];
+      client.scenario.get(`/v9/projects/static`, (req, res) => {
+        projectLookupTeamIds.push(req.query.teamId);
+        res.json({
+          ...defaultProject,
+          accountId: 'team_dummy',
+          name: 'static',
+          id: 'static',
+        });
+      });
+
+      let createTeamId: unknown;
+      const statusTeamIds: unknown[] = [];
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        createTeamId = req.query.teamId;
+        res.json({
+          creator: {
+            uid: 'user_dummy',
+            username: 'user_dummy',
+          },
+          id: 'dpl_scoped_token',
+          url: 'scoped-token.vercel.app',
+          readyState: 'BUILDING',
+          aliasAssigned: false,
+          alias: [],
+          target: 'preview',
+        });
+      });
+      client.scenario.get(`/v13/deployments/dpl_scoped_token`, (req, res) => {
+        statusTeamIds.push(req.query.teamId);
+        res.json({
+          creator: {
+            uid: 'user_dummy',
+            username: 'user_dummy',
+          },
+          id: 'dpl_scoped_token',
+          url: 'scoped-token.vercel.app',
+          readyState: 'READY',
+          aliasAssigned: true,
+          alias: [],
+          target: 'preview',
+        });
+      });
+      let eventsConnectionClosed = false;
+      client.scenario.get(
+        `/v3/now/deployments/dpl_scoped_token/events`,
+        (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
+          res.end();
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+
+      expect(exitCode).toEqual(0);
+      // The second lookup reads Deployment Protection settings after deploy.
+      expect(projectLookupTeamIds).toEqual(['team_dummy', 'team_dummy']);
+      expect(createTeamId).toBeUndefined();
+      expect(statusTeamIds).toEqual([undefined]);
+      expect(client.config.currentTeam).toBeUndefined();
+
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
+    } finally {
+      if (originalVercelTeamId === undefined) {
+        delete process.env.VERCEL_TEAM_ID;
+      } else {
+        process.env.VERCEL_TEAM_ID = originalVercelTeamId;
+      }
+    }
   });
 
   it('should deploy project linked with `repo.json`', async () => {
@@ -1364,6 +2075,19 @@ describe('deploy', () => {
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
     });
+    it('--turbo', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--turbo');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({ buildMachine: 'turbo' }),
+        })
+      );
+    });
     it('--env', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--env', 'KEY1=value', '--env', 'KEY2=value2');
@@ -1532,7 +2256,7 @@ describe('deploy', () => {
       client.setArgv('deploy', '--skip-domain');
       const exitCodePromise = deploy(client);
       await expect(client.stderr).toOutput(
-        'Error: The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--target=production`.'
+        'Error: The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--environment production`.'
       );
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
@@ -1542,7 +2266,7 @@ describe('deploy', () => {
       client.setArgv('deploy', '--skip-domain', '--target', 'my-custom-env');
       const exitCodePromise = deploy(client);
       await expect(client.stderr).toOutput(
-        'Error: The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--target=production`.'
+        'Error: The `--skip-domain` option can only be used with production deployments. Use `--prod` or `--environment production`.'
       );
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
@@ -1637,11 +2361,30 @@ describe('deploy', () => {
       const exitCode = await deploy(client);
       expect(exitCode).toEqual(0);
 
+      expect(client.stderr.getFullOutput()).toContain('Next steps:');
+
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:guidance', value: 'TRUE' },
         { key: 'target_environment', value: 'preview' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
+    });
+    it('shows post-deploy guidance by default', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.stderr.getFullOutput()).toContain('Next steps:');
+    });
+    it('respects disabled guidance settings', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.config.guidance = { enabled: false };
+      client.setArgv('deploy');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(client.stderr.getFullOutput()).not.toContain('Next steps:');
     });
     it('--name', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
@@ -1714,6 +2457,124 @@ describe('deploy', () => {
         { key: 'target_environment', value: 'production' },
         { key: 'output:deployment-id', value: 'dpl_archive_test' },
       ]);
+    });
+    it.each([
+      [['--environment', 'preview'], 'preview'],
+      [['--environment=production'], 'production'],
+      [['--environment', 'my-custom-env-slug'], 'my-custom-env-slug'],
+    ])('--environment %j', async (args, target) => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', ...args);
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({ target }),
+        })
+      );
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        {
+          key: 'option:environment',
+          value: target === 'my-custom-env-slug' ? '[REDACTED]' : target,
+        },
+        {
+          key: 'target_environment',
+          value: target === 'production' ? 'production' : 'preview',
+        },
+        { key: 'output:deployment-id', value: 'dpl_archive_test' },
+      ]);
+    });
+    it('--target keeps working with a deprecation warning', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--target', 'preview');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--target is deprecated. Use --environment.'
+      );
+    });
+    it('--target with --prod names the flag the user typed', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--target', 'preview', '--prod');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({ target: 'preview' }),
+        })
+      );
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        '! Ignoring --prod because --target is also set. Pass only one of them.'
+      );
+      expect(stderr).not.toContain('WARNING!');
+    });
+    it('--target with --environment is a usage error', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      const createDeployCalls = mock.mock.calls.length;
+      client.setArgv(
+        'deploy',
+        '--target',
+        'preview',
+        '--environment',
+        'production'
+      );
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(2);
+      expect(mock.mock.calls.length).toEqual(createDeployCalls);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use --target with --environment. Use --environment."
+      );
+    });
+    it.each([
+      ['-e', '--env', { env: { KEY1: 'value' } }],
+      ['-b', '--build-env', { build: { env: { KEY1: 'value' } } }],
+    ])('%s keeps working with a deprecation warning', async (short, long, createArgs) => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', short, 'KEY1=value');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining(createArgs),
+        })
+      );
+      expect(client.stderr.getFullOutput()).toContain(
+        `${short} is deprecated. Use ${long}.`
+      );
+    });
+    it('keeps the order of mixed -e and --env values', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '-e', 'KEY1=first', '--env', 'KEY1=second');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      expect(mock).toHaveBeenCalledWith(
+        ...Object.values({
+          ...baseCreateDeployArgs,
+          createArgs: expect.objectContaining({ env: { KEY1: 'second' } }),
+        })
+      );
+    });
+    it('--env and --build-env do not warn', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv(
+        'deploy',
+        '--env',
+        'KEY1=value',
+        '--build-env',
+        'KEY2=value'
+      );
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
     });
     it('--target=my-custom-env-slug', async () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
@@ -1918,9 +2779,6 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('Customize settings?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Customize advanced settings?');
-        client.stdin.write('\n');
-
         const exitCode = await exitCodePromise;
         expect(exitCode).toEqual(0);
         const output = client.stderr.getFullOutput();
@@ -1942,20 +2800,22 @@ describe('deploy', () => {
         await expect(client.stderr).toOutput('? Which team?');
         client.stdin.write('\n');
 
-        await expect(client.stderr).toOutput('Project?');
-        client.stdin.write('\n');
+        // Unified flow: the project picker replaces the create/link decision.
+        await expect(client.stderr).toOutput('Which project?');
+        client.events.keypress('down');
+        client.events.keypress('enter');
 
-        // The one expecation that the test is actually about!
-        await expect(client.stderr).toOutput(`Name? (${directoryName})`);
+        // The one expecation that the test is actually about! The picker's
+        // name prompt renders a back-navigation hint between `Name?` and the
+        // prefilled default, so assert the two pieces separately.
+        await expect(client.stderr).toOutput('Name?');
+        expect(client.stderr.getFullOutput()).toContain(`(${directoryName})`);
         client.stdin.write('\n');
         // Fixture has no detectable framework at the root, so the
         // root-directory prompt now fires (nested-monolith guard).
         await expect(client.stderr).toOutput('Code directory?');
         client.stdin.write('\n');
         await expect(client.stderr).toOutput('Customize settings?');
-        client.stdin.write('\n');
-
-        await expect(client.stderr).toOutput('Customize advanced settings?');
         client.stdin.write('\n');
 
         const exitCode = await exitCodePromise;
@@ -2045,9 +2905,16 @@ describe('deploy', () => {
         });
       });
 
+      // Track the background events-stream connection so the test can wait
+      // for it to close before returning control (see the comment on the
+      // sibling `dpl_streamed_alias` scenario above for why this matters).
+      let eventsConnectionClosed = false;
       client.scenario.get(
         `/v3/now/deployments/dpl_with_alias/events`,
         (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
           res.end();
         }
       );
@@ -2071,8 +2938,88 @@ describe('deploy', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
-      expect(projectFetchCount).toEqual(1);
+      // One lookup during deploy, one for Deployment Protection settings.
+      expect(projectFetchCount).toEqual(2);
       expect(callCount).toEqual(2);
+
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
+    });
+
+    it('should finish from the streamed alias event without a final deployment fetch', async () => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      const deploymentId = 'dpl_streamed_alias';
+      const aliasAssigned = 1783370781619;
+      let statusFetchCount = 0;
+      let statusConnectionClosed = false;
+      let eventsConnectionClosed = false;
+
+      client.scenario.post(`/v13/deployments`, (_req, res) => {
+        res.json({
+          creator: { uid: user.id, username: user.username },
+          id: deploymentId,
+          url: 'streamed-alias.vercel.app',
+          readyState: 'BUILDING',
+          aliasAssigned: false,
+          target: 'production',
+          alias: ['initial-streamed-app.vercel.app'],
+        });
+      });
+
+      client.scenario.get(`/v13/deployments/${deploymentId}`, req => {
+        statusFetchCount++;
+        // Leave a raced status request open so the alias signal must abort it.
+        req.on('close', () => {
+          statusConnectionClosed = true;
+        });
+      });
+
+      client.scenario.get(
+        `/v3/now/deployments/${deploymentId}/events`,
+        (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
+          res.write(
+            `${JSON.stringify({
+              type: 'alias-assigned',
+              deploymentId,
+              date: aliasAssigned,
+              alias: ['my-streamed-app.vercel.app'],
+              aliasError: null,
+              aliasWarning: {
+                code: 'alias_warning',
+                message: 'Alias warning from event',
+              },
+            })}\n`
+          );
+        }
+      );
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      const exitCode = await deploy(client);
+
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Aliased         https://my-streamed-app.vercel.app'
+      );
+      expect(client.stderr.getFullOutput()).toContain(
+        'Alias warning from event'
+      );
+      expect(client.stderr.getFullOutput()).not.toContain('alias-assigned');
+      expect(statusFetchCount).toBeLessThanOrEqual(1);
+      if (statusFetchCount === 1) {
+        await vi.waitFor(() => expect(statusConnectionClosed).toBe(true));
+      }
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
     });
 
     it('should display the ▲ gutter on Production when --no-wait skips the Aliased row', async () => {
@@ -2245,9 +3192,16 @@ describe('deploy', () => {
         });
       });
 
+      // Track the background events-stream connection so the test can wait
+      // for it to close before returning control (see the comment on the
+      // sibling `dpl_streamed_alias` scenario above for why this matters).
+      let eventsConnectionClosed = false;
       client.scenario.get(
         `/v3/now/deployments/dpl_preview/events`,
         (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
           res.end();
         }
       );
@@ -2264,6 +3218,8 @@ describe('deploy', () => {
 
       const stderrOutput = client.stderr.read().toString();
       expect(stderrOutput).not.toContain('Aliased');
+
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
     });
 
     it('should not display aliased domain when no aliases are assigned', async () => {
@@ -2319,9 +3275,16 @@ describe('deploy', () => {
         });
       });
 
+      // Track the background events-stream connection so the test can wait
+      // for it to close before returning control (see the comment on the
+      // sibling `dpl_streamed_alias` scenario above for why this matters).
+      let eventsConnectionClosed = false;
       client.scenario.get(
         `/v3/now/deployments/dpl_no_alias/events`,
         (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
           res.end();
         }
       );
@@ -2342,6 +3305,8 @@ describe('deploy', () => {
       // the Aliased row — when the server then assigns no aliases, no ▲ is
       // rendered at all (accepted edge case).
       expect(stderrOutput).not.toContain('▲');
+
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
     });
   });
 
@@ -2349,15 +3314,30 @@ describe('deploy', () => {
     const deploymentUrl = 'my-app-abc123.vercel.app';
     const deploymentId = 'dpl_json_test';
     const inspectorUrl = 'https://vercel.com/team/project/dpl_json_test';
+    const buildMachine = {
+      purchaseType: 'turbo' as const,
+      machineSelectionType: 'fixed' as const,
+      selectionSource: 'deployment-override' as const,
+      cores: 30,
+      memory: 61440,
+    };
+    let resourceConfig: { buildMachine: typeof buildMachine } | undefined;
+    let aliasResult: Partial<
+      Pick<Deployment, 'aliasWarning' | 'aliasError' | 'alias'>
+    >;
+    let projectMock: Record<string, unknown>;
 
     beforeEach(() => {
+      resourceConfig = undefined;
+      aliasResult = {};
       const user = useUser();
       useTeams('team_dummy');
-      useProject({
+      projectMock = {
         ...defaultProject,
         name: 'static',
         id: 'static',
-      });
+      };
+      useProject(projectMock);
 
       client.scenario.post(`/v13/deployments`, (req, res) => {
         res.json({
@@ -2370,6 +3350,7 @@ describe('deploy', () => {
           inspectorUrl,
           readyState: 'READY',
           target: 'production',
+          resourceConfig,
         });
       });
       client.scenario.get(`/v13/deployments/${deploymentId}`, (req, res) => {
@@ -2385,11 +3366,156 @@ describe('deploy', () => {
           target: 'production',
           aliasAssigned: true,
           alias: [],
+          resourceConfig,
+          ...aliasResult,
         });
       });
     });
 
-    it('should output deployment as JSON to stdout with --json', async () => {
+    it.each([
+      ['--json', 'aliasWarning'],
+      ['--json', 'aliasError'],
+      ['--non-interactive', 'aliasWarning'],
+      ['--non-interactive', 'aliasError'],
+    ] as const)('preserves %s %s from the API', async (flag, field) => {
+      aliasResult = {
+        [field]: {
+          code: 'test_alias_notice',
+          message: 'Production domains were not assigned.',
+        },
+      };
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.nonInteractive = flag === '--non-interactive';
+      client.setArgv('deploy', '--prod', flag);
+
+      expect(await deploy(client)).toBe(0);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect((result.deployment ?? result)[field]).toEqual(aliasResult[field]);
+    });
+
+    it('reports the assigned production address with --json', async () => {
+      aliasResult = { alias: ['my-app.example.com'] };
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--json');
+
+      expect(await deploy(client)).toBe(0);
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.url).toBe(`https://${deploymentUrl}`);
+      expect(json.productionUrl).toBe('https://my-app.example.com');
+    });
+
+    it('names the production address for agents', async () => {
+      aliasResult = { alias: ['my-app.example.com'] };
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.nonInteractive = true;
+      client.setArgv('deploy', '--prod', '--non-interactive');
+
+      expect(await deploy(client)).toBe(0);
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload.deployment.productionUrl).toBe(
+        'https://my-app.example.com'
+      );
+      expect(payload.message).toBe(
+        `Deployment ${deploymentUrl} ready. Production URL: https://my-app.example.com`
+      );
+      expect(payload.next).toContainEqual(
+        expect.objectContaining({
+          command: 'vercel curl https://my-app.example.com',
+        })
+      );
+    });
+
+    it('does not report a production address when alias assignment failed', async () => {
+      aliasResult = {
+        alias: ['my-app.example.com'],
+        aliasError: { code: 'alias_failed', message: 'Could not assign.' },
+      };
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--json');
+
+      expect(await deploy(client)).toBe(0);
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json.productionUrl).toBeNull();
+    });
+
+    it('tells agents Deployment Protection is on and how to access it', async () => {
+      projectMock.ssoProtection = {
+        deploymentType: 'all_except_custom_domains',
+      };
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.nonInteractive = true;
+      client.setArgv('deploy', '--prod', '--non-interactive');
+
+      expect(await deploy(client)).toBe(0);
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload.deployment.deploymentProtection).toEqual([
+        'vercel_authentication',
+      ]);
+      expect(payload.next).toContainEqual(
+        expect.objectContaining({
+          command: `vercel curl https://${deploymentUrl}`,
+        })
+      );
+      // Access is the likely next step; never suggest turning protection off.
+      expect(client.stdout.getFullOutput()).not.toContain('protection disable');
+    });
+
+    it('does not suggest turning off protection when none is on', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.nonInteractive = true;
+      client.setArgv('deploy', '--prod', '--non-interactive');
+
+      expect(await deploy(client)).toBe(0);
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload.deployment.deploymentProtection).toEqual([]);
+      expect(JSON.stringify(payload.next)).not.toContain('protection disable');
+    });
+
+    it.each([
+      'all_except_custom_domains',
+      'prod_deployment_urls_and_all_previews',
+      'preview',
+    ])('does not say production is protected when %s leaves production domains public', async (deploymentType: string) => {
+      aliasResult = { alias: ['my-app.example.com'] };
+      projectMock.ssoProtection = { deploymentType };
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      expect(await deploy(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Deployment Protection is on'
+      );
+    });
+
+    it('says Deployment Protection is on for production under All Deployments', async () => {
+      aliasResult = { alias: ['my-app.example.com'] };
+      projectMock.ssoProtection = { deploymentType: 'all' };
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+
+      expect(await deploy(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Deployment Protection is on for this project (Vercel Authentication).'
+      );
+    });
+
+    it('says Deployment Protection is on for --skip-domain under Standard Protection', async () => {
+      // No production domain, so people open the deployment URL, which
+      // Standard Protection still protects.
+      projectMock.ssoProtection = {
+        deploymentType: 'all_except_custom_domains',
+      };
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--skip-domain', '--yes');
+
+      expect(await deploy(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        'Deployment Protection is on for this project (Vercel Authentication).'
+      );
+    });
+
+    it('should output deployment and build machine as JSON to stdout with --json', async () => {
+      resourceConfig = { buildMachine };
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--json');
       const exitCode = await deploy(client);
@@ -2405,10 +3531,71 @@ describe('deploy', () => {
         readyState: 'READY',
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        productionUrl: null,
+        deploymentProtection: [],
+        buildMachine: {
+          cores: 30,
+          memory: 61440,
+          machine: 'turbo',
+          selectionType: 'fixed',
+          selectionSource: 'deployment-override',
+        },
       });
+      expect(Object.keys(json.buildMachine)).toEqual([
+        'cores',
+        'memory',
+        'machine',
+        'selectionType',
+        'selectionSource',
+      ]);
     });
 
-    it('should output deployment as JSON to stdout with --format=json', async () => {
+    it('should include prebuilt collisions in JSON without repeating the spinner in non-TTY output', async () => {
+      resourceConfig = { buildMachine };
+      const cwd = setupTmpDir('deploy-json-prebuilt-warning');
+      await fs.outputFile(join(cwd, 'README.md'), 'ignored source');
+      await fs.outputFile(join(cwd, '.vercelignore'), 'README.md\n');
+      await fs.outputJson(join(cwd, '.vercel/project.json'), {
+        orgId: 'team_dummy',
+        projectId: 'static',
+      });
+      await fs.outputJson(join(cwd, '.vercel/output/config.json'), {
+        version: 3,
+      });
+      await fs.outputJson(
+        join(cwd, '.vercel/output/functions/api/example.func/.vc-config.json'),
+        {
+          runtime: 'nodejs20.x',
+          handler: 'index.js',
+          filePathMap: {
+            'README.md': 'README.md',
+          },
+        }
+      );
+
+      client.stderr.isTTY = false;
+      client.setArgv('deploy', cwd, '--prebuilt', '--json');
+      const exitCode = await deploy(client);
+      const json = JSON.parse(client.stdout.getFullOutput());
+      const stderr = client.stderr.getFullOutput();
+
+      expect(exitCode).toEqual(0);
+      expect(json.warning).toMatchObject({
+        code: 'PREBUILT_FILEPATHMAP_IGNORED',
+        message: expect.stringContaining('README.md'),
+      });
+      expect(json.buildMachine).toEqual({
+        cores: 30,
+        memory: 61440,
+        machine: 'turbo',
+        selectionType: 'fixed',
+        selectionSource: 'deployment-override',
+      });
+      expect(stderr.match(/Deploying /g)).toHaveLength(1);
+    });
+
+    it('should output deployment and build machine as JSON to stdout with --format=json', async () => {
+      resourceConfig = { buildMachine };
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--format', 'json');
       const exitCode = await deploy(client);
@@ -2424,6 +3611,15 @@ describe('deploy', () => {
         readyState: 'READY',
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        productionUrl: null,
+        deploymentProtection: [],
+        buildMachine: {
+          cores: 30,
+          memory: 61440,
+          machine: 'turbo',
+          selectionType: 'fixed',
+          selectionSource: 'deployment-override',
+        },
       });
     });
 
@@ -2455,7 +3651,7 @@ describe('deploy', () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', '--format', 'xml');
       const exitCode = await deploy(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
     });
 
     it('should output only valid JSON to stdout when piped (non-TTY)', async () => {
@@ -2476,6 +3672,8 @@ describe('deploy', () => {
         readyState: 'READY',
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        productionUrl: null,
+        deploymentProtection: [],
       });
     });
   });
@@ -2534,6 +3732,7 @@ describe('deploy', () => {
         readyState: 'ERROR',
         target: null,
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        productionUrl: null,
         error: {
           name: 'BUILD_ERROR',
           message: 'Command "npm run build" exited with 1',
@@ -2592,6 +3791,67 @@ describe('deploy', () => {
       mock.mockRestore();
     });
 
+    it('should output the agent payload when build fails in non-interactive mode', async () => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.get(`/v13/deployments/${deploymentUrl}`, (_req, res) => {
+        res.json({
+          id: deploymentId,
+          url: deploymentUrl,
+          inspectorUrl,
+          readyState: 'ERROR',
+          target: null,
+          aliasAssigned: false,
+          alias: [],
+        });
+      });
+
+      const mock = vi
+        .spyOn(createDeployModule, 'default')
+        .mockImplementation(async (_client, now: Now) => {
+          now.url = deploymentUrl;
+          throw new BuildError({
+            message: 'Command "npm run build" exited with 1',
+            meta: {},
+          });
+        });
+
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes', '--non-interactive');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(1);
+
+      const json = JSON.parse(client.stdout.getFullOutput());
+      expect(json).toMatchObject({
+        status: 'error',
+        reason: 'build_failed',
+        message: 'Command "npm run build" exited with 1',
+        deployment: {
+          id: deploymentId,
+          readyState: 'ERROR',
+          error: {
+            name: 'BUILD_ERROR',
+            message: 'Command "npm run build" exited with 1',
+          },
+        },
+      });
+      expect(json.next.map((n: { when: string }) => n.when)).toEqual([
+        'read build logs',
+        'retry deploy',
+      ]);
+      expect(json.next[0].command).toContain(`inspect ${deploymentUrl} --logs`);
+
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+      mock.mockRestore();
+    });
+
     it('should output JSON with error field when deployment is canceled', async () => {
       useUser();
       useTeams('team_dummy');
@@ -2637,6 +3897,7 @@ describe('deploy', () => {
         readyState: 'CANCELED',
         target: null,
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        productionUrl: null,
         error: {
           name: 'DEPLOYMENT_CANCELED',
           message: 'The deployment has been canceled.',
@@ -2649,6 +3910,15 @@ describe('deploy', () => {
     const deploymentUrl = 'my-app-init-abc123.vercel.app';
     const deploymentId = 'dpl_init_json_test';
     const inspectorUrl = 'https://vercel.com/team/project/dpl_init_json_test';
+    const resourceConfig = {
+      buildMachine: {
+        purchaseType: 'enhanced' as const,
+        machineSelectionType: 'elastic' as const,
+        selectionSource: 'elastic-algorithm' as const,
+        cores: 8,
+        memory: 16384,
+      },
+    };
 
     beforeEach(() => {
       const user = useUser();
@@ -2670,6 +3940,7 @@ describe('deploy', () => {
           inspectorUrl,
           readyState: 'INITIALIZING',
           target: 'production',
+          resourceConfig,
         });
       });
       client.scenario.get(`/v13/deployments/${deploymentId}`, (req, res) => {
@@ -2685,6 +3956,7 @@ describe('deploy', () => {
           target: 'production',
           aliasAssigned: false,
           alias: [],
+          resourceConfig,
         });
       });
     });
@@ -2705,6 +3977,14 @@ describe('deploy', () => {
         readyState: 'INITIALIZING',
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        productionUrl: null,
+        buildMachine: {
+          cores: 8,
+          memory: 16384,
+          machine: 'enhanced',
+          selectionType: 'elastic',
+          selectionSource: 'elastic-algorithm',
+        },
       });
     });
 
@@ -2724,6 +4004,14 @@ describe('deploy', () => {
         readyState: 'INITIALIZING',
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        productionUrl: null,
+        buildMachine: {
+          cores: 8,
+          memory: 16384,
+          machine: 'enhanced',
+          selectionType: 'elastic',
+          selectionSource: 'elastic-algorithm',
+        },
       });
     });
 
@@ -2755,7 +4043,7 @@ describe('deploy', () => {
       client.cwd = setupUnitFixture('commands/deploy/static');
       client.setArgv('deploy', 'init', '--format', 'xml');
       const exitCode = await deploy(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
     });
 
     it('should output only valid JSON to stdout when piped (non-TTY)', async () => {
@@ -2776,6 +4064,14 @@ describe('deploy', () => {
         readyState: 'INITIALIZING',
         target: 'production',
         deploymentApiUrl: `${client.apiUrl}/v13/deployments/${deploymentId}`,
+        productionUrl: null,
+        buildMachine: {
+          cores: 8,
+          memory: 16384,
+          machine: 'enhanced',
+          selectionType: 'elastic',
+          selectionSource: 'elastic-algorithm',
+        },
       });
     });
   });
@@ -2850,9 +4146,19 @@ describe('deploy', () => {
         }
       );
 
+      // Track the background events-stream connection so the test can wait
+      // for it to close before returning control. Without this the socket
+      // opened by `processDeployment()` can still be mid-teardown when the
+      // test resolves, which occasionally (and more so on Windows) leaves a
+      // live handle open past this test's `afterEach`/`afterAll`, hanging
+      // the whole worker's shutdown.
+      let eventsConnectionClosed = false;
       client.scenario.get(
         `/v3/now/deployments/dpl_checks_v1/events`,
-        (_req, res) => {
+        (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
           res.end();
         }
       );
@@ -2866,6 +4172,8 @@ describe('deploy', () => {
       const stderrOutput = client.stderr.read().toString();
       expect(stderrOutput).toContain('1 failed');
       expect(stderrOutput).toContain('1 succeeded');
+
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
     });
 
     // v2 checks: deployment.checks['deployment-alias'].state === 'failed'
@@ -2932,9 +4240,16 @@ describe('deploy', () => {
         }
       );
 
+      // Track the background events-stream connection so the test can wait
+      // for it to close before returning control (see the comment on the
+      // sibling `dpl_checks_v1` scenario above for why this matters).
+      let eventsConnectionClosed = false;
       client.scenario.get(
         `/v3/now/deployments/dpl_checks_v2/events`,
-        (_req, res) => {
+        (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
           res.end();
         }
       );
@@ -2950,6 +4265,8 @@ describe('deploy', () => {
       expect(stderrOutput).toContain('1 failed');
       expect(stderrOutput).toContain('1 skipped');
       expect(stderrOutput).toContain('E2E Tests');
+
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
     });
 
     // v2 checks failure in non-interactive mode
@@ -3024,9 +4341,16 @@ describe('deploy', () => {
         }
       );
 
+      // Track the background events-stream connection so the test can wait
+      // for it to close before returning control (see the comment on the
+      // sibling `dpl_checks_v1` scenario above for why this matters).
+      let eventsConnectionClosed = false;
       client.scenario.get(
         `/v3/now/deployments/dpl_checks_ni/events`,
-        (_req, res) => {
+        (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
           res.end();
         }
       );
@@ -3055,6 +4379,8 @@ describe('deploy', () => {
           message: 'Exited with code 1.',
         },
       ]);
+
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
     });
 
     // v2 checks pending → shows "Running Checks…" spinner
@@ -3101,9 +4427,23 @@ describe('deploy', () => {
         }
       );
 
+      // Track the background events-stream connection so the test can wait
+      // for it to close before returning control. This test polls the
+      // deployment status endpoint multiple times (real ~1s delays between
+      // polls), so the events-stream connection is still comparatively
+      // "fresh" (recently active, not yet idle) by the time the test
+      // resolves. Without an explicit wait here, the socket can still be
+      // mid-teardown when this test's `afterEach` swaps out `client.scenario`
+      // for the next test, occasionally (observed on Windows CI) leaving a
+      // live handle open into the file's `afterAll`, which then hangs the
+      // whole worker's shutdown instead of exiting cleanly.
+      let eventsConnectionClosed = false;
       client.scenario.get(
         `/v3/now/deployments/dpl_checks_pending/events`,
-        (_req, res) => {
+        (req, res) => {
+          req.on('close', () => {
+            eventsConnectionClosed = true;
+          });
           res.end();
         }
       );
@@ -3118,6 +4458,8 @@ describe('deploy', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+
+      await vi.waitFor(() => expect(eventsConnectionClosed).toBe(true));
     });
   });
 
@@ -3126,21 +4468,797 @@ describe('deploy', () => {
       vi.restoreAllMocks();
     });
 
-    it('fails fast with a clean error when --project does not resolve', async () => {
+    function captureProjectCreates() {
+      const creates: any[] = [];
+      client.scenario.post('/v1/projects', (req, _res, next) => {
+        creates.push(req.body);
+        next?.();
+      });
+      return creates;
+    }
+
+    function captureDeployments() {
+      const requests: any[] = [];
+      client.scenario.post('/v13/deployments', (req, res) => {
+        requests.push(req.body);
+        res.json({
+          id: 'dpl_project_flag',
+          readyState: 'READY',
+          aliasAssigned: true,
+          url: 'project-flag.vercel.app',
+          alias: [],
+        });
+      });
+      return requests;
+    }
+
+    async function setupStaticDir() {
       const cwd = setupTmpDir();
-      useUser();
+      await fs.writeFile(join(cwd, 'index.html'), '<h1>hello</h1>');
+      return cwd;
+    }
+
+    it.each([
+      ['in a terminal with --yes', false, ['--yes', '--create-if-missing']],
+      ['for an agent', true, ['--create-if-missing']],
+    ] as const)('creates a missing --project name and deploys it without linking the directory (%s)', async (_label, nonInteractive, extraArgs) => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
       useTeams('team_dummy');
-      // Intentionally no useProject() — every API lookup will 404.
+      const creates = captureProjectCreates();
+      useUnknownProject();
+      const requests = captureDeployments();
 
       client.cwd = cwd;
-      client.setArgv('deploy', '--yes', '--project=does-not-exist');
+      client.config.currentTeam = 'team_dummy';
+      client.stdin.isTTY = !nonInteractive;
+      (client as { nonInteractive: boolean }).nonInteractive = nonInteractive;
+      client.setArgv(
+        'deploy',
+        '--project',
+        'new-app',
+        '--scope',
+        'team_dummy',
+        '--no-wait',
+        ...extraArgs
+      );
+
+      expect(await deploy(client)).toEqual(0);
+      expect(creates).toEqual([expect.objectContaining({ name: 'new-app' })]);
+      expect(requests).toHaveLength(1);
+      expect(requests[0].project).toBe('new-app');
+      expect(client.stderr.getFullOutput()).toMatch(/Created\s+\S+\/new-app/);
+      expect(client.stderr.getFullOutput()).not.toContain('was not found');
+      expect(await fs.pathExists(join(cwd, '.vercel/project.json'))).toBe(
+        false
+      );
+    });
+
+    it('creates a missing --project name in a terminal without --create-if-missing', async () => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+      const requests = captureDeployments();
+
+      client.cwd = cwd;
+      client.config.currentTeam = 'team_dummy';
+      client.stdin.isTTY = true;
+      client.setArgv(
+        'deploy',
+        '--project',
+        'new-app',
+        '--scope',
+        'team_dummy',
+        '--no-wait'
+      );
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Code directory?');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Customize settings?');
+      client.stdin.write('\n');
+
+      expect(await exitCodePromise).toEqual(0);
+      expect(creates).toEqual([expect.objectContaining({ name: 'new-app' })]);
+      expect(requests).toHaveLength(1);
+    });
+
+    it('fails with a create command instead of creating under --yes without --create-if-missing', async () => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+      const requests = captureDeployments();
+
+      client.cwd = cwd;
+      client.config.currentTeam = 'team_dummy';
+      client.setArgv(
+        'deploy',
+        '--prod',
+        '--yes',
+        '--project',
+        'new-app',
+        '--scope',
+        'team_dummy'
+      );
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Project "new-app" was not found');
+      expect(await exitCodePromise, 'exit code for "deploy"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'To create it:\n  vercel deploy --prod --yes --project new-app --scope team_dummy --create-if-missing\n'
+      );
+      expect(creates).toEqual([]);
+      expect(requests).toEqual([]);
+    });
+
+    it('uses --environment for a deprecated --target in the create command', async () => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.config.currentTeam = 'team_dummy';
+      client.setArgv(
+        'deploy',
+        '--target',
+        'preview',
+        '--yes',
+        '--project',
+        'new-app',
+        '--scope',
+        'team_dummy'
+      );
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Project "new-app" was not found');
+      expect(await exitCodePromise, 'exit code for "deploy"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'To create it:\n  vercel deploy --environment preview --yes --project new-app --scope team_dummy --create-if-missing\n'
+      );
+      expect(creates).toEqual([]);
+    });
+
+    it('repeats the deploy as typed in the create command', async () => {
+      const cwd = setupTmpDir();
+      await fs.outputFile(join(cwd, 'site/index.html'), '<h1>hello</h1>');
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+      const requests = captureDeployments();
+
+      client.cwd = cwd;
+      client.config.currentTeam = 'team_dummy';
+      client.setArgv(
+        'deploy',
+        'site',
+        '--prod',
+        '--yes',
+        '--prebuilt',
+        '--no-wait',
+        '--meta',
+        'team=web',
+        '--regions',
+        'sfo1',
+        '--project',
+        'new-app',
+        '--scope',
+        'team_dummy'
+      );
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Project "new-app" was not found');
+      expect(await exitCodePromise, 'exit code for "deploy"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'To create it:\n  vercel deploy site --prod --yes --prebuilt --no-wait --meta team=web --regions sfo1 --project new-app --scope team_dummy --create-if-missing\n'
+      );
+      expect(creates).toEqual([]);
+      expect(requests).toEqual([]);
+    });
+
+    it('hides tokens and replaces Environment Variable values with placeholders in the create command', async () => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.config.currentTeam = 'team_dummy';
+      client.setArgv(
+        'deploy',
+        '--yes',
+        '-e',
+        'API_KEY=s3cret-env',
+        '--build-env=BUILD_KEY=s3cret-build',
+        '-ye',
+        'OTHER_KEY=s3cret-cluster',
+        '--token',
+        's3cret-token',
+        '--project',
+        'new-app',
+        '--scope',
+        'team_dummy'
+      );
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Project "new-app" was not found');
+      expect(await exitCodePromise, 'exit code for "deploy"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        "To create it, replace each <VALUE> with the Environment Variable's value:\n  vercel deploy --yes --env 'API_KEY=<VALUE>' --env 'OTHER_KEY=<VALUE>' --build-env 'BUILD_KEY=<VALUE>' --project new-app --scope team_dummy --create-if-missing\n"
+      );
+      expect(client.stderr.getFullOutput()).not.toContain('s3cret');
+      expect(creates).toEqual([]);
+    });
+
+    it('uses canonical flag names in the create command', async () => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.config.currentTeam = 'team_dummy';
+      client.setArgv(
+        'deploy',
+        '-c',
+        '-e',
+        'FROM_SHELL',
+        '--name',
+        'old-name',
+        '--no-clipboard',
+        '--project',
+        'new-app',
+        '-S',
+        'team_dummy'
+      );
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput('Project "new-app" was not found');
+      expect(await exitCodePromise, 'exit code for "deploy"').toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        'To create it:\n  vercel deploy --yes --env FROM_SHELL --project new-app --scope team_dummy --create-if-missing\n'
+      );
+      expect(creates).toEqual([]);
+    });
+
+    it('labels the Environment Variable placeholder for an agent and rejects it when run unedited', async () => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+      const requests = captureDeployments();
+
+      client.cwd = cwd;
+      client.stdin.isTTY = false;
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv(
+        'deploy',
+        '-e',
+        'NODE_ENV=staging',
+        '--project',
+        'new-app',
+        '--scope',
+        'team_dummy'
+      );
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(deploy(client)).rejects.toThrow('process.exit(1)');
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.reason).toBe('project_not_found');
+      expect(payload.message).toContain(
+        "retry with --create-if-missing, and replace each <VALUE> with the Environment Variable's value."
+      );
+      expect(payload.next[0]).toEqual({
+        command:
+          "vercel deploy --env 'NODE_ENV=<VALUE>' --project new-app --scope team_dummy --create-if-missing",
+        when: "create the project; replace each <VALUE> with the Environment Variable's value",
+      });
+      expect(JSON.stringify(payload)).not.toContain('staging');
+
+      // Run the suggestion exactly as printed, split the way a shell would.
+      const suggested = (payload.next[0].command as string)
+        .match(/'[^']*'|\S+/g)!
+        .slice(1)
+        .map(word => word.replace(/^'(.*)'$/, '$1'));
+      logSpy.mockClear();
+      exitSpy.mockClear();
+      client.setArgv(...suggested);
+
+      await expect(deploy(client)).rejects.toThrow('process.exit(2)');
+      const rejected = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(rejected.reason).toBe('invalid_arguments');
+      expect(rejected.message).toBe(
+        "--env NODE_ENV is still the placeholder <VALUE>. Replace it with the Environment Variable's value."
+      );
+      expect(creates).toEqual([]);
+      expect(requests).toEqual([]);
+    });
+
+    it('creates and deploys the same directory when CI runs the suggested command', async () => {
+      const cwd = setupTmpDir();
+      await fs.outputFile(join(cwd, 'site/index.html'), '<h1>hello</h1>');
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+      const requests = captureDeployments();
+
+      client.cwd = cwd;
+      client.config.currentTeam = 'team_dummy';
+      client.stdin.isTTY = false;
+      client.setArgv(
+        'deploy',
+        'site',
+        '--yes',
+        '--no-wait',
+        '--project',
+        'new-app',
+        '--scope',
+        'team_dummy'
+      );
+      expect(await deploy(client)).toEqual(1);
+      const suggested = /To create it:\n {2}vercel (.+)\n/.exec(
+        client.stderr.getFullOutput()
+      )?.[1];
+      expect(suggested).toBeDefined();
+
+      client.setArgv(suggested!.split(' '));
+      expect(await deploy(client)).toEqual(0);
+      expect(creates).toEqual([expect.objectContaining({ name: 'new-app' })]);
+      expect(requests).toHaveLength(1);
+      expect(requests[0].project).toBe('new-app');
+      expect(
+        requests[0].files.map((file: { file: string }) => file.file)
+      ).toEqual(['index.html']);
+    });
+
+    it('suggests a similar project and the create command to an agent without --create-if-missing', async () => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      client.scenario.get('/v9/projects', (_req, res) => {
+        res.json({
+          projects: [{ ...defaultProject, id: 'prj_my_app', name: 'my-app' }],
+          pagination: { count: 1, next: null, prev: null },
+        });
+      });
+      const creates = captureProjectCreates();
+      useUnknownProject();
+      const requests = captureDeployments();
+
+      client.cwd = cwd;
+      client.stdin.isTTY = false;
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--project', 'my-ap', '--scope', 'team_dummy');
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(deploy(client)).rejects.toThrow('process.exit(1)');
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.reason).toBe('project_not_found');
+      expect(payload.message).toContain('Did you mean my-app?');
+      expect(payload.data).toEqual({ suggestion: 'my-app' });
+      expect(payload.next[0]).toEqual({
+        command:
+          'vercel deploy --project my-ap --scope team_dummy --create-if-missing',
+        when: 'create the project',
+      });
+      expect(
+        payload.next.some((step: { command: string }) =>
+          step.command.includes('my-app')
+        )
+      ).toBe(false);
+      expect(creates).toEqual([]);
+      expect(requests).toEqual([]);
+    });
+
+    it.each([
+      [
+        'without --project',
+        ['--create-if-missing'],
+        '--create-if-missing requires --project <PROJECT>.',
+      ],
+      [
+        'with --dry',
+        ['--dry', '--project', 'new-app', '--create-if-missing'],
+        "Can't use --create-if-missing with --dry.",
+      ],
+    ] as const)('rejects --create-if-missing %s as a usage error', async (_label, args, message) => {
+      const cwd = await setupStaticDir();
+      useUser();
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+
+      client.cwd = cwd;
+      client.setArgv('deploy', ...args);
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput(message);
+      expect(await exitCodePromise, 'exit code for "deploy"').toEqual(2);
+      expect(creates).toEqual([]);
+    });
+
+    it('does not connect the Git repository to a project it creates', async () => {
+      const cwd = await setupStaticDir();
+      await fs.outputFile(
+        join(cwd, '.git/config'),
+        '[remote "origin"]\n\turl = https://github.com/user/repo.git\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n'
+      );
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      const gitLinks: any[] = [];
+      client.scenario.post(
+        '/v9/projects/:projectNameOrId/link',
+        (req, _res, next) => {
+          gitLinks.push(req.body);
+          next?.();
+        }
+      );
+      const creates = captureProjectCreates();
+      useUnknownProject();
+      const requests = captureDeployments();
+
+      client.cwd = cwd;
+      client.config.currentTeam = 'team_dummy';
+      client.setArgv(
+        'deploy',
+        '--project',
+        'new-app',
+        '--scope',
+        'team_dummy',
+        '--no-wait',
+        '--yes',
+        '--create-if-missing'
+      );
+
+      expect(await deploy(client)).toEqual(0);
+      expect(creates).toEqual([expect.objectContaining({ name: 'new-app' })]);
+      expect(requests).toHaveLength(1);
+      expect(gitLinks).toEqual([]);
+    });
+
+    it('deploys an existing --project without linking the directory', async () => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+        accountId: 'team_dummy',
+      });
+      const creates = captureProjectCreates();
+      const requests = captureDeployments();
+
+      client.cwd = cwd;
+      client.config.currentTeam = 'team_dummy';
+      client.setArgv(
+        'deploy',
+        '--project',
+        'static',
+        '--scope',
+        'team_dummy',
+        '--no-wait',
+        '--yes'
+      );
+
+      expect(await deploy(client)).toEqual(0);
+      expect(creates).toEqual([]);
+      expect(requests[0].project).toBe('static');
+      expect(await fs.pathExists(join(cwd, '.vercel'))).toBe(false);
+    });
+
+    it('fails without creating anything when a --project ID does not resolve', async () => {
+      const cwd = await setupStaticDir();
+      useUser();
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('deploy', '--yes', '--project=prj_doesnotexist');
+      const exitCodePromise = deploy(client);
+
+      await expect(client.stderr).toOutput(
+        'Project "prj_doesnotexist" was not found'
+      );
+      expect(await exitCodePromise, 'exit code for "deploy"').toEqual(1);
+      expect(creates).toEqual([]);
+    });
+
+    it('fails without creating anything when --dry names a missing --project', async () => {
+      const cwd = await setupStaticDir();
+      useUser();
+      useTeams('team_dummy');
+      const creates = captureProjectCreates();
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.setArgv('deploy', '--dry', '--project=does-not-exist');
       const exitCodePromise = deploy(client);
 
       await expect(client.stderr).toOutput(
         'Project "does-not-exist" was not found'
       );
-      const exitCode = await exitCodePromise;
-      expect(exitCode, 'exit code for "deploy"').toEqual(1);
+      expect(await exitCodePromise, 'exit code for "deploy"').toEqual(1);
+      expect(creates).toEqual([]);
+    });
+
+    describe('with VERCEL_PROJECT_ID set', () => {
+      let originalOrgId: string | undefined;
+      let originalProjectId: string | undefined;
+
+      beforeEach(() => {
+        originalOrgId = process.env.VERCEL_ORG_ID;
+        originalProjectId = process.env.VERCEL_PROJECT_ID;
+      });
+
+      afterEach(() => {
+        if (originalOrgId === undefined) delete process.env.VERCEL_ORG_ID;
+        else process.env.VERCEL_ORG_ID = originalOrgId;
+        if (originalProjectId === undefined)
+          delete process.env.VERCEL_PROJECT_ID;
+        else process.env.VERCEL_PROJECT_ID = originalProjectId;
+      });
+
+      function setupPinnedProject(
+        withOrgId: boolean,
+        pinnedProjectId = 'static'
+      ) {
+        useUser({ version: 'northstar' });
+        useTeams('team_dummy');
+        useProject({
+          ...defaultProject,
+          name: 'static',
+          id: 'static',
+          accountId: 'team_dummy',
+        });
+        const creates = captureProjectCreates();
+        useUnknownProject();
+        const requests = captureDeployments();
+        if (withOrgId) process.env.VERCEL_ORG_ID = 'team_dummy';
+        else delete process.env.VERCEL_ORG_ID;
+        process.env.VERCEL_PROJECT_ID = pinnedProjectId;
+        return { creates, requests };
+      }
+
+      it.each([
+        ['with VERCEL_ORG_ID', true],
+        ['without VERCEL_ORG_ID', false],
+      ] as const)('rejects a missing --project as a usage error instead of creating or deploying (%s)', async (_label, withOrgId) => {
+        const cwd = await setupStaticDir();
+        const { creates, requests } = setupPinnedProject(withOrgId);
+
+        client.cwd = cwd;
+        client.setArgv(
+          'deploy',
+          '--yes',
+          '--project',
+          'new-app',
+          '--create-if-missing'
+        );
+        const exitCodePromise = deploy(client);
+
+        await expect(client.stderr).toOutput(
+          `Can't use --project with VERCEL_PROJECT_ID. --project is "new-app" and VERCEL_PROJECT_ID is "static". Remove one of them.`
+        );
+        expect(await exitCodePromise, 'exit code for "deploy"').toEqual(2);
+        expect(client.stderr.getFullOutput()).toMatch(
+          /See all options:\s+vercel deploy --help/
+        );
+        expect(client.stderr.getFullOutput()).not.toContain('--scope');
+        expect(creates).toEqual([]);
+        expect(requests).toEqual([]);
+      });
+
+      it('reports the pinned project as not found when --project matches VERCEL_PROJECT_ID', async () => {
+        const cwd = await setupStaticDir();
+        const { creates, requests } = setupPinnedProject(true, 'new-app');
+
+        client.cwd = cwd;
+        client.setArgv(
+          'deploy',
+          '--yes',
+          '--project',
+          'new-app',
+          '--create-if-missing'
+        );
+        const exitCodePromise = deploy(client);
+
+        await expect(client.stderr).toOutput('Project "new-app" was not found');
+        expect(await exitCodePromise, 'exit code for "deploy"').toEqual(1);
+        expect(client.stderr.getFullOutput()).not.toContain(
+          "Can't use --project with VERCEL_PROJECT_ID"
+        );
+        expect(creates).toEqual([]);
+        expect(requests).toEqual([]);
+      });
+
+      it('reports invalid_arguments with exit code 2 for an agent', async () => {
+        const cwd = await setupStaticDir();
+        const { creates, requests } = setupPinnedProject(true);
+
+        client.cwd = cwd;
+        client.stdin.isTTY = false;
+        (client as { nonInteractive: boolean }).nonInteractive = true;
+        client.setArgv('deploy', '--project', 'new-app', '--create-if-missing');
+
+        const exitSpy = vi
+          .spyOn(process, 'exit')
+          .mockImplementation((code?: number) => {
+            throw new Error(`process.exit(${code})`);
+          });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        await expect(deploy(client)).rejects.toThrow('process.exit(2)');
+
+        expect(exitSpy).toHaveBeenCalledWith(2);
+        const payload = JSON.parse(logSpy.mock.calls[0][0]);
+        expect(payload.status).toBe('error');
+        expect(payload.reason).toBe('invalid_arguments');
+        expect(payload.message).toContain('VERCEL_PROJECT_ID');
+        expect(payload.next).toEqual([
+          { command: 'vercel deploy --help', when: 'see all options' },
+        ]);
+        expect(creates).toEqual([]);
+        expect(requests).toEqual([]);
+      });
+    });
+
+    it('stops with missing_scope instead of choosing a team for an agent', async () => {
+      const cwd = await setupStaticDir();
+      useUser({ version: 'northstar' });
+      useTeams('team_dummy');
+      createTeam();
+      const creates = captureProjectCreates();
+      useUnknownProject();
+
+      client.cwd = cwd;
+      client.stdin.isTTY = false;
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--project', 'new-app', '--create-if-missing');
+
+      const exitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation((code?: number) => {
+          throw new Error(`process.exit(${code})`);
+        });
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      await expect(deploy(client)).rejects.toThrow('process.exit(1)');
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      const payload = JSON.parse(logSpy.mock.calls[0][0]);
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('missing_scope');
+      expect(creates).toEqual([]);
+    });
+  });
+
+  describe('first deployment production notice', () => {
+    const deploymentUrl = 'first-deploy-abc123.vercel.app';
+    const deploymentId = 'dpl_first_deploy';
+
+    beforeEach(() => {
+      const user = useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        name: 'static',
+        id: 'static',
+      });
+
+      client.scenario.post(`/v13/deployments`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          readyState: 'READY',
+          // API returns production even though no --prod was passed (first deploy)
+          target: 'production',
+        });
+      });
+      client.scenario.get(`/v13/deployments/${deploymentId}`, (req, res) => {
+        res.json({
+          creator: {
+            uid: user.id,
+            username: user.username,
+          },
+          id: deploymentId,
+          url: deploymentUrl,
+          readyState: 'READY',
+          target: 'production',
+          aliasAssigned: true,
+          alias: [],
+        });
+      });
+    });
+
+    it('prints a notice when a non-prod deploy returns a production deployment (TTY)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--yes');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).toContain('first deployment');
+      expect(stderrOutput).toContain('assigned to production');
+      expect(stderrOutput).toContain('--prod');
+    });
+
+    it('includes a hint and omits "Promote to production" in non-interactive JSON', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--non-interactive');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput().trim();
+      const payload = JSON.parse(stdoutOutput);
+      expect(payload.status).toBe('ok');
+      expect(payload.hint).toContain('first deployment');
+      expect(payload.hint).toContain('assigned to production');
+      // "Promote to production" is not useful when already production
+      expect(payload.next).not.toContainEqual(
+        expect.objectContaining({ when: 'Promote to production' })
+      );
+      // Inspect is still offered
+      expect(payload.next).toContainEqual(
+        expect.objectContaining({ when: 'Inspect deployment' })
+      );
+      expect(payload.next).toContainEqual({
+        command: `vercel curl https://${deploymentUrl}`,
+        when: 'Verify deployment, including when Deployment Protection is enabled',
+      });
+      (client as { nonInteractive: boolean }).nonInteractive = false;
+    });
+
+    it('does not print the notice when --prod is explicitly used (TTY)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      client.setArgv('deploy', '--prod', '--yes');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('first deployment');
+    });
+
+    it('does not include the hint when --prod is explicitly used (non-interactive)', async () => {
+      client.cwd = setupUnitFixture('commands/deploy/static');
+      (client as { nonInteractive: boolean }).nonInteractive = true;
+      client.setArgv('deploy', '--prod', '--non-interactive');
+      const exitCode = await deploy(client);
+      expect(exitCode).toEqual(0);
+
+      const stdoutOutput = client.stdout.getFullOutput().trim();
+      const payload = JSON.parse(stdoutOutput);
+      expect(payload.hint).toBeUndefined();
+      (client as { nonInteractive: boolean }).nonInteractive = false;
     });
   });
 });

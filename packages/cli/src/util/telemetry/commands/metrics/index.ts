@@ -60,11 +60,54 @@ export class MetricsTelemetryClient
     }
   }
 
+  trackCliOptionOrderBy(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'order-by',
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionOrder(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'order',
+        value: v,
+      });
+    }
+  }
+
+  trackCliOptionQuery(v: string[] | undefined) {
+    if (v && v.length > 0) {
+      this.trackCliOption({
+        option: 'query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionFilter(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({
         option: 'filter',
         value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagProd(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('prod');
+    }
+  }
+
+  trackCliOptionEnvironment(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'environment',
+        value: this.redactedTargetName(v),
       });
     }
   }
@@ -118,5 +161,16 @@ export class MetricsTelemetryClient
     if (v) {
       this.trackCliFlag('all');
     }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
+
+  trackCliError(code: string, status?: number) {
+    this.trackErrorCode(code);
+    this.trackErrorStatus(status);
   }
 }

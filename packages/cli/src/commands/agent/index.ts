@@ -23,13 +23,18 @@ export default async function agent(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('agent');
-    output.print(help(agentCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(agentCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   const subcommand = parsedArgs.args[1];
@@ -48,6 +53,11 @@ export default async function agent(client: Client): Promise<number> {
   }
 
   output.error(`Unknown subcommand: ${subcommand}`);
-  output.print(help(agentCommand, { columns: client.stderr.columns }));
-  return 1;
+  output.print(
+    help(agentCommand, {
+      stream: client.stderr,
+      columns: client.stderr.columns,
+    })
+  );
+  return 2;
 }

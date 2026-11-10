@@ -27,14 +27,14 @@ export async function openIntegration(client: Client, subArgs: string[]) {
     parsedArguments = parseArguments(subArgs, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args } = parsedArguments;
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -44,7 +44,7 @@ export async function openIntegration(client: Client, subArgs: string[]) {
     output.error(
       'Too many arguments. Usage: integration open <name> [resource]'
     );
-    return 1;
+    return 2;
   }
 
   const integrationSlug = args[0];
@@ -52,7 +52,7 @@ export async function openIntegration(client: Client, subArgs: string[]) {
 
   if (!integrationSlug) {
     output.error('You must pass an integration name');
-    return 1;
+    return 2;
   }
 
   const { team } = await getScope(client);

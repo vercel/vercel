@@ -376,7 +376,7 @@ Why we shifted off Option A:
 
 Implementation summary:
 
-- `peerDependencies: { "eve": ">=0.6.0-beta.1" }` + `peerDependenciesMeta.eve.optional: true`.
+- `peerDependencies: { "eve": ">=0.13.7" }` + `peerDependenciesMeta.eve.optional: true`.
 - Subpath export `./eve` → `./dist/eve/index.js` / `./dist/eve/index.d.ts`.
 - `src/eve/` imports types and the two error classes from `eve/connections` and throws Eve's actual error instances. `src/index.ts` does **not** re-export anything from `eve/`.
 
@@ -396,10 +396,13 @@ packages/connect/src/
 {
   "exports": {
     ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./eve": { "types": "./dist/eve/index.d.ts", "default": "./dist/eve/index.js" },
+    "./eve": {
+      "types": "./dist/eve/index.d.ts",
+      "default": "./dist/eve/index.js",
+    },
   },
   "peerDependencies": {
-    "eve": ">=0.6.0-beta.1",
+    "eve": ">=0.13.7",
   },
   "peerDependenciesMeta": {
     "eve": { "optional": true },

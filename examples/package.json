@@ -3,16 +3,13 @@
   "name": "examples",
   "description": "Each subdirectory is an example boilerplate for a framework. This package.json only exists for testing purposes.",
   "scripts": {
-    "test-unit": "pnpm test __tests__/unit/",
-    "test-e2e": "pnpm test __tests__/integration/",
-    "test": "vitest run --config ../vitest.config.mts",
-    "vitest-run": "vitest -c ../vitest.config.mts",
-    "vitest-unit": "glob --absolute '__tests__/unit/'",
-    "vitest-e2e": "glob --absolute '__tests__/integration/'"
+    "test-unit": "vitest run --config ../vitest.config.mts __tests__/unit/",
+    "test-e2e": "vitest run --config ../vitest.config.mts __tests__/integration/",
+    "test": "vitest run --config ../vitest.config.mts"
   },
   "devDependencies": {
     "@vercel/build-utils": "workspace:*",
     "@vercel/frameworks": "workspace:*",
-    "vitest": "2.0.3"
+    "vitest": "4.1.10"
   }
 }

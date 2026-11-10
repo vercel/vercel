@@ -1,14 +1,16 @@
 import chalk from 'chalk';
 import ms from 'ms';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { listVersionsSubcommand } from './command';
-import {
-  parseSubcommandArgs,
-  ensureProjectLink,
-  withGlobalFlags,
-} from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
 import { outputAgentError } from '../../util/agent-output';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
@@ -22,13 +24,24 @@ export default async function listVersions(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const asJson = Boolean(parsed.flags['--json']);
+  const limit = getRenamedOption<number>(parsed.flags, '--limit', '--count', {
+    json: asJson,
+  });
+  if ('error' in limit) {
+    return reportRenamedOptionError(client, limit.error, { json: asJson });
+  }
+
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
-  const { flags } = parsed;
   const teamId = org.type === 'team' ? org.id : undefined;
-  const count = flags['--count'] as number | undefined;
+  const count = limit.value;
 
   // Validate count
   if (count !== undefined) {
@@ -42,7 +55,7 @@ export default async function listVersions(client: Client, argv: string[]) {
             {
               command: withGlobalFlags(
                 client,
-                'routes list-versions --count 20'
+                'routes list-versions --limit 20'
               ),
             },
           ],
@@ -50,17 +63,26 @@ export default async function listVersions(client: Client, argv: string[]) {
         process.exit(1);
       }
       output.error('Count must be between 1 and 100');
-      return 1;
+      return 2;
     }
   }
 
   const lsStamp = stamp();
-  output.spinner(`Fetching route versions for ${chalk.bold(project.name)}`);
+  if (!asJson) {
+    output.spinner(`Fetching route versions for ${chalk.bold(project.name)}`);
+  }
 
   const { versions } = await getRouteVersions(client, project.id, {
     teamId,
     count,
   });
+
+  if (asJson) {
+    client.stdout.write(
+      `${JSON.stringify(withWarnings({ versions }, [limit.warning]), null, 2)}\n`
+    );
+    return 0;
+  }
 
   output.log(
     `Route versions for ${chalk.bold(project.name)} ${chalk.gray(lsStamp())}`

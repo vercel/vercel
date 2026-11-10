@@ -15,12 +15,18 @@ export class DomainsLsTelemetryClient
     }
   }
 
-  trackCliOptionNext(next: number | undefined) {
+  trackCliOptionNext(next: string | undefined) {
     if (next) {
       this.trackCliOption({
         option: 'next',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

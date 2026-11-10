@@ -76,4 +76,56 @@ describe('middleware matchers', () => {
       },
     ]);
   });
+
+  it('uses an explicit proxy matcher from the builder config', async () => {
+    const filesystem = await prepareFilesystem({
+      'proxy.js': `
+        export default () => new Response('proxy');
+      `,
+    });
+    const buildResult = await build({
+      ...filesystem,
+      entrypoint: 'proxy.js',
+      config: {
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+        middlewareMatcher: '/api/:func*',
+      },
+      meta: { skipDownload: true },
+    });
+
+    expect(buildResult.routes).toEqual([
+      {
+        src: '^\\/api(?:\\/((?:[^\\/#\\?]+?)(?:\\/(?:[^\\/#\\?]+?))*))?[\\/#\\?]?$',
+        middlewareRawSrc: ['/api/:func*'],
+        middlewarePath: 'proxy.js',
+        continue: true,
+        override: true,
+      },
+    ]);
+  });
+
+  it('rejects a matcher configured in both source and builder config', async () => {
+    const filesystem = await prepareFilesystem({
+      'proxy.js': `
+        export const config = { matcher: '/from-source' };
+        export default () => new Response('proxy');
+      `,
+    });
+
+    await expect(
+      build({
+        ...filesystem,
+        entrypoint: 'proxy.js',
+        config: {
+          middleware: true,
+          middlewareRuntime: 'nodejs',
+          middlewareMatcher: '/from-vercel-json',
+        },
+        meta: { skipDownload: true },
+      })
+    ).rejects.toThrow(
+      'proxy.js: `proxy.matcher` in vercel.json conflicts with `config.matcher` exported from the proxy entrypoint. Configure the matcher in only one location.'
+    );
+  });
 });

@@ -1,0 +1,43 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path(.*)?",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/api-bis/:path(.*)?",
+      "destination": {
+        "service": "api-bis"
+      }
+    }
+  ],
+  "services": {
+    "api": {
+      "root": "services/api",
+      "framework": "go",
+      "buildCommand": "go build -ldflags '-s -w' -o \"$VERCEL_OUTPUT_FILE\" ./cmd/server",
+      "rewrites": [
+        {
+          "source": "/api/:path(.*)?",
+          "destination": "/:path"
+        }
+      ]
+    },
+    "api-bis": {
+      "root": "services/api-bis",
+      "framework": "go",
+      "rewrites": [
+        {
+          "source": "/api-bis/:path(.*)?",
+          "destination": "/:path"
+        }
+      ]
+    }
+  }
+}

@@ -17,6 +17,7 @@ export async function createTgzFiles(
   const tarStream = tar
     .pack(workPath, {
       entries: filesToArchive.map(file => relative(workPath, file)),
+      ignore: () => true,
     })
     .pipe(createGzip());
   const chunkedTarBuffers = await streamToBufferChunks(tarStream);

@@ -1,0 +1,266 @@
+{
+  "releases": [
+    {
+      "name": "@vercel/agent-setup",
+      "oldVersion": "0.0.0",
+      "newVersion": "0.1.0",
+      "type": "minor"
+    },
+    {
+      "name": "vercel",
+      "oldVersion": "65.3.1",
+      "newVersion": "65.4.0",
+      "type": "minor"
+    },
+    {
+      "name": "@vercel-internals/cli-builder-integration",
+      "oldVersion": "1.0.32",
+      "newVersion": "1.0.33",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/build-utils",
+      "oldVersion": "15.0.2",
+      "newVersion": "15.1.0",
+      "type": "minor"
+    },
+    {
+      "name": "@vercel/container",
+      "oldVersion": "22.0.2",
+      "newVersion": "23.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel-internals/ipc-proxy",
+      "oldVersion": "1.0.1",
+      "newVersion": "1.1.0",
+      "type": "minor"
+    },
+    {
+      "name": "@vercel/go",
+      "oldVersion": "25.0.2",
+      "newVersion": "26.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/rust",
+      "oldVersion": "23.0.2",
+      "newVersion": "24.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/functions",
+      "oldVersion": "3.10.3",
+      "newVersion": "3.10.4",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/cli-config",
+      "oldVersion": "0.3.3",
+      "newVersion": "0.3.4",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/config",
+      "oldVersion": "0.13.0",
+      "newVersion": "0.14.0",
+      "type": "minor"
+    },
+    {
+      "name": "@vercel/client",
+      "oldVersion": "18.9.3",
+      "newVersion": "18.10.0",
+      "type": "minor"
+    },
+    {
+      "name": "examples",
+      "type": "none"
+    },
+    {
+      "name": "@vercel-internals/builder-orchestration",
+      "oldVersion": "1.0.29",
+      "newVersion": "1.0.30",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel-internals/runtimes",
+      "oldVersion": "1.2.3",
+      "newVersion": "1.2.4",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel-internals/types",
+      "oldVersion": "3.0.31",
+      "newVersion": "3.0.32",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/backends",
+      "oldVersion": "22.0.2",
+      "newVersion": "23.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/elysia",
+      "oldVersion": "22.0.2",
+      "newVersion": "23.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/express",
+      "oldVersion": "22.0.2",
+      "newVersion": "23.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/fastify",
+      "oldVersion": "22.0.2",
+      "newVersion": "23.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/fs-detectors",
+      "oldVersion": "7.11.0",
+      "newVersion": "7.11.1",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/gatsby-plugin-vercel-builder",
+      "oldVersion": "2.2.80",
+      "newVersion": "2.2.81",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/h3",
+      "oldVersion": "22.0.2",
+      "newVersion": "23.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/hono",
+      "oldVersion": "22.0.2",
+      "newVersion": "23.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/hydrogen",
+      "oldVersion": "23.0.2",
+      "newVersion": "24.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/koa",
+      "oldVersion": "22.0.2",
+      "newVersion": "23.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/nestjs",
+      "oldVersion": "22.0.2",
+      "newVersion": "23.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/next",
+      "oldVersion": "26.0.2",
+      "newVersion": "27.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/node",
+      "oldVersion": "27.0.2",
+      "newVersion": "28.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/python",
+      "oldVersion": "28.0.2",
+      "newVersion": "29.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/redwood",
+      "oldVersion": "24.0.2",
+      "newVersion": "25.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/remix-builder",
+      "oldVersion": "27.0.2",
+      "newVersion": "28.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/ruby",
+      "oldVersion": "24.0.2",
+      "newVersion": "25.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/static-build",
+      "oldVersion": "24.0.2",
+      "newVersion": "25.0.0",
+      "type": "major"
+    },
+    {
+      "name": "@vercel/edge",
+      "oldVersion": "1.3.3",
+      "newVersion": "1.3.3",
+      "type": "none"
+    },
+    {
+      "name": "@vercel/cli-auth",
+      "oldVersion": "0.3.12",
+      "newVersion": "0.3.13",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/oidc",
+      "oldVersion": "4.0.3",
+      "newVersion": "4.0.4",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/cervel",
+      "oldVersion": "0.1.88",
+      "newVersion": "0.1.89",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel-internals/service-topology",
+      "oldVersion": "1.0.27",
+      "newVersion": "1.0.28",
+      "type": "patch"
+    },
+    {
+      "name": "api",
+      "oldVersion": "0.0.1",
+      "newVersion": "0.0.1",
+      "type": "none"
+    },
+    {
+      "name": "@vercel/connect",
+      "oldVersion": "2.5.5",
+      "newVersion": "2.5.6",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/kms",
+      "oldVersion": "0.3.6",
+      "newVersion": "0.3.7",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/oidc-aws-credentials-provider",
+      "oldVersion": "3.3.15",
+      "newVersion": "3.3.16",
+      "type": "patch"
+    },
+    {
+      "name": "@vercel/aws",
+      "oldVersion": "0.2.22",
+      "newVersion": "0.2.23",
+      "type": "patch"
+    }
+  ]
+}

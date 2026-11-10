@@ -5,6 +5,7 @@ import {
   FLAG_CONDITION_LIST_COMPARATORS,
   FLAG_CONDITION_RHS_OPTIONAL_COMPARATORS,
 } from './comparators';
+import { parseEntityAttributeSelector } from './entity-attribute';
 import type {
   SegmentComparator,
   SegmentCondition,
@@ -65,12 +66,19 @@ const OPERATOR_ALIASES: Record<string, SegmentComparator> = {
   '!ex': '!ex',
   gt: 'gt',
   '>': 'gt',
+  after: 'gt',
   gte: 'gte',
   '>=': 'gte',
+  'at-or-after': 'gte',
+  // Legacy alias; "on" only fits dates, not instants. Kept for compatibility.
+  'on-or-after': 'gte',
   lt: 'lt',
   '<': 'lt',
+  before: 'lt',
   lte: 'lte',
   '<=': 'lte',
+  'at-or-before': 'lte',
+  'on-or-before': 'lte',
 };
 
 const LIST_OPERATORS = new Set<SegmentComparator>(
@@ -387,14 +395,17 @@ function isRuleIdInput(input: string): boolean {
   );
 }
 
-function parseComparator(input: string): SegmentComparator {
+export function parseComparator(
+  input: string,
+  ruleLabel = 'segment rule'
+): SegmentComparator {
   const normalized = input.trim();
   const lowercase = normalized.toLowerCase();
   const comparator =
     OPERATOR_ALIASES[normalized] ?? OPERATOR_ALIASES[lowercase];
   if (!comparator) {
     throw new Error(
-      `Invalid segment rule operator "${input}". Valid operators: ${formatFlagConditionComparatorList()}.`
+      `Invalid ${ruleLabel} operator "${input}". Valid operators: ${formatFlagConditionComparatorList()}.`
     );
   }
   return comparator;
@@ -405,14 +416,7 @@ function parseEntityAttribute(input: string): {
   kind: string;
   attribute: string;
 } {
-  const [kind, ...attributeParts] = input.trim().split('.');
-  const attribute = attributeParts.join('.');
-  if (!kind || !attribute) {
-    throw new Error(
-      `Invalid entity attribute "${input}". Use ENTITY.ATTRIBUTE.`
-    );
-  }
-
+  const { kind, attribute } = parseEntityAttributeSelector(input);
   return {
     type: 'entity',
     kind,
@@ -420,7 +424,7 @@ function parseEntityAttribute(input: string): {
   };
 }
 
-function parseConditionValue(
+export function parseConditionValue(
   input: string,
   comparator: SegmentComparator
 ): SegmentConditionValue {

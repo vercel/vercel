@@ -1,0 +1,12 @@
+[project]
+name = "dramatiq-subscriber"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "dramatiq>=2.2",
+    "vercel",
+]
+
+[[tool.vercel.subscribers]]
+entrypoint = "worker:broker"

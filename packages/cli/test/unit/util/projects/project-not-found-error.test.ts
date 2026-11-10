@@ -62,6 +62,21 @@ describe('printProjectNotFoundError', () => {
       );
       expect(exitSpy).not.toHaveBeenCalled();
     });
+
+    it('names the scope used for project lookup', async () => {
+      useUser();
+      const teams = useTeams('team_searched');
+      const searchedSlug = Array.isArray(teams)
+        ? teams[0].slug
+        : teams.teams[0].slug;
+      client.config.currentTeam = 'team_default';
+
+      await printProjectNotFoundError(client, 'foo', 'deploy', 'team_searched');
+
+      expect(client.stderr.getFullOutput()).toContain(
+        `current scope (${searchedSlug})`
+      );
+    });
   });
 
   describe('non-interactive mode', () => {

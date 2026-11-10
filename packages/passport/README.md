@@ -1,6 +1,6 @@
 # @vercel/passport
 
-Runtime helpers for reading Passport identity inside Vercel Functions.
+Runtime helpers for reading and verifying Passport identity.
 
 ## Usage
 
@@ -40,12 +40,52 @@ export async function GET() {
 
 `getIdentity` reads the `x-vercel-oidc-passport-token` header injected by
 Vercel after Passport validates the visitor. For tests and local debugging, you
-can also pass the `_vercel_passport` cookie explicitly.
+can also pass the `_vercel_passport` cookie explicitly. Both legacy single
+cookies and chunked Passport session cookies are supported.
 
 By default, request tokens are verified against Vercel's OIDC JWKS. The helper
 only accepts the dedicated `https://passport.vercel.com/{owner}` issuer. It also
 validates the Passport-specific token shape so regular Vercel OIDC tokens are
 not accepted as Passport identities.
+
+Use `requireIdentity(input?, options?)` when a token is required. It calls
+`getIdentity` with the same arguments and throws `PassportIdentityError` if the
+identity is missing or has no token, including tokenless development identities.
+The returned identity is a `PassportIdentityWithRequiredToken`, which extends
+`PassportIdentity` with `token: string`. `verifyIdentity` returns this type too.
+
+```ts
+import { requireIdentity } from '@vercel/passport';
+
+const identity = await requireIdentity();
+```
+
+## Verify forwarded tokens
+
+Use `verifyIdentity` when a Passport-protected app forwards its Passport token to
+another backend. The helper accepts a token string or a request-like object with
+an `Authorization: Bearer <token>` header.
+
+```ts
+import { verifyIdentity } from '@vercel/passport';
+
+export async function POST(request: Request) {
+  const identity = await verifyIdentity(request, {
+    ownerId: 'team_123',
+    projectId: 'prj_123',
+    environment: 'production',
+  });
+
+  return Response.json({
+    externalSubject: identity.externalSubject,
+    email: identity.email,
+  });
+}
+```
+
+If the token was minted by a different Vercel project than the backend that
+verifies it, pass the source project's `projectId`, `environment`, and optional
+`ownerId` explicitly.
 
 ## Local development
 
@@ -112,5 +152,5 @@ const identity = await getIdentity(
 );
 ```
 
-Only disable verification for local debugging. In deployed code, use the default
-verification behavior.
+Only disable verification for local debugging. In deployed code, use
+`verifyIdentity` for explicit token verification.

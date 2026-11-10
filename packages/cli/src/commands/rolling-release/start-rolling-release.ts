@@ -70,19 +70,19 @@ export default async function startRollingRelease({
     )) as DeploymentCreateResponsePartial;
 
     output.log(
-      `Successfully created new deployment at ${newDeployment.inspectorUrl}`
+      `Created production deployment ${newDeployment.id}: ${newDeployment.inspectorUrl}`
     );
     return 0;
   }
-  // request the promotion
+  // request the rolling release start
   await client.fetch(
-    `/v10/projects/${projectId}/promote/${deployment.id}?teamId=${teamId}`,
+    `/v1/projects/${projectId}/rolling-release/start?teamId=${teamId}`,
     {
-      body: {}, // required
-      json: false,
+      body: { canaryDeploymentId: deployment.id }, // required
+      json: true,
       method: 'POST',
     }
   );
-  output.log('Successfully started rolling release');
+  output.log(`Requested rolling release start for ${deployment.id}`);
   return 0;
 }

@@ -56,6 +56,10 @@ export default async function sandbox(client: Client) {
       process.env.VERCEL_AUTH_TOKEN = client.authConfig.token;
     }
 
+    // Link sandbox telemetry to the Vercel CLI invocation that started it.
+    process.env.VERCEL_CLI_INVOCATION_ID =
+      client.telemetryEventStore.currentInvocationId;
+
     process.chdir(client.cwd);
 
     const { createApp } = (await import('sandbox')) as SandboxCliModule;

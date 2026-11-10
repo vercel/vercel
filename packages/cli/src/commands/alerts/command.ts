@@ -1,10 +1,12 @@
 import {
   formatOption,
+  jsonOption,
   limitOption,
   projectOption,
+  sinceOption,
+  untilOption,
 } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
-import { rulesAggregateCommand } from './rules/command';
 
 export const listSubcommand = {
   name: 'ls',
@@ -29,6 +31,7 @@ export const inspectSubcommand = {
   ],
   options: [
     formatOption,
+    jsonOption,
     {
       ...projectOption,
       shorthand: 'p',
@@ -50,7 +53,7 @@ export const inspectSubcommand = {
     },
     {
       name: 'Inspect as JSON',
-      value: `${packageName} alerts inspect grp_abc123 --format json`,
+      value: `${packageName} alerts inspect grp_abc123 --json`,
     },
   ],
 } as const;
@@ -59,9 +62,9 @@ export const alertsCommand = {
   name: 'alerts',
   aliases: [],
   description:
-    'List alert groups, inspect a group, or manage alert rules (see `alerts rules`).',
+    'List alert groups or inspect a group. To manage alert rules, see `vercel monitors`.',
   arguments: [],
-  subcommands: [listSubcommand, inspectSubcommand, rulesAggregateCommand],
+  subcommands: [listSubcommand, inspectSubcommand],
   options: [
     {
       name: 'type',
@@ -95,24 +98,13 @@ export const alertsCommand = {
         'Print AI-focused sections (title, resolved time, summary, key findings) instead of table output.',
     },
     {
-      name: 'since',
-      shorthand: null,
-      type: String,
-      argument: 'ISO_DATE',
-      deprecated: false,
-      description:
-        'Start of time range (ISO-8601). Defaults to 24 hours ago if not provided.',
+      ...sinceOption,
+      description: `${sinceOption.description} (default: 24h ago)`,
     },
-    {
-      name: 'until',
-      shorthand: null,
-      type: String,
-      argument: 'ISO_DATE',
-      deprecated: false,
-      description: 'End of time range (ISO-8601). Defaults to now.',
-    },
+    untilOption,
     limitOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -129,7 +121,7 @@ export const alertsCommand = {
     },
     {
       name: 'Output JSON',
-      value: `${packageName} alerts --format json`,
+      value: `${packageName} alerts --json`,
     },
     {
       name: 'Custom time range',

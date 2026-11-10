@@ -1,45 +1,45 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { inspectSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   formatCondition,
   formatTransform,
   TRANSFORM_TYPE_LABELS,
+  withGlobalFlags,
 } from './shared';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
-import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
-import { getGlobalFlagsOnlyFromArgs } from '../../util/arg-common';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
   isTargetTransform,
+  type RouteVersion,
   type RoutingRule,
   type Transform,
 } from '../../util/routes/types';
-
-function withGlobalFlags(client: Client, commandTemplate: string): string {
-  const flags = getGlobalFlagsOnlyFromArgs(client.argv.slice(2));
-  return getCommandNamePlain(`${commandTemplate} ${flags.join(' ')}`.trim());
-}
 
 export default async function inspect(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, inspectSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const { flags, args } = parsed;
   const teamId = org.type === 'team' ? org.id : undefined;
   const showDiff = flags['--diff'] as boolean | undefined;
+  const asJson = Boolean(flags['--json']);
 
   const identifier = args[0] === 'inspect' ? args[1] : args[0];
 
@@ -63,20 +63,22 @@ export default async function inspect(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(
-      `Missing route name or ID. Usage: ${chalk.cyan(getCommandName('routes inspect <name-or-id>'))}`
+      `Missing route name or ID. Usage: ${chalk.cyan(withGlobalFlags(client, 'routes inspect <name-or-id>'))}`
     );
-    return 1;
+    return 2;
   }
 
   const inspectStamp = stamp();
-  output.spinner(
-    `Searching for route "${identifier}" in ${chalk.bold(project.name)}`
-  );
+  if (!asJson) {
+    output.spinner(
+      `Searching for route "${identifier}" in ${chalk.bold(project.name)}`
+    );
+  }
 
   // Fetch current routes (staging if exists, else production)
   const { routes } = await getRoutes(client, project.id, {
@@ -115,7 +117,7 @@ export default async function inspect(client: Client, argv: string[]) {
     }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
+        withGlobalFlags(client, 'routes list')
       )} to see all routes.`
     );
     return 1;
@@ -145,6 +147,12 @@ export default async function inspect(client: Client, argv: string[]) {
       );
       return 1;
     }
+    if (asJson) {
+      output.error(
+        `Multiple routes match "${identifier}" (${routes.length} matches). Pass an exact route name or ID.`
+      );
+      return 1;
+    }
     output.log(
       `Found ${routes.length} routes matching "${identifier}" ${chalk.gray(inspectStamp())}`
     );
@@ -171,6 +179,17 @@ export default async function inspect(client: Client, argv: string[]) {
     route = selected;
   }
 
+  if (asJson) {
+    const productionRoute = showDiff
+      ? ((await getProductionRoute(client, project.id, teamId, route.id))
+          .route ?? null)
+      : undefined;
+    client.stdout.write(
+      `${JSON.stringify({ route, productionRoute }, null, 2)}\n`
+    );
+    return 0;
+  }
+
   output.log(
     `Route found in ${chalk.bold(project.name)} ${chalk.gray(inspectStamp())}`
   );
@@ -187,29 +206,39 @@ export default async function inspect(client: Client, argv: string[]) {
 // Diff mode
 // ---------------------------------------------------------------------------
 
+/** The live version, and the route with this ID in it, if either exists. */
+async function getProductionRoute(
+  client: Client,
+  projectId: string,
+  teamId: string | undefined,
+  routeId: string
+): Promise<{ version?: RouteVersion; route?: RoutingRule }> {
+  const { versions } = await getRouteVersions(client, projectId, { teamId });
+  const version = versions.find(v => v.isLive);
+  if (!version) {
+    return {};
+  }
+  const { routes } = await getRoutes(client, projectId, {
+    teamId,
+    versionId: version.id,
+  });
+  return { version, route: routes.find(r => r.id === routeId) };
+}
+
 async function showRouteDiff(
   client: Client,
   projectId: string,
   teamId: string | undefined,
   stagingRoute: RoutingRule
 ): Promise<number> {
-  // Find the production version
-  const { versions } = await getRouteVersions(client, projectId, { teamId });
-  const productionVersion = versions.find(v => v.isLive);
+  const { version: productionVersion, route: productionRoute } =
+    await getProductionRoute(client, projectId, teamId, stagingRoute.id);
 
   if (!productionVersion) {
     output.log('No production version found. Showing current route.');
     output.print(formatRouteDetails(stagingRoute));
     return 0;
   }
-
-  // Fetch production routes to find the same route
-  const { routes: productionRoutes } = await getRoutes(client, projectId, {
-    teamId,
-    versionId: productionVersion.id,
-  });
-
-  const productionRoute = productionRoutes.find(r => r.id === stagingRoute.id);
 
   if (!productionRoute) {
     // Route only exists in staging — it's new

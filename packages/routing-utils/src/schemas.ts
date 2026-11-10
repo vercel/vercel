@@ -22,13 +22,14 @@ const serviceNameSchema = {
 
 const serviceDestinationSchema = {
   description:
-    'A service-targeted destination that delegates routing into a named service from `services`.',
+    'A service-targeted destination that delegates routing into a named service from `services`. Identified by the presence of `service`.',
   type: 'object',
   additionalProperties: false,
-  required: ['type', 'service'],
+  required: ['service'],
   properties: {
     type: {
-      description: 'Discriminator. Must be `service`.',
+      description:
+        'Optional explicit format marker. The destination shape is identified by the `service` property, so `type` is no longer required. When present it must be `service`.',
       type: 'string',
       enum: ['service'],
     },

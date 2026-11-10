@@ -1,10 +1,17 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
-import nodeFetch from 'node-fetch';
+import { getCliPath } from './helpers/get-cli-path';
+import nodeFetch from '../src/util/fetch';
 import { apiFetch } from './helpers/api-fetch';
 import fs from 'fs-extra';
 import sleep from '../src/util/sleep';
-import waitForPrompt from './helpers/wait-for-prompt';
+import waitForPrompt, {
+  answerTeamPromptThenWait,
+} from './helpers/wait-for-prompt';
+import {
+  pickDeploymentUrl,
+  waitForDeployment,
+} from './helpers/wait-for-deployment';
 import { listTmpDirs } from './helpers/get-tmp-dir';
 import { teamPromise } from './helpers/get-account';
 import {
@@ -18,7 +25,7 @@ import { randomBytes } from 'crypto';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
-const binaryPath = path.resolve(__dirname, '../scripts/start.js');
+const binaryPath = getCliPath();
 
 async function vcLink(projectPath: string) {
   const { exitCode, stdout, stderr } = await execCli(
@@ -101,7 +108,7 @@ test('default command should deploy directory', async () => {
   expect(stdout).toMatch(/https:\/\/output-.+\.vercel\.app/);
 });
 
-test('default command should warn when deploying with conflicting subdirectory', async () => {
+test('default command should not warn about conflicting subdirectory when cwd is already linked', async () => {
   const projectDir = await setupE2EFixture(
     'deploy-default-with-conflicting-sub-directory'
   );
@@ -121,12 +128,27 @@ test('default command should warn when deploying with conflicting subdirectory',
   );
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(stderr || '').toMatch(
+  expect(stderr || '').not.toMatch(
     /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
   );
 
   const listHeader = /No deployments found/;
   expect(stderr || '').toMatch(listHeader); // ensure `list` command still ran
+});
+
+test('default command should warn about conflicting subdirectory when cwd is not linked', async () => {
+  const projectDir = await setupE2EFixture(
+    'deploy-default-with-conflicting-sub-directory',
+    { removeProjectLink: true }
+  );
+
+  const { stderr } = await execCli(binaryPath, ['list', '--help'], {
+    cwd: projectDir,
+  });
+
+  expect(stderr || '').toMatch(
+    /Did you mean to deploy the subdirectory "list"\? Use `vc --cwd list` instead./
+  );
 });
 
 test('deploy command should not warn when deploying with conflicting subdirectory and using --cwd', async () => {
@@ -182,11 +204,10 @@ test('default command should work with --cwd option', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
+  const url = pickDeploymentUrl(stdout);
 
   // Root README.md is intentionally excluded from zero-config static deployments.
-  const deploymentResult = await nodeFetch(`${url}/content.txt`);
-  const body = await deploymentResult.text();
+  const { text: body } = await waitForDeployment(`${url}/content.txt`);
   expect(body).toEqual(
     'root contents for deploy-default-with-conflicting-sub-directory'
   );
@@ -194,7 +215,8 @@ test('default command should work with --cwd option', async () => {
 
 test('should allow deploying a directory that was built with a target environment of "preview" and `--prebuilt` is used without specifying a target', async () => {
   const projectDir = await setupE2EFixture(
-    'deploy-default-with-prebuilt-preview'
+    'deploy-default-with-prebuilt-preview',
+    { removeProjectLink: true }
   );
 
   await vcLink(projectDir);
@@ -212,17 +234,18 @@ test('should allow deploying a directory that was built with a target environmen
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
+  const url = pickDeploymentUrl(stdout);
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
-  const body = await deploymentResult.text();
+  const { text: body } = await waitForDeployment(`${url}/README.md`);
   expect(body).toEqual(
     'readme contents for deploy-default-with-prebuilt-preview'
   );
 });
 
 test('should allow deploying a directory that was prebuilt, but has no builds.json', async () => {
-  const projectDir = await setupE2EFixture('build-output-api-raw');
+  const projectDir = await setupE2EFixture('build-output-api-raw', {
+    removeProjectLink: true,
+  });
 
   await vcLink(projectDir);
 
@@ -239,10 +262,9 @@ test('should allow deploying a directory that was prebuilt, but has no builds.js
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
+  const url = pickDeploymentUrl(stdout);
 
-  const deploymentResult = await nodeFetch(`${url}/README.md`);
-  const body = await deploymentResult.text();
+  const { text: body } = await waitForDeployment(`${url}/README.md`);
   expect(body).toEqual('readme contents for build-output-api-raw');
 });
 
@@ -302,8 +324,10 @@ test('deploy using only vercel.json with `redirects` defined', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const url = stdout;
-  const res = await nodeFetch(`${url}/foo/bar`, { redirect: 'manual' });
+  const url = pickDeploymentUrl(stdout);
+  const { response: res } = await waitForDeployment(`${url}/foo/bar`, {
+    redirect: 'manual',
+  });
   const location = res.headers.get('location');
   expect(location).toBe('https://example.com/foo/bar');
 });
@@ -323,11 +347,12 @@ test('deploy using --local-config flag v2', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(pickDeploymentUrl(stdout));
   expect(host).toMatch(/secondary/gm);
 
-  const testRes = await nodeFetch(`https://${host}/test-${team.slug}.html`);
-  const testText = await testRes.text();
+  const { text: testText } = await waitForDeployment(
+    `https://${host}/test-${team.slug}.html`
+  );
   expect(testText).toBe('<h1>hello test</h1>');
 
   const anotherTestRes = await nodeFetch(`https://${host}/another-test`);
@@ -374,10 +399,8 @@ test('deploy from a nested directory', async () => {
   });
 
   await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Project?');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, `Name? (${projectName})`);
@@ -410,10 +433,8 @@ test('deploy from a nested directory with `--archive=tgz` option', async () => {
   );
 
   await waitForPrompt(vc, 'Directory');
-  await waitForPrompt(vc, 'Which team?');
-  vc.stdin?.write('\n');
-
-  await waitForPrompt(vc, 'Project?');
+  // Single-team accounts auto-select the team; answer the prompt only if shown.
+  await answerTeamPromptThenWait(vc, 'Project?');
   vc.stdin?.write('\n');
 
   await waitForPrompt(vc, `Name? (${projectName})`);
@@ -442,10 +463,11 @@ test('deploy using --local-config flag above target', async () => {
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
-  const { host } = new URL(stdout);
+  const { host } = new URL(pickDeploymentUrl(stdout));
 
-  const testRes = await nodeFetch(`https://${host}/index.html`);
-  const testText = await testRes.text();
+  const { text: testText } = await waitForDeployment(
+    `https://${host}/index.html`
+  );
   expect(testText).toBe('<h1>hello index</h1>');
 
   const anotherTestRes = await nodeFetch(`https://${host}/another.html`);
@@ -497,8 +519,8 @@ test.skip('deploy `api-env` fixture and test `vercel env` command', async () => 
 
     await waitForPrompt(vc, 'Name?');
     vc.stdin?.write(`${promptEnvVar}\n`);
-    await waitForPrompt(vc, 'Store as sensitive?');
-    vc.stdin?.write('n\n');
+    await waitForPrompt(vc, 'Environment Variable type?');
+    vc.stdin?.write('\x1B[B\n'); // Select Config
     await waitForPrompt(vc, 'Value?');
     vc.stdin?.write('my plaintext value\n');
 

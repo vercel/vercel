@@ -12,13 +12,13 @@ import type {
   FileBlob,
   FileFsRef,
   Lambda,
+  Service,
 } from '@vercel/build-utils';
 import { VercelConfig } from '@vercel/client';
 import type { HandleValue, Route } from '@vercel/routing-utils';
 import type { Transform } from './transforms';
 import type { ProjectSettings } from '@vercel-internals/types';
-import type { Service } from '@vercel/fs-detectors';
-import type { BuilderWithPkg } from '../build/import-builders';
+import type { BuilderWithPkg } from '../../builders/import-builders';
 
 export { VercelConfig };
 
@@ -30,6 +30,23 @@ export interface DevServerOptions {
   useImplicitServicesEnvInjection?: boolean;
   projectId?: string;
   orgId?: string;
+  queuePort?: number;
+  runtimeCachePort?: number;
+  schedulesPort?: number;
+  /**
+   * Run the app without the router: nothing listens but the Development
+   * Command, on `devCommandPort`. For callers whose routing happens elsewhere,
+   * like `vc dev --tunnel`'s deployment.
+   */
+  routing?: boolean;
+  /** Run the Development Command on this port rather than a free one. */
+  devCommandPort?: number;
+  /**
+   * Called with the project's config as authored, each time it resolves: at
+   * startup, and again whenever a change in the project reloads it.
+   */
+  onConfig?: (config: VercelConfig) => void;
+  onErrorCode?: (code: string | undefined) => void;
 }
 
 export interface EnvConfigs {
@@ -55,6 +72,7 @@ export interface BuildMatch extends BuildConfig {
   builderWithPkg: BuilderWithPkg;
   buildOutput: BuilderOutputs;
   buildResults: Map<string | null, BuildResult>;
+  buildResultVersion?: number;
   buildTimestamp: number;
   buildProcess?: ChildProcess;
 }

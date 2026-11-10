@@ -2,7 +2,10 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import formatDate from '../format-date';
 import { formatFlagConditionComparator } from './comparators';
+import { getFlagAttributeType } from './attribute-types';
+import { formatTimestampRhs } from './timestamp';
 import type {
+  FlagSettings,
   Segment,
   SegmentCondition,
   SegmentConditionValue,
@@ -14,12 +17,14 @@ interface PrintSegmentDetailsOptions {
   segment: Segment;
   projectSlugLink: string;
   showTimestamps?: boolean;
+  settings?: FlagSettings;
 }
 
 export function printSegmentDetails({
   segment,
   projectSlugLink,
   showTimestamps = true,
+  settings,
 }: PrintSegmentDetailsOptions) {
   output.log(
     `\nFeature flag segment ${chalk.bold(segment.slug)} for ${projectSlugLink}\n`
@@ -50,10 +55,10 @@ export function printSegmentDetails({
     );
   }
 
-  printSegmentData(segment);
+  printSegmentData(segment, settings);
 }
 
-function printSegmentData(segment: Segment) {
+function printSegmentData(segment: Segment, settings?: FlagSettings) {
   const { rules = [], include = {}, exclude = {} } = segment.data;
 
   output.print(`\n  ${chalk.dim('Rules:')}\n`);
@@ -65,7 +70,7 @@ function printSegmentData(segment: Segment) {
       output.print(`    ${chalk.dim('→')} ${formatOutcome(rule.outcome)}\n`);
       for (const condition of rule.conditions) {
         output.print(
-          `      ${chalk.dim('if')} ${formatCondition(condition)}\n`
+          `      ${chalk.dim('if')} ${formatCondition(condition, settings)}\n`
         );
       }
     }
@@ -113,17 +118,39 @@ function formatOutcome(outcome: SegmentRuleOutcome): string {
   return `match ${outcome.passPromille / 10}% by ${outcome.base.kind}.${outcome.base.attribute}`;
 }
 
-function formatCondition(condition: SegmentCondition): string {
+function formatCondition(
+  condition: SegmentCondition,
+  settings?: FlagSettings
+): string {
   const lhs =
     condition.lhs.type === 'entity'
       ? `${condition.lhs.kind}.${condition.lhs.attribute}`
       : 'segment';
+  const attributeType =
+    condition.lhs.type === 'entity'
+      ? getFlagAttributeType(
+          settings,
+          condition.lhs.kind,
+          condition.lhs.attribute
+        )
+      : undefined;
   const rhs =
-    condition.rhs === undefined ? '' : ` ${formatValue(condition.rhs)}`;
-  return `${lhs} ${formatFlagConditionComparator(condition.cmp)}${rhs}`;
+    condition.rhs === undefined
+      ? ''
+      : ` ${formatValue(condition.rhs, attributeType)}`;
+  return `${lhs} ${formatFlagConditionComparator(condition.cmp, {
+    attributeType,
+  })}${rhs}`;
 }
 
-function formatValue(value: SegmentConditionValue): string {
+function formatValue(
+  value: SegmentConditionValue,
+  attributeType?: string
+): string {
+  const timestampRhs = formatTimestampRhs(value, attributeType);
+  if (timestampRhs) {
+    return timestampRhs;
+  }
   if (typeof value !== 'object' || value === null) {
     return JSON.stringify(value);
   }

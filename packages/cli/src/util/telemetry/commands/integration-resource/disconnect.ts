@@ -35,4 +35,10 @@ export class IntegrationResourceDisconnectTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
 }

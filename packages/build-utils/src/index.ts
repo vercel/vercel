@@ -4,14 +4,19 @@ import FileRef from './file-ref';
 import {
   Lambda,
   createLambda,
+  findMatchingFunction,
   getLambdaOptionsFromFunction,
   sanitizeConsumerName,
 } from './lambda';
 import { NodejsLambda, type NodejsLambdaOptions } from './nodejs-lambda';
-import { Prerender } from './prerender';
+import {
+  Prerender,
+  type PrerenderInitialMetadata,
+  type PrerenderOnMiss,
+} from './prerender';
 import download, {
   downloadFile,
-  DownloadedFiles,
+  type DownloadedFiles,
   isSymbolicLink,
   isDirectory,
   isExternalSymlink,
@@ -19,13 +24,12 @@ import download, {
   getSymlinkTarget,
 } from './fs/download';
 import getWriteableDirectory from './fs/get-writable-directory';
-import glob, { GlobOptions } from './fs/glob';
+import glob, { type GlobOptions } from './fs/glob';
 import rename from './fs/rename';
 import {
   spawnAsync,
   execCommand,
   spawnCommand,
-  walkParentDirs,
   getScriptName,
   installDependencies,
   runPackageJsonScript,
@@ -43,11 +47,10 @@ import {
   getNodeBinPath,
   getNodeBinPaths,
   scanParentDirs,
-  findPackageJson,
-  traverseUpDirectories,
-  PipInstallResult,
-  NpmInstallOutput,
+  type PipInstallResult,
+  type NpmInstallOutput,
   type CliType,
+  type WorkspaceInstallTarget,
 } from './fs/run-user-scripts';
 import {
   getLatestNodeVersion,
@@ -56,7 +59,13 @@ import {
   isBunVersion,
   getSupportedBunVersion,
 } from './fs/node-version';
+import {
+  findPackageJson,
+  walkParentDirs,
+  traverseUpDirectories,
+} from './fs/find-package-json';
 import streamToBuffer, { streamToBufferChunks } from './fs/stream-to-buffer';
+import { getOrCreateBunBinary } from './fs/bun-helpers';
 import debug from './debug';
 import getIgnoreFilter from './get-ignore-filter';
 import { getPlatformEnv } from './get-platform-env';
@@ -67,9 +76,12 @@ import {
 } from './get-service-url-env-vars';
 import { cloneEnv } from './clone-env';
 import { hardLinkDir } from './hard-link-dir';
+import { getNodeExecPath } from './get-node-exec-path';
 import { validateNpmrc } from './validate-npmrc';
 
-export type { NodejsLambdaOptions };
+export type { NodejsLambdaOptions, PrerenderInitialMetadata, PrerenderOnMiss };
+export { createDaemonStaticFileFilter } from './daemon-static-publishing';
+export type { LambdaAffinity } from './lambda';
 
 export {
   FileBlob,
@@ -81,10 +93,10 @@ export {
   Prerender,
   download,
   downloadFile,
-  DownloadedFiles,
+  type DownloadedFiles,
   getWriteableDirectory,
   glob,
-  GlobOptions,
+  type GlobOptions,
   rename,
   spawnAsync,
   getScriptName,
@@ -95,15 +107,18 @@ export {
   walkParentDirs,
   getNodeBinPath,
   getNodeBinPaths,
+  getNodeExecPath,
   getSupportedNodeVersion,
   isBunVersion,
   getSupportedBunVersion,
+  getOrCreateBunBinary,
   detectPackageManager,
   runNpmInstall,
-  NpmInstallOutput,
+  type NpmInstallOutput,
+  type WorkspaceInstallTarget,
   runBundleInstall,
   runPipInstall,
-  PipInstallResult,
+  type PipInstallResult,
   runShellScript,
   runCustomInstallCommand,
   resetCustomInstallCommandSet,
@@ -125,6 +140,7 @@ export {
   isExternalSymlink,
   isExternalSymlinkTarget,
   getSymlinkTarget,
+  findMatchingFunction,
   getLambdaOptionsFromFunction,
   sanitizeConsumerName,
   scanParentDirs,
@@ -142,10 +158,15 @@ export { ContainerImage } from './container-image';
 export type { ContainerImageConfig } from './container-image';
 export { readConfigFile, getPackageJson } from './fs/read-config-file';
 export { normalizePath } from './fs/normalize-path';
-export { getOsRelease, getProvidedRuntime } from './os';
+export { getProvidedRuntime } from './provided-runtime';
 
-export * from './should-serve';
-export * from './schemas';
+export { shouldServe } from './should-serve';
+export {
+  getFunctionsSchema,
+  functionsSchema,
+  buildsSchema,
+  packageManifestSchema,
+} from './schemas';
 export {
   DEFAULT_MAX_DURATION_LIMIT,
   SKIP_MAX_DURATION_LIMIT_ENV,
@@ -171,13 +192,20 @@ export { isPackageInstalled } from './is-package-installed';
 
 export { defaultCachePathGlob } from './default-cache-path-glob';
 
+export { resolveBuildConcurrency } from './resolve-build-concurrency';
+
 export { generateNodeBuilderFunctions } from './generate-node-builder-functions';
+
+export {
+  getRegExpFromMatchers,
+  resolveMiddlewareMatcher,
+} from './middleware-matcher';
 
 export {
   BACKEND_FRAMEWORKS,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
-  BackendFramework,
+  type BackendFramework,
   isBackendFramework,
   isNodeBackendFramework,
   isBackendBuilder,
@@ -185,112 +213,46 @@ export {
   isExperimentalBackendsWithoutIntrospectionEnabled,
   shouldUseExperimentalBackends,
   PYTHON_FRAMEWORKS,
-  PythonFramework,
+  type PythonFramework,
   isPythonFramework,
 } from './framework-helpers';
 
-export * from './python';
-export * from './node-entrypoint';
+export { isNodeEntrypoint } from './node-entrypoint';
 export * from './service-path-utils';
-
+export * from './schedule-path-utils';
+export * from './schedules';
 export {
-  getEncryptedEnv,
-  type EncryptedEnvFile,
-} from './process-serverless/get-encrypted-env-file';
-export { getLambdaEnvironment } from './process-serverless/get-lambda-environment';
-export {
-  getLambdaPreloadScripts,
-  type BytecodeCachingOptions,
-} from './process-serverless/get-lambda-preload-scripts';
-export { getLambdaSupportsStreaming } from './process-serverless/get-lambda-supports-streaming';
+  DAEMON_NAME_PATTERN,
+  getDaemonImageRepository,
+  getDaemonNames,
+  type DaemonConfig,
+  type DaemonOutput,
+  type DaemonInstances,
+  type DaemonLivenessProbe,
+  type DaemonReplicas,
+  type DaemonResources,
+  type Daemons,
+} from './daemons';
 
 export {
   streamToDigestAsync,
   sha256,
-  md5,
   type FileDigest,
 } from './fs/stream-to-digest-async';
 
 export {
-  getBuildResultMetadata,
-  type BuildResultMetadata,
-} from './collect-build-result/get-build-result-metadata';
-export {
-  validateBuildResult,
-  SUPPORTED_AL2023_RUNTIMES,
-  type ValidateBuildResultParams,
-  type ValidateBuildResultResult,
-} from './collect-build-result/validate-build-result';
-export { getLambdaByOutputPath } from './collect-build-result/get-lambda-by-output-path';
-export { isRouteMiddleware } from './collect-build-result/is-route-middleware';
-export { getPrerenderChain } from './collect-build-result/get-prerender-chain';
-export {
-  streamWithExtendedPayload,
-  type ExtendedBodyData,
-} from './collect-build-result/stream-with-extended-payload';
-
-export { collectUncompressedSize } from './collect-uncompressed-size';
-
-export {
-  finalizeLambda,
-  type CreateZipResult,
-  type CreateZipFn,
-  type FinalizeLambdaParams,
-  type FinalizeLambdaResult,
-  type TraceFn,
-} from './finalize-lambda';
-
-export {
-  validateLambdaSize,
-  validateUncompressedLambdaSize,
-  FunctionSizeError,
-  MAX_LAMBDA_SIZE,
-  MAX_LAMBDA_UNCOMPRESSED_SIZE,
-  validateEnvWrapperSupport,
-  ENV_WRAPPER_SUPPORTED_FAMILIES,
-} from './validate-lambda-size';
-
-export { validateFrameworkVersion } from './deserialize/validate-framework-version';
-export { hydrateFilesMap } from './deserialize/hydrate-files-map';
-export { createFunctionsIterator } from './deserialize/create-functions-iterator';
-export { maybeReadJSON } from './deserialize/maybe-read-json';
-export {
-  deserializeBuildOutput,
-  validateDeploymentId,
-} from './deserialize/deserialize-build-output';
-export type {
-  DeserializeBuildOutputConfig,
-  DeserializeBuildOutputResult,
-  DeserializeBuildOutputPathOverride,
-  DeserializeBuildOutputOptions,
-  DeserializeBuildOutputLambdaOptions,
-  GroupLambdasOptions,
-  DeserializeBuildOutputSerializedConfig,
-  DeserializeBuildOutputSerializedPrerender,
-} from './deserialize/deserialize-build-output-types';
-
-export {
-  deserializeLambda,
-  type DeserializeLambdaOptions,
-} from './deserialize/deserialize-lambda';
-export { deserializeEdgeFunction } from './deserialize/deserialize-edge-function';
-export type {
-  Properties,
-  SerializedLambda,
-  SerializedNodejsLambda,
-  SerializedEdgeFunction,
-  SerializedFileFsRef,
-  SerializedPrerender,
-} from './deserialize/serialized-types';
-
-export { validateRegularFile } from './collect-build-result/validate-regular-file';
-export { validatePrerender } from './collect-build-result/validate-prerender';
-export { getContentType } from './collect-build-result/get-content-type';
-export {
-  fileToBuildOutputFile,
-  type BuildOutputFile,
-} from './collect-build-result/file-to-build-output-file';
-export {
-  prerenderToBuildOutputFile,
-  type ExtendedPayload,
-} from './collect-build-result/prerender-to-build-output-file';
+  EMPTY_DISCOVERY,
+  NAVIGATION_ACCEPT_RE,
+  promoteStaticFiles,
+  staticBundleExclusions,
+  staticDirectoryRedirects,
+  staticFallbackRoutes,
+  staticShadowRoutes,
+  type ShadowRoute,
+  type StaticBundleExclusions,
+  type StaticFallback,
+  type StaticDiscovery,
+  type StaticMount,
+  type StaticPromotionOptions,
+  type StaticPromotionResult,
+} from './static-files';

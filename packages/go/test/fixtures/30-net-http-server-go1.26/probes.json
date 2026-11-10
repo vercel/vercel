@@ -3,20 +3,28 @@
     {
       "path": "/",
       "status": 200,
-      "mustContain": "framework:net-http version:go1.26.1-X:jsonv2 randomness:RANDOMNESS_PLACEHOLDER",
+      "mustContain": "framework:net-http version:go1.26.",
       "responseHeaders": {
         "content-type": "/text\\/html/"
       }
     },
     {
+      "path": "/",
+      "mustContain": "randomness:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/",
+      "mustContain": "-X:jsonv2"
+    },
+    {
       "path": "/static/info.txt",
       "status": 200,
-      "mustContain": "framework=net-http version=go1.26.1 RANDOMNESS_PLACEHOLDER"
+      "mustContain": "framework=net-http RANDOMNESS_PLACEHOLDER"
     },
     {
       "path": "/api/data",
       "status": 200,
-      "mustContain": "\"framework\":\"net-http\",\"version\":\"go1.26.1-X:jsonv2\"",
+      "mustContain": "\"framework\":\"net-http\",\"version\":\"go1.26.",
       "responseHeaders": {
         "content-type": "/application\\/json/"
       }

@@ -21,7 +21,7 @@ describe('detectProcfileServices', () => {
         type: 'web',
         framework: 'django',
         entrypoint: 'myapp/wsgi.py',
-        routePrefix: '/',
+        mountPath: '/',
       });
     });
 
@@ -92,7 +92,7 @@ describe('detectProcfileServices', () => {
         type: 'web',
         framework: 'fastapi',
         entrypoint: 'app/main.py',
-        routePrefix: '/',
+        mountPath: '/',
       });
     });
 
@@ -146,7 +146,7 @@ describe('detectProcfileServices', () => {
       expect(result.services!.web).toMatchObject({
         type: 'web',
         entrypoint: 'server.js',
-        routePrefix: '/',
+        mountPath: '/',
       });
     });
 
@@ -164,7 +164,7 @@ describe('detectProcfileServices', () => {
       expect(result.services!.web).toMatchObject({
         type: 'web',
         entrypoint: 'src/server.ts',
-        routePrefix: '/',
+        mountPath: '/',
       });
     });
 
@@ -182,7 +182,7 @@ describe('detectProcfileServices', () => {
       expect(result.errors).toEqual([]);
       expect(result.services!.web).toMatchObject({
         entrypoint: 'server.js',
-        routePrefix: '/',
+        mountPath: '/',
       });
     });
 
@@ -200,7 +200,7 @@ describe('detectProcfileServices', () => {
       expect(result.errors).toEqual([]);
       expect(result.services!.web).toMatchObject({
         entrypoint: 'server.js',
-        routePrefix: '/',
+        mountPath: '/',
       });
     });
   });
@@ -491,7 +491,7 @@ describe('detectProcfileServices', () => {
       expect(result.services!.backend).toMatchObject({
         type: 'web',
         entrypoint: 'server.js',
-        routePrefix: '/',
+        mountPath: '/',
       });
     });
   });
@@ -580,9 +580,9 @@ describe('detectProcfileServices', () => {
 
       expect(result.errors).toEqual([]);
       // both are backend frameworks, no frontend detected,
-      // so all get /_/<name> prefixes
-      expect(result.services!.web.routePrefix).toBe('/_/web');
-      expect(result.services!.api.routePrefix).toBe('/_/api');
+      // so all get /api/<name> prefixes
+      expect(result.services!.web.mountPath).toBe('/api/web');
+      expect(result.services!.api.mountPath).toBe('/api/api');
     });
 
     it('should skip service when no framework detected and no runtime inferred', async () => {

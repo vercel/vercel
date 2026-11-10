@@ -13,9 +13,12 @@ import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import table from '../../util/output/table';
-import title from 'title';
 import type { Team } from '@vercel-internals/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
+import {
+  resourceLink,
+  resourceStatus,
+} from '../../util/integration-resource/format';
 import { IntegrationListTelemetryClient } from '../../util/telemetry/commands/integration/list';
 import output from '../../output-manager';
 
@@ -27,7 +30,7 @@ export async function list(client: Client) {
     parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new IntegrationListTelemetryClient({
@@ -45,7 +48,7 @@ export async function list(client: Client) {
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -63,8 +66,8 @@ export async function list(client: Client) {
 
   if (parsedArguments.args.length === 2) {
     if (parsedArguments.flags['--all']) {
-      output.error('Cannot specify a project when using the `--all` flag.');
-      return 1;
+      output.error('Cannot specify a project when using the `--all` option.');
+      return 2;
     }
 
     project = { name: parsedArguments.args[1] };
@@ -87,7 +90,7 @@ export async function list(client: Client) {
     });
     if (!project) {
       output.error(
-        'No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
+        'No project linked. Either use `vc link` to link a project, or the `--all` option to list all resources.'
       );
       return 1;
     }
@@ -211,50 +214,11 @@ export async function list(client: Client) {
     const noun = sandboxCount === 1 ? 'resource' : 'resources';
     output.log(`${sandboxCount} sandbox ${noun} can be claimed.`);
     output.print(
-      `  Run \`${packageName} integration-resource claim <name>\` to claim one.\n`
+      `  Run \`${packageName} integration resource claim <name>\` to claim one.\n`
     );
   }
 
   return 0;
-}
-
-// Builds a string with an appropriately coloured indicator, plus a
-// `[SANDBOX]` annotation for sandbox marketplace resources.
-function resourceStatus(status: string, isSandbox = false) {
-  const CIRCLE = '● ';
-  const statusTitleCase = title(status);
-  const sandboxTag = isSandbox ? ` ${chalk.yellow('[SANDBOX]')}` : '';
-  switch (status) {
-    case 'initializing':
-      return chalk.yellow(CIRCLE) + statusTitleCase + sandboxTag;
-    case 'error':
-      return chalk.red(CIRCLE) + statusTitleCase + sandboxTag;
-    case 'available':
-      return chalk.green(CIRCLE) + statusTitleCase + sandboxTag;
-    case 'suspended':
-      return chalk.white(CIRCLE) + statusTitleCase + sandboxTag;
-    case 'limits-exceeded-suspended':
-      return `${chalk.white(CIRCLE)}Limits exceeded${sandboxTag}`;
-    default:
-      return chalk.gray(statusTitleCase) + sandboxTag;
-  }
-}
-
-// Builds a deep link to the vercel dashboard resource page
-function resourceLink(
-  orgSlug: string,
-  resource: { id: string; name?: string }
-): string | undefined {
-  if (!resource.name) {
-    return;
-  }
-
-  const projectUrl = `https://vercel.com/${orgSlug}/~`;
-  return output.link(
-    resource.name,
-    `${projectUrl}/stores/integration/${resource.id}`,
-    { fallback: () => resource.name ?? '–', color: false }
-  );
 }
 
 // Builds a deep link to the integration dashboard

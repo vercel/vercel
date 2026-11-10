@@ -20,6 +20,27 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandVersions(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'versions',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandEvaluations(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'evaluations',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandStale(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'stale',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandOpen(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'open',
@@ -48,6 +69,20 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandTargeting(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'targeting',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUseTargeting(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'use-targeting',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandSplit(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'split',
@@ -62,9 +97,9 @@ export class FlagsTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'rm',
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -72,6 +107,13 @@ export class FlagsTelemetryClient
   trackCliSubcommandArchive(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'archive',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUnarchive(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'unarchive',
       value: actual,
     });
   }
@@ -97,6 +139,13 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandConnections(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'connections',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandSegments(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'segments',
@@ -104,9 +153,41 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandEntities(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'entities',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandLabels(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'labels', value: actual });
+  }
+
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTargets(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'targets',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandPrepare(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'prepare',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDatafile(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'datafile',
       value: actual,
     });
   }

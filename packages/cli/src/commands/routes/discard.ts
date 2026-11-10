@@ -1,10 +1,10 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { discardSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   confirmAction,
   printDiffSummary,
   withGlobalFlags,
@@ -13,14 +13,17 @@ import getRouteVersions from '../../util/routes/get-route-versions';
 import updateRouteVersion from '../../util/routes/update-route-version';
 import getRoutes from '../../util/routes/get-routes';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 
 export default async function discard(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, discardSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -35,7 +38,7 @@ export default async function discard(client: Client, argv: string[]) {
   if (!stagingVersion) {
     output.warn(
       `No staged changes to discard. Make changes first with ${chalk.cyan(
-        getCommandName('routes add')
+        withGlobalFlags(client, 'routes add')
       )}.`
     );
     return 0;

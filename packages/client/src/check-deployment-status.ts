@@ -1,4 +1,9 @@
 import sleep from 'sleep-promise';
+import { DeploymentError } from './errors';
+import {
+  formatNetworkError,
+  isRetryableNetworkError,
+} from './utils/network-error';
 import { fetchApi, getApiDeploymentsUrl } from './utils';
 import { getPollingDelay } from './utils/get-polling-delay';
 import {
@@ -11,6 +16,7 @@ import {
 import { createDebug } from './utils';
 import {
   Deployment,
+  DeploymentAliasAssignedEvent,
   VercelClientOptions,
   DeploymentBuild,
   DeploymentEventType,
@@ -31,6 +37,56 @@ const RETRY_DELAY_MIN_MS = 5_000;
 // We add between 0 and RETRY_DELAY_SKEW_MS of skew to the retry duration.
 const RETRY_DELAY_SKEW_MS = 30_000;
 const RETRY_DELAY_DEFAULT_MS = 5_000;
+
+function getAliasAssignedEvent(
+  signal: AbortSignal | undefined,
+  deploymentId: string
+): DeploymentAliasAssignedEvent | undefined {
+  if (!signal?.aborted) return;
+
+  const event = signal.reason;
+  if (
+    event?.type === 'alias-assigned' &&
+    event.deploymentId === deploymentId &&
+    typeof event.date === 'number' &&
+    Array.isArray(event.alias) &&
+    'aliasError' in event &&
+    'aliasWarning' in event
+  ) {
+    return event;
+  }
+
+  return undefined;
+}
+
+async function sleepUntilAliasAssigned(
+  duration: number,
+  signal: AbortSignal | undefined,
+  deploymentId: string
+): Promise<void> {
+  if (getAliasAssignedEvent(signal, deploymentId)) return;
+
+  if (!signal || signal.aborted) {
+    await sleep(duration);
+    return;
+  }
+
+  await new Promise<void>(resolve => {
+    const timeout = setTimeout(finish, duration);
+
+    function finish() {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }
+
+    function onAbort() {
+      if (getAliasAssignedEvent(signal, deploymentId)) finish();
+    }
+
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
 
 export function parseRetryAfterMs(response: any): number | null {
   // HTTP 429 (Too Many Requests) or 503 (Service Unavailable)
@@ -70,6 +126,8 @@ export async function* checkDeploymentStatus(
   const debug = createDebug(clientOptions.debug);
 
   let deploymentState = deployment;
+  const deploymentId = deployment.id || deployment.deploymentId!;
+  let aliasAssignedSignal = clientOptions.aliasAssignedSignal;
 
   const apiDeployments = getApiDeploymentsUrl();
 
@@ -87,17 +145,91 @@ export async function* checkDeploymentStatus(
   const startTime = Date.now();
 
   // Deployment polling
-  while (true) {
+  polling: while (true) {
+    const aliasAssignedEvent = getAliasAssignedEvent(
+      aliasAssignedSignal,
+      deploymentId
+    );
+    if (aliasAssignedEvent) {
+      deploymentState = {
+        ...deploymentState,
+        readyState: 'READY',
+        aliasAssigned: aliasAssignedEvent.date,
+        alias: aliasAssignedEvent.alias,
+        aliasError: aliasAssignedEvent.aliasError,
+        aliasWarning: aliasAssignedEvent.aliasWarning,
+      };
+
+      if (!finishedEvents.has('ready')) {
+        debug('Deployment state changed to READY');
+        finishedEvents.add('ready');
+        yield { type: 'ready', payload: deploymentState };
+      }
+
+      debug('Deployment alias assigned from event stream');
+      return yield { type: 'alias-assigned', payload: deploymentState };
+    }
+
     let deploymentResponse: any;
+    let deploymentUpdate: any;
     let retriesLeft = RETRY_COUNT;
     while (true) {
-      deploymentResponse = await fetchApi(
-        `${apiDeployments}/${deployment.id || deployment.deploymentId}${
-          teamId ? `?teamId=${teamId}` : ''
-        }`,
-        token,
-        { apiUrl, userAgent, agent: clientOptions.agent }
-      );
+      try {
+        deploymentResponse = await fetchApi(
+          `${apiDeployments}/${deploymentId}${
+            teamId ? `?teamId=${teamId}` : ''
+          }`,
+          token,
+          {
+            apiUrl,
+            userAgent,
+            dispatcher: clientOptions.dispatcher,
+            signal: aliasAssignedSignal,
+          },
+          clientOptions.debug
+        );
+        if (
+          parseRetryAfterMs(deploymentResponse) == null ||
+          retriesLeft === 1
+        ) {
+          deploymentUpdate = await deploymentResponse.json();
+        }
+      } catch (error) {
+        if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId)) {
+          continue polling;
+        }
+        // An invalid abort reason is not a deployment failure. Disable the
+        // enhancement and continue with polling alone.
+        if (aliasAssignedSignal?.aborted) {
+          aliasAssignedSignal = undefined;
+          continue polling;
+        }
+        if (!isRetryableNetworkError(error)) throw error;
+        retriesLeft--;
+        debug(
+          `Deployment status request failed (${retriesLeft} attempts remaining): ${formatNetworkError(error)}`
+        );
+        if (retriesLeft === 0) {
+          throw Object.assign(
+            new DeploymentError({
+              code: 'deployment_status_unavailable',
+              message: `Could not confirm the status of deployment ${deploymentId}. The deployment may still complete. Run 'vercel inspect ${deploymentId}' to check its status.`,
+            }),
+            { cause: error }
+          );
+        }
+        await sleepUntilAliasAssigned(
+          RETRY_DELAY_DEFAULT_MS,
+          aliasAssignedSignal,
+          deploymentId
+        );
+        if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId))
+          continue polling;
+        continue;
+      }
+      if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId)) {
+        continue polling;
+      }
 
       retriesLeft--;
       if (retriesLeft == 0) {
@@ -117,18 +249,27 @@ export async function* checkDeploymentStatus(
             `status, retrying after ${retryAfterMs + randomSkewMs}ms ` +
             `(${retryAfterMs} + ${randomSkewMs}ms of random skew)`
         );
-        await sleep(retryAfterMs + randomSkewMs);
+        await sleepUntilAliasAssigned(
+          retryAfterMs + randomSkewMs,
+          aliasAssignedSignal,
+          deploymentId
+        );
+        if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId)) {
+          continue polling;
+        }
         continue;
       }
 
       break;
     }
-    const deploymentUpdate = await deploymentResponse.json();
+    if (getAliasAssignedEvent(aliasAssignedSignal, deploymentId)) continue;
 
     if (deploymentUpdate.error) {
       debug('Deployment status check has errorred');
       return yield { type: 'error', payload: deploymentUpdate.error };
     }
+
+    deploymentState = deploymentUpdate;
 
     if (
       deploymentUpdate.readyState === 'BUILDING' &&
@@ -236,6 +377,6 @@ export async function* checkDeploymentStatus(
 
     const elapsed = Date.now() - startTime;
     const duration = getPollingDelay(elapsed);
-    await sleep(duration);
+    await sleepUntilAliasAssigned(duration, aliasAssignedSignal, deploymentId);
   }
 }

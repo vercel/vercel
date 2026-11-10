@@ -3,9 +3,25 @@
 import json
 from http.server import BaseHTTPRequestHandler
 
+from vercel_runtime import get_deadline
+
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == "/deadline":
+            deadline = get_deadline()
+            payload = {
+                "deadline": deadline.isoformat() if deadline else None,
+                "header": "x-vercel-internal-deadline" in self.headers,
+                "unknown_header": ("x-vercel-internal-unknown" in self.headers),
+            }
+            body = json.dumps(payload).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         if self.path == "/oidc":
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")

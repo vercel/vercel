@@ -1,20 +1,39 @@
-import { formatOption, projectOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  gitBranchOption,
+  jsonOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
+
+// Hidden: `--trigger-branch` is the old name of `--git-branch`.
+const triggerBranchOption = {
+  name: 'trigger-branch',
+  shorthand: null,
+  type: String,
+  argument: 'BRANCH',
+  deprecated: true,
+  description: 'Deprecated alias for `--git-branch`',
+} as const;
 
 export const createSubcommand = {
   name: 'create',
   aliases: [],
-  description: 'Create a new connector',
+  dynamicHelp: true,
+  description:
+    'Create a new connector\n\nAccepts a known service (slack, notion, okta) or the URL of an OAuth or MCP server (mcp.notion.com/mcp). Run `create <service> --help` to see how a specific service can be connected to.',
   arguments: [
     {
-      name: 'type',
+      name: 'service',
       required: true,
     },
   ],
   options: [
     {
       name: 'name',
-      shorthand: 'n',
+      shorthand: null,
+      deprecatedShorthand: 'n',
       type: String,
       argument: 'NAME',
       deprecated: false,
@@ -26,6 +45,79 @@ export const createSubcommand = {
       type: Boolean,
       deprecated: false,
       description: 'Enable webhook triggers for this connector',
+    },
+    {
+      name: 'trigger-event',
+      shorthand: null,
+      type: [String],
+      argument: 'EVENT',
+      deprecated: false,
+      description:
+        "Webhook event to receive. Repeatable. Requires --triggers and replaces the provider's default events.",
+    },
+    {
+      name: 'trigger-project',
+      shorthand: null,
+      type: String,
+      argument: 'PROJECT',
+      deprecated: false,
+      description:
+        'Target a project by name or ID instead of the linked project. Requires --triggers.',
+    },
+    {
+      name: 'trigger-path',
+      shorthand: null,
+      type: String,
+      argument: 'PATH',
+      deprecated: false,
+      description:
+        'Set the path on the destination project that receives forwarded webhooks. Requires --triggers.',
+    },
+    {
+      ...gitBranchOption,
+      description:
+        'Target a preview deployment by Git branch name. Omit the option to target production. Cannot be combined with --trigger-environment. Requires --triggers.',
+    },
+    triggerBranchOption,
+    {
+      name: 'trigger-environment',
+      shorthand: null,
+      type: String,
+      argument: 'ENVIRONMENT',
+      deprecated: false,
+      description:
+        'Target a custom environment by slug or stable ID. Cannot be combined with --git-branch. Requires --triggers.',
+    },
+    {
+      name: 'connection-method',
+      shorthand: null,
+      type: String,
+      argument: 'METHOD',
+      deprecated: false,
+      description:
+        'How to connect to the service (e.g. oauth, mcp, api-key). Run without it to choose interactively; the error lists the valid values for a service.',
+    },
+    {
+      name: 'target',
+      shorthand: null,
+      type: String,
+      argument: 'TARGET',
+      deprecated: false,
+      description:
+        "Which of the service's products to connect to (e.g. api, mcp). Only needed when a service exposes more than one.",
+    },
+    {
+      name: 'param',
+      shorthand: null,
+      type: [String],
+      argument: 'KEY=VALUE',
+      deprecated: false,
+      description:
+        'Value for a connection method template field (e.g. domain=acme.okta.com). Repeatable.',
+    },
+    {
+      ...yesOption,
+      description: 'Skip the single-connection-method confirmation prompt',
     },
     {
       name: 'data',
@@ -43,7 +135,7 @@ export const createSubcommand = {
       argument: 'TYPE',
       deprecated: false,
       description:
-        'Connector type for non-managed creation. By default, the type is resolved from the service.',
+        'Connector type for non-managed creation (default: resolved from the service).',
     },
     {
       name: 'icon',
@@ -71,6 +163,7 @@ export const createSubcommand = {
       description: 'Accent color for the connector icon (e.g. #1A2B3C)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -86,8 +179,40 @@ export const createSubcommand = {
       value: `${packageName} connect create slack --name my-bot --triggers`,
     },
     {
+      name: 'Create with selected webhook events',
+      value: `${packageName} connect create linear --name linear --triggers --trigger-event Issue --trigger-event Comment --trigger-event Project`,
+    },
+    {
+      name: 'Create with a custom trigger path',
+      value: `${packageName} connect create github --name github --triggers --trigger-path /eve/v1/github`,
+    },
+    {
+      name: 'Create with branch-specific trigger routing',
+      value: `${packageName} connect create github --name github --triggers --trigger-path /api/webhooks --git-branch staging`,
+    },
+    {
+      name: 'Create with trigger routing on another project',
+      value: `${packageName} connect create github --name github --triggers --trigger-project my-api --trigger-path /api/webhooks`,
+    },
+    {
       name: 'Create with branding (icon and colors)',
       value: `${packageName} connect create slack --name my-bot --icon ./logo.png --background-color '#1A2B3C' --accent-color '#FF0066'`,
+    },
+    {
+      name: 'Create with a specific connection method',
+      value: `${packageName} connect create notion --connection-method mcp --name notion-mcp`,
+    },
+    {
+      name: 'Create with an API key, reading it from a file',
+      value: `${packageName} connect create notion --connection-method api-key --name notion --data @key.json`,
+    },
+    {
+      name: 'Create from a connection method that needs template values',
+      value: `${packageName} connect create okta --connection-method custom-server --param domain=acme.okta.com --param auth_server_id=default --name okta --data @creds.json`,
+    },
+    {
+      name: 'Target a specific product of a service',
+      value: `${packageName} connect create notion --target api --connection-method oauth --name notion --data @creds.json`,
     },
     {
       name: 'Create a non-managed connector from explicit data',
@@ -103,7 +228,7 @@ export const createSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect create slack --format=json`,
+      value: `${packageName} connect create slack --json`,
     },
   ],
 } as const;
@@ -145,6 +270,7 @@ export const updateSubcommand = {
       description: 'Accent color for the connector icon (e.g. #1A2B3C)',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -157,7 +283,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect update scl_abc123 --icon ./logo.png --format=json`,
+      value: `${packageName} connect update scl_abc123 --icon ./logo.png --json`,
     },
   ],
 } as const;
@@ -179,7 +305,7 @@ export const listSubcommand = {
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       argument: 'COUNT',
       deprecated: false,
@@ -191,15 +317,25 @@ export const listSubcommand = {
       type: String,
       argument: 'CURSOR',
       deprecated: false,
-      description: 'Cursor for the next page of results',
+      description:
+        'Show the next page using the cursor from the previous output',
     },
+    {
+      name: 'query',
+      shorthand: 'q',
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Search connectors by name or UID',
+    },
+    // Hidden: `--search` is the old name of `--query`.
     {
       name: 'search',
       shorthand: null,
       type: String,
       argument: 'TEXT',
-      deprecated: false,
-      description: 'Search connectors by name or UID',
+      deprecated: true,
+      description: 'Deprecated alias for `--query`',
     },
     {
       name: 'service',
@@ -220,6 +356,7 @@ export const listSubcommand = {
         'Filter by connector type (slack, github, oauth, custom). Repeatable.',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -244,30 +381,31 @@ export const listSubcommand = {
     },
     {
       name: 'Search by text',
-      value: `${packageName} connect list --search linear`,
+      value: `${packageName} connect list --query linear`,
     },
     {
       name: 'Combine filters',
-      value: `${packageName} connect list --type oauth --search prod`,
+      value: `${packageName} connect list --type oauth --query prod`,
     },
     {
       name: 'Limit the number of results',
       value: `${packageName} connect list --limit 10`,
     },
     {
-      name: 'Fetch the next page of results',
-      value: `${packageName} connect list --next <cursor>`,
+      name: 'Show the next page, using the cursor from the previous output',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} connect list --next <CURSOR>`,
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect list --format=json`,
+      value: `${packageName} connect list --json`,
     },
   ],
 } as const;
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete a connector',
   arguments: [
     {
@@ -280,7 +418,8 @@ export const removeSubcommand = {
       name: 'disconnect-all',
       description:
         'Disconnects all projects from the connector before deletion',
-      shorthand: 'a',
+      shorthand: null,
+      deprecatedShorthand: 'a',
       type: Boolean,
       deprecated: false,
     },
@@ -289,30 +428,31 @@ export const removeSubcommand = {
       description: 'Skip the confirmation prompt when deleting a connector',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
       name: 'Delete a connector by ID',
-      value: `${packageName} connect remove scl_abc123`,
+      value: `${packageName} connect delete scl_abc123`,
     },
     {
       name: 'Delete a connector by UID',
-      value: `${packageName} connect remove slack/my-bot`,
+      value: `${packageName} connect delete slack/my-bot`,
     },
     {
       name: 'Disconnect all projects from a connector, then delete it',
       value: [
-        `${packageName} connect remove scl_abc123 --disconnect-all`,
-        `${packageName} connect remove slack/my-bot -a`,
+        `${packageName} connect delete scl_abc123 --disconnect-all`,
+        `${packageName} connect delete slack/my-bot --disconnect-all`,
       ],
     },
     {
       name: 'Skip the confirmation prompt',
-      value: `${packageName} connect remove scl_abc123 --yes`,
+      value: `${packageName} connect delete scl_abc123 --yes`,
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect remove scl_abc123 --format=json --yes`,
+      value: `${packageName} connect delete scl_abc123 --json --yes`,
     },
   ],
 } as const;
@@ -331,21 +471,31 @@ export const tokenSubcommand = {
   options: [
     {
       name: 'subject',
-      shorthand: 's',
+      shorthand: null,
+      deprecatedShorthand: 's',
       type: String,
       argument: 'TYPE',
       deprecated: false,
       description:
-        'Subject type: "user" (default, acts on behalf of you) or "app" (uses the connector\'s default installation)',
+        'Subject type: "user" (acts on behalf of you) or "app" (uses the connector\'s default installation) (default: "user")',
     },
+    {
+      name: 'installation',
+      shorthand: null,
+      type: String,
+      argument: 'INSTALLATION',
+      deprecated: false,
+      description:
+        "Target a specific installation (only useful with --subject app) (default: the connector's default installation)",
+    },
+    // Hidden: `--installation-id` is the old name of `--installation`.
     {
       name: 'installation-id',
       shorthand: null,
       type: String,
       argument: 'ID',
-      deprecated: false,
-      description:
-        "Target a specific installation (only useful with --subject app; defaults to the connector's default installation)",
+      deprecated: true,
+      description: 'Deprecated alias for `--installation`',
     },
     {
       name: 'scopes',
@@ -353,10 +503,19 @@ export const tokenSubcommand = {
       type: String,
       argument: 'SCOPES',
       deprecated: false,
-      description: 'Scopes (comma- or space-separated)',
+      description:
+        'Scopes (comma- or space-separated) (default: connector defaults)',
+    },
+    {
+      name: 'no-default-scopes',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Do not request the connector default scopes',
     },
     yesOption,
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -373,7 +532,7 @@ export const tokenSubcommand = {
     },
     {
       name: 'Get an app token for a specific installation',
-      value: `${packageName} connect token scl_abc123 --subject app --installation-id inst_1`,
+      value: `${packageName} connect token scl_abc123 --subject app --installation inst_1`,
     },
     {
       name: 'Open the browser automatically if authorization/installation is required',
@@ -381,7 +540,7 @@ export const tokenSubcommand = {
     },
     {
       name: 'Output as JSON (includes expiresAt, installationId, etc.)',
-      value: `${packageName} connect token scl_abc123 --format=json`,
+      value: `${packageName} connect token scl_abc123 --json`,
     },
   ],
 } as const;
@@ -417,6 +576,7 @@ export const revokeTokensSubcommand = {
       description: 'Skip the confirmation prompt',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -437,7 +597,7 @@ export const revokeTokensSubcommand = {
     },
     {
       name: 'Output as JSON',
-      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes --format=json`,
+      value: `${packageName} connect revoke-tokens scl_abc123 --my-tokens --yes --json`,
     },
   ],
 } as const;
@@ -452,7 +612,7 @@ export const openSubcommand = {
       required: true,
     },
   ],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Open a connector by ID',
@@ -464,7 +624,7 @@ export const openSubcommand = {
     },
     {
       name: 'Print the dashboard URL as JSON',
-      value: `${packageName} connect open scl_abc123 --format=json`,
+      value: `${packageName} connect open scl_abc123 --json`,
     },
   ],
 } as const;
@@ -485,10 +645,10 @@ export const attachSubcommand = {
       name: 'environment',
       shorthand: 'e',
       type: [String],
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
       deprecated: false,
       description:
-        'Environments to enable. Repeatable and comma-separated (e.g. -e production -e preview, or -e production,preview). Defaults to all environments.',
+        'Environments to enable by system name, custom slug, or custom ID. Repeatable and comma-separated (default: production, preview, and development).',
     },
     {
       ...projectOption,
@@ -504,13 +664,19 @@ export const attachSubcommand = {
         'Also register this project as a trigger destination so the connector forwards verified webhooks to it (max 3 destinations per connector)',
     },
     {
-      name: 'trigger-branch',
+      ...gitBranchOption,
+      description:
+        'Target a preview deployment by Git branch name. Omit the option to target production. Cannot be combined with --trigger-environment. Only valid with --triggers.',
+    },
+    triggerBranchOption,
+    {
+      name: 'trigger-environment',
       shorthand: null,
       type: String,
-      argument: 'BRANCH',
+      argument: 'ENVIRONMENT',
       deprecated: false,
       description:
-        'Target a specific git branch for the trigger destination (default: production). Only valid with --triggers.',
+        'Target a custom environment by slug or stable ID. Cannot be combined with --git-branch. Only valid with --triggers.',
     },
     {
       name: 'trigger-path',
@@ -526,15 +692,24 @@ export const attachSubcommand = {
       description: 'Skip the confirmation prompt',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
-      name: 'Attach the current project to a connector for all environments',
+      name: 'Attach the current project for all system environments',
       value: `${packageName} connect attach scl_abc123`,
     },
     {
       name: 'Restrict to specific environments',
       value: `${packageName} connect attach scl_abc123 -e production -e preview`,
+    },
+    {
+      name: 'Attach to a custom environment by slug',
+      value: `${packageName} connect attach scl_abc123 -e qa`,
+    },
+    {
+      name: 'Attach to a custom environment by stable ID',
+      value: `${packageName} connect attach scl_abc123 -e env_qa123`,
     },
     {
       name: 'Attach a different project by name',
@@ -546,11 +721,15 @@ export const attachSubcommand = {
     },
     {
       name: 'Attach and register a preview-branch trigger destination',
-      value: `${packageName} connect attach scl_abc123 --triggers --trigger-branch staging --trigger-path /slack`,
+      value: `${packageName} connect attach scl_abc123 --triggers --git-branch staging --trigger-path /slack`,
+    },
+    {
+      name: 'Attach and register a custom-environment trigger destination',
+      value: `${packageName} connect attach scl_abc123 --triggers --trigger-environment qa --trigger-path /slack`,
     },
     {
       name: 'Non-interactive output as JSON',
-      value: `${packageName} connect attach scl_abc123 --yes --format=json`,
+      value: `${packageName} connect attach scl_abc123 --yes --json`,
     },
   ],
 } as const;
@@ -576,6 +755,7 @@ export const detachSubcommand = {
       description: 'Skip the confirmation prompt',
     },
     formatOption,
+    jsonOption,
   ],
   examples: [
     {
@@ -588,7 +768,176 @@ export const detachSubcommand = {
     },
     {
       name: 'Non-interactive output as JSON',
-      value: `${packageName} connect detach scl_abc123 --yes --format=json`,
+      value: `${packageName} connect detach scl_abc123 --yes --json`,
+    },
+  ],
+} as const;
+
+export const contactsAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description: 'Add a phone contact that a connector may message',
+  arguments: [
+    {
+      name: 'connector',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'phone-number',
+      shorthand: null,
+      type: String,
+      argument: 'PHONE',
+      deprecated: false,
+      description: 'Contact phone number in E.164 format (e.g. +12025551234)',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Add a contact by connector ID',
+      value: `${packageName} connect contacts add scl_abc123 --phone-number +12025551234`,
+    },
+    {
+      name: 'Add a contact by connector UID',
+      value: `${packageName} connect contacts add linq/support --phone-number +12025551234`,
+    },
+    {
+      name: 'Output the verification result as JSON',
+      value: `${packageName} connect contacts add scl_abc123 --phone-number +12025551234 --json`,
+    },
+  ],
+} as const;
+
+export const contactsSubcommand = {
+  name: 'contacts',
+  aliases: [],
+  description: 'Manage phone contacts for connectors',
+  arguments: [],
+  options: [],
+  subcommands: [contactsAddSubcommand],
+  examples: [
+    {
+      name: 'Add a contact',
+      value: `${packageName} connect contacts add scl_abc123 --phone-number +12025551234`,
+    },
+  ],
+} as const;
+
+export const discoverSubcommand = {
+  name: 'discover',
+  aliases: [],
+  description:
+    'Discover services you can create a connector for\n\nMatches the query against service names, aliases, keywords, and descriptions.',
+  arguments: [
+    {
+      name: 'query',
+      required: false,
+    },
+  ],
+  options: [
+    {
+      name: 'category',
+      shorthand: null,
+      type: [String],
+      argument: 'SLUG',
+      deprecated: false,
+      description: `Filter by category. Repeatable. Run \`${packageName} connect categories\` for valid slugs.`,
+    },
+    {
+      name: 'connection-method',
+      shorthand: null,
+      type: [String],
+      argument: 'METHOD',
+      deprecated: false,
+      description:
+        'Filter by connection method (oauth, api-key, mcp, or a service-specific method). Repeatable.',
+    },
+    {
+      name: 'target',
+      shorthand: null,
+      type: [String],
+      argument: 'TARGET',
+      deprecated: false,
+      description:
+        'Filter by the product a service exposes (e.g. mcp). Repeatable.',
+    },
+    {
+      name: 'supports-triggers',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Only show services that can forward webhook triggers',
+    },
+    {
+      name: 'limit',
+      shorthand: 'n',
+      type: Number,
+      argument: 'COUNT',
+      deprecated: false,
+      description: 'Number of services to return (default: 50, max: 500)',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      argument: 'CURSOR',
+      deprecated: false,
+      description:
+        'Show the next page using the cursor from the previous output',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Discover services',
+      value: `${packageName} connect discover`,
+    },
+    {
+      name: 'Search for a service',
+      value: `${packageName} connect discover crm`,
+    },
+    {
+      name: 'Filter by category',
+      value: `${packageName} connect discover --category ai --category data`,
+    },
+    {
+      name: 'Find services with an MCP server',
+      value: `${packageName} connect discover --connection-method mcp`,
+    },
+    {
+      name: 'Find services that support webhook triggers',
+      value: `${packageName} connect discover --supports-triggers`,
+    },
+    {
+      name: 'Show the next page, using the cursor from the previous output',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} connect discover --next <CURSOR>`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect discover --json`,
+    },
+  ],
+} as const;
+
+export const categoriesSubcommand = {
+  name: 'categories',
+  aliases: [],
+  description: 'List the categories services are grouped into',
+  arguments: [],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'List categories',
+      value: `${packageName} connect categories`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} connect categories --json`,
     },
   ],
 } as const;
@@ -596,11 +945,12 @@ export const detachSubcommand = {
 export const connexCommand = {
   name: 'connect',
   aliases: [],
-  description:
-    'Manage connectors (Beta).\n\nVercel Connect is currently in beta. Behavior, commands, and output may change before general availability.',
+  description: 'Manage connectors',
   arguments: [],
   options: [],
   subcommands: [
+    discoverSubcommand,
+    categoriesSubcommand,
     createSubcommand,
     updateSubcommand,
     listSubcommand,
@@ -610,8 +960,13 @@ export const connexCommand = {
     removeSubcommand,
     revokeTokensSubcommand,
     openSubcommand,
+    contactsSubcommand,
   ],
   examples: [
+    {
+      name: 'Discover services to connect to',
+      value: `${packageName} connect discover`,
+    },
     {
       name: 'Create a Slack app',
       value: `${packageName} connect create slack`,
@@ -633,4 +988,8 @@ export const connexCommand = {
       value: `${packageName} connect open scl_abc123`,
     },
   ],
+  documentation: {
+    label: 'Vercel Connect guide',
+    url: 'https://vercel.com/kb/guide/vercel-connect',
+  },
 } as const;

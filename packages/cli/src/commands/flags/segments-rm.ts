@@ -4,7 +4,6 @@ import { isAPIError } from '../../util/errors-ts';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import {
   buildCommandWithGlobalFlags,
@@ -19,6 +18,7 @@ import {
 import output from '../../output-manager';
 import { FlagsSegmentsRmTelemetryClient } from '../../util/telemetry/commands/flags/segments';
 import { segmentsRemoveSubcommand } from './command';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function segmentsRm(
   client: Client,
@@ -38,17 +38,19 @@ export default async function segmentsRm(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
   let segmentArg: string | undefined = args[0];
   const skipConfirmation = flags['--yes'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
   telemetryClient.trackCliArgumentSegment(segmentArg);
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliFlagYes(skipConfirmation);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -71,7 +73,7 @@ export default async function segmentsRm(
       return 1;
     }
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -96,9 +98,9 @@ export default async function segmentsRm(
     if (!skipConfirmation) {
       if (!client.stdin.isTTY) {
         output.error(
-          'Missing required flag --yes. Use --yes to skip the confirmation prompt in non-interactive mode.'
+          'Missing required option --yes. Use --yes to skip the confirmation prompt in non-interactive mode.'
         );
-        return 1;
+        return 2;
       }
 
       if (client.nonInteractive) {
@@ -112,7 +114,7 @@ export default async function segmentsRm(
               {
                 command: buildCommandWithGlobalFlags(
                   client.argv,
-                  `flags segments rm ${segmentArg} --yes`
+                  `flags segments delete ${segmentArg} --yes`
                 ),
                 when: 'confirm and delete the segment',
               },
@@ -229,7 +231,7 @@ function handleSegmentInUseError(
         {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            `flags segments rm ${segment} --yes`
+            `flags segments delete ${segment} --yes`
           ),
           when: 'retry after removing all references',
         },
@@ -270,7 +272,7 @@ async function resolveSegmentArg(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'flags segments rm <segment> --yes'
+              'flags segments delete <segment> --yes'
             ),
             when: 'delete a segment by slug or ID',
           },
@@ -283,14 +285,16 @@ async function resolveSegmentArg(
           },
         ],
       },
-      1
+      2
     );
     return undefined;
   }
 
   if (!client.stdin.isTTY) {
     output.error('Please provide a segment slug or ID to delete');
-    output.log(`Example: ${getCommandName('flags segments rm beta-users')}`);
+    output.log(
+      `Example: ${getCommandName('flags segments delete beta-users')}`
+    );
     return undefined;
   }
 

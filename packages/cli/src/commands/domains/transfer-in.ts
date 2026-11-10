@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import * as ERRORS from '../../util/errors-ts';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import param from '../../util/output/param';
 import transferInDomain from '../../util/domains/transfer-in-domain';
 import stamp from '../../util/output/stamp';
@@ -31,7 +31,7 @@ export default async function transferIn(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -42,7 +42,7 @@ export default async function transferIn(client: Client, argv: string[]) {
     output.error(
       `Missing domain name. Run ${getCommandName(`domains --help`)}`
     );
-    return 1;
+    return 2;
   }
 
   telemetry.trackCliArgumentDomain(domainName);
@@ -70,7 +70,7 @@ export default async function transferIn(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   output.log(
     `The domain ${param(domainName)} is ${chalk.underline(
       'available'

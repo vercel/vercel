@@ -5,10 +5,9 @@
     { "src": "subdirectory/index.go", "use": "@vercel/go" }
   ],
   "probes": [
-    { "path": "/", "mustContain": "cow:go1.26.1:RANDOMNESS_PLACEHOLDER" },
-    {
-      "path": "/subdirectory",
-      "mustContain": "subcow:go1.26.1:RANDOMNESS_PLACEHOLDER"
-    }
+    { "path": "/", "mustContain": "cow:go1.27." },
+    { "path": "/", "mustContain": ":RANDOMNESS_PLACEHOLDER" },
+    { "path": "/subdirectory", "mustContain": "subcow:go1.27." },
+    { "path": "/subdirectory", "mustContain": ":RANDOMNESS_PLACEHOLDER" }
   ]
 }

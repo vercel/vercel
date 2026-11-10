@@ -14,7 +14,7 @@ export const contractCommand = {
     },
     {
       name: 'Show contract information for all billing periods as JSON',
-      value: `${packageName} contract --format json`,
+      value: `${packageName} contract --json`,
     },
   ],
 } as const;

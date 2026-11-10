@@ -23,6 +23,6 @@
 - [exchangeVercelOidcToken](functions/exchangeVercelOidcToken.md)
 - [getContext](functions/getContext.md)
 - [getVercelOidcToken](functions/getVercelOidcToken.md)
-- [getVercelOidcTokenSync](functions/getVercelOidcTokenSync.md)
+- [~~getVercelOidcTokenSync~~](functions/getVercelOidcTokenSync.md)
 - [getVercelToken](functions/getVercelToken.md)
 - [verifyVercelOidcToken](functions/verifyVercelOidcToken.md)

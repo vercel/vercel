@@ -4,7 +4,6 @@ import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
 import { getCommandName } from '../../util/pkg-name';
 import { getSdkKeys } from '../../util/flags/sdk-keys';
 import formatTable from '../../util/format-table';
@@ -13,6 +12,7 @@ import { FlagsSdkKeysLsTelemetryClient } from '../../util/telemetry/commands/fla
 import { sdkKeysListSubcommand } from './command';
 import type { SdkKey } from '../../util/flags/types';
 import { formatProject } from '../../util/projects/format-project';
+import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 
 export default async function sdkKeysLs(
   client: Client,
@@ -32,20 +32,22 @@ export default async function sdkKeysLs(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { flags } = parsedArgs;
   const json = flags['--json'] as boolean | undefined;
+  const projectName = getProjectNameFromFlags(flags);
 
+  telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliFlagJson(json);
 
-  const link = await getLinkedProject(client);
+  const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
+      `Your codebase isn't linked to a project on Vercel. Pass --project <name>, or run ${getCommandName('link')} to link it.`
     );
     return 1;
   }
@@ -69,7 +71,7 @@ export default async function sdkKeysLs(
     } else if (keys.length === 0) {
       output.log(`No SDK keys found for ${projectSlugLink}`);
       output.log(
-        `\nCreate one with: ${getCommandName('flags sdk-keys add --type server --environment production')}`
+        `\nCreate one with: ${getCommandName('flags sdk-keys create --type server --environment production')}`
       );
     } else {
       output.log(

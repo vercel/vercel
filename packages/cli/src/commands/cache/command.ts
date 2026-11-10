@@ -1,16 +1,18 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { projectOption, yesOption } from '../../util/arg-common';
 
 export const purgeSubcommand = {
   name: 'purge',
   aliases: [],
-  description: 'Purge cache for the current project',
+  description: 'Purge the CDN cache and Data cache for the selected project',
   arguments: [],
   options: [
     yesOption,
+    projectOption,
     {
       name: 'type',
-      description: 'Type of cache to purge',
+      description:
+        'Select the cache to purge: cdn, data, or all (default: all)',
       shorthand: null,
       type: String,
       argument: 'TYPE',
@@ -36,10 +38,12 @@ export const purgeSubcommand = {
 export const invalidateSubcommand = {
   name: 'invalidate',
   aliases: [],
-  description: 'Invalidate all cached content by tag',
+  description:
+    'Mark cached content matching a tag or source image as stale for background revalidation',
   arguments: [],
   options: [
     yesOption,
+    projectOption,
     {
       name: 'tag',
       description: 'Tags to invalidate (comma-separated)',
@@ -76,10 +80,12 @@ export const invalidateSubcommand = {
 export const dangerouslyDeleteSubcommand = {
   name: 'dangerously-delete',
   aliases: [],
-  description: 'Dangerously delete all cached content by tag',
+  description:
+    'Delete cached content matching a tag or source image; cache misses block on revalidation',
   arguments: [],
   options: [
     yesOption,
+    projectOption,
     {
       name: 'tag',
       description: 'Tags to delete (comma-separated)',
@@ -98,7 +104,8 @@ export const dangerouslyDeleteSubcommand = {
     },
     {
       name: 'revalidation-deadline-seconds',
-      description: 'Revalidation deadline in seconds',
+      description:
+        'Delay deletion for this many seconds; content accessed before the deadline is revalidated',
       shorthand: null,
       type: Number,
       argument: 'REVALIDATION-DEADLINE-SECONDS',
