@@ -36,12 +36,17 @@ export default async function login(
     }
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs?.flags['--help']) {
     telemetry.trackCliFlagHelp('login');
-    output.print(help(loginCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(loginCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 
@@ -60,7 +65,7 @@ export default async function login(
 
     if (obsoleteFlags.length) {
       const flags = obsoleteFlags.map(f => chalk.bold(f)).join(', ');
-      output.warn(`The following flags are deprecated: ${flags}`);
+      output.warn(`The following options are deprecated: ${flags}`);
     }
 
     const obsoleteArguments = parsedArgs.args.slice(1);

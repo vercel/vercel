@@ -8,7 +8,8 @@ import { isAPIError } from '../../util/errors-ts';
 import output from '../../output-manager';
 import table from '../../util/output/table';
 import { validateJsonOutput } from '../../util/output-format';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
 import { searchSubcommand } from './command';
 
 const DEFAULT_LIMIT = 20;
@@ -77,37 +78,37 @@ export default async function search(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   const queryResult = normalizeQuery(parsedArgs.args);
   if (!queryResult.valid) {
     output.error(queryResult.error);
-    return 1;
+    return 2;
   }
 
   const orderResult = getOrder(parsedArgs.flags['--order']);
   if (!orderResult.valid) {
     output.error(orderResult.error);
-    return 1;
+    return 2;
   }
 
   const limitResult = getLimit(parsedArgs.flags['--limit']);
   if (!limitResult.valid) {
     output.error(limitResult.error);
-    return 1;
+    return 2;
   }
 
   const tldsResult = normalizeTldFilters(parsedArgs.flags['--tld']);
   if (!tldsResult.valid) {
     output.error(tldsResult.error);
-    return 1;
+    return 2;
   }
 
   const { query, keyword, fragment } = queryResult;
@@ -186,9 +187,11 @@ export default async function search(
 
     output.log(renderTable(page.results));
     if (next) {
-      output.log('');
-      output.log(
-        `To continue, run ${getCommandName(getContinuationCommand(query, order, tlds, availableOnly, next))}`
+      output.print('\n');
+      printNextPageCommand(
+        getCommandNamePlain(
+          getContinuationCommand(query, order, tlds, availableOnly, next)
+        )
       );
     }
     return 0;

@@ -29,7 +29,7 @@ describe('project pause', () => {
 
     client.setArgv('project', 'pause', 'my-project', '--yes');
     const exitCode = await project(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('--yes');
   });
 

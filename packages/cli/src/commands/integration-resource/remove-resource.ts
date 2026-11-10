@@ -45,13 +45,13 @@ export async function remove(client: Client, argv: string[]) {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -61,7 +61,7 @@ export async function remove(client: Client, argv: string[]) {
 
   if (asJson && !skipConfirmation) {
     output.error('--json requires --yes to skip confirmation prompts');
-    return 1;
+    return 2;
   }
 
   const { team } = await getScope(client);
@@ -80,12 +80,12 @@ export async function remove(client: Client, argv: string[]) {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message,
-        hint: `Put global flags first, then \`integration resource remove <resource> --yes\`. Use \`--disconnect-all\` to detach projects before delete.`,
+        hint: `Put global options first, then \`integration resource delete <resource> --yes\`. Use \`--disconnect-all\` to detach projects before delete.`,
         next: [
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'integration resource remove <resource> --yes',
+              'integration resource delete <resource> --yes',
               packageName,
               suggestRemoveOpts
             ),
@@ -93,10 +93,10 @@ export async function remove(client: Client, argv: string[]) {
           },
         ],
       },
-      1
+      2
     );
     output.error(message);
-    return 1;
+    return 2;
   }
 
   const hasTooManyArguments = parsedArguments.args.length > 1;
@@ -108,12 +108,12 @@ export async function remove(client: Client, argv: string[]) {
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message,
-        hint: `One resource per invocation: \`${packageName} [global flags] integration resource remove <resource> [--disconnect-all] --yes\`.`,
+        hint: `One resource per invocation: \`${packageName} [global options] integration resource delete <resource> [--disconnect-all] --yes\`.`,
         next: [
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'integration resource remove <resource> --disconnect-all --yes',
+              'integration resource delete <resource> --disconnect-all --yes',
               packageName,
               suggestRemoveOpts
             ),
@@ -121,28 +121,28 @@ export async function remove(client: Client, argv: string[]) {
           },
         ],
       },
-      1
+      2
     );
     output.error(message);
-    return 1;
+    return 2;
   }
 
   const disconnectAll = !!parsedArguments.flags['--disconnect-all'];
-  const resourceName = parsedArguments.args[0];
+  const resourceReference = parsedArguments.args[0];
 
-  telemetry.trackCliArgumentResource(resourceName);
+  telemetry.trackCliArgumentResource(resourceReference);
   telemetry.trackCliFlagDisconnectAll(disconnectAll);
   telemetry.trackCliFlagYes(skipConfirmation);
 
   output.spinner('Retrieving resource…', 500);
   const resources = await getResources(client);
-  const targetedResource = resources.find(
-    resource => resource.name === resourceName
-  );
+  const targetedResource =
+    resources.find(resource => resource.name === resourceReference) ??
+    resources.find(resource => resource.id === resourceReference);
   output.stopSpinner();
 
   if (!targetedResource) {
-    output.error(`No resource ${chalk.bold(resourceName)} found.`);
+    output.error(`No resource ${chalk.bold(resourceReference)} found.`);
     return 1;
   }
 
@@ -187,7 +187,7 @@ async function handleDeleteResource(
     resource.projectsMetadata && resource.projectsMetadata?.length > 0;
   if (!options?.skipProjectCheck && hasProjects) {
     output.error(
-      `Cannot delete resource ${chalk.bold(resource.name)} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` flag.`
+      `Cannot delete resource ${chalk.bold(resource.name)} while it has connected projects. Please disconnect any projects using this resource first or use the \`--disconnect-all\` option.`
     );
     return 1;
   }

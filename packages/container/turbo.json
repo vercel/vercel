@@ -1,0 +1,31 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "env": ["$TURBO_EXTENDS$", "VERCEL_CLI_VERSION"],
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/packages/fs-detectors/src/**",
+        "$TURBO_ROOT$/packages/frameworks/src/**"
+      ]
+    },
+    "test-e2e": {
+      "env": ["$TURBO_EXTENDS$", "VERCEL_CLI_VERSION"],
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/packages/fs-detectors/src/**",
+        "$TURBO_ROOT$/packages/frameworks/src/**"
+      ]
+    },
+    "test-e2e-artifacts": {
+      "command": ["pnpm", "run", "test-e2e"],
+      "env": ["$TURBO_EXTENDS$", "VERCEL_CLI_VERSION"],
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/packages/fs-detectors/src/**",
+        "$TURBO_ROOT$/packages/frameworks/src/**"
+      ]
+    }
+  }
+}

@@ -2,7 +2,7 @@ import { describe, expect, test, vi, beforeEach } from 'vitest';
 import { Socket } from 'net';
 import { IncomingMessage } from 'http';
 import { SYMBOL_FOR_REQ_CONTEXT } from '../../src/get-context';
-import { experimental_upgradeWebSocket } from '../../src/websocket';
+import { upgradeWebSocket } from '../../src/websocket';
 
 const { webSocketServerOptions } = vi.hoisted(() => ({
   webSocketServerOptions: [] as Array<Record<string, unknown> | undefined>,
@@ -39,19 +39,19 @@ beforeEach(() => {
   webSocketServerOptions.length = 0;
 });
 
-describe('experimental_upgradeWebSocket', () => {
+describe('upgradeWebSocket', () => {
   describe('runtime support', () => {
     test('throws when runtime does not provide upgradeWebSocket', async () => {
       g[SYMBOL_FOR_REQ_CONTEXT] = { get: () => ({}) };
 
-      await expect(experimental_upgradeWebSocket(() => {})).rejects.toThrow(
-        'experimental_upgradeWebSocket is not available in the current runtime environment'
+      await expect(upgradeWebSocket(() => {})).rejects.toThrow(
+        'upgradeWebSocket is not available in the current runtime environment'
       );
     });
 
     test('throws when context is empty', async () => {
-      await expect(experimental_upgradeWebSocket(() => {})).rejects.toThrow(
-        'experimental_upgradeWebSocket is not available in the current runtime environment'
+      await expect(upgradeWebSocket(() => {})).rejects.toThrow(
+        'upgradeWebSocket is not available in the current runtime environment'
       );
     });
   });
@@ -83,7 +83,7 @@ describe('experimental_upgradeWebSocket', () => {
       const { mockUpgrade, socket } = createUpgradeContext();
       const handler = vi.fn();
 
-      const response = await experimental_upgradeWebSocket(handler);
+      const response = await upgradeWebSocket(handler);
 
       expect(mockUpgrade).toHaveBeenCalled();
       expect(handler).toHaveBeenCalledTimes(1);
@@ -100,7 +100,7 @@ describe('experimental_upgradeWebSocket', () => {
     test('passes maxPayload to the WebSocket server when provided', async () => {
       const { socket } = createUpgradeContext();
 
-      const response = await experimental_upgradeWebSocket(() => {}, {
+      const response = await upgradeWebSocket(() => {}, {
         maxPayload: 256 * 1024,
       });
 
@@ -115,7 +115,7 @@ describe('experimental_upgradeWebSocket', () => {
     test('uses the default maxPayload when undefined', async () => {
       const { socket } = createUpgradeContext();
 
-      const response = await experimental_upgradeWebSocket(() => {}, {
+      const response = await upgradeWebSocket(() => {}, {
         maxPayload: undefined,
       });
 
@@ -133,7 +133,7 @@ describe('experimental_upgradeWebSocket', () => {
       let close: ReturnType<typeof vi.spyOn> | undefined;
 
       await expect(
-        experimental_upgradeWebSocket(ws => {
+        upgradeWebSocket(ws => {
           close = vi.spyOn(ws, 'close');
           throw error;
         })

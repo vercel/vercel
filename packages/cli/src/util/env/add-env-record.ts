@@ -15,7 +15,7 @@ export default async function addEnvRecord(
   key: string,
   value: string,
   targets: string[],
-  gitBranch: string,
+  gitBranch: string | undefined,
   visibility?: ProjectEnvVariable['visibility']
 ): Promise<void> {
   const actionWord = upsert ? 'Overriding' : 'Adding';

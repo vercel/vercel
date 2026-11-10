@@ -38,6 +38,29 @@ export function storeKeyInKeychain(key: string): boolean {
   }
 }
 
+export function readKeyFromKeychain(): string | undefined {
+  if (!isKeychainAvailable()) {
+    return undefined;
+  }
+  try {
+    const out = execFileSync(
+      SECURITY_BIN,
+      [
+        'find-generic-password',
+        '-s',
+        KEYCHAIN_SERVICE,
+        '-a',
+        KEYCHAIN_ACCOUNT,
+        '-w',
+      ],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+    );
+    return out.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function keychainLookup(opts: { fish?: boolean } = {}): string {
   const cmd = `${SECURITY_BIN} find-generic-password -s '${KEYCHAIN_SERVICE}' -a '${KEYCHAIN_ACCOUNT}' -w 2>/dev/null`;
   return opts.fish ? `(${cmd})` : `$(${cmd})`;

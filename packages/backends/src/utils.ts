@@ -10,7 +10,7 @@ import {
   scanParentDirs,
   getNodeBinPaths,
 } from '@vercel/build-utils';
-import type { BuildV2 } from '@vercel/build-utils';
+import type { BuildV2, WorkspaceInstallTarget } from '@vercel/build-utils';
 
 export async function downloadInstallAndBundle(
   args: Parameters<BuildV2>[0]
@@ -62,6 +62,12 @@ export async function downloadInstallAndBundle(
       console.log(`Skipping "install" command...`);
     }
   } else {
+    const workspaceInstallTargets = Array.isArray(meta?.workspaceInstallTargets)
+      ? meta.workspaceInstallTargets.filter(
+          (target): target is WorkspaceInstallTarget =>
+            Boolean(target && typeof target === 'object')
+        )
+      : [];
     await runNpmInstall(
       entrypointFsDirname,
       [],
@@ -69,7 +75,9 @@ export async function downloadInstallAndBundle(
         env: spawnEnv,
       },
       meta,
-      config.projectSettings?.createdAt
+      config.projectSettings?.createdAt,
+      undefined,
+      { targets: workspaceInstallTargets }
     );
   }
   return {

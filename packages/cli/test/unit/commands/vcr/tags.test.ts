@@ -6,7 +6,7 @@ describe('vcr tag', () => {
   it('displays help when invoked without subcommand', async () => {
     client.setArgv('vcr', 'tag');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Please specify a valid subcommand'
     );
@@ -15,7 +15,7 @@ describe('vcr tag', () => {
   it('errors on an unknown subcommand', async () => {
     client.setArgv('vcr', 'tag', 'bogus');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('Unknown "vcr tag"');
   });
 });

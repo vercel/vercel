@@ -40,12 +40,25 @@ export async function GET() {
 
 `getIdentity` reads the `x-vercel-oidc-passport-token` header injected by
 Vercel after Passport validates the visitor. For tests and local debugging, you
-can also pass the `_vercel_passport` cookie explicitly.
+can also pass the `_vercel_passport` cookie explicitly. Both legacy single
+cookies and chunked Passport session cookies are supported.
 
 By default, request tokens are verified against Vercel's OIDC JWKS. The helper
 only accepts the dedicated `https://passport.vercel.com/{owner}` issuer. It also
 validates the Passport-specific token shape so regular Vercel OIDC tokens are
 not accepted as Passport identities.
+
+Use `requireIdentity(input?, options?)` when a token is required. It calls
+`getIdentity` with the same arguments and throws `PassportIdentityError` if the
+identity is missing or has no token, including tokenless development identities.
+The returned identity is a `PassportIdentityWithRequiredToken`, which extends
+`PassportIdentity` with `token: string`. `verifyIdentity` returns this type too.
+
+```ts
+import { requireIdentity } from '@vercel/passport';
+
+const identity = await requireIdentity();
+```
 
 ## Verify forwarded tokens
 

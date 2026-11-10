@@ -39,7 +39,7 @@ Implementations use **`outputActionRequired`** / **`outputAgentError`** (`packag
 
 - **Global flags** (`--cwd`, `--scope`, `--token`, `--non-interactive`, etc.) should be **appended to every suggested command** when the agent is expected to run from the same context. That way the suggested command works when run from the same directory/config.
 - **`getGlobalFlagsOnlyFromArgs(client.argv.slice(2))`** (`arg-common.ts`) collects only global flags so **cross-subcommand** suggestions (e.g. `redirects add` → `redirects promote`, `teams invite` → `teams switch`) do not forward flags that would **parse-error** on the target subcommand.
-- **Same subcommand** retries (e.g. `teams add` still missing `--name`) should preserve **subcommand-specific flags** via **`getSameSubcommandSuggestionFlags()`** (args after the subcommand, minus positionals) so the user does not retype `--slug`, `--status`, etc.
+- **Same subcommand** retries (e.g. `teams create` still missing `--name`) should preserve **subcommand-specific flags** via **`getSameSubcommandSuggestionFlags()`** (args after the subcommand, minus positionals) so the user does not retype `--slug`, `--status`, etc.
 - **Pattern:** `getCommandNamePlain(\`${template} ${flags.join(' ')}\`.trim())` after collecting flags.
 
 ## Ordering of checks (implementers)
@@ -62,11 +62,11 @@ Implementations use **`outputActionRequired`** / **`outputAgentError`** (`packag
 ## API failures in non-interactive mode (implementers)
 
 - Prefer **`outputAgentError`** with a stable **`reason`** (e.g. `payment_required`, `rate_limited`, `slug_unavailable`, `timeout`, `domain_not_found`, `confirmation_required`) and a **plain `message`**—never chalk/`param()` in JSON (agents parse stdout).
-- **`teams add`** non-interactive path: create-team and patch-team catches should emit JSON instead of only `output.error`, so agents get parseable stdout.
+- **`teams create`** non-interactive path: create-team and patch-team catches should emit JSON instead of only `output.error`, so agents get parseable stdout.
 - When the fix is **user action in the browser** (e.g. add payment method), include a **`next`** entry whose **`command`** is a **shell one-liner** to open the URL (`open` / `start` / `xdg-open` by platform) so the user or agent can run it locally.
-- **`tokens add`:** If the API returns **403** because the session is OAuth-only (not a classic token), emit **`reason: classic_token_required`**, **`verification_uri`** pointing at the dashboard tokens page, **`userActionRequired`**, a plain **`hint`**, and **`next[]`** with `openUrlInBrowserCommand`, a shell **`export VERCEL_TOKEN='<class_access_token>'`** placeholder step, plus the re-run command (or **`--token`**). If the API returns **403** with *authenticated to scope* (classic token lacks full user scope), emit **`reason: token_user_scope_required`**, the same URL / **`next[]`** pattern, and put the API **`message`** in **`message`** (normalized, no ANSI).
+- **`tokens create`:** If the API returns **403** because the session is OAuth-only (not a classic token), emit **`reason: classic_token_required`**, **`verification_uri`** pointing at the dashboard tokens page, **`userActionRequired`**, a plain **`hint`**, and **`next[]`** with `openUrlInBrowserCommand`, a shell **`export VERCEL_TOKEN='<class_access_token>'`** placeholder step, plus the re-run command (or **`--token`**). If the API returns **403** with *authenticated to scope* (classic token lacks full user scope), emit **`reason: token_user_scope_required`**, the same URL / **`next[]`** pattern, and put the API **`message`** in **`message`** (normalized, no ANSI).
 - **`domains verify`:** Include `configurationStatus` and `issues[]` so agents can see simultaneous DNS and project-verification problems. When Domain Connect automatic configuration is available, include **`domainConnect`** with `protocol`, `providerId`, `providerName`, and `applyUrl`. Add an `openUrlInBrowserCommand(applyUrl)` entry to **`next[]`** before the verification retry. Applying records requires user review and approval at the DNS provider; agents should surface or open the URL rather than request the apply endpoint directly.
-- **`tokens rm`:** When the token id is missing, emit **`missing_arguments`** with **`hint`** and **`next[]`**: **`buildCommandWithGlobalFlags`** **`tokens ls`**, then **`tokens rm <token_id>`** (placeholder).
+- **`tokens revoke`:** When the token id is missing, emit **`missing_arguments`** with **`hint`** and **`next[]`**: **`buildCommandWithGlobalFlags`** **`tokens ls`**, then **`tokens revoke <token_id>`** (placeholder).
 - **`bailOn429`:** For flows that would otherwise sleep/retry on 429 (e.g. PATCH after create), use **`bailOn429: true`** on the fetch or fail fast so the CLI does not spin indefinitely.
 
 ## Related code (implementers)
@@ -82,3 +82,21 @@ Implementations use **`outputActionRequired`** / **`outputAgentError`** (`packag
 
 - Interactive behavior unchanged.
 - Scripts that assume **no JSON on stdout** on failure may need to tolerate a single JSON object before exit when using non-interactive mode.
+
+## Password Protection
+
+`vercel project protection enable --password` requires interactive confirmation
+when Password Protection is off. The CLI first loads the project to check its
+current protection settings. First-time activation can incur charges, so the
+user must review the warning and type the project name in an interactive
+terminal, or enable it in the Vercel dashboard.
+
+When stdin has no TTY or the CLI runs non-interactively, first-time activation
+returns `action_required` with `reason: "interactive_confirmation_required"`,
+`action: "confirmation_required"`, `hint`, and a `next` command for a human to run
+in an interactive terminal. It exits with code 1 without making any mutations.
+Suggested commands omit secrets and use `<password>` when a password is needed.
+
+Updating the password on an already-protected project remains available in
+non-interactive mode. Reading protection settings, disabling Password Protection,
+and managing other protection settings retain their existing behavior.

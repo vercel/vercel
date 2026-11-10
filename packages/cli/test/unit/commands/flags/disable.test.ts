@@ -125,7 +125,7 @@ describe('flags disable', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = flags(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -145,7 +145,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const out = client.stdout.getFullOutput();
     const parsed = JSON.parse(out);
     expect(parsed.status).toBe('error');
@@ -177,7 +177,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const out = client.stdout.getFullOutput();
     const parsed = JSON.parse(out);
     expect(parsed.next[0].command).toContain('--environment production');
@@ -309,7 +309,7 @@ describe('flags disable', () => {
   it('errors without flag argument', async () => {
     client.setArgv('flags', 'disable');
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
   });
 
   it('errors when invalid variant is provided', async () => {
@@ -340,7 +340,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:disable',
@@ -547,9 +547,9 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --environment'
+      'Missing required option --environment'
     );
     expect(selectMock).not.toHaveBeenCalled();
   });
@@ -570,7 +570,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const out = client.stdout.getFullOutput();
     const parsed = JSON.parse(out);
     expect(parsed.status).toBe('error');
@@ -605,7 +605,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const out = client.stdout.getFullOutput();
     const parsed = JSON.parse(out);
     expect(parsed.status).toBe('error');
@@ -802,9 +802,10 @@ describe('flags disable', () => {
     });
   });
 
-  it('errors when flag is archived', async () => {
+  it('updates an archived flag without unarchiving it', async () => {
     // Set flag to archived (mock uses testFlags reference)
     testFlags[0].state = 'archived';
+    testFlags[0].environments.production.active = true;
 
     client.setArgv(
       'flags',
@@ -814,7 +815,17 @@ describe('flags disable', () => {
       'production'
     );
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(1);
-    expect(client.stderr.getFullOutput()).toContain('archived');
+    expect(exitCode).toEqual(0);
+    expect(testFlags[0].state).toBe('archived');
+    expect(testFlags[0].environments.production.pausedOutcome).toEqual({
+      type: 'variant',
+      variantId: 'off',
+    });
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'This flag remains archived'
+    );
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'Serving variant:'
+    );
   });
 });

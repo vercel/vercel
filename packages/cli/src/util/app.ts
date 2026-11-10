@@ -1,4 +1,8 @@
+import { getPlatformEnv } from '@vercel/build-utils';
 import type Client from './client';
+import getUser from './get-user';
+import { outputAgentError } from './agent-output';
+import { AGENT_REASON } from './agent-output-constants';
 import {
   introspectToken,
   type TokenIntrospectionResponse,
@@ -24,6 +28,44 @@ export function resolveAppFromToken(
     id: token.client_id,
     name: token.client_name,
   };
+}
+
+/**
+ * The team an app token is bound to. Like the other app-token checks, a token
+ * counts as one only when it can't fetch the user.
+ */
+export async function getAppTokenTeamId(
+  client: Client
+): Promise<string | undefined> {
+  try {
+    await getUser(client);
+    return undefined;
+  } catch {
+    const token = await introspectToken(client).catch(() => null);
+    return token && resolveAppFromToken(token) ? token.team?.id : undefined;
+  }
+}
+
+/**
+ * Fails when `VERCEL_ORG_ID` names a team other than the app token's own, as
+ * `--scope` does, instead of quietly using the token's team.
+ */
+export function assertOrgIdMatchesAppTeam(
+  client: Client,
+  appTeamId: string
+): void {
+  const envOrgId = getPlatformEnv('ORG_ID');
+  if (!envOrgId || envOrgId === appTeamId) {
+    return;
+  }
+
+  const message = `This token only works with team ${appTeamId}, but VERCEL_ORG_ID is set to ${envOrgId}.`;
+  outputAgentError(client, {
+    status: 'error',
+    reason: AGENT_REASON.SCOPE_NOT_ACCESSIBLE,
+    message,
+  });
+  throw new Error(message);
 }
 
 /**

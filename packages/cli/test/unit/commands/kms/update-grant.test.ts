@@ -9,7 +9,7 @@ describe('kms update-grant', () => {
     it('tracks telemetry', async () => {
       client.setArgv('kms', 'update-grant', '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'kms:update-grant' },
@@ -65,7 +65,7 @@ describe('kms update-grant', () => {
       'staging'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Invalid environment: staging');
   });
 
@@ -102,7 +102,7 @@ describe('kms update-grant', () => {
       '--remove-token-claims'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       '--token-claims and --remove-token-claims conflict'
     );
@@ -112,7 +112,7 @@ describe('kms update-grant', () => {
     useUser();
     client.setArgv('kms', 'update-grant', 'iss_test', 'prj_1');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Nothing to update');
   });
 

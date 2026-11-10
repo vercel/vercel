@@ -15,10 +15,10 @@ export class TeamsTelemetryClient
     }
   }
 
-  trackCliSubcommandAdd(actual?: string) {
+  trackCliSubcommandCreate(actual?: string) {
     if (actual) {
       this.trackCliSubcommand({
-        subcommand: 'add',
+        subcommand: 'create',
         value: actual,
       });
     }

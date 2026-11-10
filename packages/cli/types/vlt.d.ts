@@ -30,6 +30,12 @@ declare module '@vltpkg/package-info' {
       target: string,
       options?: Record<string, unknown>
     ): Promise<any>;
+    getRegistryClient(): Promise<{
+      cache: {
+        /** Resolves when there are no pending writes to the disk cache. */
+        promise(): Promise<void>;
+      };
+    }>;
   }
 }
 

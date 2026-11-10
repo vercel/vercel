@@ -7,7 +7,7 @@ import * as ERRORS from '../../util/errors-ts';
 import deleteCertById from '../../util/certs/delete-cert-by-id';
 import getCertById from '../../util/certs/get-cert-by-id';
 import { getCustomCertsForDomain } from '../../util/certs/get-custom-certs-for-domain';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
@@ -36,7 +36,7 @@ async function rm(client: Client, argv: string[]): Promise<number> {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
   const { args } = parsedArgs;
   const id = args[0];
@@ -45,13 +45,13 @@ async function rm(client: Client, argv: string[]): Promise<number> {
   if (args.length !== 1) {
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('certs rm <id or cn>')}`
+        `${getCommandName('certs delete <id or cn>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   const certs = await getCertsToDelete(client, contextName, id);
   if (certs instanceof ERRORS.CertsPermissionDenied) {
     output.error(
@@ -77,7 +77,7 @@ async function rm(client: Client, argv: string[]): Promise<number> {
 
   const yes = await readConfirmation(
     client,
-    'The following certificates will be removed permanently',
+    'The following certificates will be deleted permanently',
     certs
   );
 
@@ -89,7 +89,7 @@ async function rm(client: Client, argv: string[]): Promise<number> {
   output.success(
     `${chalk.bold(
       plural('Certificate', certs.length, true)
-    )} removed ${rmStamp()}`
+    )} deleted ${rmStamp()}`
   );
   return 0;
 }

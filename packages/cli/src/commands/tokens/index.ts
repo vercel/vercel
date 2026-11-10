@@ -12,13 +12,15 @@ import {
   removeSubcommand,
 } from './command';
 import { type Command, help } from '../help';
+import { getCommandAliases } from '..';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { TokensTelemetryClient } from '../../util/telemetry/commands/tokens';
 import output from '../../output-manager';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   add: ['add', 'create'],
-  remove: ['rm', 'remove', 'delete'],
+  revoke: getCommandAliases(removeSubcommand),
   ls: ['ls', 'list'],
 };
 
@@ -31,7 +33,7 @@ export default async function main(client: Client): Promise<number> {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new TokensTelemetryClient({
@@ -49,15 +51,24 @@ export default async function main(client: Client): Promise<number> {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('tokens');
-    output.print(help(tokensCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(tokensCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command): number {
     output.print(
-      help(command, { parent: tokensCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: tokensCommand,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
@@ -66,14 +77,24 @@ export default async function main(client: Client): Promise<number> {
         telemetry.trackCliFlagHelp('tokens', subcommandOriginal);
         return printHelp(addSubcommand);
       }
-      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      if (subcommandOriginal === 'add') {
+        warnDeprecatedSubcommand(client, 'tokens add', 'tokens create');
+      }
       return add(client, args);
-    case 'remove':
+    case 'revoke':
       if (needHelp) {
         telemetry.trackCliFlagHelp('tokens', subcommandOriginal);
         return printHelp(removeSubcommand);
       }
-      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      telemetry.trackCliSubcommandRevoke(subcommandOriginal);
+      if (subcommandOriginal !== 'revoke') {
+        warnDeprecatedSubcommand(
+          client,
+          `tokens ${subcommandOriginal}`,
+          'tokens revoke'
+        );
+      }
       return rm(client, args);
     default:
       if (needHelp) {

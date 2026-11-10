@@ -4,14 +4,18 @@ import plural from 'pluralize';
 
 import type Client from '../../util/client';
 import getDomains from '../../util/domains/get-domains';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { formatDateWithoutTime } from '../../util/format-date';
 import type { Domain } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
-import { getCommandName } from '../../util/pkg-name';
+import {
+  getPaginationOpts,
+  InvalidNextError,
+} from '../../util/get-pagination-opts';
+import { printNextPageCommand } from '../../util/pagination';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import isDomainExternal from '../../util/domains/is-domain-external';
 import { getDomainRegistrar } from '../../util/domains/get-domain-registrar';
 import { validateJsonOutput } from '../../util/output-format';
@@ -36,7 +40,7 @@ export default async function ls(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -57,7 +61,7 @@ export default async function ls(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
   let paginationOptions: (number | undefined)[];
@@ -66,10 +70,10 @@ export default async function ls(client: Client, argv: string[]) {
     paginationOptions = getPaginationOpts(opts);
   } catch (err: unknown) {
     output.prettyError(err);
-    return 1;
+    return err instanceof InvalidNextError ? 2 : 1;
   }
 
-  const { contextName } = await getScope(client, {
+  const contextName = await getContextName(client, {
     resolveLocalScope: true,
   });
 
@@ -112,10 +116,8 @@ export default async function ls(client: Client, argv: string[]) {
 
     if (pagination?.next) {
       const flags = getCommandFlags(opts, ['_', '--next', '--format']);
-      output.log(
-        `To display the next page, run ${getCommandName(
-          `domains ls${flags} --next ${pagination.next}`
-        )}`
+      printNextPageCommand(
+        getCommandNamePlain(`domains ls${flags} --next ${pagination.next}`)
       );
     }
   }

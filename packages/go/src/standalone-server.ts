@@ -161,6 +161,7 @@ async function createStandaloneServerLambda({
   meta = {},
   registerPreDeploy,
   service,
+  diagnosticsValues,
 }: BuildOptions): Promise<Lambda> {
   debug(`Building standalone Go server: ${entrypoint}`);
 
@@ -281,7 +282,7 @@ async function createStandaloneServerLambda({
     workPath,
     goModJson,
     resolvedGoVersion: go.resolvedVersion,
-    framework: config.framework ?? undefined,
+    framework: diagnosticsValues?.framework,
     serviceType: service ? getReportedServiceType(service) : undefined,
   });
 

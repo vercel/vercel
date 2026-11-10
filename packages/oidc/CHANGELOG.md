@@ -1,5 +1,75 @@
 # @vercel/oidc
 
+## 4.0.4
+
+### Patch Changes
+
+- Updated dependencies [bcdc735]
+  - @vercel/cli-config@0.3.4
+
+## 4.0.3
+
+### Patch Changes
+
+- Updated dependencies [b0e01f5]
+  - @vercel/cli-config@0.3.3
+
+## 4.0.2
+
+### Patch Changes
+
+- Updated dependencies [637c7b9]
+  - @vercel/cli-config@0.3.2
+
+## 4.0.1
+
+### Patch Changes
+
+- d032cfb: Add experimental Connect event delivery authentication scoped to project, environment, registered path, preview branch and delivery purpose, with envelope schema validation. Distinguish OIDC identity failures from temporary signing-key outages.
+
+  Preserve optional MCP event metadata and opaque cursors within the total delivery body limit.
+
+## 4.0.0
+
+### Major Changes
+
+- ec76b68: Read the Vercel OIDC token from the file specified by `VERCEL_OIDC_TOKEN_FILE` on each call.
+
+## 3.8.10
+
+### Patch Changes
+
+- Updated dependencies [85cfdc3]
+  - @vercel/cli-config@0.3.1
+
+## 3.8.9
+
+### Patch Changes
+
+- Updated dependencies [c610f14]
+  - @vercel/cli-config@0.3.0
+
+## 3.8.8
+
+### Patch Changes
+
+- Updated dependencies [c4c4f3f]
+  - @vercel/cli-config@0.2.7
+
+## 3.8.7
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/cli-config@0.2.6
+
+## 3.8.6
+
+### Patch Changes
+
+- Updated dependencies [38a4acd]
+  - @vercel/cli-config@0.2.5
+
 ## 3.8.5
 
 ### Patch Changes

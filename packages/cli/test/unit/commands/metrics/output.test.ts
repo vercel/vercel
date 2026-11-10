@@ -285,5 +285,124 @@ describe('output', () => {
       );
       expect(result.error.allowedValues).toEqual(['value1']);
     });
+
+    it('prefers meta.reason over a generic Observability Plus 402 message', () => {
+      client.reset();
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage: 'Observability Plus is required for this query.',
+          meta: { reason: 'project_excluded' },
+        },
+        true,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.error.next[0].command).toContain(
+        'project observability enable'
+      );
+      expect(result.error.next[0].command).not.toContain('buy addon');
+    });
+
+    it('does not suggest an Observability command from a generic plan reason', () => {
+      client.reset();
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage: 'This feature requires a higher plan.',
+          meta: { reason: 'project_excluded' },
+        },
+        true,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.error.next).toBeUndefined();
+      expect(result.error.hint).not.toContain('Observability Plus');
+    });
+
+    it('converts --project to a positional Priority recovery target', () => {
+      client.reset();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--project',
+        'my-app',
+        '--non-interactive'
+      );
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage: 'A Priority project is required for this query.',
+        },
+        true,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.error.next[0].command).toBe(
+        'vercel project priority enable my-app'
+      );
+      expect(result.error.next[0].command).not.toContain('--project');
+      expect(result.error.next[0].command).not.toContain('--non-interactive');
+      expect(result.error.next[0].when).toContain('interactive terminal');
+      expect(result.error.hint).toBeUndefined();
+    });
+
+    it('prints the Priority command once for a person', () => {
+      client.reset();
+      client.setArgv('metrics', 'vercel.request.count', '--project', 'my-app');
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage: 'A Priority project is required for this query.',
+        },
+        false,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain('A Priority project is required');
+      expect(output).toContain('vercel project priority enable my-app');
+      expect(output).not.toContain('A person must');
+      expect(output.match(/project priority enable/g)).toHaveLength(1);
+    });
+
+    it('converts --project=value to a positional Observability recovery target', () => {
+      client.reset();
+      client.setArgv(
+        'metrics',
+        'vercel.request.count',
+        '--project=my-app',
+        '--non-interactive'
+      );
+
+      const exitCode = handleApiError(
+        {
+          status: 402,
+          serverMessage:
+            'Observability Plus is enabled for team acme, but this project is excluded from it. Include the project in Observability Plus to query its data.',
+        },
+        true,
+        client
+      );
+
+      expect(exitCode).toBe(1);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.error.next[0].command).toBe(
+        'vercel project observability enable my-app'
+      );
+      expect(result.error.next[0].command).not.toContain('--project');
+      expect(result.error.next[0].command).not.toContain('--non-interactive');
+    });
   });
 });

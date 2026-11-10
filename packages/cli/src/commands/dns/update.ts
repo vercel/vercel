@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import output from '../../output-manager';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -55,11 +55,11 @@ export default async function update(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags } = parsedArgs;
 
@@ -80,7 +80,7 @@ export default async function update(
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
@@ -88,7 +88,7 @@ export default async function update(
         `${getCommandName('dns update <id> [options]')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   const [recordId] = args;
@@ -123,11 +123,11 @@ export default async function update(
             reason: AGENT_REASON.INVALID_ARGUMENTS,
             message: `The ${flagName} option must be a number.`,
           },
-          1
+          2
         );
       }
       output.error(`The ${flagName} option must be a number.`);
-      return 1;
+      return 2;
     }
   }
 
@@ -166,13 +166,13 @@ export default async function update(
             reason: AGENT_REASON.INVALID_ARGUMENTS,
             message: `Updating an SRV record requires all of ${SRV_FLAGS.join(', ')}.`,
           },
-          1
+          2
         );
       }
       output.error(
         `Updating an SRV record requires all of ${SRV_FLAGS.join(', ')}.`
       );
-      return 1;
+      return 2;
     }
     data.srv = {
       priority: flags['--srv-priority']!,
@@ -211,7 +211,7 @@ export default async function update(
         `${getCommandName('dns update --help')}`
       )} for available options.`
     );
-    return 1;
+    return 2;
   }
 
   const changeSummary = Object.entries(data)
@@ -294,7 +294,7 @@ export default async function update(
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   output.success(
     `DNS record ${chalk.gray(`${record.id}`)} of domain ${chalk.bold(
       record.domain

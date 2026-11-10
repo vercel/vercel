@@ -189,7 +189,7 @@ export async function buildStandaloneServer(
   options: BuildOptions,
   { rustEnv, crossCompilation, verbose }: StandaloneBuildContext
 ): Promise<BuildResultVX> {
-  const { entrypoint, workPath, config, service } = options;
+  const { entrypoint, workPath, config, service, diagnosticsValues } = options;
 
   debug(`Building standalone Rust server: ${entrypoint}`);
 
@@ -255,7 +255,7 @@ export async function buildStandaloneServer(
   await generateProjectManifest({
     workPath,
     cargoMetadata,
-    framework: config?.framework ?? undefined,
+    framework: diagnosticsValues?.framework,
     serviceType: service ? getReportedServiceType(service) : undefined,
   });
 

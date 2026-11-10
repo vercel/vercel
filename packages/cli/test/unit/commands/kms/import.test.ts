@@ -25,7 +25,7 @@ describe('kms import', () => {
     it('tracks telemetry', async () => {
       client.setArgv('kms', 'import', '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'kms:import' },
@@ -62,7 +62,7 @@ describe('kms import', () => {
     useUser();
     client.setArgv('kms', 'import', 'my-issuer');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('A private key is required.');
   });
 
@@ -70,7 +70,7 @@ describe('kms import', () => {
     useUser();
     client.setArgv('kms', 'import', 'my-issuer', '--key', 'missing-key.pem');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput("Couldn't read --key file");
   });
 
@@ -79,7 +79,7 @@ describe('kms import', () => {
     writeFileSync(join(client.cwd, 'not-a-key.txt'), 'hello');
     client.setArgv('kms', 'import', 'my-issuer', '--key', 'not-a-key.txt');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       '--key must be a PEM-encoded private key'
     );
@@ -97,7 +97,7 @@ describe('kms import', () => {
       'HS256'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Invalid algorithm "HS256"');
   });
 

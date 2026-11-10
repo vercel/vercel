@@ -1,41 +1,25 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { access } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { spawn } from 'node:child_process';
-import { KNOWN_AGENTS } from '@vercel/detect-agent';
 import { z } from 'zod';
 import type Client from '../client';
 import output from '../../output-manager';
+import {
+  claudeCode,
+  claudeDir,
+} from '../ai-gateway/coding-agents/agents/claude-code';
 
 const PREFS_FILE = 'agent-preferences.json';
 const CLAUDE_LEGACY_PLUGIN_ID = 'vercel-plugin@vercel';
-const CLAUDE_OFFICIAL_PLUGIN_ID = 'vercel@claude-plugins-official';
+const CLAUDE_OFFICIAL_MARKETPLACE = 'claude-plugins-official';
+const CLAUDE_OFFICIAL_MARKETPLACE_SOURCE = 'anthropics/claude-plugins-official';
+const CLAUDE_OFFICIAL_PLUGIN_ID = `vercel@${CLAUDE_OFFICIAL_MARKETPLACE}`;
+// Claude Code's built-in plugin directory lists the same plugin.
+const CLAUDE_DIRECTORY_PLUGIN_ID = 'vercel@anthropic-plugin-directory';
 const VERCEL_PLUGIN_VERSION_URL =
   'https://raw.githubusercontent.com/vercel/vercel-plugin/main/.claude-plugin/plugin.json';
-
-const AGENT_TO_TARGET: Record<string, string> = {
-  [KNOWN_AGENTS.CLAUDE]: 'claude-code',
-  [KNOWN_AGENTS.COWORK]: 'claude-code',
-};
-
-export function getPluginTargetForAgent(
-  agentName?: string
-): string | undefined {
-  if (!agentName) {
-    return undefined;
-  }
-
-  if (
-    agentName === KNOWN_AGENTS.CLAUDE ||
-    agentName.startsWith('claude-code') ||
-    agentName === KNOWN_AGENTS.COWORK
-  ) {
-    return 'claude-code';
-  }
-
-  return AGENT_TO_TARGET[agentName];
-}
 
 const promptedAtSchema = z.codec(
   z.union([z.iso.date(), z.iso.datetime()]),
@@ -119,52 +103,47 @@ async function writePrefs(
   }
 }
 
-function encodeClaudeProjectDir(projectPath: string): string {
-  return projectPath.replace(/[^A-Za-z0-9]/g, '-');
+/** The saved answer to the Vercel plugin offer: `true` for yes, `false` for no. */
+export async function getSavedPluginAnswer(
+  client: Client
+): Promise<boolean | undefined> {
+  const { pluginDeclined } = await readPrefs(client);
+  return pluginDeclined === undefined ? undefined : !pluginDeclined;
 }
 
-export async function projectHasUsedClaudeCode(cwd: string): Promise<boolean> {
-  const home = homedir();
-  const projectsDir = join(home, '.claude', 'projects');
-  let dir = resolve(cwd);
-  while (dir !== home) {
-    if (await fileExists(join(projectsDir, encodeClaudeProjectDir(dir)))) {
-      return true;
-    }
-    const parent = dirname(dir);
-    if (parent === dir) {
-      break;
-    }
-    dir = parent;
-  }
-  return false;
+export async function savePluginAnswer(
+  client: Client,
+  accepted: boolean
+): Promise<void> {
+  const prefs = await readPrefs(client);
+  prefs.pluginDeclined = !accepted;
+  prefs.pluginAutoUpdate = accepted;
+  await markPromptedToday(client, prefs);
 }
 
-async function getPluginTargets(
-  agentName?: string,
-  cwd?: string
-): Promise<string[]> {
-  const targetForAgent = getPluginTargetForAgent(agentName);
-  if (targetForAgent) {
-    return [targetForAgent];
-  }
-  if (agentName) {
-    return [];
-  }
-  if (cwd && (await projectHasUsedClaudeCode(cwd))) {
-    return ['claude-code'];
-  }
-  return [];
+/**
+ * Whether Claude Code's plugin registry lists the Vercel plugin from the
+ * official marketplace or the built-in directory. Reads the registry file
+ * instead of running `claude`, so the check is instant.
+ */
+export async function hasClaudeVercelPlugin(home: string): Promise<boolean> {
+  // The registry lives in the config dir Claude Code uses, which honors
+  // `CLAUDE_CONFIG_DIR`, like the detection that decides to offer the plugin.
+  const plugins = await readClaudeInstalledPluginsFromRegistry(
+    join(claudeDir(home), 'plugins', 'installed_plugins.json')
+  );
+  return plugins.some(
+    plugin =>
+      plugin.id === CLAUDE_OFFICIAL_PLUGIN_ID ||
+      plugin.id === CLAUDE_DIRECTORY_PLUGIN_ID
+  );
 }
 
-async function readClaudeInstalledPluginsFromRegistry(): Promise<
-  ClaudeListedPlugin[]
-> {
+async function readClaudeInstalledPluginsFromRegistry(
+  registryPath = getClaudeInstalledPluginsRegistryPath()
+): Promise<ClaudeListedPlugin[]> {
   try {
-    const raw = await readFile(
-      getClaudeInstalledPluginsRegistryPath(),
-      'utf-8'
-    );
+    const raw = await readFile(registryPath, 'utf-8');
     const data = JSON.parse(raw);
     const plugins: Record<string, unknown> = data?.plugins ?? {};
     const entries: ClaudeListedPlugin[] = [];
@@ -229,61 +208,12 @@ async function removeClaudePluginFromRegistry(
   }
 }
 
-async function isPluginInstalledForTarget(target: string): Promise<boolean> {
-  if (target === 'claude-code') {
-    const status = await getClaudePluginStatus();
-    return status.state === 'official-only';
-  }
-  return false;
-}
-
-async function confirm(client: Client, message: string): Promise<boolean> {
-  if (client.nonInteractive || !client.stdin.isTTY) {
-    return false;
-  }
-  return client.input.confirm(message, true);
-}
-
-function isSameDay(left: Date, right: Date): boolean {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
-}
-
-function wasPromptedToday(prefs: AgentPreferences): boolean {
-  return prefs.lastPromptedAt
-    ? isSameDay(prefs.lastPromptedAt, new Date())
-    : false;
-}
-
-function wasPluginAutoUpdateAttemptedToday(
-  prefs: AgentPreferences,
-  attemptKey: string
-): boolean {
-  return (
-    prefs.lastPluginAutoUpdateAttemptedKey === attemptKey &&
-    !!prefs.lastPluginAutoUpdateAttemptedAt &&
-    isSameDay(prefs.lastPluginAutoUpdateAttemptedAt, new Date())
-  );
-}
-
 async function markPromptedToday(
   client: Client,
   prefs: AgentPreferences
 ): Promise<void> {
   prefs.lastPromptedAt = new Date();
   await writePrefs(client, prefs);
-}
-
-function markPluginAutoUpdateAttempted(
-  prefs: AgentPreferences,
-  attemptKey?: string
-): void {
-  if (!attemptKey) return;
-  prefs.lastPluginAutoUpdateAttemptedAt = new Date();
-  prefs.lastPluginAutoUpdateAttemptedKey = attemptKey;
 }
 
 async function runCommand(
@@ -442,22 +372,6 @@ function hasClaudeMigrationActions(plan: ClaudePluginMigrationPlan): boolean {
   );
 }
 
-function getClaudeAutoUpdateAttemptKey(
-  status: ClaudePluginStatus,
-  plan: ClaudePluginMigrationPlan
-): string {
-  return [
-    status.state,
-    status.legacy?.version ?? 'none',
-    status.official?.version ?? 'none',
-    status.latestVersion ?? 'unknown',
-    plan.installOfficial ? 'install' : '',
-    plan.updateOfficial ? 'update' : '',
-    plan.removeLegacy ? 'remove-legacy' : '',
-    plan.removeLegacyMarketplace ? 'remove-marketplace' : '',
-  ].join(':');
-}
-
 export function buildClaudePromptCopy(
   status: ClaudePluginStatus,
   plan: ClaudePluginMigrationPlan
@@ -528,9 +442,58 @@ async function runClaudeCommand(
   return false;
 }
 
+/**
+ * A fresh Claude Code config has only the built-in plugin directory, so an
+ * install from the official marketplace fails until the marketplace is added.
+ */
+async function ensureClaudeOfficialMarketplace(): Promise<boolean> {
+  const result = await runCommand('claude', [
+    'plugins',
+    'marketplace',
+    'list',
+    '--json',
+  ]);
+  let marketplaces: unknown;
+  try {
+    marketplaces = JSON.parse(result.stdout);
+  } catch {
+    // Handled below.
+  }
+  if (result.exitCode !== 0 || !Array.isArray(marketplaces)) {
+    // Without the list, let the install itself report any problem.
+    output.debug(
+      `Failed to list Claude plugin marketplaces: ${result.stderr || result.stdout}`
+    );
+    return true;
+  }
+  if (
+    marketplaces.some(
+      marketplace =>
+        (marketplace as { name?: unknown })?.name ===
+        CLAUDE_OFFICIAL_MARKETPLACE
+    )
+  ) {
+    return true;
+  }
+
+  const added = await runClaudeCommand(
+    'Adding the official Claude plugin marketplace...',
+    'Added the official Claude plugin marketplace',
+    'Failed to add the official Claude plugin marketplace.',
+    ['plugins', 'marketplace', 'add', CLAUDE_OFFICIAL_MARKETPLACE_SOURCE],
+    { quietSuccess: true }
+  );
+  if (!added) {
+    output.log(
+      `Setup command: claude plugins marketplace add ${CLAUDE_OFFICIAL_MARKETPLACE_SOURCE}`
+    );
+  }
+  return added;
+}
+
 async function removeStaleLegacyClaudePlugin(
   removeMarketplace: boolean
-): Promise<boolean> {
+): Promise<{ removedPlugin: boolean; complete: boolean }> {
   output.spinner('Removing the stale legacy Vercel Claude plugin...');
   const removedRegistryEntry = await removeClaudePluginFromRegistry(
     CLAUDE_LEGACY_PLUGIN_ID
@@ -541,7 +504,7 @@ async function removeStaleLegacyClaudePlugin(
     output.warn(
       'Could not remove the stale legacy Vercel Claude plugin registry entry.'
     );
-    return false;
+    return { removedPlugin: false, complete: false };
   }
 
   output.success('Removed the stale legacy Vercel Claude plugin');
@@ -557,26 +520,33 @@ async function removeStaleLegacyClaudePlugin(
     if (!removedMarketplace) {
       output.log('Cleanup command: claude plugins marketplace remove vercel');
     }
+    return { removedPlugin: true, complete: removedMarketplace };
   }
 
-  return true;
+  return { removedPlugin: true, complete: true };
 }
 
 async function runClaudeMigration(
   plan: ClaudePluginMigrationPlan
-): Promise<void> {
+): Promise<boolean> {
   let removedStaleLegacy = false;
+  let complete = true;
 
   if (plan.removeLegacy) {
     const statusBeforeInstall = await getClaudePluginStatus();
     if (statusBeforeInstall.legacy?.stale) {
-      removedStaleLegacy = await removeStaleLegacyClaudePlugin(
+      const cleanup = await removeStaleLegacyClaudePlugin(
         plan.removeLegacyMarketplace
       );
+      removedStaleLegacy = cleanup.removedPlugin;
+      complete = cleanup.complete;
     }
   }
 
   if (plan.installOfficial) {
+    if (!(await ensureClaudeOfficialMarketplace())) {
+      return false;
+    }
     const installed = await runClaudeCommand(
       'Installing the official Vercel Claude plugin...',
       'Updated the Vercel plugin',
@@ -584,15 +554,18 @@ async function runClaudeMigration(
       ['plugins', 'install', CLAUDE_OFFICIAL_PLUGIN_ID]
     );
     if (!installed) {
-      return;
+      return false;
     }
   } else if (plan.updateOfficial) {
-    await runClaudeCommand(
+    const updated = await runClaudeCommand(
       'Updating the official Vercel Claude plugin...',
       'Updated the Vercel plugin',
       'Failed to update the official Vercel Claude plugin.',
       ['plugins', 'update', CLAUDE_OFFICIAL_PLUGIN_ID]
     );
+    if (!updated) {
+      return false;
+    }
   }
 
   const statusAfterInstall = await getClaudePluginStatus();
@@ -600,7 +573,7 @@ async function runClaudeMigration(
     output.warn(
       'Skipping Claude cleanup because the official Vercel plugin is not installed.'
     );
-    return;
+    return false;
   }
 
   if (plan.removeLegacy && statusAfterInstall.legacy) {
@@ -615,7 +588,7 @@ async function runClaudeMigration(
       output.log(
         `Cleanup command: claude plugins uninstall ${CLAUDE_LEGACY_PLUGIN_ID}`
       );
-      return;
+      return false;
     }
   }
 
@@ -631,9 +604,11 @@ async function runClaudeMigration(
       );
       if (!removedMarketplace) {
         output.log('Cleanup command: claude plugins marketplace remove vercel');
+        return false;
       }
     }
   }
+  return complete;
 }
 
 async function getClaudePluginStatus(): Promise<ClaudePluginStatus> {
@@ -644,113 +619,138 @@ async function getClaudePluginStatus(): Promise<ClaudePluginStatus> {
   return buildClaudePluginStatus(installedPlugins, latestVersion);
 }
 
-async function applyPluginActions(
-  targets: string[],
-  claudePlan?: ClaudePluginMigrationPlan
-): Promise<void> {
-  for (const target of targets) {
-    if (target === 'claude-code' && claudePlan) {
-      await runClaudeMigration(claudePlan);
-    } else {
-      output.debug(`Skipping unsupported plugin target: ${target}`);
-    }
-  }
+export type PluginSetupStatus =
+  | 'installed'
+  | 'enabled'
+  | 'updated'
+  | 'up_to_date'
+  | 'not_detected'
+  | 'unsupported'
+  | 'disabled'
+  | 'declined'
+  | 'confirmation_required'
+  | 'dry_run'
+  | 'failed';
+
+export interface PluginSetupResult {
+  status: PluginSetupStatus;
+  message: string;
+  /** What a dry run would do, so the caller can word its receipt. */
+  action?: 'install' | 'update' | 'enable';
 }
 
-export async function autoInstallVercelPlugin(
+function describeClaudePlan(plan: ClaudePluginMigrationPlan): string {
+  const actions: string[] = [];
+  if (plan.installOfficial) actions.push('install the official plugin');
+  if (plan.updateOfficial) actions.push('update the official plugin');
+  if (plan.removeLegacy) actions.push('remove the legacy plugin');
+  if (plan.removeLegacyMarketplace)
+    actions.push('remove the legacy marketplace');
+  return actions.join(', ');
+}
+
+/**
+ * The explicit `vercel setup` path. It targets Claude Code whenever it is
+ * installed on the machine, and reports what happened so the caller can render
+ * a receipt. Prompts go through `client.input`; the caller decides
+ * interactivity.
+ */
+export async function setupVercelPlugin(
   client: Client,
-  options?: { autoConfirm?: boolean; mode?: 'prompt' | 'apply' }
-): Promise<void> {
-  try {
-    const prefs = await readPrefs(client);
-    const applyMode = options?.mode === 'apply';
-
-    if (!prefs.pluginDeclined || prefs.pluginAutoUpdate || applyMode) {
-      const targets = await getPluginTargets(client.agentName, client.cwd);
-      const uninstalledTargets: string[] = [];
-      const claudeStatus = targets.includes('claude-code')
-        ? await getClaudePluginStatus()
-        : undefined;
-      const claudePlan = claudeStatus
-        ? buildClaudePluginMigrationPlan(claudeStatus)
-        : undefined;
-      const claudeAutoUpdateAttemptKey =
-        claudeStatus && claudePlan
-          ? getClaudeAutoUpdateAttemptKey(claudeStatus, claudePlan)
-          : undefined;
-
-      for (const target of targets) {
-        if (target === 'claude-code') {
-          if (claudePlan && hasClaudeMigrationActions(claudePlan)) {
-            uninstalledTargets.push(target);
-          }
-          continue;
-        }
-
-        if (!(await isPluginInstalledForTarget(target))) {
-          uninstalledTargets.push(target);
-        }
-      }
-
-      if (uninstalledTargets.length > 0) {
-        if (prefs.pluginAutoUpdate) {
-          if (
-            claudeAutoUpdateAttemptKey &&
-            wasPluginAutoUpdateAttemptedToday(prefs, claudeAutoUpdateAttemptKey)
-          ) {
-            return;
-          }
-
-          prefs.pluginDeclined = false;
-          markPluginAutoUpdateAttempted(prefs, claudeAutoUpdateAttemptKey);
-          await writePrefs(client, prefs);
-          await applyPluginActions(uninstalledTargets, claudePlan);
-          return;
-        }
-
-        if (!applyMode && wasPromptedToday(prefs)) {
-          return;
-        }
-
-        if (applyMode) {
-          prefs.pluginDeclined = false;
-          prefs.pluginAutoUpdate = true;
-          await writePrefs(client, prefs);
-          await applyPluginActions(uninstalledTargets, claudePlan);
-          return;
-        }
-
-        const promptMessages: string[] = [];
-        let confirmMessage = 'Install the Vercel plugin?';
-        if (
-          uninstalledTargets.includes('claude-code') &&
-          claudeStatus &&
-          claudePlan
-        ) {
-          const claudePrompt = buildClaudePromptCopy(claudeStatus, claudePlan);
-          promptMessages.push(claudePrompt.message);
-          confirmMessage = claudePrompt.confirm;
-        }
-
-        const promptMessage = promptMessages.join(' ').trim();
-        if (promptMessage) {
-          output.log(promptMessage);
-        }
-        const accepted = await confirm(client, confirmMessage);
-        await markPromptedToday(client, prefs);
-        if (accepted) {
-          prefs.pluginDeclined = false;
-          prefs.pluginAutoUpdate = true;
-          await writePrefs(client, prefs);
-          await applyPluginActions(uninstalledTargets, claudePlan);
-        } else {
-          prefs.pluginDeclined = true;
-          prefs.pluginAutoUpdate = false;
-          await writePrefs(client, prefs);
-        }
-      }
-    }
-  } catch (err) {
-    output.debug(`Auto-install agent tooling failed: ${err}`);
+  opts: { yes: boolean; dryRun: boolean; canPrompt: boolean; home: string }
+): Promise<PluginSetupResult> {
+  if (!(await claudeCode.detect(opts.home))) {
+    return {
+      status: 'not_detected',
+      message: 'Claude Code was not detected on this machine.',
+    };
   }
+
+  const status = await getClaudePluginStatus();
+  if (status.official?.stale) {
+    return {
+      status: 'failed',
+      message:
+        'The installed Vercel plugin files are missing. Run `claude plugins uninstall vercel@claude-plugins-official`, then run `vercel setup plugin --agent claude-code` to reinstall it.',
+    };
+  }
+  const plan = buildClaudePluginMigrationPlan(status);
+  if (!hasClaudeMigrationActions(plan)) {
+    const version = status.official?.version
+      ? ` (v${status.official.version})`
+      : '';
+    return {
+      status: 'up_to_date',
+      message: `Vercel plugin for Claude Code is installed${version}.`,
+    };
+  }
+
+  const copy = buildClaudePromptCopy(status, plan);
+  if (opts.dryRun) {
+    return {
+      status: 'dry_run',
+      message: `${copy.message} Setup would ${describeClaudePlan(plan)}.`,
+      action: plan.installOfficial ? 'install' : 'update',
+    };
+  }
+
+  const prefs = await readPrefs(client);
+  if (!opts.yes) {
+    if (!opts.canPrompt) {
+      return {
+        status: 'confirmation_required',
+        message: `${copy.message} Re-run with --yes to apply it.`,
+      };
+    }
+    output.print(`  ${copy.message}\n`);
+    const accepted = await client.input.confirm(copy.confirm, true);
+    await markPromptedToday(client, prefs);
+    if (!accepted) {
+      prefs.pluginDeclined = true;
+      prefs.pluginAutoUpdate = false;
+      await writePrefs(client, prefs);
+      return {
+        status: 'declined',
+        message: 'Skipped the Vercel plugin for Claude Code.',
+      };
+    }
+  }
+
+  prefs.pluginDeclined = false;
+  prefs.pluginAutoUpdate = true;
+  await writePrefs(client, prefs);
+  const migrated = await runClaudeMigration(plan);
+
+  const after = await getClaudePluginStatus();
+  if (!after.official) {
+    return {
+      status: 'failed',
+      message:
+        'Failed to install the Vercel plugin for Claude Code. Run `claude plugins install vercel@claude-plugins-official` to install it manually.',
+    };
+  }
+  // Verify the plan against the version we offered, even if the second
+  // manifest request fails. A successful subprocess can also leave stale state.
+  // An install gets the version the marketplace serves, which can trail
+  // vercel-plugin's main branch, so only an update must reach that version.
+  const remaining = buildClaudePluginMigrationPlan({
+    ...after,
+    latestVersion: plan.updateOfficial ? status.latestVersion : undefined,
+  });
+  if (
+    !migrated ||
+    after.official.stale ||
+    hasClaudeMigrationActions(remaining)
+  ) {
+    return {
+      status: 'failed',
+      message:
+        'Failed to complete Vercel plugin setup for Claude Code. Re-run `vercel setup plugin --agent claude-code --yes` to retry.',
+    };
+  }
+  const version = after.official.version ? ` v${after.official.version}` : '';
+  return {
+    status: plan.installOfficial ? 'installed' : 'updated',
+    message: `${plan.installOfficial ? 'Installed' : 'Updated'} the Vercel plugin for Claude Code${version}.`,
+  };
 }

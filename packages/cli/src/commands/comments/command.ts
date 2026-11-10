@@ -1,8 +1,10 @@
 import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
+  gitBranchOption,
   jsonOption,
   limitOption,
+  nextCursorOption,
   projectOption,
   yesOption,
 } from '../../util/arg-common';
@@ -12,14 +14,13 @@ import {
 const commentsProjectOption = {
   ...projectOption,
   shorthand: 'p',
-  description: 'Project ID or name (defaults to the linked project)',
+  description: 'Project ID or name (default: linked project)',
 } as const;
 
-// Deliberate divergence, documented in the plan: the repo uses -m for --meta
-// elsewhere; we take it for `git commit -m` muscle memory.
 const messageContentOption = {
   name: 'message',
-  shorthand: 'm',
+  shorthand: null,
+  deprecatedShorthand: 'm',
   type: String,
   argument: 'TEXT',
   deprecated: false,
@@ -44,17 +45,6 @@ const attachOption = {
   description: 'Attach a file by https URL (repeatable, max 10)',
 } as const;
 
-// Local String cursor option on purpose: the shared `nextOption` is
-// `type: Number` (timestamp pagination) and would NaN an opaque cursor.
-const nextCursorOption = {
-  name: 'next',
-  shorthand: 'N',
-  type: String,
-  argument: 'CURSOR',
-  deprecated: false,
-  description: 'Show the next page using the cursor from the previous output',
-} as const;
-
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
@@ -64,13 +54,19 @@ export const listSubcommand = {
   options: [
     commentsProjectOption,
     {
+      ...gitBranchOption,
+      type: [String],
+      description:
+        'Filter by Git branch (repeatable) (default: the current branch when inferable)',
+    },
+    // Hidden: `--branch` is the old name of `--git-branch`.
+    {
       name: 'branch',
       shorthand: null,
       type: [String],
       argument: 'BRANCH',
-      deprecated: false,
-      description:
-        'Filter by Git branch (repeatable; defaults to the current branch when inferable)',
+      deprecated: true,
+      description: 'Deprecated alias for `--git-branch`',
     },
     {
       name: 'all-branches',
@@ -85,7 +81,7 @@ export const listSubcommand = {
       type: String,
       argument: 'STATUS',
       deprecated: false,
-      description: 'unresolved (default), resolved, or all',
+      description: 'unresolved, resolved, or all (default: unresolved)',
     },
     {
       name: 'page-path',
@@ -113,20 +109,38 @@ export const listSubcommand = {
       description: 'Filter by author user ID, or `me` (repeatable)',
     },
     {
+      name: 'content',
+      shorthand: null,
+      type: [String],
+      argument: 'CONTENT',
+      deprecated: false,
+      description: 'Filter by CMS content ID (repeatable)',
+    },
+    // Hidden: `--content-id` is the old name of `--content`.
+    {
       name: 'content-id',
       shorthand: null,
       type: [String],
       argument: 'ID',
-      deprecated: false,
-      description: 'Filter by CMS content ID (repeatable)',
+      deprecated: true,
+      description: 'Deprecated alias for `--content`',
     },
+    {
+      name: 'query',
+      shorthand: 'q',
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description: 'Search comment content',
+    },
+    // Hidden: `--search` is the old name of `--query`.
     {
       name: 'search',
       shorthand: null,
       type: String,
       argument: 'TEXT',
-      deprecated: false,
-      description: 'Search comment content',
+      deprecated: true,
+      description: 'Deprecated alias for `--query`',
     },
     limitOption,
     nextCursorOption,
@@ -216,7 +230,7 @@ export const replySubcommand = {
   examples: [
     {
       name: 'Reply to a comment',
-      value: `${packageName} comments reply icZ9BnPPINuK -m 'Fixed in **main**.'`,
+      value: `${packageName} comments reply icZ9BnPPINuK --message 'Fixed in **main**.'`,
     },
     {
       name: 'Reply from stdin',
@@ -244,7 +258,7 @@ export const resolveSubcommand = {
     },
     {
       name: 'Reply and resolve in one step',
-      value: `${packageName} comments resolve icZ9BnPPINuK -m 'Fixed in the latest deployment'`,
+      value: `${packageName} comments resolve icZ9BnPPINuK --message 'Fixed in the latest deployment'`,
     },
   ],
 } as const;
@@ -264,9 +278,9 @@ export const reopenSubcommand = {
 } as const;
 
 export const editSubcommand = {
-  name: 'edit',
-  aliases: [],
-  description: 'Edit a comment message',
+  name: 'update',
+  aliases: ['edit'],
+  description: 'Update a comment message while preserving its attachments',
   arguments: [
     { name: 'thread', required: true },
     { name: 'message-id', required: true },
@@ -280,15 +294,15 @@ export const editSubcommand = {
   ],
   examples: [
     {
-      name: 'Edit a message',
-      value: `${packageName} comments edit icZ9BnPPINuK VvkhYF6dTqbpm7K -m 'Updated wording'`,
+      name: 'Update a message',
+      value: `${packageName} comments update icZ9BnPPINuK VvkhYF6dTqbpm7K --message 'Updated wording'`,
     },
   ],
 } as const;
 
 export const deleteSubcommand = {
   name: 'delete',
-  aliases: [],
+  aliases: ['rm', 'del'],
   description: 'Delete a comment message',
   arguments: [
     { name: 'thread', required: true },
@@ -331,7 +345,7 @@ export const commentsCommand = {
     },
     {
       name: 'Reply and resolve in one step',
-      value: `${packageName} comments resolve icZ9BnPPINuK -m 'Fixed!'`,
+      value: `${packageName} comments resolve icZ9BnPPINuK --message 'Fixed!'`,
     },
   ],
 } as const;

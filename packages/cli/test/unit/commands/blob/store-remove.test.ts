@@ -289,7 +289,7 @@ describe('blob store remove', () => {
       }));
 
       const exitCode = await removeStore(client, ['--invalid-flag'], noToken);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should handle API errors gracefully', async () => {
@@ -414,7 +414,7 @@ describe('blob store remove', () => {
         noToken
       );
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(confirmInputMock).not.toHaveBeenCalled();
       expect(client.fetch).not.toHaveBeenCalled();
       expect(mockedOutput.success).not.toHaveBeenCalled();
@@ -614,7 +614,7 @@ describe('blob store remove', () => {
         noToken
       ).catch(() => 1);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(confirmInputMock).not.toHaveBeenCalled();
       expect(mockedOutput.success).not.toHaveBeenCalled();
       expect(client.fetch).not.toHaveBeenCalled();

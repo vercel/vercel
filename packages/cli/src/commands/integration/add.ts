@@ -1,8 +1,4 @@
 import type Client from '../../util/client';
-import {
-  VALID_ENVIRONMENTS,
-  validateEnvironments,
-} from '../../util/integration/post-provision-setup';
 import { addAutoProvision } from './add-auto-provision';
 import output from '../../output-manager';
 import { validateJsonOutput } from '../../util/output-format';
@@ -12,8 +8,14 @@ import {
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
+import { getTypedOptionName } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+} from '../../util/renamed-option';
 
-import type { IntegrationAddFlags } from './command';
+import { addSubcommand, type IntegrationAddFlags } from './command';
 
 export async function add(
   client: Client,
@@ -22,27 +24,57 @@ export async function add(
   commandName?: 'integration add' | 'install'
 ) {
   const resourceNameArg = flags['--name'];
-  const metadataFlags = flags['--metadata'];
-  const billingPlanId = flags['--plan'];
   const prefix = flags['--prefix'];
   if (prefix !== undefined && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(prefix)) {
     output.error(
       'Invalid --prefix value. It must start with a letter and contain only letters, digits, and underscores.'
     );
-    return 1;
+    return 2;
   }
-  const installationId = flags['--installation-id'];
 
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
+  const argv = client.argv.slice(2);
+  const spec = getFlagsSpecification(addSubcommand.options);
+  const meta = getRenamedOption<string[]>(flags, '--meta', '--metadata', {
+    json: asJson,
+    typedName: getTypedOptionName(argv, spec, '--metadata'),
+  });
+  if ('error' in meta) {
+    return reportRenamedOptionError(client, meta.error, { json: asJson });
+  }
+  const billingPlan = getRenamedOption(flags, '--billing-plan', '--plan', {
+    json: asJson,
+    typedName: getTypedOptionName(argv, spec, '--plan'),
+  });
+  if ('error' in billingPlan) {
+    return reportRenamedOptionError(client, billingPlan.error, {
+      json: asJson,
+    });
+  }
+  const installation = getRenamedOption(
+    flags,
+    '--installation',
+    '--installation-id',
+    { json: asJson }
+  );
+  if ('error' in installation) {
+    return reportRenamedOptionError(client, installation.error, {
+      json: asJson,
+    });
+  }
+  const metadataFlags = meta.value;
+  const billingPlanId = billingPlan.value;
+  const installationId = installation.value;
+
   if (args.length > 1) {
     output.error('Cannot install more than one integration at a time');
-    return 1;
+    return 2;
   }
 
   const rawArg = args[0];
@@ -77,10 +109,10 @@ export async function add(
           },
         ],
       },
-      1
+      2
     );
     output.error(message);
-    return 1;
+    return 2;
   }
 
   // Parse optional product slug from "integration/product" syntax
@@ -94,29 +126,19 @@ export async function add(
       output.error(
         'Invalid format. Expected: <integration-name>/<product-slug>'
       );
-      return 1;
+      return 2;
     }
   } else {
     integrationSlug = rawArg;
   }
 
-  // Validate --environment values early (before any network requests)
   const environments = flags['--environment'];
-  if (environments?.length) {
-    const envValidation = validateEnvironments(environments);
-    if (!envValidation.valid) {
-      output.error(
-        `Invalid environment value: ${envValidation.invalid.map(e => `"${e}"`).join(', ')}. Must be one of: ${VALID_ENVIRONMENTS.join(', ')}`
-      );
-      return 1;
-    }
-  }
 
   const claimFlag = flags['--claim'];
   const noClaimFlag = flags['--no-claim'];
   if (claimFlag && noClaimFlag) {
     output.error('Cannot use both --claim and --no-claim.');
-    return 1;
+    return 2;
   }
 
   return await addAutoProvision(client, integrationSlug, resourceNameArg, {
@@ -132,5 +154,7 @@ export async function add(
     asJson,
     claim: claimFlag,
     noClaim: noClaimFlag,
+    flags,
+    deprecations: [meta.warning, billingPlan.warning, installation.warning],
   });
 }

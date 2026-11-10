@@ -36,6 +36,11 @@ import parseTarget from '../../util/parse-target';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import getDeployment from '../../util/get-deployment';
 import {
+  getRenamedOption,
+  renameOptionInArgs,
+  reportRenamedOptionError,
+} from '../../util/renamed-option';
+import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
   outputActionRequired,
@@ -133,7 +138,7 @@ export default async function pull(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags: opts } = parsedArgs;
@@ -142,7 +147,7 @@ export default async function pull(
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
     );
-    return 1;
+    return 2;
   }
 
   // handle relative or absolute filename
@@ -155,20 +160,29 @@ export default async function pull(
   telemetryClient.trackCliFlagYes(skipConfirmation);
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
+  telemetryClient.trackCliOptionDeployment(opts['--deployment']);
   telemetryClient.trackCliOptionId(opts['--id']);
   telemetryClient.trackCliOptionProject(opts['--project']);
+
+  const deploymentFlag = getRenamedOption(opts, '--deployment', '--id');
+  if ('error' in deploymentFlag) {
+    return reportRenamedOptionError(client, deploymentFlag.error);
+  }
 
   let link = await resolveProjectContext({
     client,
     projectNameOrId: opts['--project'],
+    skipOwnerLookup: true,
   });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     if (client.nonInteractive) {
-      const preserved = getPreservedArgsForEnvPull(client.argv);
+      // Suggestions teach `--deployment`, even when `--id` was typed.
+      const argv = renameOptionInArgs(client.argv, '--id', '--deployment');
+      const preserved = getPreservedArgsForEnvPull(argv);
       const linkArgv = [
-        ...client.argv.slice(0, 2),
+        ...argv.slice(0, 2),
         'link',
         '--scope',
         '<scope>',
@@ -184,7 +198,7 @@ export default async function pull(
           )}\` to begin. Use \`--yes\` for non-interactive; use \`--scope\` or \`--project\` to specify team or project.`,
           next: [
             { command: buildCommandWithYes(linkArgv) },
-            { command: buildCommandWithYes(client.argv) },
+            { command: buildCommandWithYes(argv) },
           ],
         },
         1
@@ -215,10 +229,14 @@ export default async function pull(
   client.config.currentTeam =
     link.org.type === 'team' ? link.org.id : undefined;
 
-  const deploymentId = opts['--id'];
+  const deploymentId = deploymentFlag.value;
 
   if (deploymentId && opts['--project']) {
-    const deployment = await getDeployment(client, link.org.slug, deploymentId);
+    const deployment = await getDeployment(
+      client,
+      link.org.slug || link.org.id,
+      deploymentId
+    );
     if (deployment.projectId && deployment.projectId !== link.project.id) {
       output.error(
         `Deployment ${chalk.bold(deploymentId)} does not belong to project ${chalk.bold(link.project.name)}.`
@@ -269,9 +287,9 @@ export async function envPullCommandLogic(
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
   } else if (exists && !skipConfirmation && !oidcTokenOnly) {
     if (client.nonInteractive) {
-      const preserved = getPreservedArgsForEnvPull(client.argv).filter(
-        arg => arg !== '--yes' && arg !== '-y'
-      );
+      const preserved = getPreservedArgsForEnvPull(
+        renameOptionInArgs(client.argv, '--id', '--deployment')
+      ).filter(arg => arg !== '--yes' && arg !== '-y');
       const suffix = preserved.length > 0 ? ` ${preserved.join(' ')}` : '';
       outputActionRequired(client, {
         status: 'action_required',
@@ -300,7 +318,9 @@ export async function envPullCommandLogic(
     }
   }
 
-  const projectSlugLink = formatProject(link.org.slug, link.project.name);
+  const projectSlugLink = link.org.slug
+    ? formatProject(link.org.slug, link.project.name)
+    : chalk.bold(link.project.name);
 
   const downloadMessage = oidcTokenOnly
     ? `Downloading a fresh \`${chalk.cyan(

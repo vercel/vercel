@@ -32,7 +32,7 @@ export async function contacts(client: Client): Promise<number> {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -46,6 +46,7 @@ export async function contacts(client: Client): Promise<number> {
     telemetry.trackCliFlagHelp('connect contacts');
     output.print(
       help(contactsSubcommand, {
+        stream: client.stderr,
         parent: connexCommand,
         columns: client.stderr.columns,
       })
@@ -56,6 +57,7 @@ export async function contacts(client: Client): Promise<number> {
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: contactsSubcommand,
         columns: client.stderr.columns,
       })
@@ -75,6 +77,7 @@ export async function contacts(client: Client): Promise<number> {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
         help(contactsSubcommand, {
+          stream: client.stderr,
           parent: connexCommand,
           columns: client.stderr.columns,
         })

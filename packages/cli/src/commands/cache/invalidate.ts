@@ -28,7 +28,7 @@ export default async function invalidate(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const projectName = parsedArgs.flags['--project'];
@@ -61,7 +61,7 @@ export default async function invalidate(
 
   if (tag && srcimg) {
     output.error(`Cannot use both --tag and --srcimg options`);
-    return 1;
+    return 2;
   }
 
   let itemName = '';
@@ -83,7 +83,7 @@ export default async function invalidate(
     postBody = { srcImages: [srcimg] };
   } else {
     output.error(`The --tag or --srcimg option is required`);
-    return 1;
+    return 2;
   }
 
   const msg = `You are about to invalidate all cached content associated with ${itemName} ${itemValue} for project ${project.name}`;

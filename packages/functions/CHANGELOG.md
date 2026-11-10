@@ -1,5 +1,81 @@
 # @vercel/functions
 
+## 3.10.4
+
+### Patch Changes
+
+- 4db77ba: Fix `ipAddress` throwing for header readers with an internal `headers` property, such as the Next.js headers adapter.
+  - @vercel/oidc@4.0.4
+
+## 3.10.3
+
+### Patch Changes
+
+- @vercel/oidc@4.0.3
+
+## 3.10.2
+
+### Patch Changes
+
+- @vercel/oidc@4.0.2
+
+## 3.10.1
+
+### Patch Changes
+
+- Updated dependencies [d032cfb]
+  - @vercel/oidc@4.0.1
+
+## 3.10.0
+
+### Minor Changes
+
+- 3394701: Promote the WebSocket upgrade API to `upgradeWebSocket()` and remove its experimental label.
+
+## 3.9.12
+
+### Patch Changes
+
+- Updated dependencies [baad6f5]
+  - @vercel/oidc@5.0.0
+
+## 3.9.11
+
+### Patch Changes
+
+- Updated dependencies [ec76b68]
+  - @vercel/oidc@4.0.0
+
+## 3.9.10
+
+### Patch Changes
+
+- @vercel/oidc@3.8.10
+
+## 3.9.9
+
+### Patch Changes
+
+- @vercel/oidc@3.8.9
+
+## 3.9.8
+
+### Patch Changes
+
+- @vercel/oidc@3.8.8
+
+## 3.9.7
+
+### Patch Changes
+
+- @vercel/oidc@3.8.7
+
+## 3.9.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.6
+
 ## 3.9.5
 
 ### Patch Changes

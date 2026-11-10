@@ -40,6 +40,8 @@ export async function checkRateLimit(
       | Record<string, string | string[]>;
     /** The current request object. Optional. */
     request?: Request;
+    /** The fetch timeout in milliseconds. Defaults to no timeout. Rejects with a `TimeoutError` when exceeded. */
+    timeout?: number;
   }
 ): Promise<{
   rateLimited: boolean;
@@ -129,6 +131,10 @@ export async function checkRateLimit(
     method: 'GET',
     headers: rateLimitHeaders,
     redirect: 'manual',
+    signal:
+      options?.timeout === undefined
+        ? undefined
+        : AbortSignal.timeout(options.timeout),
   });
 
   if (response.status === 204) {

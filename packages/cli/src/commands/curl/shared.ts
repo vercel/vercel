@@ -3,12 +3,11 @@ import { isErrnoException } from '@vercel/error-utils';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import { ensureLink } from '../../util/link/ensure-link';
-import getScope from '../../util/get-scope';
+import getScope, { detectExplicitScope } from '../../util/get-scope';
 import { getOrCreateDeploymentProtectionToken } from './bypass-token';
 import { getLinkedProject } from '../../util/projects/link';
 import { getDeploymentUrlById } from './deployment-url';
 import toHost from '../../util/to-host';
-import getTeams from '../../util/teams/get-teams';
 import type {
   Deployment,
   Project,
@@ -21,7 +20,8 @@ import { help } from '../help';
 import { getCommandName } from '../../util/pkg-name';
 import type { Command } from '../help';
 import type arg from 'arg';
-import getDeployment from '../../util/get-deployment';
+import { getDeploymentAccounts, resolveDeployment } from './resolve-deployment';
+import { isAPIError } from '../../util/errors-ts';
 
 export interface DeploymentUrlOptions {
   deploymentFlag?: string;
@@ -217,8 +217,10 @@ export function setupCurlLikeCommand(
     );
 
     if (parsed.help) {
-      print(help(command, { columns: client.stderr.columns }));
-      return 2;
+      print(
+        help(command, { stream: client.stderr, columns: client.stderr.columns })
+      );
+      return 0;
     }
 
     const path = parsed.target;
@@ -237,8 +239,10 @@ export function setupCurlLikeCommand(
       output.error(
         `${getCommandName(`${command.name} <url|path>`)} requires a URL or API path (e.g., 'https://example.vercel.app/api/hello' or '/api/hello')`
       );
-      print(help(command, { columns: client.stderr.columns }));
-      return 1;
+      print(
+        help(command, { stream: client.stderr, columns: client.stderr.columns })
+      );
+      return 2;
     }
 
     let isFullUrl = path.startsWith('http://') || path.startsWith('https://');
@@ -247,7 +251,7 @@ export function setupCurlLikeCommand(
     }
 
     output.debug(
-      `${command.name} flags (${parsed.toolFlags.length} args): ${JSON.stringify(parsed.toolFlags)}`
+      `${command.name} options (${parsed.toolFlags.length} args): ${JSON.stringify(parsed.toolFlags)}`
     );
 
     return {
@@ -270,14 +274,16 @@ export function setupCurlLikeCommand(
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { flags } = parsedArgs;
 
   if (parsedArgs.flags['--help']) {
-    print(help(command, { columns: client.stderr.columns }));
-    return 2;
+    print(
+      help(command, { stream: client.stderr, columns: client.stderr.columns })
+    );
+    return 0;
   }
 
   // Remove command name from the args list
@@ -310,7 +316,9 @@ export function setupCurlLikeCommand(
         `${getCommandName(`${command.name} <path>`)} requires an API path (e.g., '/' or '/api/hello' or 'api/hello')`
       );
     }
-    print(help(command, { columns: client.stderr.columns }));
+    print(
+      help(command, { stream: client.stderr, columns: client.stderr.columns })
+    );
     return 1;
   }
 
@@ -324,16 +332,18 @@ export function setupCurlLikeCommand(
       `The <path> argument must be a relative API path (e.g., '/' or '/api/hello'), not a full URL.`
     );
     output.print(
-      `To target a specific deployment within the currently linked project, use the --deployment <id|url> flag.`
+      `To target a specific deployment within the currently linked project, use the --deployment <id|url> option.`
     );
-    print(help(command, { columns: client.stderr.columns }));
+    print(
+      help(command, { stream: client.stderr, columns: client.stderr.columns })
+    );
     return 1;
   }
 
   const toolFlags =
     separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
   output.debug(
-    `${command.name} flags (${toolFlags.length} args): ${JSON.stringify(toolFlags)}`
+    `${command.name} options (${toolFlags.length} args): ${JSON.stringify(toolFlags)}`
   );
 
   return {
@@ -354,26 +364,15 @@ async function resolveProjectFromUrl(
 ): Promise<ProjectLinked | null> {
   const host = toHost(url);
 
-  for (const useCurrentTeam of [undefined, false] as const) {
-    try {
-      const deployment = await client.fetch<Deployment>(
-        `/v13/deployments/${encodeURIComponent(host)}`,
-        { useCurrentTeam }
-      );
-      if (deployment.projectId && deployment.ownerId) {
-        const project = await client.fetch<Project>(
-          `/v9/projects/${encodeURIComponent(deployment.projectId)}`,
-          { accountId: deployment.ownerId }
-        );
-        return {
-          status: 'linked',
-          project,
-          org: orgFromOwner(deployment.ownerId),
-        };
-      }
-    } catch (err) {
-      output.debug(`Deployment lookup failed for ${host}: ${err}`);
+  try {
+    const deployment = await resolveDeployment(client, host);
+    if (deployment) {
+      const link = await linkFromDeployment(client, deployment);
+      if (link) return link;
     }
+  } catch (err) {
+    output.debug(`Deployment lookup failed for ${host}: ${err}`);
+    if (isAPIError(err) && err.status === 429) return null;
   }
 
   try {
@@ -382,7 +381,12 @@ async function resolveProjectFromUrl(
       const alias = await client.fetch<{
         projectId?: string;
         ownerId?: string;
-      }>(aliasUrl, { useCurrentTeam: false });
+      }>(aliasUrl, {
+        useCurrentTeam: false,
+        ...(detectExplicitScope(client)
+          ? { accountId: client.config.currentTeam }
+          : {}),
+      });
       if (alias.projectId && alias.ownerId) {
         const project = await client.fetch<Project>(
           `/v9/projects/${encodeURIComponent(alias.projectId)}`,
@@ -398,15 +402,14 @@ async function resolveProjectFromUrl(
       output.debug(`User alias lookup failed for ${host}: ${err}`);
     }
 
-    const teams = (await getTeams(client)).filter(team => !team.limited);
-    for (const team of teams) {
+    for (const accountId of await getDeploymentAccounts(client)) {
       try {
         const alias = await client.fetch<{
           projectId?: string;
           ownerId?: string;
-        }>(aliasUrl, { accountId: team.id });
+        }>(aliasUrl, { accountId });
         const projectId = alias.projectId;
-        const ownerId = alias.ownerId || team.id;
+        const ownerId = alias.ownerId || accountId;
         if (projectId) {
           const project = await client.fetch<Project>(
             `/v9/projects/${encodeURIComponent(projectId)}`,
@@ -415,11 +418,11 @@ async function resolveProjectFromUrl(
           return {
             status: 'linked',
             project,
-            org: orgFromOwner(ownerId, team.slug),
+            org: orgFromOwner(ownerId),
           };
         }
       } catch (err) {
-        output.debug(`Alias lookup failed for ${host} in ${team.slug}: ${err}`);
+        output.debug(`Alias lookup failed for ${host} in ${accountId}: ${err}`);
       }
     }
   } catch (err) {
@@ -519,11 +522,10 @@ async function resolveTargetProject(
 /** Deployment lookup that returns null (and logs) instead of throwing. */
 async function tryGetDeployment(
   client: Client,
-  contextName: string,
   selector: string
 ): Promise<Deployment | null> {
   try {
-    return await getDeployment(client, contextName, selector);
+    return await resolveDeployment(client, selector);
   } catch (err) {
     output.debug(`Failed to resolve deployment: ${err}`);
     return null;
@@ -534,12 +536,11 @@ async function tryGetDeployment(
  *  failure (lookup or project fetch) resolves to null. */
 async function tryLinkFromSelector(
   client: Client,
-  contextName: string,
   selector: string
 ): Promise<ProjectLinked | null> {
   try {
-    const deployment = await getDeployment(client, contextName, selector);
-    return await linkFromDeployment(client, deployment);
+    const deployment = await resolveDeployment(client, selector);
+    return deployment ? await linkFromDeployment(client, deployment) : null;
   } catch (err) {
     output.debug(`Failed to resolve trace project context: ${err}`);
     return null;
@@ -587,26 +588,9 @@ export async function getDeploymentUrlAndToken(
 
   let link: ProjectLinked | null = null;
   let createProtectionBypassIfMissing = !deploymentFlag;
-  let scope;
-
-  try {
-    scope = await getScope(client);
-  } catch (err: unknown) {
-    if (
-      isErrnoException(err) &&
-      (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
-    ) {
-      output.error(err.message);
-      return 1;
-    }
-
-    throw err;
-  }
-
   let baseUrl: string;
 
   if (deploymentFlag) {
-    const accountId = scope.team?.id || scope.user?.id;
     const isDirectUrl =
       deploymentFlag.startsWith('http://') ||
       deploymentFlag.startsWith('https://') ||
@@ -615,7 +599,7 @@ export async function getDeploymentUrlAndToken(
     // network fetch. A bare id is left null and resolved later, alongside the
     // project/bypass-token lookup.
     const requestedBaseUrl = isDirectUrl
-      ? await getDeploymentUrlById(client, deploymentFlag, accountId)
+      ? await getDeploymentUrlById(client, deploymentFlag)
       : null;
     // Prefix a bare deployment id with `dpl_`; pass URLs/prefixed ids through.
     const deploymentSelector =
@@ -629,7 +613,7 @@ export async function getDeploymentUrlAndToken(
       // cwd-linked project and never fails the request.
       baseUrl =
         requestedBaseUrl ??
-        (await getDeploymentUrlById(client, deploymentFlag, accountId)) ??
+        (await getDeploymentUrlById(client, deploymentFlag)) ??
         '';
       if (!baseUrl) {
         output.error(`No deployment found for ID "${deploymentFlag}"`);
@@ -637,21 +621,14 @@ export async function getDeploymentUrlAndToken(
       }
       if (resolveProjectForTrace) {
         link =
-          (await tryLinkFromSelector(
-            client,
-            scope.contextName,
-            deploymentSelector
-          )) ?? (await getLinkedProjectOrNull(client));
+          (await tryLinkFromSelector(client, deploymentSelector)) ??
+          (await getLinkedProjectOrNull(client));
       }
     } else {
       // No token: the lookup is load-bearing — it resolves the project the
       // token is sourced from, and its url is the fallback target when
       // --deployment wasn't a direct URL.
-      const deployment = await tryGetDeployment(
-        client,
-        scope.contextName,
-        deploymentSelector
-      );
+      const deployment = await tryGetDeployment(client, deploymentSelector);
 
       baseUrl =
         requestedBaseUrl ??
@@ -677,9 +654,22 @@ export async function getDeploymentUrlAndToken(
       }
     }
   } else {
+    try {
+      await getScope(client);
+    } catch (err: unknown) {
+      if (
+        isErrnoException(err) &&
+        (err.code === 'NOT_AUTHORIZED' || err.code === 'TEAM_DELETED')
+      ) {
+        output.error(err.message);
+        return 1;
+      }
+      throw err;
+    }
+
     // No explicit --deployment: target the linked project. `ensureLink` may
     // return a numeric exit code (aborted link / recoverable error), surfaced
-    // as-is; on success we re-read it for the production alias / latest URL.
+    // as-is.
     let ensuredLink;
     try {
       ensuredLink = await ensureLink(commandName, client, client.cwd, {
@@ -698,22 +688,29 @@ export async function getDeploymentUrlAndToken(
       return ensuredLink;
     }
 
-    const linkedProject = await getLinkedProject(client, { cwd: client.cwd });
-    if (linkedProject.status !== 'linked') {
-      output.error('This command requires a linked project. Please run:');
-      output.print('  vercel link');
-      return 1;
-    }
-
-    if (!linkedProject.project || !linkedProject.org) {
-      output.error('Failed to get project information');
-      return 1;
-    }
-
     link = ensuredLink;
-    const preferredAlias =
-      linkedProject.project.targets?.production?.alias?.[0];
-    const backupAlias = linkedProject.project.latestDeployments?.[0]?.url;
+    // The project `ensureLink` fetched carries the production alias and the
+    // latest deployments. A project created while linking may have neither,
+    // so only then re-read the link for them.
+    let { project } = ensuredLink;
+    if (!project.targets && !project.latestDeployments) {
+      const linkedProject = await getLinkedProject(client, { cwd: client.cwd });
+      if (linkedProject.status !== 'linked') {
+        output.error('This command requires a linked project. Please run:');
+        output.print('  vercel link');
+        return 1;
+      }
+
+      if (!linkedProject.project || !linkedProject.org) {
+        output.error('Failed to get project information');
+        return 1;
+      }
+
+      project = linkedProject.project;
+    }
+
+    const preferredAlias = project.targets?.production?.alias?.[0];
+    const backupAlias = project.latestDeployments?.[0]?.url;
     const target = preferredAlias || backupAlias;
     if (!target) {
       throw new Error('No deployment URL found for the project');
