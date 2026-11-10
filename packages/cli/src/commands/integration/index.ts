@@ -14,6 +14,7 @@ import {
   acceptTermsSubcommand,
   addSubcommand,
   balanceSubcommand,
+  billingPlansSubcommand,
   categoriesSubcommand,
   discoverSubcommand,
   guideSubcommand,
@@ -33,6 +34,7 @@ import { update } from './update-integration';
 import { categories } from './categories';
 import { discover } from './discover';
 import { guide } from './guide';
+import { billingPlans } from './billing-plans';
 import { printAddDynamicHelp } from './add-help';
 import installationsList from './installations-list';
 import acceptTerms from './accept-terms';
@@ -52,6 +54,7 @@ const COMMAND_CONFIG = {
   categories: getCommandAliases(categoriesSubcommand),
   discover: getCommandAliases(discoverSubcommand),
   guide: getCommandAliases(guideSubcommand),
+  'billing-plans': getCommandAliases(billingPlansSubcommand),
   balance: getCommandAliases(balanceSubcommand),
   remove: getCommandAliases(removeSubcommand),
   resource: getCommandAliases(resourceSubcommand),
@@ -209,6 +212,10 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandGuide(subcommandOriginal);
       return guide(client, subArgs);
+    }
+    case 'billing-plans': {
+      telemetry.trackCliSubcommandBillingPlans(subcommandOriginal);
+      return billingPlans(client, subArgs);
     }
     case 'balance': {
       if (needHelp) {

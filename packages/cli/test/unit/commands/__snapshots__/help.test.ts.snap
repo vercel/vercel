@@ -2161,6 +2161,36 @@ Examples:
 "
 `;
 
+exports[`help command > integration help output snapshots > integration billing-plans subcommand > integration billing-plans subcommand help column width 120 1`] = `
+"▲ vercel integration billing-plans <integration> [options]
+List a marketplace integration's billing plans: the ID to pass to \`--billing-plan\`, free or paid, and whether the
+current team can use it
+
+Options:
+  --json              Output as JSON
+  --meta <KEY=VALUE>  Product metadata as KEY=VALUE (can be repeated), for integrations that only list plans once they
+                      know it, such as a region. Takes the same keys as \`integration add --meta\`.
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  List the billing plans of an integration
+    vercel integration billing-plans <integration>
+
+  List the billing plans of one product of a multi-product integration
+    vercel integration billing-plans <integration>/<product>
+
+  List the plans of a product that needs its metadata first
+    vercel integration billing-plans acme/acme-storage --meta region=iad1
+
+  Output as JSON
+    vercel integration billing-plans acme --json
+
+  Install with a billing plan from the list
+    vercel integration add acme --billing-plan <BILLING_PLAN>
+"
+`;
+
 exports[`help command > integration help output snapshots > integration categories subcommand > integration categories subcommand help column width 120 1`] = `
 "▲ vercel integration categories [options]
 List marketplace integration categories (slugs valid for \`integration discover --category\`)
@@ -2265,6 +2295,11 @@ Commands:
   balance <integration>
     Shows the balances and thresholds of
     a specified marketplace integration
+  billing-plans <integration>
+    List a marketplace integration's
+    billing plans: the ID to pass to
+    \`--billing-plan\`, free or paid, and
+    whether the current team can use it
   categories
     List marketplace integration
     categories (slugs valid for
@@ -2335,47 +2370,50 @@ Manage marketplace integrations. To manage individual resources, see \`vercel
 integration resource\`.
 
 Commands:
-  add <integration>           Installs a marketplace integration
-  accept-terms <integration>  Accept marketplace legal terms for an integration
-                              and install it on the current team (installation
-                              only; no product resource). Requires an
-                              interactive terminal and human confirmation,
-                              unless \`--yes\` is passed (supported for \`neon\`
-                              only). Does not replace integrations that require
-                              a browser or device attestation.
-  balance <integration>       Shows the balances and thresholds of a specified
-                              marketplace integration
-  categories                  List marketplace integration categories (slugs
-                              valid for \`integration discover --category\`)
-  discover [query]            Discover available marketplace integrations
-  guide <integration>         Show getting started guides and code snippets for
-                              a marketplace integration
-  installations               List marketplace integration installations for the
-                              current team (account scope)
-  list [project]              List resources from marketplace integrations for
-                              the current project
-  open <name> [resource]      Opens a marketplace integration's or resource's
-                              dashboard via SSO
-  resource                    Manage marketplace integration resources (inspect,
-                              connect, disconnect, delete, claim,
-                              create-threshold)
-  update <integration>        Update a marketplace integration installation
-                              (billing plan or which projects can access it).
-                              Install, remove, and connect flows are separate
-                              (integration add, integration remove, integration
-                              resource, env pull, etc.) — not part of update.
-                              UI-only flows (OAuth in a browser, consent
-                              screens, marketplace purchase) may not map
-                              one-to-one to a single CLI option; pass
-                              --billing-plan and --authorization when the
-                              product requires them for billing changes. Any
-                              extra fields on the configuration resource that
-                              the API exposes but this command PATCH body does
-                              not send are not covered until the API and CLI
-                              support them.
-  remove <integration>        Remove a marketplace integration. Resources must
-                              be deleted first using \`integration resource
-                              delete\`.
+  add <integration>            Installs a marketplace integration
+  accept-terms <integration>   Accept marketplace legal terms for an integration
+                               and install it on the current team (installation
+                               only; no product resource). Requires an
+                               interactive terminal and human confirmation,
+                               unless \`--yes\` is passed (supported for \`neon\`
+                               only). Does not replace integrations that require
+                               a browser or device attestation.
+  balance <integration>        Shows the balances and thresholds of a specified
+                               marketplace integration
+  billing-plans <integration>  List a marketplace integration's billing plans:
+                               the ID to pass to \`--billing-plan\`, free or paid,
+                               and whether the current team can use it
+  categories                   List marketplace integration categories (slugs
+                               valid for \`integration discover --category\`)
+  discover [query]             Discover available marketplace integrations
+  guide <integration>          Show getting started guides and code snippets for
+                               a marketplace integration
+  installations                List marketplace integration installations for
+                               the current team (account scope)
+  list [project]               List resources from marketplace integrations for
+                               the current project
+  open <name> [resource]       Opens a marketplace integration's or resource's
+                               dashboard via SSO
+  resource                     Manage marketplace integration resources
+                               (inspect, connect, disconnect, delete, claim,
+                               create-threshold)
+  update <integration>         Update a marketplace integration installation
+                               (billing plan or which projects can access it).
+                               Install, remove, and connect flows are separate
+                               (integration add, integration remove, integration
+                               resource, env pull, etc.) — not part of update.
+                               UI-only flows (OAuth in a browser, consent
+                               screens, marketplace purchase) may not map
+                               one-to-one to a single CLI option; pass
+                               --billing-plan and --authorization when the
+                               product requires them for billing changes. Any
+                               extra fields on the configuration resource that
+                               the API exposes but this command PATCH body does
+                               not send are not covered until the API and CLI
+                               support them.
+  remove <integration>         Remove a marketplace integration. Resources must
+                               be deleted first using \`integration resource
+                               delete\`.
 
 Global Options: See \`vercel --help\`
 
@@ -2393,30 +2431,32 @@ exports[`help command > integration help output snapshots > integration help col
 Manage marketplace integrations. To manage individual resources, see \`vercel integration resource\`.
 
 Commands:
-  add <integration>           Installs a marketplace integration
-  accept-terms <integration>  Accept marketplace legal terms for an integration and install it on the current team
-                              (installation only; no product resource). Requires an interactive terminal and human
-                              confirmation, unless \`--yes\` is passed (supported for \`neon\` only). Does not replace
-                              integrations that require a browser or device attestation.
-  balance <integration>       Shows the balances and thresholds of a specified marketplace integration
-  categories                  List marketplace integration categories (slugs valid for \`integration discover
-                              --category\`)
-  discover [query]            Discover available marketplace integrations
-  guide <integration>         Show getting started guides and code snippets for a marketplace integration
-  installations               List marketplace integration installations for the current team (account scope)
-  list [project]              List resources from marketplace integrations for the current project
-  open <name> [resource]      Opens a marketplace integration's or resource's dashboard via SSO
-  resource                    Manage marketplace integration resources (inspect, connect, disconnect, delete, claim,
-                              create-threshold)
-  update <integration>        Update a marketplace integration installation (billing plan or which projects can access
-                              it). Install, remove, and connect flows are separate (integration add, integration remove,
-                              integration resource, env pull, etc.) — not part of update. UI-only flows (OAuth in a
-                              browser, consent screens, marketplace purchase) may not map one-to-one to a single CLI
-                              option; pass --billing-plan and --authorization when the product requires them for billing
-                              changes. Any extra fields on the configuration resource that the API exposes but this
-                              command PATCH body does not send are not covered until the API and CLI support them.
-  remove <integration>        Remove a marketplace integration. Resources must be deleted first using \`integration
-                              resource delete\`.
+  add <integration>            Installs a marketplace integration
+  accept-terms <integration>   Accept marketplace legal terms for an integration and install it on the current team
+                               (installation only; no product resource). Requires an interactive terminal and human
+                               confirmation, unless \`--yes\` is passed (supported for \`neon\` only). Does not replace
+                               integrations that require a browser or device attestation.
+  balance <integration>        Shows the balances and thresholds of a specified marketplace integration
+  billing-plans <integration>  List a marketplace integration's billing plans: the ID to pass to \`--billing-plan\`, free
+                               or paid, and whether the current team can use it
+  categories                   List marketplace integration categories (slugs valid for \`integration discover
+                               --category\`)
+  discover [query]             Discover available marketplace integrations
+  guide <integration>          Show getting started guides and code snippets for a marketplace integration
+  installations                List marketplace integration installations for the current team (account scope)
+  list [project]               List resources from marketplace integrations for the current project
+  open <name> [resource]       Opens a marketplace integration's or resource's dashboard via SSO
+  resource                     Manage marketplace integration resources (inspect, connect, disconnect, delete, claim,
+                               create-threshold)
+  update <integration>         Update a marketplace integration installation (billing plan or which projects can access
+                               it). Install, remove, and connect flows are separate (integration add, integration
+                               remove, integration resource, env pull, etc.) — not part of update. UI-only flows (OAuth
+                               in a browser, consent screens, marketplace purchase) may not map one-to-one to a single
+                               CLI option; pass --billing-plan and --authorization when the product requires them for
+                               billing changes. Any extra fields on the configuration resource that the API exposes but
+                               this command PATCH body does not send are not covered until the API and CLI support them.
+  remove <integration>         Remove a marketplace integration. Resources must be deleted first using \`integration
+                               resource delete\`.
 
 Global Options: See \`vercel --help\`
 

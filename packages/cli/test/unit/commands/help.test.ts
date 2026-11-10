@@ -908,6 +908,17 @@ describe('help command', () => {
         ).toMatchSnapshot();
       });
     });
+    describe('integration billing-plans subcommand', () => {
+      it('integration billing-plans subcommand help column width 120', () => {
+        expect(
+          help(integration.billingPlansSubcommand, {
+            stream: { isTTY: false },
+            columns: 120,
+            parent: integration.integrationCommand,
+          })
+        ).toMatchSnapshot();
+      });
+    });
     describe('integration balance subcommand', () => {
       it('integration balance subcommand help column width 120', () => {
         expect(

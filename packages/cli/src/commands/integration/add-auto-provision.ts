@@ -55,6 +55,7 @@ import { getLinkedProject } from '../../util/projects/link';
 import { resolveProjectEnvironments } from '../../util/integration/resolve-project-environments';
 import type { IntegrationAddFlags } from './command';
 import type { DeprecatedOptionWarning } from '../../util/renamed-option';
+import { getBillingPlanErrorHint } from '../../util/integration/billing-plan-error';
 
 interface AddAutoProvisionOptions extends PostProvisionOptions {
   metadata?: string[];
@@ -380,6 +381,13 @@ export async function addAutoProvision(
       }
     );
     output.error(errorToString(error));
+    const plansHint = getBillingPlanErrorHint(
+      client,
+      error,
+      integration,
+      product
+    );
+    if (plansHint) output.log(plansHint);
     return 1;
   }
   output.stopSpinner();

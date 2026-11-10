@@ -55,7 +55,8 @@ export const addSubcommand = {
       type: String,
       deprecated: false,
       argument: 'BILLING_PLAN',
-      description: 'Billing plan ID to use for the resource',
+      description:
+        'Billing plan ID to use for the resource. Run `vercel integration billing-plans <integration>` to list them.',
     },
     // Hidden: `--plan` and `-p` are the old names of `--billing-plan`.
     {
@@ -176,6 +177,10 @@ export const addSubcommand = {
         `${packageName} integration add acme --billing-plan pro`,
         `${packageName} integration add acme --billing-plan pro`,
       ],
+    },
+    {
+      name: 'List the billing plans you can pass to --billing-plan',
+      value: `${packageName} integration billing-plans acme`,
     },
     {
       name: 'Install and connect to specific environments only',
@@ -649,6 +654,57 @@ export const removeSubcommand = {
   ],
 } as const;
 
+export const billingPlansSubcommand = {
+  name: 'billing-plans',
+  aliases: [],
+  description:
+    "List a marketplace integration's billing plans: the ID to pass to `--billing-plan`, free or paid, and whether the current team can use it",
+  arguments: [
+    {
+      name: 'integration',
+      required: true,
+    },
+  ],
+  options: [
+    {
+      name: 'meta',
+      description:
+        'Product metadata as KEY=VALUE (can be repeated), for integrations that only list plans once they know it, such as a region. Takes the same keys as `integration add --meta`.',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      argument: 'KEY=VALUE',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'List the billing plans of an integration',
+      placeholders: ['<integration>'],
+      value: `${packageName} integration billing-plans <integration>`,
+    },
+    {
+      name: 'List the billing plans of one product of a multi-product integration',
+      placeholders: ['<integration>', '<product>'],
+      value: `${packageName} integration billing-plans <integration>/<product>`,
+    },
+    {
+      name: 'List the plans of a product that needs its metadata first',
+      value: `${packageName} integration billing-plans acme/acme-storage --meta region=iad1`,
+    },
+    {
+      name: 'Output as JSON',
+      value: `${packageName} integration billing-plans acme --json`,
+    },
+    {
+      name: 'Install with a billing plan from the list',
+      placeholders: ['<BILLING_PLAN>'],
+      value: `${packageName} integration add acme --billing-plan <BILLING_PLAN>`,
+    },
+  ],
+} as const;
+
 export const guideSubcommand = {
   name: 'guide',
   aliases: [],
@@ -736,6 +792,7 @@ export const integrationCommand = {
     addSubcommand,
     acceptTermsSubcommand,
     balanceSubcommand,
+    billingPlansSubcommand,
     categoriesSubcommand,
     discoverSubcommand,
     guideSubcommand,

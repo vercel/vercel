@@ -128,6 +128,23 @@ describe('formatDynamicExamples', () => {
     expect(output).toContain('--meta region=iad1');
   });
 
+  it('points at `integration billing-plans` for the plan IDs', () => {
+    const output = stripAnsi(
+      formatDynamicExamples('sample', productWithSchema)
+    );
+    expect(output).toContain(
+      'List the billing plans you can pass to --billing-plan'
+    );
+    expect(output).toContain('vercel integration billing-plans sample');
+  });
+
+  it('keeps unsafe integration slugs out of the billing plans example', () => {
+    const output = stripAnsi(
+      formatDynamicExamples('integration;echo SAMPLE', productWithSchema)
+    );
+    expect(output).toContain('vercel integration billing-plans <INTEGRATION>');
+  });
+
   it('should include an example for every addSubcommand option', () => {
     const output = stripAnsi(
       formatDynamicExamples('test-integration', productWithSchema)

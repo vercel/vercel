@@ -36,8 +36,17 @@ export function formatDynamicExamples(
   const metadata = buildMetadataExample(integrationSlug, products, commandName);
   if (metadata)
     examples.push({ name: 'Install with metadata', value: metadata });
+  examples.push(
+    {
+      name: 'Install with a specific billing plan',
+      value: `${invocation} --billing-plan <PLAN>`,
+    },
+    {
+      name: 'List the billing plans you can pass to --billing-plan',
+      value: `${packageName} integration billing-plans ${formatHelpSelector(integrationSlug, '<INTEGRATION>')}`,
+    }
+  );
   for (const [name, flags] of [
-    ['Install with a specific billing plan', '--billing-plan <PLAN>'],
     [
       'Install and connect to specific environments only',
       '-e production -e preview',

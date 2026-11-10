@@ -76,6 +76,13 @@ export class IntegrationTelemetryClient
     });
   }
 
+  trackCliSubcommandBillingPlans(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'billing-plans',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandGuide(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'guide',
