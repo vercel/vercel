@@ -5,6 +5,7 @@ import integrationCommand from '../../../../src/commands/integration';
 import install from '../../../../src/commands/install';
 import pull from '../../../../src/commands/env/pull';
 import { connectResourceToProject } from '../../../../src/util/integration-resource/connect-resource-to-project';
+import { quoteShellArg } from '../../../../src/util/pagination';
 import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import {
@@ -771,7 +772,7 @@ describe('integration add (auto-provision)', () => {
           '    enterprise_v2  Enterprise\n'
       );
       await expect(client.stderr).toOutput(
-        "    vercel integration add acme --meta 'region=us-east-1' --billing-plan <BILLING_PLAN>"
+        `    vercel integration add acme --scope ${quoteShellArg(team.slug)} --meta region=us-east-1 --billing-plan <BILLING_PLAN>\n`
       );
       await expect(client.stderr).toOutput(
         'Visit this URL if the browser does not open: https://vercel.com/acme/~/integrations/checkout/acme?'
@@ -825,11 +826,66 @@ describe('integration add (auto-provision)', () => {
       expect(payload.verification_uri).toMatch(
         /^https:\/\/vercel\.com\/acme\/~\/integrations\/checkout\/acme\?/
       );
-      expect(payload.next[0].command).toContain(
-        "integration add acme --meta 'region=us-east-1' --billing-plan <BILLING_PLAN>"
+      expect(payload.data.plans[0]).toEqual({
+        id: 'pro',
+        name: 'Pro',
+        type: 'subscription',
+        description: 'Pro plan',
+        cost: '$20.00/month',
+      });
+      expect(payload.next[0].command).toMatch(
+        /^vercel integration add acme --scope \S+ --meta region=us-east-1 --billing-plan <BILLING_PLAN>$/
       );
       expect(payload.next[1].command).toContain('integration list');
       expect(payload.hint).toContain('Ask the user which paid plan to use');
+    });
+
+    it('should keep the options the user passed in the --billing-plan command', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      useAutoProvision({ responseKey: 'no_eligible_plan' });
+
+      client.nonInteractive = true;
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--meta',
+        'region=us-east-1',
+        '--name',
+        'my-db',
+        '--installation',
+        'acme-install',
+        '--no-connect',
+        '--plan',
+        'free'
+      );
+
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.next[0].command).toMatch(
+        /^vercel integration add acme --scope \S+ --name my-db --meta region=us-east-1 --installation acme-install --no-connect --billing-plan <BILLING_PLAN>$/
+      );
+    });
+
+    it('should not suggest --billing-plan in JSON when no plans are listed', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      useAutoProvision({ responseKey: 'no_eligible_plan_without_plans' });
+
+      client.nonInteractive = true;
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.data).toEqual({ plans: [] });
+      expect(payload.next).toHaveLength(1);
+      expect(payload.next[0].command).toContain('integration list');
+      expect(payload.hint).not.toContain('paid plan');
     });
 
     it('should hand off to the browser for no_eligible_plan without a plan list', async () => {

@@ -8,7 +8,7 @@ import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
 import { remoteText } from '../../util/output/remote-text';
-import { quoteArg } from '../../util/flags/quote-arg';
+import { quoteShellArg } from '../../util/pagination';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { resolveAndFetchIntegration } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
@@ -189,6 +189,10 @@ export async function addAutoProvision(
 
   const product = productResult.value;
   const installations = installationsResult.value;
+  const productRef =
+    integration.products.length > 1
+      ? `${integration.slug}/${product.slug}`
+      : integration.slug;
 
   const baseProps = {
     integration_id: integration.id,
@@ -494,13 +498,28 @@ export async function addAutoProvision(
       url.searchParams.set('environment', options.environments.join(','));
     }
     if (fallback.reason === 'no_eligible_plan') {
-      const slug =
-        integration.products.length > 1
-          ? `${integration.slug}/${product.slug}`
-          : integration.slug;
       return handleNoEligiblePlan(client, fallback, url, {
-        slug,
-        metadata: options.metadata ?? [],
+        productRef,
+        retryArgs: [
+          productRef,
+          '--scope',
+          contextName,
+          ...(resourceNameArg ? ['--name', resourceNameArg] : []),
+          ...(options.metadata ?? []).flatMap(entry => ['--meta', entry]),
+          ...(options.installationId
+            ? ['--installation', options.installationId]
+            : []),
+          ...(options.environments ?? []).flatMap(env => [
+            '--environment',
+            env,
+          ]),
+          ...(options.prefix ? ['--prefix', options.prefix] : []),
+          ...(options.noConnect ? ['--no-connect'] : []),
+          ...(options.noEnvPull ? ['--no-env-pull'] : []),
+          ...(options.claim ? ['--claim'] : []),
+          ...(options.noClaim ? ['--no-claim'] : []),
+          ...(options.asJson ? ['--format', 'json'] : []),
+        ],
       });
     }
     const setupMessage = fallback.error_message
@@ -610,11 +629,7 @@ export async function addAutoProvision(
     );
   }
 
-  const guideSlug =
-    integration.products.length > 1
-      ? `${integration.slug}/${product.slug}`
-      : integration.slug;
-  const guideCommand = `vercel integration guide ${guideSlug}`;
+  const guideCommand = `vercel integration guide ${productRef}`;
   output.log(
     indent(
       `Guide: Run ${chalk.cyan(`\`${guideCommand}\``)} for getting started guides and code snippets`,
@@ -804,31 +819,32 @@ export async function addAutoProvision(
 
 /**
  * The integration has no free plan for this team, so a person must choose a
- * paid one: with `--billing-plan`, which provisions directly when a payment
- * method is on file, or in the browser.
+ * paid one: with `--billing-plan`, which provisions directly unless payment is
+ * needed, or in the browser. The API lists plans only when a retry can use
+ * them. `retryArgs` repeats this invocation after `integration add`.
  */
 function handleNoEligiblePlan(
   client: Client,
   fallback: AutoProvisionFallback,
   url: URL,
-  { slug, metadata }: { slug: string; metadata: string[] }
+  { productRef, retryArgs }: { productRef: string; retryArgs: string[] }
 ): number {
   const plans = (fallback.plans ?? []).map(plan => ({
-    id: remoteText(plan.id),
+    id: plan.id,
     name: remoteText(plan.name),
+    ...(plan.type ? { type: remoteText(plan.type) } : {}),
+    ...(plan.description ? { description: remoteText(plan.description) } : {}),
     ...(plan.cost ? { cost: remoteText(plan.cost) } : {}),
   }));
   const remoteMessage = fallback.error_message
     ? remoteText(fallback.error_message)
     : undefined;
-  const headline = `Can't provision ${slug} on a free plan. None is available to this team.`;
-  // Plans can depend on metadata such as the region, so keep it.
+  const headline = `Can't provision ${productRef} on a free plan. None is available to this team.`;
   const planCommand = buildCommandWithGlobalFlags(
     client.argv,
     [
       'integration add',
-      slug,
-      ...metadata.map(entry => `--meta ${quoteArg(entry)}`),
+      ...retryArgs.map(quoteShellArg),
       '--billing-plan <BILLING_PLAN>',
     ].join(' '),
     packageName,
@@ -841,7 +857,11 @@ function handleNoEligiblePlan(
     message: `${headline} A person must choose a paid plan, from data.plans or in the browser at verification_uri. This command does not wait for it in non-interactive mode.`,
     verification_uri: url.href,
     userActionRequired: true,
-    hint: 'Ask the user which paid plan to use before running next[0]. It starts a paid plan.',
+    ...(plans.length
+      ? {
+          hint: 'Ask the user which paid plan to use before running next[0]. It starts a paid plan.',
+        }
+      : {}),
     data: { plans, ...(remoteMessage ? { remoteMessage } : {}) },
     next: [
       ...(plans.length
@@ -869,11 +889,12 @@ function handleNoEligiblePlan(
     output.print(`  Vercel API: ${remoteMessage}\n`);
   }
   if (plans.length) {
-    const idWidth = Math.max(...plans.map(plan => plan.id.length));
+    const rows = plans.map(plan => ({ ...plan, id: remoteText(plan.id) }));
+    const idWidth = Math.max(...rows.map(row => row.id.length));
     output.print('  Paid plans:\n');
-    for (const plan of plans) {
-      const cost = plan.cost ? ` (${plan.cost})` : '';
-      output.print(`    ${plan.id.padEnd(idWidth)}  ${plan.name}${cost}\n`);
+    for (const row of rows) {
+      const cost = row.cost ? ` (${row.cost})` : '';
+      output.print(`    ${row.id.padEnd(idWidth)}  ${row.name}${cost}\n`);
     }
     output.print(
       `\nTo provision a paid plan, run this command with its ID:\n    ${planCommand}\n\n`
