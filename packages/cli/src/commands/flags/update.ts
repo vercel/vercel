@@ -1,3 +1,4 @@
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import chalk from 'chalk';
 import deepEqual from 'fast-deep-equal';
 import type Client from '../../util/client';
@@ -63,7 +64,7 @@ export default async function update(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -90,7 +91,7 @@ export default async function update(
     output.log(
       `Example: ${getCommandName('flags update my-feature --variant control --value welcome-back --label "Welcome back"')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -169,10 +170,9 @@ async function updateExistingVariant(
   const { flag, etag } = await fetchFlagForUpdate(client, projectId, flagArg);
   output.stopSpinner();
 
-  if (flag.state === 'archived') {
-    output.error(
-      `Flag ${chalk.bold(flag.slug)} is archived and cannot be updated`
-    );
+  logArchivedFlagNotice(flag);
+
+  if (rejectExperimentOwnedVariantUpdate(flag)) {
     return 1;
   }
 
@@ -233,10 +233,9 @@ async function updateFlagVariants(
   const { flag, etag } = await fetchFlagForUpdate(client, projectId, flagArg);
   output.stopSpinner();
 
-  if (flag.state === 'archived') {
-    output.error(
-      `Flag ${chalk.bold(flag.slug)} is archived and cannot be updated`
-    );
+  logArchivedFlagNotice(flag);
+
+  if (rejectExperimentOwnedVariantUpdate(flag)) {
     return 1;
   }
 
@@ -299,6 +298,18 @@ async function updateFlagVariants(
   }
 
   return 0;
+}
+
+function rejectExperimentOwnedVariantUpdate(flag: Flag): boolean {
+  if (!flag.experiment) return false;
+
+  const experiment = flag.experiment.id
+    ? `experiment ${chalk.bold(flag.experiment.id)}`
+    : 'an experiment';
+  output.error(
+    `Flag ${chalk.bold(flag.slug)} is managed by ${experiment}. Update its variants with ${getCommandName('experiments update <experiment> --file <file>')}.`
+  );
+  return true;
 }
 
 function hasLegacyVariantEditOptions(
@@ -438,7 +449,7 @@ async function confirmVariantRemoval(
 
   if (!client.stdin.isTTY) {
     throw new Error(
-      'Missing required flag --yes. Use --yes to skip the removal confirmation prompt in non-interactive mode.'
+      'Missing required option --yes. Use --yes to skip the removal confirmation prompt in non-interactive mode.'
     );
   }
 
@@ -521,7 +532,7 @@ async function resolveSelectedVariant(
 
   if (!client.stdin.isTTY) {
     throw new Error(
-      'Missing required flag --variant. Use --variant <VARIANT>, or run interactively in a terminal.'
+      'Missing required option --variant. Use --variant <VARIANT>, or run interactively in a terminal.'
     );
   }
 

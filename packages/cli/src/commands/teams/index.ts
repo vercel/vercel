@@ -10,6 +10,8 @@ import {
   addSubcommand,
   inviteSubcommand,
   listSubcommand,
+  membersInviteSubcommand,
+  membersRemoveSubcommand,
   requestSubcommand,
   membersSubcommand,
   ssoSubcommand,
@@ -26,6 +28,7 @@ import getSubcommand from '../../util/get-subcommand';
 import type Client from '../../util/client';
 import { tryOpenApiFallback } from '../../util/openapi';
 import { resolveOpenApiTagForTeamsCli } from '../../util/openapi/matches-cli-api-tag';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   list: ['ls', 'list'],
@@ -59,11 +62,11 @@ export default async function teams(client: Client) {
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.args[0] === 'switch') {
@@ -79,13 +82,22 @@ export default async function teams(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('teams', subcommand);
-    output.print(help(teamsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(teamsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: teamsCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: teamsCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -94,7 +106,7 @@ export default async function teams(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
@@ -103,25 +115,31 @@ export default async function teams(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(switchSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSwitch(subcommandOriginal);
+      if (subcommandOriginal === 'change') {
+        warnDeprecatedSubcommand(client, 'teams change', 'teams switch');
+      }
       return change(client, args);
     }
     case 'add': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
+        return 0;
       }
-      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      if (subcommandOriginal === 'add') {
+        warnDeprecatedSubcommand(client, 'teams add', 'teams create');
+      }
       return add(client, args);
     }
     case 'invite': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(inviteSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandInvite(subcommandOriginal);
       return invite(client, args);
@@ -130,16 +148,23 @@ export default async function teams(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(requestSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRequest(subcommandOriginal);
+      if (subcommandOriginal === 'access-request') {
+        warnDeprecatedSubcommand(
+          client,
+          'teams access-request',
+          'teams request'
+        );
+      }
       return request(client, args);
     }
     case 'sso': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('teams', subcommandOriginal);
         printHelp(ssoSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSso(subcommandOriginal);
       return sso(client, args);
@@ -147,10 +172,24 @@ export default async function teams(client: Client) {
     case 'members': {
       if (needHelp) {
         telemetry.trackCliFlagHelp('teams', subcommandOriginal);
+        if (args[0] === 'invite') {
+          printHelp(membersInviteSubcommand);
+          return 0;
+        }
+        if (args[0] === 'remove' || args[0] === 'rm') {
+          printHelp(membersRemoveSubcommand);
+          return 0;
+        }
         printHelp(membersSubcommand);
-        return 2;
+        return 0;
       }
-      telemetry.trackCliSubcommandMembers(subcommandOriginal);
+      telemetry.trackCliSubcommandMembers(
+        args[0] === 'invite'
+          ? 'members invite'
+          : args[0] === 'remove' || args[0] === 'rm'
+            ? 'members remove'
+            : subcommandOriginal
+      );
       return members(client, args);
     }
     default: {
@@ -165,7 +204,12 @@ export default async function teams(client: Client) {
       output.error(
         'Please specify a valid subcommand: add | ls | switch | invite | request | sso | members'
       );
-      output.print(help(teamsCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(teamsCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
     }
   }

@@ -3,28 +3,33 @@ import output from '../../output-manager';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
-import { printError } from '../../util/error';
 import { help, type Command } from '../help';
 import { getCommandAliases } from '..';
 import { TracesTelemetryClient } from '../../util/telemetry/commands/traces';
 import {
   createSubcommand as createSubcommandMetadata,
   getSubcommand as getSubcommandMetadata,
+  searchSubcommand as searchSubcommandMetadata,
   tracesCommand,
 } from './command';
 import { tracesConfigCommand } from './config/command';
 import get from './get';
 import { runCurl } from '../curl';
+import search from './search';
+import { invalidArguments } from './config/errors';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
-  get: getCommandAliases(getSubcommandMetadata),
+  inspect: getCommandAliases(getSubcommandMetadata),
   create: getCommandAliases(createSubcommandMetadata),
+  search: getCommandAliases(searchSubcommandMetadata),
   config: getCommandAliases(tracesConfigCommand),
 };
 
 const SUBCOMMAND_METADATA: Record<string, Command> = {
   [getSubcommandMetadata.name]: getSubcommandMetadata,
   [createSubcommandMetadata.name]: createSubcommandMetadata,
+  [searchSubcommandMetadata.name]: searchSubcommandMetadata,
 };
 
 export default async function traces(client: Client): Promise<number> {
@@ -41,8 +46,10 @@ export default async function traces(client: Client): Promise<number> {
       permissive: true,
     });
   } catch (err) {
-    printError(err);
-    return 1;
+    return invalidArguments(
+      client,
+      err instanceof Error ? err.message : String(err)
+    );
   }
 
   const { subcommand, subcommandOriginal, args } = getSubcommand(
@@ -70,11 +77,12 @@ export default async function traces(client: Client): Promise<number> {
         : undefined;
     output.print(
       help(subMetadata ?? tracesCommand, {
+        stream: client.stderr,
         parent: subMetadata ? tracesCommand : undefined,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   if (subcommand === createSubcommandMetadata.name) {
@@ -88,5 +96,13 @@ export default async function traces(client: Client): Promise<number> {
     return runCurl(client, { forceTrace: true, args });
   }
 
+  if (subcommand === searchSubcommandMetadata.name) {
+    telemetry.trackCliSubcommandSearch(subcommandOriginal || subcommand);
+    return search(client, telemetry);
+  }
+
+  if (subcommandOriginal === 'get') {
+    warnDeprecatedSubcommand(client, 'traces get', 'traces inspect');
+  }
   return get(client, telemetry);
 }

@@ -6,6 +6,7 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   printActionImpactWarning,
+  failPriorityProjectGate,
   mapFirewallApiError,
 } from '../shared';
 import type { FirewallScope } from '../../../util/firewall/scope';
@@ -135,6 +136,9 @@ export async function addInteractive(
 
     return 0;
   } catch (e: unknown) {
+    output.stopSpinner();
+    const priority = failPriorityProjectGate(client, e, scope);
+    if (priority !== null) return priority;
     output.error(mapFirewallApiError(e, scope, 'Failed to stage rule'));
     return 1;
   }

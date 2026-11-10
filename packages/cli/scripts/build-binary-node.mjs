@@ -11,7 +11,7 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const nodeVersion = process.env.VERCEL_CLI_NODE_VERSION ?? '24.14.1';
+const nodeVersion = process.env.VERCEL_CLI_NODE_VERSION ?? '24.22.1';
 const nodeTag = `v${nodeVersion}`;
 const nodePlatform =
   process.env.VERCEL_CLI_NODE_PLATFORM ?? nodePlatformForHost(platform());

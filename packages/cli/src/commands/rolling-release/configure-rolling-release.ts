@@ -6,6 +6,8 @@ import type {
   RollingReleaseAdvancementType,
 } from '@vercel-internals/types';
 import output from '../../output-manager';
+import { writeAgentError } from '../../util/agent-output';
+import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
 
 export type ConfigureResult =
   | { config: ProjectRollingRelease | undefined; exitCode?: undefined }
@@ -196,13 +198,31 @@ async function interactiveConfigure(client: Client): Promise<ConfigureResult> {
 }
 
 /**
+ * Reports a usage error: one JSON error document with `--json`, otherwise a
+ * human error.
+ */
+function failUsage(
+  client: Client,
+  jsonOutput: boolean,
+  reason: string,
+  message: string
+): ConfigureResult {
+  if (jsonOutput) {
+    writeAgentError(client, { status: AGENT_STATUS.ERROR, reason, message });
+  } else {
+    output.error(message);
+  }
+  return { exitCode: 2 };
+}
+
+/**
  * Resolves the rolling release configuration from CLI flags or interactive prompts.
  *
  * Priority:
  * 1. --cfg (raw JSON, backwards compatible)
- * 2. --disable
+ * 2. --no-enable
  * 3. --enable + --advancement-type + --stage
- * 4. Interactive mode (TTY, no flags)
+ * 4. Interactive mode (TTY, no flags, no --json)
  * 5. Error (non-TTY, no flags)
  */
 export async function buildConfigurePayload({
@@ -210,15 +230,21 @@ export async function buildConfigurePayload({
   cfgString,
   enableFlag,
   disableFlag,
+  disableName = '--no-enable',
   advancementType,
   stageFlags,
+  jsonOutput = false,
 }: {
   client: Client;
   cfgString: string | undefined;
   enableFlag: boolean | undefined;
+  /** `--no-enable`, or its hidden old name `--disable`. */
   disableFlag: boolean | undefined;
+  /** Which of the two was typed, for the conflict error. */
+  disableName?: '--no-enable' | '--disable';
   advancementType: string | undefined;
   stageFlags: string[] | undefined;
+  jsonOutput?: boolean;
 }): Promise<ConfigureResult> {
   if (cfgString !== undefined) {
     if (cfgString === 'disable') {
@@ -228,15 +254,23 @@ export async function buildConfigurePayload({
       const cfg = JSON.parse(cfgString);
       return { config: cfg };
     } catch {
-      output.error('Invalid JSON provided for --cfg option.');
-      return { exitCode: 1 };
+      return failUsage(
+        client,
+        jsonOutput,
+        AGENT_REASON.INVALID_ARGUMENTS,
+        'Invalid JSON provided for --cfg option.'
+      );
     }
   }
 
   if (disableFlag) {
     if (enableFlag) {
-      output.error('--enable and --disable are mutually exclusive.');
-      return { exitCode: 1 };
+      return failUsage(
+        client,
+        jsonOutput,
+        AGENT_REASON.INVALID_ARGUMENTS,
+        `Can't use --enable with ${disableName}.`
+      );
     }
     return { config: undefined };
   }
@@ -246,21 +280,31 @@ export async function buildConfigurePayload({
       advancementType !== 'automatic' &&
       advancementType !== 'manual-approval'
     ) {
-      output.error(
+      return failUsage(
+        client,
+        jsonOutput,
+        'missing_flags',
         '--advancement-type is required when using --enable. Must be "automatic" or "manual-approval".'
       );
-      return { exitCode: 1 };
     }
 
     if (!stageFlags || stageFlags.length === 0) {
-      output.error('At least one --stage is required when using --enable.');
-      return { exitCode: 1 };
+      return failUsage(
+        client,
+        jsonOutput,
+        'missing_flags',
+        'At least one --stage is required when using --enable.'
+      );
     }
 
     const parsed = parseStageFlags(stageFlags, advancementType);
     if (parsed.error !== null) {
-      output.error(parsed.error);
-      return { exitCode: 1 };
+      return failUsage(
+        client,
+        jsonOutput,
+        AGENT_REASON.INVALID_ARGUMENTS,
+        parsed.error
+      );
     }
 
     return {
@@ -277,28 +321,35 @@ export async function buildConfigurePayload({
     (stageFlags !== undefined && stageFlags.length > 0);
 
   if (hasAnyFlags) {
-    output.error(
-      '--enable or --disable is required when using --advancement-type or --stage flags.'
+    return failUsage(
+      client,
+      jsonOutput,
+      'missing_flags',
+      '--enable or --no-enable is required when using --advancement-type or --stage options.'
     );
-    return { exitCode: 1 };
   }
 
-  if (client.nonInteractive) {
-    output.error(
-      'In non-interactive mode use --enable or --disable with --advancement-type and --stage as needed. ' +
-        'Example: vercel rolling-release configure --enable --advancement-type=automatic --stage=10,5m --stage=50,10m'
+  // `--json` turns off prompts, so it needs the same explicit flags.
+  if (client.nonInteractive || jsonOutput) {
+    return failUsage(
+      client,
+      jsonOutput,
+      'missing_flags',
+      'In non-interactive mode use --enable or --no-enable with --advancement-type and --stage as needed. ' +
+        'Example: vercel rolling-release update --enable --advancement-type=automatic --stage=10,5m --stage=50,10m'
     );
-    return { exitCode: 1 };
   }
 
   if (client.stdin.isTTY) {
     return interactiveConfigure(client);
   }
 
-  output.error(
-    'Missing configuration flags. Use --enable/--disable with --advancement-type and --stage, or run interactively in a terminal.'
+  return failUsage(
+    client,
+    jsonOutput,
+    'missing_flags',
+    'Missing configuration options. Use --enable or --no-enable with --advancement-type and --stage, or run interactively in a terminal.'
   );
-  return { exitCode: 1 };
 }
 
 /**
@@ -307,6 +358,7 @@ export async function buildConfigurePayload({
  * @param {string} projectId - The projectId to request the rolling release for
  * @param {string} teamId - The team to request the rolling release for
  * @param {ProjectRollingRelease} rollingReleaseConfig - The rolling release configuration to store.
+ * @param {boolean} jsonOutput - Print the applied configuration as JSON instead of a receipt
  * @returns {Promise<number>} Resolves an exit code; 0 on success
  */
 export default async function configureRollingRelease({
@@ -314,11 +366,13 @@ export default async function configureRollingRelease({
   projectId,
   teamId,
   rollingReleaseConfig,
+  jsonOutput = false,
 }: {
   client: Client;
   projectId: string;
   teamId: string;
   rollingReleaseConfig: ProjectRollingRelease | undefined;
+  jsonOutput?: boolean;
 }): Promise<number> {
   const body = {
     ...rollingReleaseConfig,
@@ -334,8 +388,19 @@ export default async function configureRollingRelease({
     }
   );
 
+  if (jsonOutput) {
+    client.stdout.write(
+      `${JSON.stringify(
+        { rollingReleaseConfig: body, outcome: 'updated' },
+        null,
+        2
+      )}\n`
+    );
+    return 0;
+  }
+
   if (rollingReleaseConfig) {
-    output.log('Successfully configured rolling releases.');
+    output.log('Successfully updated rolling releases.');
   } else {
     output.log('Successfully disabled rolling releases.');
   }

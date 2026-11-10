@@ -1,8 +1,11 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
 import {
+  deploymentOption,
+  environmentOption,
   forceOption,
   formatOption,
+  gitBranchOption,
   jsonOption,
   projectOption,
   yesOption,
@@ -14,19 +17,26 @@ export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
   description: 'List all Environment Variables for a Project',
-  arguments: [
-    {
-      name: 'environment',
-      required: false,
-    },
-    {
-      name: 'git-branch',
-      required: false,
-    },
-  ],
+  arguments: [],
   options: [
-    formatOption,
-    jsonOption,
+    {
+      ...environmentOption,
+      description: 'List only the variables for this environment',
+    },
+    {
+      ...gitBranchOption,
+      description: 'List only the variables for this Git branch',
+    },
+    {
+      ...formatOption,
+      description:
+        'Specify the output format (json, including readable Environment Variable values)',
+    },
+    {
+      ...jsonOption,
+      description:
+        'Output as JSON, including readable Environment Variable values',
+    },
     projectOption,
     {
       name: 'guidance',
@@ -48,20 +58,18 @@ export const addSubcommand = {
       name: 'name',
       required: true,
     },
-    {
-      name: 'environment',
-      required: false,
-    },
   ],
   options: [
     projectOption,
     {
-      name: 'git-branch',
+      ...environmentOption,
+      type: [String],
+      description:
+        'Environments to add the variable to; repeatable or comma-separated. Prompts when omitted',
+    },
+    {
+      ...gitBranchOption,
       description: 'Set the Git branch for a Preview Environment Variable',
-      shorthand: null,
-      type: String,
-      argument: 'NAME',
-      deprecated: false,
     },
     {
       name: 'sensitive',
@@ -95,7 +103,7 @@ export const addSubcommand = {
     },
     {
       ...forceOption,
-      description: 'Overwrite an existing variable for the same target',
+      description: 'Overwrite an existing variable in the same environment',
       shorthand: null,
     },
     {
@@ -122,27 +130,21 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Add a new variable (prompts for value and Environments)',
-      value: [
-        `${packageName} env add <name>`,
-        `${packageName} env add API_TOKEN`,
-      ],
+      placeholders: ['<name>'],
+      value: `${packageName} env add <name>`,
     },
     {
       name: 'Add a new Environment Variable to a specific Environment',
-      value: [
-        `${packageName} env add <name> ${targetPlaceholder}`,
-        `${packageName} env add DB_PASS production`,
-      ],
+      placeholders: ['<name>', targetPlaceholder],
+      value: `${packageName} env add <name> --environment ${targetPlaceholder}`,
     },
     {
       name: 'Add one variable to multiple Environments (comma-separated)',
-      value: [
-        `${packageName} env add <name> <environment>[,<environment>]`,
-        `${packageName} env add API_URL production,preview,development`,
-      ],
+      placeholders: ['<name>', '<environment>'],
+      value: `${packageName} env add <name> --environment <environment>[,<environment>]`,
     },
     {
-      name: 'Override an existing Environment Variable of same target (production, preview, deployment)',
+      name: 'Override an existing Environment Variable in the same environment (production, preview, development)',
       value: `${packageName} env add API_TOKEN --force`,
     },
     {
@@ -151,22 +153,23 @@ export const addSubcommand = {
     },
     {
       name: 'Add a new Environment Variable for a specific Environment and Git Branch',
-      value: [
-        `${packageName} env add <name> ${targetPlaceholder} --git-branch <name>`,
-        `${packageName} env add DB_PASS preview --git-branch feat1`,
-      ],
+      placeholders: ['<name>', '<BRANCH>', targetPlaceholder],
+      value: `${packageName} env add <name> --environment ${targetPlaceholder} --git-branch <BRANCH>`,
     },
     {
-      name: 'Add a new Environment Variable from stdin',
-      value: [
-        `cat <file> | ${packageName} env add <name> ${targetPlaceholder}`,
-        `cat ~/.npmrc | ${packageName} env add NPM_RC preview`,
-        `${packageName} env add API_URL production < url.txt`,
-      ],
+      name: 'Add a variable from piped input',
+      placeholders: ['<file>', '<name>', targetPlaceholder],
+      value: `cat <file> | ${packageName} env add <name> --environment ${targetPlaceholder}`,
+    },
+    {
+      name: 'Add a variable from a file',
+      placeholders: ['<file>', '<name>', targetPlaceholder],
+      value: `${packageName} env add <name> --environment ${targetPlaceholder} < <file>`,
     },
     {
       name: 'Add with --value for non-interactive use',
-      value: `${packageName} env add API_TOKEN production --value "<value>" --yes`,
+      placeholders: ['<value>'],
+      value: `${packageName} env add API_TOKEN --environment production --value "<value>" --yes`,
     },
   ],
 } as const;
@@ -180,13 +183,18 @@ export const removeSubcommand = {
       name: 'name',
       required: true,
     },
-    {
-      name: 'environment',
-      required: false,
-    },
   ],
   options: [
     projectOption,
+    {
+      ...environmentOption,
+      description:
+        'Remove the variable from this environment only. Without it, the variable is removed from all of its environments',
+    },
+    {
+      ...gitBranchOption,
+      description: 'Remove the variable for this Git branch only',
+    },
     {
       ...yesOption,
       description:
@@ -196,24 +204,18 @@ export const removeSubcommand = {
   examples: [
     {
       name: 'Remove a variable from multiple Environments',
-      value: [
-        `${packageName} env rm <name>`,
-        `${packageName} env rm API_TOKEN`,
-      ],
+      placeholders: ['<name>'],
+      value: `${packageName} env remove <name>`,
     },
     {
       name: 'Remove a variable from a specific Environment',
-      value: [
-        `${packageName} env rm <name> ${targetPlaceholder}`,
-        `${packageName} env rm NPM_RC preview`,
-      ],
+      placeholders: ['<name>', targetPlaceholder],
+      value: `${packageName} env remove <name> --environment ${targetPlaceholder}`,
     },
     {
       name: 'Remove a variable from a specific Environment and Git Branch',
-      value: [
-        `${packageName} env rm <name> ${targetPlaceholder} <gitbranch>`,
-        `${packageName} env rm NPM_RC preview feat1`,
-      ],
+      placeholders: ['<name>', '<BRANCH>', targetPlaceholder],
+      value: `${packageName} env remove <name> --environment ${targetPlaceholder} --git-branch <BRANCH>`,
     },
   ],
 } as const;
@@ -222,7 +224,7 @@ export const pullSubcommand = {
   name: 'pull',
   aliases: [],
   description:
-    'Pull all Development Environment Variables from the cloud and write to a file [.env.local]',
+    'Pull Environment Variables into a local file (default: .env.local)',
   arguments: [
     {
       name: 'filename',
@@ -233,47 +235,39 @@ export const pullSubcommand = {
     projectOption,
     {
       name: 'environment',
-      description: 'Set the Environment when pulling Environment Variables',
-      shorthand: null,
+      description: 'Select the environment to pull (default: development)',
+      shorthand: 'e',
       type: String,
-      argument: 'TARGET',
+      argument: 'ENVIRONMENT',
       deprecated: false,
     },
     {
-      name: 'git-branch',
+      ...gitBranchOption,
       description:
         'Specify the Git branch to pull specific Environment Variables for',
-      shorthand: null,
-      type: String,
-      argument: 'NAME',
-      deprecated: false,
     },
     {
-      name: 'id',
+      ...deploymentOption,
       description:
-        'Pull environment variables for a specific deployment (e.g. dpl_xxx)',
-      shorthand: null,
-      type: String,
-      argument: 'ID',
-      deprecated: false,
+        'Pull Environment Variables for a specific deployment (e.g. dpl_xxx)',
     },
+    // `--id` is the deprecated name of `--deployment`.
+    { name: 'id', shorthand: null, type: String, deprecated: true },
     {
       ...yesOption,
       description:
-        'Skip the confirmation prompt when removing an environment variable',
+        'Skip the confirmation prompt when overwriting an existing file',
     },
   ],
   examples: [
     {
-      name: 'Pull all Development Environment Variables down from the cloud',
-      value: [
-        `${packageName} env pull <file>`,
-        `${packageName} env pull .env.development.local`,
-      ],
+      name: 'Pull Development Environment Variables into a custom file (check .gitignore)',
+      placeholders: ['<file>'],
+      value: `${packageName} env pull <file>`,
     },
     {
-      name: 'Pull environment variables for a specific deployment',
-      value: `${packageName} env pull --id dpl_xxx`,
+      name: 'Pull Environment Variables for a specific deployment',
+      value: `${packageName} env pull --deployment dpl_xxx`,
     },
   ],
 } as const;
@@ -298,17 +292,13 @@ export const runSubcommand = {
         'Specify the environment to pull variables from (default: development)',
       shorthand: 'e',
       type: String,
-      argument: 'TARGET',
+      argument: 'ENVIRONMENT',
       deprecated: false,
     },
     {
-      name: 'git-branch',
+      ...gitBranchOption,
       description:
         'Specify the Git branch to pull specific Environment Variables for',
-      shorthand: null,
-      type: String,
-      argument: 'NAME',
-      deprecated: false,
     },
   ],
   examples: [
@@ -333,13 +323,18 @@ export const updateSubcommand = {
       name: 'name',
       required: true,
     },
-    {
-      name: 'environment',
-      required: false,
-    },
   ],
   options: [
     projectOption,
+    {
+      ...environmentOption,
+      description:
+        'Pick the variable to update by an environment it covers. The new value applies to all of its environments',
+    },
+    {
+      ...gitBranchOption,
+      description: 'Pick the variable to update by its Git branch',
+    },
     {
       name: 'sensitive',
       description: 'Store the updated value as a Secret',
@@ -381,32 +376,28 @@ export const updateSubcommand = {
   examples: [
     {
       name: 'Update a variable in all Environments',
-      value: [
-        `${packageName} env update <name>`,
-        `${packageName} env update API_TOKEN`,
-      ],
+      placeholders: ['<name>'],
+      value: `${packageName} env update <name>`,
     },
     {
-      name: 'Update a variable in a specific Environment',
-      value: [
-        `${packageName} env update <name> ${targetPlaceholder}`,
-        `${packageName} env update DB_PASS production`,
-      ],
+      name: 'Update the variable that covers a specific Environment',
+      placeholders: ['<name>', targetPlaceholder],
+      value: `${packageName} env update <name> --environment ${targetPlaceholder}`,
     },
     {
-      name: 'Update a variable for a specific Environment and Git Branch',
-      value: [
-        `${packageName} env update <name> ${targetPlaceholder} <gitbranch>`,
-        `${packageName} env update NPM_RC preview feat1`,
-      ],
+      name: 'Update the variable for a specific Environment and Git Branch',
+      placeholders: ['<name>', '<BRANCH>', targetPlaceholder],
+      value: `${packageName} env update <name> --environment ${targetPlaceholder} --git-branch <BRANCH>`,
     },
     {
-      name: 'Update a variable from stdin',
-      value: [
-        `cat <file> | ${packageName} env update <name> ${targetPlaceholder}`,
-        `cat ~/.npmrc | ${packageName} env update NPM_RC preview`,
-        `${packageName} env update API_URL production < url.txt`,
-      ],
+      name: 'Update a variable from piped input',
+      placeholders: ['<file>', '<name>', targetPlaceholder],
+      value: `cat <file> | ${packageName} env update <name> --environment ${targetPlaceholder}`,
+    },
+    {
+      name: 'Update a variable from a file',
+      placeholders: ['<file>', '<name>', targetPlaceholder],
+      value: `${packageName} env update <name> --environment ${targetPlaceholder} < <file>`,
     },
   ],
 } as const;
@@ -428,11 +419,12 @@ export const envCommand = {
   examples: [
     {
       name: 'Run a command with Environment Variables from the linked Project',
+      placeholders: ['<command>'],
       value: `${packageName} env run -- <command>`,
     },
     {
       name: 'Add one variable to multiple Environments',
-      value: `${packageName} env add API_URL production,preview,development`,
+      value: `${packageName} env add API_URL --environment production,preview,development`,
     },
   ],
 } as const;

@@ -12,6 +12,10 @@ import {
   getExperimentalServiceUrlEnvVars,
   normalizePath,
   NowBuildError,
+  DAEMON_NAME_PATTERN,
+  type DaemonConfig,
+  type DaemonOutput,
+  getDaemonNames,
   runNpmInstall,
   runCustomInstallCommand,
   scanParentDirs,
@@ -20,10 +24,14 @@ import {
   type BuildResultV2,
   type BuildResultV2Typical,
   type BuildResultV3,
+  type DiagnosticsValues,
   type BuildResultVX,
   type Config,
   type Cron,
   type Schedule,
+  type Schedules,
+  getNamedSchedules,
+  toScheduleRecord,
   type ExperimentalServices,
   type ExperimentalServicesV2,
   type Files,
@@ -46,6 +54,7 @@ import {
   type TriggerEvent,
   sanitizeConsumerName,
   type Span,
+  resolveBuildConcurrency,
 } from '@vercel/build-utils';
 import type { VercelConfig } from '@vercel/client';
 import { fileNameSymbol } from '@vercel/client';
@@ -56,10 +65,16 @@ import {
   detectFrameworkRecord,
   detectFrameworkVersion,
   detectInstrumentation,
+  isOfficialRuntime,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
 import { generateServicesRoutes } from '@vercel-internals/service-topology';
 import { detectBuildersWithServices } from './detect-builders-with-services';
+import {
+  getDaemonBuilders,
+  isContainerPresetFromDaemons,
+  validateDaemonImageRepositories,
+} from './get-daemon-builders';
 import {
   appendRoutesToPhase,
   convertRewrites,
@@ -77,6 +92,8 @@ import type { Project } from '@vercel-internals/types';
 import type { WriteBuildResultArgs } from '@vercel-internals/builder-orchestration/write-build-result';
 import {
   OUTPUT_DIR,
+  getV3OutputPath,
+  isEdgeFunction,
   isLambda,
   type PathOverride,
 } from '@vercel-internals/builder-orchestration/write-build-result';
@@ -86,22 +103,27 @@ import {
   type BuildRunnerContext,
 } from './build-runner';
 import { executeBuilder, sortBuildsForExecution } from './execute-builder';
+import { buildDiagnostics } from './diagnostics';
 import {
   getInstallScopeKey,
-  resolveBuildConcurrency,
   resolveInstallScopeRoot,
   runBuildsWithConcurrency,
   type InstallScope,
 } from './build-concurrency';
+import { collectWorkspaceInstallTargets } from './workspace-install-targets';
 import {
   BACKEND_REWRITE_BEHAVIOR_WARNING,
   hasBackendRewriteBehaviorChange,
 } from './backend-rewrite-warning';
+import {
+  getPublishedPythonSources,
+  getPublishedPythonSourcesWarning,
+} from './schedule-static-source-warning';
 import { scopeRoutesToServiceOwnership } from './service-route-ownership';
 import { getStaticServiceSchedules } from './service-schedules';
 import { validateCronSecret } from './validate-cron-secret';
 import { validatePackageManifest } from './validate-package-manifest';
-import { writeManifests } from './manifest';
+import { getBuildDiagnosticsFramework, writeManifests } from './manifest';
 import { shouldEmbedFlagsDefinitions } from './build-embedding';
 import { staticFiles } from './get-files';
 import {
@@ -119,6 +141,11 @@ import {
   setMonorepoDefaultSettings,
 } from './monorepo';
 import { cleanupCorepack, initCorepack } from './corepack';
+import {
+  assertNoScheduleEntrypointSourceConflict,
+  planScheduleEntrypoints,
+  resolveScheduleEntrypointTargets,
+} from '@vercel-internals/runtimes/schedule-entrypoint';
 
 export interface BuildOutput {
   log(message: string): void;
@@ -150,6 +177,7 @@ export interface BuildProject {
     rootDirectory: Project['rootDirectory'];
     framework: Project['framework'];
     nodeVersion: Project['nodeVersion'];
+    vercelFlags?: Project['vercelFlags'];
     analyticsId?: string;
     commandForIgnoringBuildStep?: string | null;
     monorepoManager?: string;
@@ -280,14 +308,17 @@ interface BuildOutputConfig {
   wildcard?: BuildResultV2Typical['wildcard'];
   images?: BuildResultV2Typical['images'];
   routes?: BuildResultV2Typical['routes'];
+  afterCacheBypass?: BuildResultV2Typical['afterCacheBypass'];
   overrides?: Record<string, PathOverride>;
   framework?: { slug: string; version: string };
   crons?: Cron[];
-  schedules?: Schedule[];
+  schedules?: Schedules;
   experimentalServices?: ExperimentalServices;
   experimentalServicesV2?: ExperimentalServicesV2;
   services?: ExperimentalServicesV2 | Service[];
   deploymentId?: string;
+  /** Entries are reserved for daemon-level wiring such as bindings. */
+  daemons?: Record<string, Record<string, never>>;
 }
 
 const SERVICE_BUILD_IMMUTABLE_ENV_VARS = [
@@ -439,6 +470,21 @@ export async function doBuild(
     throw validateError;
   }
 
+  const authoredSchedules = getNamedSchedules(localConfig.schedules);
+
+  // Daemons are built on their own, next to the regular build, so service
+  // detection, routing, and output nesting never see them.
+  const daemonNames = getDaemonNames(localConfig);
+  const daemons = daemonNames.length > 0 ? localConfig.daemons : undefined;
+  const daemonsEnabled = process.env.VERCEL_ENABLE_DAEMONS_BOA === '1';
+  if (daemons && !daemonsEnabled) {
+    throw new NowBuildError({
+      code: 'DAEMONS_NOT_SUPPORTED',
+      message: `Can't build daemons yet: ${daemonNames.join(', ')}. Remove \`daemons\` from ${localConfig[fileNameSymbol] || 'vercel.json'} to build this project.`,
+    });
+  }
+  validateDaemonImageRepositories(daemons);
+
   // Validate CRON_SECRET if crons are defined
   if (localConfig.crons && localConfig.crons.length > 0) {
     const cronSecretError = validateCronSecret(process.env.CRON_SECRET);
@@ -467,6 +513,11 @@ export async function doBuild(
           localConfig,
           'framework'
         ),
+        // A daemon's Dockerfile at the project root would otherwise match the
+        // Container preset and also deploy the daemon as the project's app.
+        excludedFrameworks: isContainerPresetFromDaemons(workPath, daemons)
+          ? ['container']
+          : undefined,
         output,
       });
       s.setAttributes({
@@ -491,7 +542,11 @@ export async function doBuild(
   }
 
   await span.child('vc.prepareFlagsDefinitions').trace(async s => {
-    const shouldEmbed = await shouldEmbedFlagsDefinitions(cwd);
+    const shouldEmbed = await shouldEmbedFlagsDefinitions(
+      cwd,
+      pkg,
+      projectSettings.vercelFlags
+    );
     s.setAttributes({ shouldEmbed: String(shouldEmbed) });
     if (!shouldEmbed) {
       return;
@@ -515,6 +570,14 @@ export async function doBuild(
     s.setAttributes({ fileCount: String(result.length) });
     return result;
   });
+
+  const scheduleEntrypointPlan = planScheduleEntrypoints({
+    schedules: authoredSchedules,
+    files,
+    framework: projectSettings.framework,
+    functions: localConfig.functions,
+  });
+  const { reservedFunctionFiles } = scheduleEntrypointPlan;
 
   // Started here to run concurrently with the builders (used in the
   // end-of-build cross-check).
@@ -556,6 +619,13 @@ export async function doBuild(
     });
   }
 
+  const daemonBuilds = await getDaemonBuilders({
+    workPath,
+    repoRootPath,
+    daemons,
+    files,
+  });
+
   let builds = localConfig.builds || [];
   let zeroConfigRoutes: Route[] = [];
   let zeroConfigFallbackRoutes: Route[] = [];
@@ -573,6 +643,11 @@ export async function doBuild(
   const hasExperimentalServicesV2ConfiguredInVercelConfig = hasNonEmptyObject(
     localConfig.services ?? localConfig.experimentalServicesV2
   );
+  if (hasExperimentalServicesV1ConfiguredInVercelConfig) {
+    output.warn(
+      'The `experimentalServices` property is deprecated. Migrate to `services`.'
+    );
+  }
   const configuredExperimentalServicesV2 =
     hasExperimentalServicesV2ConfiguredInVercelConfig &&
     (localConfig.services ?? localConfig.experimentalServicesV2)
@@ -583,9 +658,6 @@ export async function doBuild(
   let detectedExperimentalServicesV1Config: ExperimentalServices | undefined;
   let detectedExperimentalServicesV2Config: ExperimentalServicesV2 | undefined =
     configuredExperimentalServicesV2;
-  let detectedExperimentalServicesV2RootRoutes:
-    | BuildOutputConfig['routes']
-    | undefined;
   let isZeroConfig = false;
 
   if (builds.length > 0) {
@@ -626,6 +698,7 @@ export async function doBuild(
     const detectedBuilders = await span.child('vc.detectBuilders').trace(() =>
       detectBuildersWithServices(files, pkg, {
         ...localConfig,
+        reservedFunctionFiles,
         services: undefined,
         experimentalServicesV2: servicesForDetection,
         projectSettings,
@@ -743,6 +816,8 @@ export async function doBuild(
     }
   }
 
+  builds.push(...daemonBuilds);
+
   if (
     hasBackendRewriteBehaviorChange({
       projectRewrites: localConfig.rewrites,
@@ -752,12 +827,30 @@ export async function doBuild(
     output.warn(BACKEND_REWRITE_BEHAVIOR_WARNING);
   }
 
+  assertNoScheduleEntrypointSourceConflict(builds, scheduleEntrypointPlan);
+
+  // Only the declared entrypoints are kept out of static output. Surface
+  // other Python sources a static build would publish, such as the modules
+  // a schedule script imports.
+  const hasPythonScheduleEntrypoints = scheduleEntrypointPlan.uses.some(
+    ({ resolved }) => isOfficialRuntime('python', resolved.use)
+  );
+  if (hasPythonScheduleEntrypoints) {
+    const publishedPythonSources = getPublishedPythonSources(builds, files);
+    if (publishedPythonSources.length > 0) {
+      output.warn(getPublishedPythonSourcesWarning(publishedPythonSources));
+    }
+  }
+
+  const scheduleEntrypointBuilds = new Set(scheduleEntrypointPlan.builds);
+  builds.push(...scheduleEntrypointPlan.builds);
+
   const builderSpecs = new Set(builds.map(b => b.use));
 
   let buildersWithPkgs = await span
     .child('vc.importBuilders')
     .trace(async s => {
-      const builders = await importBuilders(builderSpecs, cwd, span);
+      const builders = await importBuilders(builderSpecs, cwd, s);
       s.setAttributes({ resolved: formatResolvedBuilders(builders) });
       return builders;
     });
@@ -796,7 +889,7 @@ export async function doBuild(
     const importedBuilders = await span
       .child('vc.importBuilders')
       .trace(async s => {
-        const builders = await importBuilders(missingBuilderSpecs, cwd, span);
+        const builders = await importBuilders(missingBuilderSpecs, cwd, s);
         s.setAttributes({ resolved: formatResolvedBuilders(builders) });
         return builders;
       });
@@ -811,7 +904,7 @@ export async function doBuild(
       if (buildsJsonBuilds.has(build)) continue;
       const builderWithPkg = buildersWithPkgs.get(build.use);
       if (!builderWithPkg) {
-        throw new Error(`Failed to load Builder "${build.use}"`);
+        throw buildDiagnostics.BUILD_BUILDER_LOAD_FAILED({ use: build.use });
       }
       const { builder, pkg: builderPkg } = builderWithPkg;
       buildsJsonBuilds.set(build, {
@@ -833,6 +926,7 @@ export async function doBuild(
     skipDownload: true,
     cliVersion: cliVersion,
     runNpmInstallSet: new Set<string>(),
+    ...(daemons && { daemonContext: { projectRoot: workPath, daemons } }),
   };
 
   // Execute Builders for detected entrypoints
@@ -859,7 +953,7 @@ export async function doBuild(
     ordinal: number;
     workspace: string;
     key: string;
-    buildConfig: Config;
+    diagnosticsValues?: DiagnosticsValues;
     manifest: PackageManifest;
     service?: Service;
     builderUse: string;
@@ -893,8 +987,22 @@ export async function doBuild(
   const liveRunners = new Set<BuildRunner>();
   const buildOrdinals = new Map<Builder, number>();
 
+  // Root route table from a lazily generated Build Output `config.json`
+  // that no build result carries. Consumed during final assembly.
+  let generatedRootRoutes: Route[] | undefined;
+
   const runBuilders = async (buildsToRun: Builder[]) => {
     await addBuildsToBuildJson(buildsToRun);
+
+    if (process.env.VERCEL_EXPERIMENTAL_WORKSPACE_SCOPED_INSTALLS === '1') {
+      meta.workspaceInstallTargets = await collectWorkspaceInstallTargets({
+        builds: buildsToRun,
+        existingTargets: meta.workspaceInstallTargets,
+        repoRootPath,
+        serviceByBuilder,
+        workPath,
+      });
+    }
 
     const buildOne = async (
       build: Builder,
@@ -904,7 +1012,7 @@ export async function doBuild(
 
       const builderWithPkg = buildersWithPkgs.get(build.use);
       if (!builderWithPkg) {
-        throw new Error(`Failed to load Builder "${build.use}"`);
+        throw buildDiagnostics.BUILD_BUILDER_LOAD_FAILED({ use: build.use });
       }
 
       try {
@@ -1066,6 +1174,16 @@ export async function doBuild(
           };
         }
 
+        const diagnosticsFramework = getBuildDiagnosticsFramework({
+          service,
+          configFramework: buildConfig.framework,
+          apiDirFramework,
+        });
+        const diagnosticsValues: DiagnosticsValues | undefined =
+          diagnosticsFramework
+            ? { framework: diagnosticsFramework }
+            : undefined;
+
         const builderSpan = span.child('vc.builder', {
           'builder.name': builderPkg.name,
           'builder.version': builderPkg.version,
@@ -1098,6 +1216,7 @@ export async function doBuild(
           config: buildConfig,
           meta,
           span: builderSpan,
+          ...(diagnosticsValues ? { diagnosticsValues } : undefined),
           ...(preDeployCmd
             ? {
                 registerPreDeploy: (callback: () => Promise<void>) => {
@@ -1186,9 +1305,9 @@ export async function doBuild(
         // A concurrent build must be process-isolated, because running it in the
         // parent's event loop is the exact unsafe case forking prevents.
         if (concurrent && runner instanceof InprocessBuildRunner) {
-          throw new Error(
-            `Internal error: build for "${buildOptions.entrypoint}" was scheduled concurrently but cannot run in a subprocess`
-          );
+          throw buildDiagnostics.BUILD_CONCURRENT_INPROCESS({
+            entrypoint: buildOptions.entrypoint,
+          });
         }
         liveRunners.add(runner);
 
@@ -1256,11 +1375,9 @@ export async function doBuild(
                           buildOrdinals.get(build) ?? Number.MAX_SAFE_INTEGER,
                         workspace,
                         key: fullKey,
-                        buildConfig: buildConfig,
+                        diagnosticsValues,
                         manifest: {
                           ...packageManifest,
-                          framework:
-                            packageManifest.framework ?? apiDirFramework,
                           buildType,
                         } as PackageManifest,
                         service,
@@ -1465,6 +1582,9 @@ export async function doBuild(
           }
 
           if (buildOutputConfig) {
+            if (buildResult.framework && !buildOutputConfig.framework) {
+              buildOutputConfig.framework = buildResult.framework;
+            }
             if (
               !hasExperimentalServicesV1ConfiguredInVercelConfig &&
               !hasExperimentalServicesV2ConfiguredInVercelConfig
@@ -1503,10 +1623,17 @@ export async function doBuild(
                 shouldMergeGeneratedOutputRoutes &&
                 Array.isArray(outputConfig?.routes)
               ) {
+                // Merge the generated routes into this build result ahead of
+                // the builder's own routes within each phase, so a generated
+                // service handoff still beats a framework catch-all once
+                // `mergeRoutes` runs. The result now carries both the
+                // services metadata and these routes, which is what final
+                // assembly keys on to avoid appending the table again.
                 buildOutputConfig.routes = prependMissingBuildOutputRoutes(
                   outputConfig.routes,
                   buildOutputConfig.routes
                 );
+                generatedRootRoutes ??= outputConfig.routes as Route[];
               }
               if (
                 hasNonEmptyObject(buildOutputConfig.experimentalServices) ||
@@ -1815,19 +1942,23 @@ export async function doBuild(
         detectedExperimentalServicesV1Config =
           generatedExperimentalServicesV1Config;
         detectedExperimentalServicesV2Config = generatedServicesConfig;
-        detectedExperimentalServicesV2RootRoutes = generatedServicesConfig
+        const generatedRootRoutesConfig = generatedServicesConfig
           ? generatedConfigs.find(
               config =>
                 (hasGeneratedServicesConfig(config) ||
                   hasNonEmptyObject(config?.experimentalServicesV2)) &&
                 Array.isArray(config?.routes)
-            )?.routes
+            )
           : undefined;
+        if (generatedRootRoutesConfig?.routes) {
+          generatedRootRoutes ??= generatedRootRoutesConfig.routes as Route[];
+        }
         const generatedBuilders = await span
           .child('vc.detectGeneratedServices')
           .trace(() =>
             detectBuildersWithServices(files, pkg, {
               ...localConfig,
+              reservedFunctionFiles,
               ...(generatedServicesConfig
                 ? {
                     services: generatedServicesConfig,
@@ -1960,6 +2091,52 @@ export async function doBuild(
   // Re-sort again, because the generated-services round appended its results after the first sort.
   sortBuildResultsByOrdinal();
 
+  // Every output path a build produced, regardless of output type. The
+  // `_vercel/schedules/` namespace is reserved for schedule entrypoints, and every
+  // function-like output (Lambda, EdgeFunction, Prerender, ContainerImage)
+  // is written to the same `functions/<path>.func` location, so any other
+  // output claiming one of these paths would silently shadow the schedule
+  // function. Service builds are written under their own namespace and
+  // cannot collide.
+  function getBuildOutputPaths(
+    build: Builder,
+    result: BuildResult | BuildOutputConfig
+  ): string[] {
+    if (!('output' in result) || !result.output) return [];
+    const { output } = result;
+    if (Array.isArray(output)) return [];
+
+    // v3 builders return a single function as the output.
+    if (isLambda(output) || isEdgeFunction(output)) {
+      if (serviceByBuilder.has(build) || typeof build.src !== 'string') {
+        return [];
+      }
+      return [getV3OutputPath(build)];
+    }
+
+    // v2 builders return a map of output path to output.
+    return Object.keys(output);
+  }
+
+  const claimedScheduleOutputPaths = new Set(
+    scheduleEntrypointPlan.outputPaths.values()
+  );
+  for (const [build, result] of buildResults) {
+    if (scheduleEntrypointBuilds.has(build)) continue;
+
+    const conflictingOutputPath = getBuildOutputPaths(build, result).find(
+      outputPath => claimedScheduleOutputPaths.has(outputPath)
+    );
+    if (conflictingOutputPath) {
+      throw new NowBuildError({
+        code: 'SCHEDULE_FUNCTION_OUTPUT_COLLISION',
+        message:
+          `Schedule function output "${conflictingOutputPath}" conflicts with another build output. ` +
+          'Move the conflicting function out of the reserved "_vercel/schedules" namespace.',
+      });
+    }
+  }
+
   // Aggregate individual package-manifest.json files from builders into
   // a single project-manifest.json and deploy-manifest.json keyed by service workspace.
   packageManifests.sort((a, b) => a.ordinal - b.ordinal);
@@ -2070,6 +2247,7 @@ export async function doBuild(
         use: build.use,
         entrypoint,
         routes: buildResult.routes,
+        projectMiddleware: build.config?.middleware === true,
       };
     });
   if (zeroConfigRoutes.length) {
@@ -2109,6 +2287,7 @@ export async function doBuild(
     existingConfig?.deploymentId,
     topLevelBuildResults.values(),
     workPath,
+    projectSettings.outputDirectory,
     readJSONFile,
     isCantParseJSONFile
   );
@@ -2148,32 +2327,65 @@ export async function doBuild(
     topLevelBuildResults.size > 0
       ? await getFramework(workPath, topLevelBuildResults)
       : undefined;
+  // A top-level build result that declares services already carries the
+  // generated root routes: either its own Build Output `config.json` was
+  // adopted as the result, or the generated routes were merged into it above.
+  // Either way they are already in `mergedRoutes`, so appending the table
+  // again would duplicate every route. Only append it when no top-level
+  // result carries it.
+  const generatedRootRoutesCarriedByBuild = Array.from(
+    topLevelBuildResults.values()
+  ).some(
+    result =>
+      (hasGeneratedServicesConfig(result) ||
+        ('experimentalServicesV2' in result &&
+          hasNonEmptyObject(result.experimentalServicesV2))) &&
+      'routes' in result &&
+      Array.isArray(result.routes)
+  );
+  const rootRoutesToAppend = generatedRootRoutesCarriedByBuild
+    ? undefined
+    : (generatedRootRoutes ?? existingConfig?.routes);
   const explicitRootRoutes = appendBuildOutputRouteTables(
     routesResult.routes,
-    detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
+    rootRoutesToAppend
   );
   const mergedRoutesWithGeneratedServicesV2Routes =
     nestExperimentalServicesV2Output
-      ? appendBuildOutputRouteTables(
-          mergedRoutes,
-          detectedExperimentalServicesV2RootRoutes ?? existingConfig?.routes
-        )
+      ? appendBuildOutputRouteTables(mergedRoutes, rootRoutesToAppend)
       : mergedRoutes;
 
   // Write out the final `config.json` file based on the
   // user configuration and Builder build results
+  const resolvedSchedules = mergeSchedules(
+    resolveScheduleEntrypointTargets(authoredSchedules, scheduleEntrypointPlan),
+    buildResults,
+    build => nestExperimentalServicesV2Output && serviceByBuilder.has(build)
+  );
+
+  await writeDaemonDescriptors(outputDir, daemons, buildResults);
+
   const config: BuildOutputConfig = {
     version: 3,
+    // Flagged builds always record the full daemon inventory, so an empty map
+    // tells the platform that a deployment removes all daemons.
+    ...(daemonsEnabled && {
+      daemons: Object.fromEntries(
+        Object.keys(daemons ?? {}).map(name => [name, {}])
+      ),
+    }),
     routes: mergedRoutesWithGeneratedServicesV2Routes ?? explicitRootRoutes,
+    afterCacheBypass:
+      mergeAfterCacheBypass(topLevelBuildResults.values()) ??
+      existingConfig?.afterCacheBypass,
     images: mergedImages,
     wildcard: mergedWildcard,
     overrides: mergedOverrides,
     framework,
     crons: mergedCrons,
-    ...(localConfig.schedules &&
-      localConfig.schedules.length > 0 && {
-        schedules: localConfig.schedules,
-      }),
+    ...(resolvedSchedules.length > 0 && {
+      schedules: toScheduleRecord(resolvedSchedules),
+    }),
     ...(detectedExperimentalServicesV1Config &&
       Object.keys(detectedExperimentalServicesV1Config).length > 0 && {
         experimentalServices: detectedExperimentalServicesV1Config,
@@ -2254,6 +2466,16 @@ async function getFramework(
   });
 
   if (!detectedFramework) {
+    // Build Output API builders can report framework metadata even when the framework cannot be
+    // detected from the project root, such as in monorepos if we inspected the wrong package.json.
+    for (const buildResult of buildResults.values()) {
+      if ('framework' in buildResult && buildResult.framework) {
+        return {
+          slug: buildResult.framework.slug,
+          version: buildResult.framework.version,
+        };
+      }
+    }
     return;
   }
 
@@ -2361,6 +2583,84 @@ function mergeCrons(
   return crons;
 }
 
+/**
+ * Combines `vercel.json` schedules with schedules that builders emit in their
+ * own Build Output `config.json` (for example, a framework mapping its native
+ * scheduled tasks to Vercel Schedules). Authored schedules come first, then
+ * builder schedules in build order.
+ */
+function mergeSchedules(
+  authored: Schedule[],
+  buildResults: Map<Builder, BuildResult | BuildOutputConfig>,
+  isNestedServiceBuild: (build: Builder) => boolean
+): Schedule[] {
+  const schedules: Schedule[] = [...authored];
+  const sources = new Map<string, string>();
+  const claim = (schedule: Schedule, source: string) => {
+    const { name } = schedule;
+    const existing = sources.get(name);
+    if (existing) {
+      throw new NowBuildError({
+        code: 'SCHEDULE_NAME_CONFLICT',
+        message: `Schedule "${name}" is defined by both ${existing} and ${source}. Schedule names must be unique within a deployment.`,
+      });
+    }
+    sources.set(name, source);
+  };
+  for (const schedule of schedules) {
+    claim(schedule, 'vercel.json');
+  }
+
+  for (const [build, result] of buildResults) {
+    if (!('schedules' in result) || result.schedules === undefined) continue;
+    const source = `the build output of "${build.use}"${
+      build.src ? ` for "${build.src}"` : ''
+    }`;
+    const invalid = (message: string) =>
+      new NowBuildError({
+        code: 'INVALID_BUILD_OUTPUT_SCHEDULE',
+        message: `Schedules in ${source} ${message}`,
+      });
+
+    if (!isPlainObject(result.schedules)) {
+      throw invalid('must be an object keyed by schedule name.');
+    }
+    const entries = Object.entries(result.schedules);
+    if (entries.length === 0) continue;
+    if (isNestedServiceBuild(build)) {
+      // Function targets are relocated under the service's output directory,
+      // so a service's schedules cannot be carried over unchanged.
+      throw new NowBuildError({
+        code: 'SERVICE_BUILD_OUTPUT_SCHEDULES_UNSUPPORTED',
+        message: `Schedules in ${source} are not supported for services yet. Define them in vercel.json instead.`,
+      });
+    }
+    for (const [key, schedule] of entries) {
+      if (!isPlainObject(schedule)) {
+        throw invalid('must be objects.');
+      }
+      if ('entrypoint' in schedule) {
+        throw invalid(
+          'cannot use `entrypoint`. Build Output schedules must target a `function`, `path`, or `topic`.'
+        );
+      }
+      if ('name' in schedule) {
+        throw invalid(
+          `cannot set \`name\` on "${key}". The schedule's key is its name.`
+        );
+      }
+      const named = { name: key, ...schedule } as Schedule;
+      claim(named, source);
+      schedules.push(named);
+    }
+  }
+  return schedules;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === 'object' && !Array.isArray(value);
+}
+
 function mergeWildcard(
   buildResults: Iterable<BuildResult | BuildOutputConfig>
 ): BuildResultV2Typical['wildcard'] {
@@ -2372,6 +2672,18 @@ function mergeWildcard(
     }
   }
   return wildcard;
+}
+
+function mergeAfterCacheBypass(
+  buildResults: Iterable<BuildResult | BuildOutputConfig>
+): BuildResultV2Typical['afterCacheBypass'] {
+  let rules: BuildResultV2Typical['afterCacheBypass'];
+  for (const result of buildResults) {
+    if ('afterCacheBypass' in result && result.afterCacheBypass) {
+      rules = (rules ?? []).concat(result.afterCacheBypass);
+    }
+  }
+  return rules;
 }
 
 function appendBuildOutputRouteTables(
@@ -2514,6 +2826,8 @@ async function writeServiceConfigs(
         ...existingConfig,
         version: 3,
         routes: mergedRoutes,
+        afterCacheBypass:
+          mergeAfterCacheBypass(results) ?? existingConfig?.afterCacheBypass,
         images: mergeImages(existingConfig?.images, results),
         wildcard: mergeWildcard(results) || existingConfig?.wildcard,
         overrides:
@@ -2593,10 +2907,11 @@ function getGeneratedServicesConfig(
   return undefined;
 }
 
-async function mergeDeploymentId(
+export async function mergeDeploymentId(
   existingDeploymentId: string | undefined,
   buildResults: Iterable<BuildResult | BuildOutputConfig>,
   workPath: string,
+  outputDirectory: string | null | undefined,
   readJSONFile: ReadJSONFile,
   isCantParseJSONFile: DoBuildDependencies['isCantParseJSONFile']
 ): Promise<string | undefined> {
@@ -2611,21 +2926,32 @@ async function mergeDeploymentId(
     }
   }
   // For Next.js builds, try reading from routes-manifest.json
-  // where Next.js writes the deploymentId during build
-  try {
-    const routesManifestPath = join(workPath, '.next', 'routes-manifest.json');
-    if (await fs.pathExists(routesManifestPath)) {
-      const routesManifest = await readJSONFile<{ deploymentId?: string }>(
-        routesManifestPath
+  // where Next.js writes the deploymentId during build. The Next.js output
+  // can live outside `<root>/.next` (custom `distDir`, monorepo tools such as
+  // Nx), so check the configured Output Directory first.
+  const nextOutputDirs = new Set(
+    [outputDirectory, '.next'].filter((dir): dir is string => Boolean(dir))
+  );
+  for (const nextOutputDir of nextOutputDirs) {
+    try {
+      const routesManifestPath = join(
+        workPath,
+        nextOutputDir,
+        'routes-manifest.json'
       );
-      if (routesManifest && !isCantParseJSONFile(routesManifest)) {
-        if (routesManifest.deploymentId) {
-          return routesManifest.deploymentId;
+      if (await fs.pathExists(routesManifestPath)) {
+        const routesManifest = await readJSONFile<{ deploymentId?: string }>(
+          routesManifestPath
+        );
+        if (routesManifest && !isCantParseJSONFile(routesManifest)) {
+          if (routesManifest.deploymentId) {
+            return routesManifest.deploymentId;
+          }
         }
       }
+    } catch {
+      // Ignore errors reading routes-manifest.json
     }
-  } catch {
-    // Ignore errors reading routes-manifest.json
   }
   return undefined;
 }
@@ -2733,6 +3059,48 @@ async function detectApiDirFramework(
   return detectedSlugs.length === 1 ? detectedSlugs[0] : undefined;
 }
 
+/**
+ * Writes `daemons/<name>/.vc-config.json` for each daemon. This runs once all
+ * builders have finished, so a builder that resets `.vercel/output` can't
+ * remove a descriptor.
+ */
+async function writeDaemonDescriptors(
+  outputDir: string,
+  daemons: Record<string, DaemonConfig> | undefined,
+  buildResults: Map<Builder, BuildResult | BuildOutputConfig>
+): Promise<void> {
+  const namePattern = new RegExp(DAEMON_NAME_PATTERN);
+  const descriptors = new Map<string, DaemonOutput>();
+  for (const [build, result] of buildResults) {
+    const returned: Record<string, DaemonOutput> | undefined =
+      'output' in result && 'daemons' in result ? result.daemons : undefined;
+    for (const [name, descriptor] of Object.entries(returned ?? {})) {
+      // A build may only describe the daemon it was created for, and the name
+      // becomes a file path, so it must stay a plain daemon name.
+      if (name !== build.config?.daemon?.name || !namePattern.test(name)) {
+        throw new Error(
+          `Builder "${build.use}" returned an unexpected daemon descriptor "${name}".`
+        );
+      }
+      descriptors.set(name, descriptor);
+    }
+  }
+  for (const name of Object.keys(daemons ?? {})) {
+    const descriptor = descriptors.get(name);
+    if (!descriptor) {
+      throw new NowBuildError({
+        code: 'MISSING_DAEMON_OUTPUT',
+        message: `Failed to build daemon "${name}": its build returned no daemon descriptor.`,
+      });
+    }
+    await fs.outputJSON(
+      join(outputDir, 'daemons', name, '.vc-config.json'),
+      descriptor,
+      { spaces: 2 }
+    );
+  }
+}
+
 async function writeBuildJson(buildsJson: BuildsManifest, outputDir: string) {
   await fs.writeJSON(join(outputDir, 'builds.json'), buildsJson, { spaces: 2 });
 }
@@ -2785,9 +3153,10 @@ function attachQueueServiceTrigger(
   );
 
   if (service.builder.use !== '@vercel/python' && topics.length > 1) {
-    throw new Error(
-      `Worker service "${service.name}" has ${topics.length} topics, but multiple topics are only supported for Python workers.`
-    );
+    throw buildDiagnostics.BUILD_WORKER_MULTIPLE_TOPICS({
+      name: service.name,
+      topics: topics.length,
+    });
   }
 
   for (const topicConfig of topics) {

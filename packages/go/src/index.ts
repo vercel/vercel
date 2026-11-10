@@ -149,6 +149,7 @@ export async function build(options: BuildOptions): Promise<BuildResultVX> {
     workPath,
     meta = {},
     service,
+    diagnosticsValues,
     registerPreDeploy,
   } = options;
   let { entrypoint } = options;
@@ -288,7 +289,7 @@ export async function build(options: BuildOptions): Promise<BuildResultVX> {
       workPath,
       goModJson,
       resolvedGoVersion: go.resolvedVersion,
-      framework: config.framework ?? undefined,
+      framework: diagnosticsValues?.framework,
       serviceType: service ? getReportedServiceType(service) : undefined,
     });
 

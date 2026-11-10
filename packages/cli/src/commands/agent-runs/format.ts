@@ -12,6 +12,16 @@ export function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** Quotes a value for a suggested shell command; control characters become `placeholder`. */
+export function quoteCommandArgument(
+  value: string,
+  placeholder: string
+): string {
+  if (/[\x00-\x1F\x7F]/.test(value)) return placeholder;
+  if (/^[A-Za-z0-9_./:=@%+,-]+$/.test(value)) return value;
+  return `'${value.replaceAll("'", "'\"'\"'")}'`;
+}
+
 export function asArray(value: unknown): UnknownRecord[] {
   return Array.isArray(value) ? value.filter(isRecord) : [];
 }

@@ -78,6 +78,16 @@ export class MetricsTelemetryClient
     }
   }
 
+  trackCliOptionQuery(v: string[] | undefined) {
+    if (v && v.length > 0) {
+      this.trackCliOption({
+        option: 'query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionFilter(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({
@@ -90,6 +100,15 @@ export class MetricsTelemetryClient
   trackCliFlagProd(v: boolean | undefined) {
     if (v) {
       this.trackCliFlag('prod');
+    }
+  }
+
+  trackCliOptionEnvironment(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'environment',
+        value: this.redactedTargetName(v),
+      });
     }
   }
 

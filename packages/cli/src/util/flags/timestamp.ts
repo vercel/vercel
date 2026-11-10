@@ -30,17 +30,10 @@ const TIMESTAMP_FORMAT_HELP =
   'Use an ISO 8601 date and time (for example 2026-04-16T09:00:00Z) or epoch milliseconds.';
 
 const TIMESTAMP_COMPARATOR_HELP =
-  'Use after, before, on-or-after, on-or-before, eq, or ex. after and before are exclusive; use on-or-after or on-or-before for inclusive boundaries.';
+  'Use gt (after), gte (at-or-after), lt (before), or lte (at-or-before). gt and lt are exclusive; use gte or lte for inclusive boundaries.';
 
-const UNSUPPORTED_TIMESTAMP_COMPARATORS = new Set([
-  'startsWith',
-  'endsWith',
-  'contains',
-  '!contains',
-  'containsAllOf',
-  'containsAnyOf',
-  'containsNoneOf',
-]);
+// Mirrors the operators the dashboard offers for Timestamp attributes.
+const SUPPORTED_TIMESTAMP_COMPARATORS = new Set(['gt', 'gte', 'lt', 'lte']);
 
 export function parseTimestampInput(value: string): number {
   const trimmed = value.trim();
@@ -209,7 +202,7 @@ export function coerceTimestampCondition<
     return condition;
   }
 
-  if (UNSUPPORTED_TIMESTAMP_COMPARATORS.has(condition.cmp)) {
+  if (!SUPPORTED_TIMESTAMP_COMPARATORS.has(condition.cmp)) {
     throw new Error(
       `Operator "${condition.cmp}" is not valid for Timestamp attribute ${condition.lhs.kind}.${condition.lhs.attribute}. ${TIMESTAMP_COMPARATOR_HELP}`
     );
@@ -229,19 +222,6 @@ export function coerceTimestampCondition<
     };
   }
 
-  if (isListRhs(condition.rhs)) {
-    return {
-      ...condition,
-      rhs: {
-        ...condition.rhs,
-        items: condition.rhs.items.map(item => ({
-          ...item,
-          value: coerceTimestampListItemValue(item.value, source),
-        })),
-      },
-    };
-  }
-
   return condition;
 }
 
@@ -252,30 +232,6 @@ function coerceTimestampEpochNumber(
   return source === 'input'
     ? validateTimestampEpochMs(value)
     : acceptTimestampEpochMs(value);
-}
-
-function coerceTimestampListItemValue(
-  value: unknown,
-  source: TimestampCoercionSource
-): unknown {
-  if (typeof value === 'string') {
-    return parseTimestampInput(value);
-  }
-  if (typeof value === 'number') {
-    return coerceTimestampEpochNumber(value, source);
-  }
-  return value;
-}
-
-function isListRhs(
-  rhs: unknown
-): rhs is { type: string; items: { value?: unknown }[] } {
-  return (
-    typeof rhs === 'object' &&
-    rhs !== null &&
-    'items' in rhs &&
-    Array.isArray((rhs as { items?: unknown }).items)
-  );
 }
 
 export function formatTimestampRhs(

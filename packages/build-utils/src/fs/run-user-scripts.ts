@@ -1,3 +1,17 @@
+import {
+  findPackageJson,
+  traverseUpDirectories,
+  type FindPackageJsonResult,
+  type TraverseUpDirectoriesProps,
+} from './find-package-json';
+export {
+  findPackageJson,
+  walkParentDirs,
+  traverseUpDirectories,
+  type FindPackageJsonResult,
+  type TraverseUpDirectoriesProps,
+  type WalkParentDirsProps,
+} from './find-package-json';
 import assert from 'assert';
 import fs from 'fs-extra';
 import path from 'path';
@@ -38,18 +52,6 @@ const NO_OVERRIDE = {
 
 export type CliType = 'yarn' | 'npm' | 'pnpm' | 'bun' | 'vlt';
 
-export interface FindPackageJsonResult {
-  /**
-   * The file path of found `package.json` file, or `undefined` if not found.
-   */
-  packageJsonPath?: string;
-  /**
-   * The contents of found `package.json` file, when the `readPackageJson`
-   * option is enabled.
-   */
-  packageJson?: PackageJson;
-}
-
 export interface ScanParentDirsResult extends FindPackageJsonResult {
   /**
    * "yarn", "npm", or "pnpm" depending on the presence of lockfiles.
@@ -81,25 +83,6 @@ export interface ScanParentDirsResult extends FindPackageJsonResult {
    * `undefined` if not a Turborepo project.
    */
   turboSupportsCorepackHome?: boolean;
-}
-
-export interface TraverseUpDirectoriesProps {
-  /**
-   * The directory to start iterating from, typically the same directory of the entrypoint.
-   */
-  start: string;
-  /**
-   * The highest directory, typically the workPath root of the project.
-   */
-  base?: string;
-}
-
-export interface WalkParentDirsProps
-  extends Required<TraverseUpDirectoriesProps> {
-  /**
-   * The name of the file to search for, typically `package.json` or `Gemfile`.
-   */
-  filename: string;
 }
 
 export interface WalkParentDirsMultiProps
@@ -197,39 +180,33 @@ export function spawnAsync(
   });
 }
 
+function getShellCommand(command: string): string {
+  // pkg rewrites shell commands starting with `node` to invoke the CLI binary.
+  // Leading whitespace preserves shell semantics while preventing that rewrite:
+  // user scripts must run with the Node executable selected by their PATH.
+  return process.env.VERCEL_VC_NATIVE === '1' ? ` ${command}` : command;
+}
+
 export function spawnCommand(command: string, options: SpawnOptions = {}) {
   const opts = { ...options, prettyCommand: command };
+  const shellCommand = getShellCommand(command);
   if (process.platform === 'win32') {
-    return spawn('cmd.exe', ['/C', command], opts);
+    return spawn('cmd.exe', ['/C', shellCommand], opts);
   }
 
-  return spawn('sh', ['-c', command], opts);
+  return spawn('sh', ['-c', shellCommand], opts);
 }
 
 export async function execCommand(command: string, options: SpawnOptions = {}) {
   const opts = { ...options, prettyCommand: command };
+  const shellCommand = getShellCommand(command);
   if (process.platform === 'win32') {
-    await spawnAsync('cmd.exe', ['/C', command], opts);
+    await spawnAsync('cmd.exe', ['/C', shellCommand], opts);
   } else {
-    await spawnAsync('sh', ['-c', command], opts);
+    await spawnAsync('sh', ['-c', shellCommand], opts);
   }
 
   return true;
-}
-
-export function* traverseUpDirectories({
-  start,
-  base,
-}: TraverseUpDirectoriesProps) {
-  let current: string | undefined = path.normalize(start);
-  const normalizedRoot = base ? path.normalize(base) : undefined;
-  while (current) {
-    yield current;
-    if (current === normalizedRoot) break;
-    // Go up one directory
-    const next = path.join(current, '..');
-    current = next === current ? undefined : next;
-  }
 }
 
 async function readProjectRootInfo({
@@ -408,7 +385,8 @@ export async function getNodeVersion(
     const supportedNodeVersion = await getSupportedNodeVersion(
       packageJsonNodeVersion || configuredNodeVersion,
       !packageJsonNodeVersion,
-      availableVersions
+      availableVersions,
+      configuredNodeVersion
     );
 
     if (packageJson?.engines?.node) {
@@ -449,41 +427,6 @@ export async function getNodeVersion(
     // default to 1.x as a fallback
     return getSupportedBunVersion('1.x');
   }
-}
-
-/**
- * Traverses up directories to find and optionally read package.json.
- * This is a lightweight alternative to `scanParentDirs` when only
- * package.json information is needed (without lockfile detection).
- */
-export async function findPackageJson(
-  destPath: string,
-  readPackageJson = false,
-  base = '/'
-): Promise<FindPackageJsonResult> {
-  assert(path.isAbsolute(destPath));
-
-  const pkgJsonPath = await walkParentDirs({
-    base,
-    start: destPath,
-    filename: 'package.json',
-  });
-
-  let packageJson: PackageJson | undefined;
-  if (readPackageJson && pkgJsonPath) {
-    try {
-      packageJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'));
-    } catch (err) {
-      throw new Error(
-        `Could not read ${pkgJsonPath}: ${(err as Error).message}.`
-      );
-    }
-  }
-
-  return {
-    packageJsonPath: pkgJsonPath || undefined,
-    packageJson,
-  };
 }
 
 export async function scanParentDirs(
@@ -558,7 +501,9 @@ export async function scanParentDirs(
   if (bunLock && yarnLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
-    lockfileVersion = bunLockTextPath ? 1 : 0;
+    lockfileVersion = bunLockTextPath
+      ? resolveBunTextLockfileVersion(bunLock.toString('utf8'))
+      : 0;
   } else if (yarnLock) {
     cliType = 'yarn';
     lockfilePath = yarnLockPath;
@@ -574,7 +519,9 @@ export async function scanParentDirs(
   } else if (bunLock) {
     cliType = 'bun';
     lockfilePath = bunLockPath;
-    lockfileVersion = bunLockTextPath ? 1 : 0;
+    lockfileVersion = bunLockTextPath
+      ? resolveBunTextLockfileVersion(bunLock.toString('utf8'))
+      : 0;
   } else if (vltLock) {
     cliType = 'vlt';
     lockfilePath = vltLockPath;
@@ -604,11 +551,41 @@ function parseYarnLockVersion(yarnLock: string) {
   }
 
   try {
-    const metadata = yaml.load(yarnLock).__metadata;
+    const metadata = yaml.safeLoad(yarnLock).__metadata;
     return Number(metadata.version);
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Text `bun.lock` files historically used lockfileVersion 0 or 1; we treated
+ * every text lockfile as internal version 1. Bun >= 1.4 writes version 2+,
+ * which older binaries cannot parse, so surface those values as-is.
+ */
+function resolveBunTextLockfileVersion(bunLockText: string): number {
+  const parsed = parseBunLockVersion(bunLockText);
+  return parsed !== undefined && parsed >= 2 ? parsed : 1;
+}
+
+function parseBunLockVersion(bunLockText: string): number | undefined {
+  try {
+    const parsed = json5.parse(bunLockText);
+    const version = Number(parsed?.lockfileVersion);
+    return Number.isFinite(version) ? version : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function lockfileRequiresBun14(lockfileVersion: number | undefined): boolean {
+  return typeof lockfileVersion === 'number' && lockfileVersion >= 2;
+}
+
+function bunBinaryDir(version: BunVersion): string {
+  return `/bun${version.major}${
+    version.minor === undefined ? '' : `.${version.minor}`
+  }`;
 }
 
 async function checkTurboSupportsCorepack(
@@ -723,25 +700,6 @@ export function usingCorepack(
     return false;
   }
   return true;
-}
-
-export async function walkParentDirs({
-  base,
-  start,
-  filename,
-}: WalkParentDirsProps): Promise<string | null> {
-  assert(path.isAbsolute(base), 'Expected "base" to be absolute path');
-  assert(path.isAbsolute(start), 'Expected "start" to be absolute path');
-
-  for (const dir of traverseUpDirectories({ start, base })) {
-    const fullPath = path.join(dir, filename);
-
-    if (await fs.pathExists(fullPath)) {
-      return fullPath;
-    }
-  }
-
-  return null;
 }
 
 async function walkParentDirsMulti({
@@ -882,8 +840,8 @@ function checkIfAlreadyInstalled(
   return { alreadyInstalled, runNpmInstallSet: initializedRunNpmInstallSet };
 }
 
-// Only allow one `runNpmInstall()` invocation to run concurrently
-const runNpmInstallSema = new Sema(1);
+// Only allow one package install invocation to run concurrently
+const installSema = new Sema(1);
 
 /**
  * Whether the `VERCEL_INSTALL_COMPLETED` marker covers the given
@@ -920,13 +878,114 @@ export function resetCustomInstallCommandSet(): void {
   customInstallCommandSet = undefined;
 }
 
+interface WorkspaceInstallOptions {
+  targets: WorkspaceInstallTarget[];
+}
+
+export interface WorkspaceInstallTarget {
+  installRoot?: string;
+  isRoot?: boolean;
+  name?: string;
+  packageJsonPath: string;
+  relativePath: string;
+}
+
+export function getWorkspaceInstallCommand({
+  packageManager,
+  targets,
+  lockfileVersion,
+}: {
+  packageManager: CliType;
+  targets: WorkspaceInstallTarget[];
+  lockfileVersion: number | undefined;
+}): { command: CliType; args: string[] } | null {
+  let commandArguments: string[] | undefined;
+  switch (packageManager) {
+    case 'npm':
+      commandArguments = [
+        'install',
+        '--no-audit',
+        ...targets
+          .filter(target => !target.isRoot)
+          .map(target => `--workspace=${target.relativePath}`),
+        ...(targets.some(target => target.isRoot)
+          ? ['--include-workspace-root']
+          : []),
+      ];
+      break;
+    case 'pnpm':
+      commandArguments = [
+        'install',
+        ...targets.flatMap(target => [
+          '--filter',
+          `{${target.relativePath}}...`,
+        ]),
+      ];
+      break;
+    case 'yarn':
+      // `workspaces focus` is bundled by default starting with Yarn 4.
+      if (detectYarnVersion(lockfileVersion) !== 'yarn@4.x') return null;
+      if (targets.some(target => !target.name)) return null;
+      commandArguments = [
+        'workspaces',
+        'focus',
+        ...targets.map(target => target.name!),
+      ];
+      break;
+    case 'bun':
+      // Bun 1.3 matches no workspace (and exits 0) for pnpm-style `path...`
+      // filters; plain path filters already install workspace dependencies.
+      commandArguments = [
+        'install',
+        ...targets.flatMap(target => [
+          '--filter',
+          target.isRoot ? './' : `./${target.relativePath}`,
+        ]),
+      ];
+      break;
+  }
+
+  if (!commandArguments) return null;
+
+  if (process.env.NPM_ONLY_PRODUCTION) {
+    commandArguments.push(
+      packageManager === 'pnpm' ? '--prod' : '--production'
+    );
+  }
+  return { command: packageManager, args: commandArguments };
+}
+
+async function runWorkspaceInstall({
+  packageManager,
+  targets,
+  opts,
+  lockfileVersion,
+}: {
+  packageManager: CliType;
+  targets: WorkspaceInstallTarget[];
+  opts: SpawnOptionsExtended;
+  lockfileVersion: number | undefined;
+}): Promise<boolean> {
+  const installCommand = getWorkspaceInstallCommand({
+    packageManager,
+    targets,
+    lockfileVersion,
+  });
+  if (!installCommand) return false;
+
+  opts.prettyCommand = `${installCommand.command} ${installCommand.args.join(' ')}`;
+  await spawnAsync(installCommand.command, installCommand.args, opts);
+  return true;
+}
+
 export async function runNpmInstall(
   destPath: string,
   args: string[] = [],
   spawnOpts?: SpawnOptions,
   meta?: Meta,
   projectCreatedAt?: number,
-  output?: NpmInstallOutput
+  output?: NpmInstallOutput,
+  workspaceInstall?: WorkspaceInstallOptions
 ): Promise<boolean> {
   if (meta?.isDev) {
     debug('Skipping dependency installation because dev mode is enabled');
@@ -936,11 +995,12 @@ export async function runNpmInstall(
   assert(path.isAbsolute(destPath));
 
   try {
-    await runNpmInstallSema.acquire();
+    await installSema.acquire();
     const {
       cliType,
       packageJsonPath,
       packageJson,
+      lockfilePath,
       lockfileVersion,
       packageJsonPackageManager,
       packageJsonDevEngines,
@@ -955,12 +1015,46 @@ export async function runNpmInstall(
     }
 
     // Only allow `runNpmInstall()` to run once per `package.json`
-    // when doing a default install (no additional args)
-    // VERCEL_INSTALL_COMPLETED indicates install already ran for the root,
-    // so we add that path to the set to prevent duplicate installs while
-    // still allowing subdirectory installs to proceed
+    // when doing a default install (no additional args).
     const defaultInstall = args.length === 0;
-    if (meta && packageJsonPath && defaultInstall) {
+    const workspaceInstallRoot = lockfilePath
+      ? path.dirname(lockfilePath)
+      : undefined;
+    const workspaceCandidates =
+      process.env.VERCEL_EXPERIMENTAL_WORKSPACE_SCOPED_INSTALLS === '1' &&
+      !installCompletedCovers(packageJsonPath) &&
+      defaultInstall &&
+      meta &&
+      workspaceInstall &&
+      workspaceInstallRoot
+        ? workspaceInstall.targets.filter(
+            target =>
+              target.installRoot &&
+              path.normalize(target.installRoot) ===
+                path.normalize(workspaceInstallRoot)
+          )
+        : null;
+    const workspaceTargets =
+      workspaceCandidates?.length &&
+      getWorkspaceInstallCommand({
+        packageManager: cliType,
+        targets: workspaceCandidates,
+        lockfileVersion,
+      })
+        ? workspaceCandidates
+        : null;
+
+    if (workspaceTargets?.length && meta) {
+      const installed = initializeSet(meta.runNpmInstallSet);
+      if (
+        workspaceTargets.every(target => installed.has(target.packageJsonPath))
+      ) {
+        return false;
+      }
+    } else if (meta && packageJsonPath && defaultInstall) {
+      // VERCEL_INSTALL_COMPLETED indicates install already ran for the root,
+      // so we add that path to the set to prevent duplicate installs while
+      // still allowing subdirectory installs to proceed.
       const { alreadyInstalled, runNpmInstallSet } = checkIfAlreadyInstalled(
         meta.runNpmInstallSet,
         packageJsonPath
@@ -986,7 +1080,7 @@ export async function runNpmInstall(
         await spawnAsync(
           'yarn',
           ['config', 'set', 'enableGlobalCache', 'false'],
-          { cwd: destPath }
+          { cwd: destPath, env: spawnOpts?.env }
         );
       }
     }
@@ -1024,6 +1118,25 @@ export async function runNpmInstall(
       );
     }
 
+    if (workspaceTargets?.length && workspaceInstallRoot && meta) {
+      const scopedOpts = { ...opts, cwd: workspaceInstallRoot };
+      const installed = await runWorkspaceInstall({
+        packageManager: cliType,
+        targets: workspaceTargets,
+        opts: scopedOpts,
+        lockfileVersion,
+      });
+      if (installed) {
+        const installedPackages = initializeSet(meta.runNpmInstallSet);
+        for (const target of workspaceTargets) {
+          installedPackages.add(target.packageJsonPath);
+        }
+        meta.runNpmInstallSet = installedPackages;
+        debug(`Install complete [${Date.now() - installTime}ms]`);
+        return true;
+      }
+    }
+
     await runInstallCommand({
       packageManager: cliType,
       args,
@@ -1034,8 +1147,23 @@ export async function runNpmInstall(
     debug(`Install complete [${Date.now() - installTime}ms]`);
     return true;
   } finally {
-    runNpmInstallSema.release();
+    installSema.release();
   }
+}
+
+/**
+ * Older Bun binaries cannot parse lockfileVersion 2+ and silently ignore the
+ * lockfile. If the resolved runtime is still the generic 1.x (or an older
+ * minor), bump the install binary to Bun 1.4.
+ */
+function resolveEffectiveBunVersion(
+  nodeVersion: BunVersion,
+  lockfileVersion: number | undefined
+): BunVersion {
+  const requiresBun14 =
+    lockfileRequiresBun14(lockfileVersion) &&
+    (nodeVersion.minor === undefined || nodeVersion.minor < 4);
+  return requiresBun14 ? getSupportedBunVersion('1.4.x') : nodeVersion;
 }
 
 /**
@@ -1100,9 +1228,7 @@ export function getEnvForPackageManager({
 
   const bunRuntimePath =
     nodeVersion && isBunVersion(nodeVersion)
-      ? `/bun${nodeVersion.major}${
-          nodeVersion.minor === undefined ? '' : `.${nodeVersion.minor}`
-        }`
+      ? bunBinaryDir(resolveEffectiveBunVersion(nodeVersion, lockfileVersion))
       : undefined;
 
   const alreadyInPath = (newPath: string) => {
@@ -1295,7 +1421,8 @@ function detectYarnVersion(lockfileVersion: number | undefined) {
       return 'yarn@2.x';
     } else if ([6, 7].includes(lockfileVersion)) {
       return 'yarn@3.x';
-    } else if ([8].includes(lockfileVersion)) {
+    } else if (lockfileVersion >= 8) {
+      // Yarn 4 minors keep bumping the lockfile version (4.14 writes 9, 4.16 writes 10).
       return 'yarn@4.x';
     }
   }
@@ -1516,11 +1643,14 @@ export function getPathOverrideForPackageManager({
     nodeVersion &&
     isBunVersion(nodeVersion)
   ) {
-    const minor = nodeVersion.minor;
+    const effectiveBunVersion = resolveEffectiveBunVersion(
+      nodeVersion,
+      lockfileVersion
+    );
     return {
       ...detectedPackageManger,
-      path: `/bun${nodeVersion.major}${minor === undefined ? '' : `.${minor}`}`,
-      detectedPackageManager: `bun@${nodeVersion.range}`,
+      path: bunBinaryDir(effectiveBunVersion),
+      detectedPackageManager: `bun@${effectiveBunVersion.range}`,
     };
   }
 
@@ -1720,12 +1850,23 @@ export function detectPackageManager(
           return undefined;
       }
     }
-    case 'bun':
+    case 'bun': {
+      // Bun >= 1.4 writes lockfileVersion 2+, which `/bun1` (1.3.x) cannot
+      // parse. Select `/bun1.4` from the lockfile the same way pnpm versions
+      // are inferred from pnpm-lock.yaml.
+      if (lockfileRequiresBun14(lockfileVersion)) {
+        return {
+          path: '/bun1.4',
+          detectedLockfile: 'bun.lock',
+          detectedPackageManager: 'bun@1.4.x',
+        };
+      }
       return {
         path: '/bun1',
         detectedLockfile: lockfileVersion === 0 ? 'bun.lockb' : 'bun.lock',
         detectedPackageManager: 'bun@1.x',
       };
+    }
     case 'yarn':
       // yarn always uses the default version in the build container
       // which is why there's no `path` here

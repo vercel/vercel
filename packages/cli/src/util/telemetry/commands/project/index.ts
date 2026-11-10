@@ -23,9 +23,9 @@ export class ProjectTelemetryClient
     });
   }
 
-  trackCliSubcommandAdd(actual: string) {
+  trackCliSubcommandCreate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'add',
+      subcommand: 'create',
       value: actual,
     });
   }
@@ -44,9 +44,9 @@ export class ProjectTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'remove',
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -143,9 +143,23 @@ export class ProjectTelemetryClient
     });
   }
 
+  trackCliSubcommandDangerouslyDeleteImmutableStaticAsset(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'dangerously-delete-immutable-static-asset',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandObservability(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'observability',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandPriority(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'priority',
       value: actual,
     });
   }

@@ -43,9 +43,12 @@ export type ConnectWebhookVerifierOptions = Parameters<
  * current deployment's project and environment (`projectId` defaults to
  * `VERCEL_PROJECT_ID`, `environment` to `VERCEL_TARGET_ENV` then
  * `VERCEL_ENV`). Verification fails closed — if those values are absent
- * and not supplied via `options`, every request is rejected. The
- * accepted set is therefore "any Vercel OIDC token for this
- * project + environment"; it is not pinned to a specific Connect
+ * and not supplied via `options`, every request is rejected. Unless
+ * `options.audience` is supplied, tokens re-minted by Vercel's
+ * audience exchange (which carry an `act` claim) are rejected, so a token
+ * handed to a third-party audience cannot be replayed here. The accepted
+ * set is therefore "any unexchanged Vercel OIDC token for this project +
+ * environment"; it is not pinned to a specific Connect
  * connector or to a single deployment. To tighten or broaden it (extra
  * audiences, multiple environments, an explicit project id), pass
  * `options` through to {@link verifyVercelOidcToken}.
@@ -72,7 +75,10 @@ export function createConnectWebhookVerifier(
     if (!token) {
       throw new Error('Missing Authorization bearer token');
     }
-    await verifyVercelOidcToken(token, options);
+    const { payload } = await verifyVercelOidcToken(token, options);
+    if (options?.audience === undefined && payload.act !== undefined) {
+      throw new Error('Exchanged OIDC tokens are not accepted');
+    }
     return true;
   };
 }

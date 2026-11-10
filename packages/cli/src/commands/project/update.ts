@@ -51,6 +51,10 @@ import {
 } from './update-setting-definitions';
 import { computeSettingsChanges, patchProjectSettings } from './update-changes';
 import { printChangePreview, writeUpdateResult } from './update-output';
+import {
+  readOnOffOption,
+  rewriteLegacyOnOffValues,
+} from '../../util/on-off-option';
 
 function getUpdateCommand(framework = '<slug>') {
   return `project update <name> --framework ${framework}`;
@@ -60,7 +64,13 @@ function buildUpdateRetryCommand(
   client: Client,
   { interactive, withYes }: { interactive: boolean; withYes: boolean }
 ): string {
-  const args = stripSensitiveAuthArgs(client.argv.slice(2));
+  const typedArgs = stripSensitiveAuthArgs(client.argv.slice(2));
+  // Repeat `--fluid-compute on` as `--fluid-compute`, the form help teaches.
+  const rewritten = rewriteLegacyOnOffValues(
+    typedArgs,
+    updateSubcommand.options
+  );
+  const args = 'error' in rewritten ? typedArgs : rewritten.args;
   const nextArgs: string[] = [];
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
@@ -239,10 +249,20 @@ export default async function update(
     opts: { store: client.telemetryEventStore },
   });
 
+  // `--fluid-compute on|off` and `--elastic-concurrency on|off` still work.
+  const rewritten = rewriteLegacyOnOffValues(
+    argv,
+    updateSubcommand.options,
+    client
+  );
+  if ('error' in rewritten) {
+    return printUsageError(client, rewritten.error, 2, 'invalid_arguments');
+  }
+
   let parsedArgs;
   try {
     parsedArgs = parseArguments(
-      argv,
+      rewritten.args,
       getFlagsSpecification(updateSubcommand.options)
     );
   } catch (error) {
@@ -253,10 +273,10 @@ export default async function update(
         reason: 'invalid_arguments',
         message: error instanceof Error ? error.message : String(error),
       },
-      1
+      2
     );
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -282,10 +302,22 @@ export default async function update(
   telemetry.trackCliOptionFormat(flags['--format']);
   telemetry.trackCliFlagJson(flags['--json']);
   telemetry.trackCliFlagYes(flags['--yes']);
-  telemetry.trackCliOptionFluidCompute(flags['--fluid-compute']);
+  telemetry.trackCliOptionFluidCompute(rewritten.legacy.get('--fluid-compute'));
+  if (!rewritten.legacy.has('--fluid-compute')) {
+    telemetry.trackCliFlagFluidCompute(flags['--fluid-compute']);
+    telemetry.trackCliFlagNoFluidCompute(flags['--no-fluid-compute']);
+  }
   telemetry.trackCliOptionFunctionCpu(flags['--function-cpu']);
   telemetry.trackCliOptionBuildMachine(flags['--build-machine']);
-  telemetry.trackCliOptionElasticConcurrency(flags['--elastic-concurrency']);
+  telemetry.trackCliOptionElasticConcurrency(
+    rewritten.legacy.get('--elastic-concurrency')
+  );
+  if (!rewritten.legacy.has('--elastic-concurrency')) {
+    telemetry.trackCliFlagElasticConcurrency(flags['--elastic-concurrency']);
+    telemetry.trackCliFlagNoElasticConcurrency(
+      flags['--no-elastic-concurrency']
+    );
+  }
   telemetry.trackCliOptionNodeVersion(flags['--node-version']);
 
   if (args.length > 1) {
@@ -301,7 +333,7 @@ export default async function update(
 
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
-    return printUsageError(client, formatResult.error, 1, 'invalid_arguments');
+    return printUsageError(client, formatResult.error, 2, 'invalid_arguments');
   }
 
   const requestedSettings: ProjectSettingsUpdate = {};
@@ -320,7 +352,7 @@ export default async function update(
       return printUsageError(
         client,
         message,
-        1,
+        2,
         'invalid_arguments',
         getUpdateCommand(suggestion)
       );
@@ -341,7 +373,7 @@ export default async function update(
       return printUsageError(
         client,
         message,
-        1,
+        2,
         'invalid_arguments',
         `project update <name> --auto-detect ${suggestion ?? '<setting>'}`
       );
@@ -366,7 +398,7 @@ export default async function update(
         return printUsageError(
           client,
           validationError,
-          1,
+          2,
           'invalid_arguments',
           `project update <name> ${definition.flag} <value>`
         );
@@ -392,6 +424,25 @@ export default async function update(
 
   const providedAdvanced: ProvidedAdvancedSetting[] = [];
   for (const definition of advancedSettingDefinitions) {
+    if (definition.kind === 'toggle') {
+      const toggle = readOnOffOption(client, flags, {
+        on: definition.flag as `--${string}`,
+        off: `--no-${definition.flag.slice(2)}`,
+      });
+      if ('error' in toggle) {
+        return printUsageError(
+          client,
+          toggle.error,
+          2,
+          'invalid_arguments',
+          `project update <name> ${definition.flag}`
+        );
+      }
+      if (toggle.value !== undefined) {
+        providedAdvanced.push({ definition, value: toggle.value });
+      }
+      continue;
+    }
     const raw = (flags as Record<string, unknown>)[definition.flag] as
       | string
       | undefined;
@@ -403,7 +454,7 @@ export default async function update(
       return printUsageError(
         client,
         result.message,
-        1,
+        2,
         'invalid_arguments',
         `project update <name> ${definition.flag} <value>`
       );

@@ -1,5 +1,6 @@
 import path from 'path';
 import { execCli } from './helpers/exec';
+import { getCliPath } from './helpers/get-cli-path';
 import fs from 'fs-extra';
 import waitForPrompt from './helpers/wait-for-prompt';
 import { listTmpDirs } from './helpers/get-tmp-dir';
@@ -13,7 +14,7 @@ import formatOutput from './helpers/format-output';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
-const binaryPath = path.resolve(__dirname, '../scripts/start.js');
+const binaryPath = getCliPath();
 
 beforeAll(async () => {
   try {

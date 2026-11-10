@@ -3,6 +3,7 @@ import {
   hoistRegistryDependenciesFromWorkspaceTarballs,
   pinWorkspacePeerDependencies,
   selectPackageTasks,
+  toSemverPreviewIdentifier,
 } from './pack-task-selection';
 import { Task } from './types';
 
@@ -13,6 +14,27 @@ function task(packageName: string, taskName: string): Task {
     taskId: `${packageName}#${taskName}`,
   } as Task;
 }
+
+describe('toSemverPreviewIdentifier', () => {
+  test('leaves hex shas containing a letter untouched', () => {
+    expect(toSemverPreviewIdentifier('a1b2c3d')).toBe('a1b2c3d');
+    expect(toSemverPreviewIdentifier('abcdef1')).toBe('abcdef1');
+  });
+
+  test('prefixes all-digit shas so leading zeroes stay valid semver', () => {
+    // A prerelease identifier made only of digits is "numeric" per semver,
+    // and semver forbids leading zeroes on numeric identifiers. Left alone,
+    // `0749271` produces an invalid version string for strict parsers (npm
+    // rejected `0.2.7-0749271` outright) and gets silently truncated to
+    // `749271` by looser ones, corrupting the identifier either way.
+    expect(toSemverPreviewIdentifier('0749271')).toBe('g0749271');
+    expect(/^0\d/.test(toSemverPreviewIdentifier('0749271'))).toBe(false);
+  });
+
+  test('also guards all-digit shas without a leading zero for consistency', () => {
+    expect(toSemverPreviewIdentifier('2816496')).toBe('g2816496');
+  });
+});
 
 describe('pinWorkspacePeerDependencies', () => {
   test('pins workspace peers to their preview versions', () => {

@@ -75,9 +75,9 @@ export class FirewallTelemetryClient
     });
   }
 
-  trackCliSubcommandRulesEdit(actual: string) {
+  trackCliSubcommandRulesUpdate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'rules:edit',
+      subcommand: 'rules:update',
       value: actual,
     });
   }
@@ -106,6 +106,13 @@ export class FirewallTelemetryClient
   trackCliSubcommandRulesReorder(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'rules:reorder',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRulesMove(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules:move',
       value: actual,
     });
   }
@@ -246,6 +253,34 @@ export class FirewallTelemetryClient
   trackCliSubcommandPersistentActionsInspect(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'persistent-actions:inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTraffic(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'traffic',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTrafficList(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'traffic:list',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTrafficInspect(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'traffic:inspect',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandBotManagement(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'bot-management',
       value: actual,
     });
   }

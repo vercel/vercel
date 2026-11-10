@@ -10,6 +10,7 @@ import {
   CUSTOM_ENVIRONMENTS_PER_PACK,
   customEnvironmentPackEnvironments,
 } from '../../util/buy/custom-environment-addon';
+import { buySubcommand as domainsBuySubcommand } from '../domains/command';
 
 const EXAMPLE_CUSTOM_ENVIRONMENT_COUNT = customEnvironmentPackEnvironments(
   CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT
@@ -140,11 +141,16 @@ export const domainSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  // `buy domain` runs `domains buy`, so it takes the same options.
+  options: domainsBuySubcommand.options,
   examples: [
     {
       name: 'Purchase a domain',
       value: `${packageName} buy domain example.com`,
+    },
+    {
+      name: 'From an agent or script: buy at the price a person approved, with the billing info for the address',
+      value: `${packageName} buy domain example.com --scope my-team --amount 20.00 --use-billing-details --first-name Jane --last-name Doe --phone +11122233344 --no-auto-renew`,
     },
   ],
 } as const;

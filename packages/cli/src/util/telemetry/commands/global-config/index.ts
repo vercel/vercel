@@ -10,20 +10,20 @@ export class GlobalConfigTelemetryClient
     this.trackCliSubcommand({ subcommand: 'list', value: actual });
   }
 
-  trackCliSubcommandAdd(actual: string) {
-    this.trackCliSubcommand({ subcommand: 'add', value: actual });
+  trackCliSubcommandCreate(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'create', value: actual });
   }
 
-  trackCliSubcommandGet(actual: string) {
-    this.trackCliSubcommand({ subcommand: 'get', value: actual });
+  trackCliSubcommandInspect(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'inspect', value: actual });
   }
 
   trackCliSubcommandUpdate(actual: string) {
     this.trackCliSubcommand({ subcommand: 'update', value: actual });
   }
 
-  trackCliSubcommandRemove(actual: string) {
-    this.trackCliSubcommand({ subcommand: 'remove', value: actual });
+  trackCliSubcommandDelete(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'delete', value: actual });
   }
 
   trackCliSubcommandItems(actual: string) {

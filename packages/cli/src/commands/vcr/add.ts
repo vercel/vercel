@@ -29,9 +29,13 @@ export default async function add(
       getFlagsSpecification(addSubcommand.options)
     );
   } catch (err) {
-    emitVcrArgParseError(client, err, 'vcr add <name> --project <name-or-id>');
+    emitVcrArgParseError(
+      client,
+      err,
+      'vcr create <name> --project <name-or-id>'
+    );
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -50,21 +54,24 @@ export default async function add(
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
-        message: `Missing repository name. Example: ${packageName} vcr add <name>`,
+        message: `Missing repository name. Example: ${packageName} vcr create <name>`,
         next: [
           {
-            command: buildCommandWithGlobalFlags(client.argv, 'vcr add <name>'),
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'vcr create <name>'
+            ),
             when: 'Replace <name> with the repository name to create',
           },
         ],
       },
-      1
+      2
     );
     return outputError(
       client,
       fr.jsonOutput,
       'MISSING_ARGUMENTS',
-      'Usage: `vercel vcr add <name>`'
+      'Usage: `vercel vcr create <name>`'
     );
   }
 

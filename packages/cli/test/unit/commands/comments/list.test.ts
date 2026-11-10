@@ -12,6 +12,7 @@ import {
   mockLinkedProject,
   mockTeamScope,
 } from './helpers';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 vi.mock('../../../../src/util/projects/link');
 vi.mock('../../../../src/util/projects/get-org-by-id');
@@ -130,7 +131,7 @@ describe('comments list', () => {
     client.setArgv('comments', 'inspect', '-ULOL');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('comments inspect -- <arg>');
   });
@@ -139,7 +140,7 @@ describe('comments list', () => {
     client.setArgv('comments', 'inspect', 'icZ9BnPPINuK', '--branch', 'main');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('--branch');
     expect(stderr).toContain('comments inspect --help');
@@ -214,23 +215,121 @@ describe('comments list', () => {
       status: 'unresolved',
       branch: { value: 'feat-x', source: 'git' },
     });
-    expect(parsed.pagination).toEqual({ nextCursor: 'abc' });
+    // `next` is the standard key; `nextCursor` stays for existing scripts.
+    expect(parsed.pagination).toEqual({ nextCursor: 'abc', next: 'abc' });
     expect(parsed.threads).toHaveLength(1);
     expect(parsed.threads[0].id).toBe(thread.id);
   });
 
-  it('echoes an explicit --branch in filters with source flag', async () => {
+  it.each([
+    '--git-branch',
+    '--branch',
+  ])('echoes an explicit %s in filters with source flag', async flag => {
     client.scenario.get('/toolbar/threads', (_req, res) => {
       res.json({ pagination: {}, threads: [] });
     });
 
-    client.setArgv('comments', '--branch', 'main', '--format', 'json');
+    client.setArgv('comments', flag, 'main', '--format', 'json');
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
     const parsed = JSON.parse(client.stdout.getFullOutput());
     expect(parsed.filters.branch).toEqual({ value: 'main', source: 'flag' });
     expect(parsed.scope.inferredBranch).toBeUndefined();
+    // The deprecation warning is skipped for JSON output.
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+  });
+
+  describe('the deprecated --branch', () => {
+    const DEPRECATED = '--branch is deprecated. Use --git-branch.';
+
+    it('filters by the branch and warns', async () => {
+      let requestQuery: Record<string, unknown> | undefined;
+      client.scenario.get('/toolbar/threads', (req, res) => {
+        requestQuery = req.query;
+        res.json({ pagination: {}, threads: [makeThread()] });
+      });
+
+      client.setArgv('comments', '--branch', 'main');
+      const exitCode = await comments(client);
+
+      expect(exitCode).toBe(0);
+      expect(requestQuery?.branch).toBe('main');
+      expect(client.stderr.getFullOutput()).toContain(`! ${DEPRECATED}`);
+    });
+
+    it('does not warn for --git-branch', async () => {
+      client.scenario.get('/toolbar/threads', (_req, res) => {
+        res.json({ pagination: {}, threads: [makeThread()] });
+      });
+
+      client.setArgv('comments', '--git-branch', 'main');
+      const exitCode = await comments(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+    });
+
+    it.each([
+      ['comments', '--branch', 'main', '--git-branch', 'feat'],
+      ['comments', '--branch', 'main', '--git-branch', 'feat', '--json'],
+    ])('exits 2 without a request when both names are given: %j', async (...argv) => {
+      let requested = false;
+      client.scenario.get('/toolbar/threads', (_req, res) => {
+        requested = true;
+        res.json({ pagination: {}, threads: [] });
+      });
+
+      client.setArgv(...argv);
+      const exitCode = await comments(client);
+
+      expect(exitCode).toBe(2);
+      expect(requested).toBe(false);
+      const message = "Can't use --branch with --git-branch. Use --git-branch.";
+      expect(
+        client.stdout.getFullOutput() + client.stderr.getFullOutput()
+      ).toContain(message);
+    });
+
+    it('teaches --git-branch in the next-page hint', async () => {
+      client.scenario.get('/toolbar/threads', (_req, res) => {
+        res.json({
+          pagination: { nextCursor: 'abc' },
+          threads: [makeThread()],
+        });
+      });
+
+      client.setArgv('comments', '--branch', 'a', '--branch=b');
+      const exitCode = await comments(client);
+
+      expect(exitCode).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        'comments --git-branch a --git-branch=b --next abc'
+      );
+      expect(stderr).not.toMatch(/--branch[ =][ab]/);
+    });
+
+    it.each([
+      ['--git-branch', 'option:git-branch'],
+      ['--branch', 'option:branch'],
+    ])('tracks %s telemetry without the branch name', async (flag, key) => {
+      client.scenario.get('/toolbar/threads', (_req, res) => {
+        res.json({ pagination: {}, threads: [makeThread()] });
+      });
+
+      client.setArgv('comments', flag, 'secret-branch');
+      await comments(client);
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ key, value: '[REDACTED]' }),
+        ])
+      );
+      expect(
+        JSON.stringify(client.telemetryEventStore.readonlyEvents)
+      ).not.toContain('secret-branch');
+    });
   });
 
   it('suggests the exact branch when empty and all probe results share one', async () => {
@@ -257,7 +356,8 @@ describe('comments list', () => {
     expect(calls).toBe(2);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('No unresolved comments on feat-x');
-    expect(stderr).toContain('--branch main');
+    expect(stderr).toContain('comments --git-branch main');
+    expect(stderr).not.toContain('--branch main');
   });
 
   it('suggests --all-branches when empty and probe spans branches', async () => {
@@ -600,7 +700,7 @@ describe('comments list', () => {
 
     expect(exitCode).toBe(0);
     const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain('To display the next page');
+    expect(stderr).toContain('  Next page:\n    vercel comments --next abc\n');
     expect(stderr).not.toContain('sekrit123');
     expect(stderr).not.toContain('--token');
   });
@@ -613,13 +713,13 @@ describe('comments list', () => {
       });
     });
 
-    client.setArgv('comments', '--branch', 'a', '--branch', 'b');
+    client.setArgv('comments', '--git-branch', 'a', '--git-branch', 'b');
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
     const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain('--branch a --branch b');
-    expect(stderr).not.toContain('--branch a,b');
+    expect(stderr).toContain('--git-branch a --git-branch b');
+    expect(stderr).not.toContain('--git-branch a,b');
   });
 
   it('quotes remote branch names in probe suggestions', async () => {
@@ -639,7 +739,7 @@ describe('comments list', () => {
 
     expect(exitCode).toBe(0);
     expect(client.stderr.getFullOutput()).toContain(
-      "--branch 'evil$(rm -rf ~)'"
+      "--git-branch 'evil$(rm -rf ~)'"
     );
   });
 
@@ -659,8 +759,10 @@ describe('comments list', () => {
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
-    // POSIX single-quote escape renders as: --branch 'feat'\''s'
-    expect(client.stderr.getFullOutput()).toContain("--branch 'feat'\\''s'");
+    // POSIX single-quote escape renders as: --git-branch 'feat'\''s'
+    expect(client.stderr.getFullOutput()).toContain(
+      "--git-branch 'feat'\\''s'"
+    );
   });
 
   it('honors an explicit --scope over the linked directory', async () => {
@@ -683,7 +785,7 @@ describe('comments list', () => {
     client.setArgv('comments', '--status', 'closed');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('closed');
   });
 
@@ -703,5 +805,96 @@ describe('comments list', () => {
     expect(exitCode).toBe(0);
     expect(requestQuery?.cursor).toBe('cursor123');
     expect(client.stderr.getFullOutput()).toContain('--next dGhyZWFk');
+  });
+
+  it('still reads the hidden -N as --next, and warns', async () => {
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [makeThread()] });
+    });
+
+    client.setArgv('comments', '-N', 'cursor123');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.cursor).toBe('cursor123');
+    expect(client.stderr.getFullOutput()).toContain(
+      '! -N is deprecated. Use --next.'
+    );
+  });
+});
+
+describe('comments list renamed options', () => {
+  // Runs `comments list` with a fresh client, recording the threads request.
+  async function run(...args: string[]) {
+    client.reset();
+    vi.clearAllMocks();
+    mockLinkedProject();
+    mockTeamScope();
+    mockedGetOrgById.mockResolvedValue(null);
+    mockedInferBranch.mockReturnValue({ value: 'feat-x', source: 'git' });
+    let query: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      query = req.query;
+      res.json({ pagination: { next: 'cursor_2' }, threads: [] });
+    });
+    client.setArgv('comments', 'list', ...args);
+    const exitCode = await comments(client);
+    return {
+      exitCode,
+      query,
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  it.each([
+    ['--search', ['--search', 'typo'], ['--query', 'typo']],
+    [
+      '--content-id',
+      ['--content-id', 'c1', '--content-id', 'c2'],
+      ['--content', 'c1', '--content', 'c2'],
+    ],
+  ])('still accepts %s, with one warning', async (typed, oldArgs, newArgs) => {
+    const now = await run(...newArgs);
+    const before = await run(...oldArgs);
+    const name = newArgs[0];
+
+    expect(now.exitCode).toBe(0);
+    expect(now.stderr).not.toContain('deprecated');
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.query).toEqual(now.query);
+    expect(before.stdout).toBe(now.stdout);
+    const warning = `! ${typed} is deprecated. Use ${name}.\n`;
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain(warning);
+    // The filter summary and the next page name the new option.
+    expect(before.stderr.replace(warning, '')).toBe(now.stderr);
+    expect(now.stderr).toContain(`${name} `);
+    expect(now.stderr).not.toContain(`${typed} `);
+
+    const nowJson = await run(...newArgs, '--json');
+    const beforeJson = await run(...oldArgs, '--json');
+    expectDeprecationInJson(
+      beforeJson.stdout,
+      nowJson.stdout,
+      `${typed} is deprecated. Use ${name}.`
+    );
+    expect(beforeJson.stderr).not.toContain('deprecated');
+  });
+
+  it.each([
+    [['--query', 'a', '--search', 'b'], "Can't use --query with --search."],
+    [
+      ['--content', 'c1', '--content-id', 'c2'],
+      "Can't use --content with --content-id.",
+    ],
+  ])('rejects %j before any request', async (args, message) => {
+    const result = await run(...args);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(message);
+    expect(result.query).toBeUndefined();
   });
 });

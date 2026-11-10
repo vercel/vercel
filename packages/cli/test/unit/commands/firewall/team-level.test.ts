@@ -3,6 +3,8 @@ import { client } from '../../../mocks/client';
 import firewall from '../../../../src/commands/firewall';
 import { useUser } from '../../../mocks/user';
 import { useTeams } from '../../../mocks/team';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
+import { quoteArg } from '../../../../src/util/flags/quote-arg';
 import {
   useListTeamFirewallConfigs,
   usePatchTeamDraft,
@@ -46,7 +48,7 @@ describe('firewall --team-level', () => {
   it('rejects --team-level combined with --project', async () => {
     client.setArgv('firewall', 'diff', '--team-level', '--project', 'foo');
     const exitCode = await firewall(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'Cannot specify both --team-level and --project'
     );
@@ -100,6 +102,7 @@ describe('firewall --team-level', () => {
     const exitCode = await firewall(client);
     expect(exitCode).toEqual(0);
     await expect(client.stderr).toOutput('Test Rule 1');
+    expect(client.stderr.getFullOutput()).not.toContain('bot-protection');
     expect(capturedRequests.teamConfigQuery?.teamId).toBe('team_dummy');
   });
 
@@ -245,6 +248,65 @@ describe('firewall --team-level', () => {
     expect(exitCode).toEqual(1);
     await expect(client.stderr).toOutput(
       'You need to be a team owner to manage the team-level firewall for'
+    );
+  });
+
+  it('turns a Priority project 401 into an upsell', async () => {
+    useTeamConfigError(
+      401,
+      'unauthorized',
+      'This feature requires a Priority project'
+    );
+
+    client.setArgv('firewall', 'rules', 'list', '--team-level');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+    const output = client.stderr.getFullOutput();
+    const team = teamCache.get('team_dummy');
+    expect(output).toContain(
+      `This rule requires a Priority project on team ${team?.slug}`
+    );
+    expect(output).toContain(
+      `project priority enable <project> --scope ${quoteArg(team?.slug ?? '')}`
+    );
+    expect(output).not.toContain(`project priority enable ${team?.slug}`);
+    expect(output).not.toContain('--project');
+    expect(output).not.toContain('(401)');
+  });
+
+  it('returns a structured Priority error with --json', async () => {
+    useTeamConfigError(
+      401,
+      'unauthorized',
+      'This feature requires a Priority project'
+    );
+
+    client.setArgv('firewall', 'rules', 'list', '--team-level', '--json');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    const team = teamCache.get('team_dummy');
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'plan_upgrade_required',
+      userActionRequired: true,
+      scope: team?.slug,
+    });
+    expect(payload.data.project).toBeNull();
+    expect(payload.data.team).toMatchObject({
+      id: 'team_dummy',
+      slug: team?.slug,
+    });
+    expect(payload.next?.[0]?.command).toContain(
+      `project priority enable <project> --scope ${quoteArg(team?.slug ?? '')}`
+    );
+    expect(payload.next?.[0]?.command).not.toContain('--project');
+    expect(payload.next?.[0]?.command).not.toContain('--non-interactive');
+    expect(payload.message).toContain(
+      `This rule requires a Priority project on team ${team?.slug}`
+    );
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'This rule requires a Priority project'
     );
   });
 

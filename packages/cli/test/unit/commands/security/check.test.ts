@@ -180,7 +180,7 @@ describe('security', () => {
       useTeamScope();
       client.setArgv('security', 'check', 'not-a-check');
       const exitCode = await security(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput(
         'Unknown check: not-a-check. Valid slugs:'
       );
@@ -213,7 +213,7 @@ describe('security', () => {
       client.nonInteractive = true;
       client.setArgv('security', 'check', 'not-a-check');
       await security(client);
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(exitSpy).toHaveBeenCalledWith(2);
       await expect(client.stdout).toOutput('"reason": "invalid_arguments"');
       exitSpy.mockRestore();
     });

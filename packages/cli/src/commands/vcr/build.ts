@@ -52,7 +52,7 @@ export default async function build(
   } catch (err) {
     emitVcrArgParseError(client, err, 'vcr build <engine> [path] [name[:tag]]');
     printError(err);
-    return 1;
+    return 2;
   }
 
   // Positionals are `vcr build <engine> [path] [name]`; drop the first two.
@@ -88,7 +88,7 @@ export default async function build(
           },
         ],
       },
-      1
+      2
     );
     return outputError(client, false, 'MISSING_ARGUMENTS', message);
   }
@@ -133,7 +133,7 @@ export default async function build(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: parsed.error,
       },
-      1
+      2
     );
     return outputError(client, false, 'INVALID_ARGUMENTS', parsed.error);
   }
@@ -147,7 +147,7 @@ export default async function build(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: validationError,
       },
-      1
+      2
     );
     return outputError(client, false, 'INVALID_ARGUMENTS', validationError);
   }

@@ -12,6 +12,10 @@ interface GetPackagePathOptions {
   fs: DetectorFilesystem;
 }
 
+export interface GetWorkspacePatternsOptions extends GetPackagePathOptions {
+  type: Workspace['type'];
+}
+
 export interface GetWorkspacePackagePathsOptions extends GetPackagePathOptions {
   fs: DetectorFilesystem;
   workspace: Workspace;
@@ -26,22 +30,13 @@ export async function getWorkspacePackagePaths({
 
   let results: string[] = [];
 
-  switch (type) {
-    case 'yarn':
-    case 'npm':
-      results = await getPackageJsonWorkspacePackagePaths({ fs: workspaceFs });
-      break;
-    case 'pnpm':
-      results = await getPnpmWorkspacePackagePaths({ fs: workspaceFs });
-      break;
-    case 'nx':
-      results = await getNxWorkspacePackagePaths({ fs: workspaceFs });
-      break;
-    case 'rush':
-      results = await getRushWorkspacePackagePaths({ fs: workspaceFs });
-      break;
-    default:
-      throw new Error(`Unknown workspace implementation: ${type}`);
+  if (type === 'nx') {
+    results = await getNxWorkspacePackagePaths({ fs: workspaceFs });
+  } else if (type === 'rush') {
+    results = await getRushWorkspacePackagePaths({ fs: workspaceFs });
+  } else {
+    const patterns = await getWorkspacePatterns({ fs: workspaceFs, type });
+    results = await getPackagePaths(patterns, workspaceFs);
   }
 
   return results.map(packagePath => {
@@ -99,23 +94,32 @@ async function getPackagePaths(
   ).flat();
 }
 
-async function getPackageJsonWorkspacePackagePaths({
+export async function getWorkspacePatterns({
   fs,
-}: GetPackagePathOptions): Promise<string[]> {
+  type,
+}: GetWorkspacePatternsOptions): Promise<string[]> {
+  const stringPatterns = (value: unknown): string[] =>
+    Array.isArray(value)
+      ? value.filter(
+          (pattern): pattern is string => typeof pattern === 'string'
+        )
+      : [];
+
+  if (type === 'pnpm') {
+    const pnpmWorkspaceAsBuffer = await fs.readFile('pnpm-workspace.yaml');
+    const { packages = [] } = yaml.load(
+      pnpmWorkspaceAsBuffer.toString()
+    ) as PnpmWorkspaces;
+    return stringPatterns(packages);
+  }
+
   const packageJsonAsBuffer = await fs.readFile('package.json');
   const { workspaces } = JSON.parse(
     packageJsonAsBuffer.toString()
   ) as PackageJsonWithWorkspace;
-
-  let packages: string[] = [];
-
-  if (Array.isArray(workspaces)) {
-    packages = workspaces;
-  } else {
-    packages = workspaces?.packages ?? [];
-  }
-
-  return getPackagePaths(packages, fs);
+  return stringPatterns(
+    Array.isArray(workspaces) ? workspaces : workspaces?.packages
+  );
 }
 
 async function getNxWorkspacePackagePaths({
@@ -126,17 +130,6 @@ async function getNxWorkspacePackagePaths({
   const { projects } = JSON.parse(nxWorkspaceJsonAsBuffer.toString());
 
   const packages: string[] = Object.values(projects);
-  return getPackagePaths(packages, fs);
-}
-
-async function getPnpmWorkspacePackagePaths({
-  fs,
-}: GetPackagePathOptions): Promise<string[]> {
-  const pnpmWorkspaceAsBuffer = await fs.readFile('pnpm-workspace.yaml');
-  const { packages = [] } = yaml.load(
-    pnpmWorkspaceAsBuffer.toString()
-  ) as PnpmWorkspaces;
-
   return getPackagePaths(packages, fs);
 }
 

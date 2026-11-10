@@ -32,7 +32,7 @@ export default async function add(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags } = parsedArgs;
   telemetry.trackCliArgumentConnector(args[0]);
@@ -43,7 +43,7 @@ export default async function add(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   const connector = args[0];
@@ -51,19 +51,19 @@ export default async function add(
     output.error(
       'Missing connector ID or UID. Usage: vercel connect contacts add <connector> --phone-number <phone-number>'
     );
-    return 1;
+    return 2;
   }
 
   const phoneNumber = flags['--phone-number'];
   if (!phoneNumber) {
     output.error('Missing phone number. Provide one with `--phone-number`.');
-    return 1;
+    return 2;
   }
   if (!/^\+[1-9]\d{1,14}$/.test(phoneNumber)) {
     output.error(
       'Invalid phone number. Provide an E.164 number (e.g. +12025551234).'
     );
-    return 1;
+    return 2;
   }
 
   await selectConnexTeam(client, 'Select the team for this connector');

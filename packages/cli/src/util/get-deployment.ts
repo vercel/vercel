@@ -6,6 +6,21 @@ import {
   isAPIError,
 } from './errors-ts';
 import type { Deployment } from '@vercel-internals/types';
+import type { BuildCacheSummary } from './deploy/build-cache-summary';
+
+export type DeploymentWithBuildUsage = Deployment & {
+  buildCacheSummary?: BuildCacheSummary | null;
+  duration?: {
+    startTime?: number;
+    endTime?: number;
+    endTimeCapped?: number;
+    timeToReady?: number;
+    timeToContainerExit?: number;
+    timeToContainerExitCapped?: number;
+    timeForBilling?: number;
+    cpuTimeForBilling?: number;
+  };
+};
 import mapCertError from './certs/map-cert-error';
 import toHost from './to-host';
 
@@ -21,13 +36,13 @@ export default async function getDeployment(
   client: Client,
   contextName: string,
   hostOrId: string
-): Promise<Deployment> {
+): Promise<DeploymentWithBuildUsage> {
   if (hostOrId.includes('.')) {
     hostOrId = toHost(hostOrId);
   }
 
   try {
-    return await client.fetch<Deployment>(
+    return await client.fetch<DeploymentWithBuildUsage>(
       `/v13/deployments/${encodeURIComponent(hostOrId)}`
     );
   } catch (err: unknown) {

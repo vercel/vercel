@@ -2,8 +2,14 @@ import ms from 'ms';
 import chalk from 'chalk';
 import format from 'date-fns/format';
 
+function isMissingDate(
+  value?: number | string | null
+): value is null | undefined | '' {
+  return value === undefined || value === null || value === '';
+}
+
 export default function formatDate(dateStrOrNumber?: number | string | null) {
-  if (!dateStrOrNumber) {
+  if (isMissingDate(dateStrOrNumber)) {
     return chalk.gray('-');
   }
 
@@ -22,7 +28,7 @@ export default function formatDate(dateStrOrNumber?: number | string | null) {
 export function formatDateWithoutTime(
   dateStrOrNumber?: number | string | null
 ) {
-  if (!dateStrOrNumber) {
+  if (isMissingDate(dateStrOrNumber)) {
     return chalk.gray('-');
   }
 

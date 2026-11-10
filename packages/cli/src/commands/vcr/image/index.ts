@@ -8,11 +8,14 @@ import {
 } from '../../../util/agent-output';
 import { AGENT_REASON } from '../../../util/agent-output-constants';
 import type { VcrTelemetryClient } from '../../../util/telemetry/commands/vcr';
+import { warnDeprecatedSubcommand } from '../../../util/warn-deprecated-subcommand';
+import { getCommandAliases } from '../..';
+import { imageRmSubcommand } from './command';
 
 const IMAGE_CONFIG = {
   ls: ['ls', 'list'],
   inspect: ['inspect', 'get'],
-  rm: ['rm', 'remove', 'delete'],
+  delete: getCommandAliases(imageRmSubcommand),
 };
 
 export default async function image(
@@ -20,7 +23,10 @@ export default async function image(
   argv: string[],
   telemetry: VcrTelemetryClient
 ): Promise<number> {
-  const { subcommand, args } = getSubcommand(argv, IMAGE_CONFIG);
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
+    argv,
+    IMAGE_CONFIG
+  );
 
   if (subcommand == null) {
     const message =
@@ -43,18 +49,28 @@ export default async function image(
           },
         ],
       },
-      1
+      2
     );
     output.error(`${message} Run \`vercel vcr image --help\`.`);
-    return 1;
+    return 2;
   }
 
   switch (subcommand) {
     case 'ls':
       return (await import('./ls')).default(client, args, telemetry);
     case 'inspect':
+      if (subcommandOriginal === 'get') {
+        warnDeprecatedSubcommand(client, 'vcr image get', 'vcr image inspect');
+      }
       return (await import('./inspect')).default(client, args, telemetry);
-    case 'rm':
+    case 'delete':
+      if (subcommandOriginal === 'remove') {
+        warnDeprecatedSubcommand(
+          client,
+          'vcr image remove',
+          'vcr image delete'
+        );
+      }
       return (await import('./rm')).default(client, args, telemetry);
     default:
       output.error(`Unhandled image subcommand: ${subcommand}`);

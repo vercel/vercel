@@ -57,6 +57,11 @@ vercel curl /api/endpoint -- --header "Content-Type: application/json" --request
 vercel curl https://your-project-abc123.vercel.app/api/hello
 ```
 
+For an explicit deployment URL or `--deployment` ID, the CLI discovers the
+owning team from the teams your credentials can access. You do not need to
+switch teams or link the current directory first. Discovery skips teams that
+require SSO authentication; an explicit `--scope` limits the lookup to that team.
+
 ### Basic GET Request
 
 ```bash

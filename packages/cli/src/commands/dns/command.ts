@@ -3,9 +3,14 @@ import {
   formatOption,
   jsonOption,
   limitOption,
-  nextOption,
+  nextCursorOption,
   yesOption,
 } from '../../util/arg-common';
+
+const recordTypesHelp = {
+  title: 'Record Types',
+  body: ['A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT'],
+} as const;
 
 export const importSubcommand = {
   name: 'import',
@@ -37,14 +42,14 @@ export const listSubcommand = {
       required: false,
     },
   ],
-  options: [limitOption, nextOption],
+  options: [limitOption, nextCursorOption, formatOption, jsonOption],
   examples: [],
 } as const;
 
 export const addSubcommand = {
   name: 'add',
   aliases: [],
-  description: 'Add a new DNS entry (see below for examples)',
+  description: 'Add a DNS record',
   arguments: [
     {
       name: 'domain',
@@ -53,10 +58,12 @@ export const addSubcommand = {
     {
       name: 'details',
       required: true,
+      description: 'Record name, type, and value',
     },
   ],
   options: [],
   examples: [],
+  helpSections: [recordTypesHelp],
 } as const;
 
 export const inspectSubcommand = {
@@ -209,7 +216,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Update an SRV record',
-      value: `${packageName} dns update rec_1a2b3c4d5e6f --srv-priority 10 --srv-weight 0 --srv-port 389 --srv-target zeit.party`,
+      value: `${packageName} dns update rec_1a2b3c4d5e6f --srv-priority 10 --srv-weight 0 --srv-port 389 --srv-target example.net`,
     },
   ],
 } as const;
@@ -217,7 +224,7 @@ export const updateSubcommand = {
 export const dnsCommand = {
   name: 'dns',
   aliases: [],
-  description: 'Interact with DNS entries for a project',
+  description: 'Manage DNS records for your domains',
   arguments: [],
   subcommands: [
     addSubcommand,
@@ -228,62 +235,64 @@ export const dnsCommand = {
     updateSubcommand,
   ],
   options: [],
+  helpSections: [recordTypesHelp],
   examples: [
     {
       name: 'Add an A record for a subdomain',
-      value: [
-        `${packageName} dns add <DOMAIN> <SUBDOMAIN> <A | AAAA | ALIAS | CNAME | TXT>  <VALUE>`,
-        `${packageName} dns add zeit.rocks api A 198.51.100.100`,
-      ],
+      placeholders: ['<DOMAIN>', '<SUBDOMAIN>', '<VALUE>'],
+      value: `${packageName} dns add <DOMAIN> <SUBDOMAIN> A <VALUE>`,
     },
     {
       name: 'Add an MX record (@ as a name refers to the domain)',
-      value: [
-        `${packageName} dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>`,
-        `${packageName} dns add zeit.rocks '@' MX mail.zeit.rocks 10`,
-      ],
+      placeholders: ['<DOMAIN>', '<RECORD VALUE>', '<PRIORITY>'],
+      value: `${packageName} dns add <DOMAIN> '@' MX <RECORD VALUE> <PRIORITY>`,
     },
     {
       name: 'Add an SRV record',
-      value: [
-        `${packageName} dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>`,
-        `${packageName} dns add zeit.rocks '@' SRV 10 0 389 zeit.party`,
+      placeholders: [
+        '<DOMAIN>',
+        '<NAME>',
+        '<PRIORITY>',
+        '<WEIGHT>',
+        '<PORT>',
+        '<TARGET>',
       ],
+      value: `${packageName} dns add <DOMAIN> <NAME> SRV <PRIORITY> <WEIGHT> <PORT> <TARGET>`,
     },
     {
       name: 'Add a CAA record',
-      value: [
-        `${packageName} dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`,
-        `${packageName} dns add zeit.rocks '@' CAA '0 issue "example.com"'`,
-      ],
+      placeholders: ['<DOMAIN>', '<NAME>', '<FLAGS>', '<TAG>', '<VALUE>'],
+      value: `${packageName} dns add <DOMAIN> <NAME> CAA '<FLAGS> <TAG> "<VALUE>"'`,
     },
     {
-      name: 'Update an existing DNS record using its ID',
-      value: [
-        `${packageName} dns update <ID> --value <VALUE>`,
-        `${packageName} dns update rec_1a2b3c4d5e6f --name api --ttl 300`,
-      ],
+      name: 'Update a DNS record value',
+      placeholders: ['<ID>', '<VALUE>'],
+      value: `${packageName} dns update <ID> --value <VALUE>`,
+    },
+    {
+      name: 'Update a DNS record name and TTL',
+      placeholders: ['<ID>', '<NAME>', '<SECONDS>'],
+      value: `${packageName} dns update <ID> --name <NAME> --ttl <SECONDS>`,
     },
     {
       name: 'Show a DNS record in full using its ID',
-      value: [
-        `${packageName} dns inspect <ID>`,
-        `${packageName} dns inspect rec_1a2b3c4d5e6f`,
-      ],
+      placeholders: ['<ID>'],
+      value: `${packageName} dns inspect <ID>`,
     },
     {
       name: 'Import a Zone file',
-      value: [
-        `${packageName} dns import <DOMAIN> <FILE>`,
-        `${packageName} dns import zeit.rocks ./zonefile.txt`,
-      ],
+      placeholders: ['<DOMAIN>', '<FILE>'],
+      value: `${packageName} dns import <DOMAIN> <FILE>`,
     },
     {
-      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: [
-        `${packageName} dns ls --next 1584722256178`,
-        `${packageName} dns ls zeit.rocks --next 1584722256178`,
-      ],
+      name: 'Get the next page of DNS records',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} dns list --next <CURSOR>`,
+    },
+    {
+      name: 'Get the next page for a domain',
+      placeholders: ['<DOMAIN>', '<CURSOR>'],
+      value: `${packageName} dns list <DOMAIN> --next <CURSOR>`,
     },
   ],
 } as const;

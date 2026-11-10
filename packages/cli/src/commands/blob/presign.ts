@@ -6,6 +6,10 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { parseAccessFlag } from '../../util/blob/access';
 import { blobOpts, type BlobRWToken } from '../../util/blob/token';
+import {
+  withWarnings,
+  type DeprecatedOptionWarning,
+} from '../../util/renamed-option';
 import { resolveBlobValidUntil } from '../../util/blob/validity';
 import {
   hasPresignUploadOnlyFlags,
@@ -22,16 +26,21 @@ function writePresignOutput(params: {
   operation: BlobOperation;
   presignedUrl: string;
   validUntil?: number;
+  warnings: ReadonlyArray<DeprecatedOptionWarning | undefined>;
 }) {
-  const { client, asJson, operation, presignedUrl, validUntil } = params;
+  const { client, asJson, operation, presignedUrl, validUntil, warnings } =
+    params;
   if (asJson) {
     client.stdout.write(
       `${JSON.stringify(
-        {
-          operation,
-          presignedUrl,
-          ...(validUntil !== undefined ? { validUntil } : {}),
-        },
+        withWarnings(
+          {
+            operation,
+            presignedUrl,
+            ...(validUntil !== undefined ? { validUntil } : {}),
+          },
+          warnings
+        ),
         null,
         2
       )}\n`
@@ -44,7 +53,8 @@ function writePresignOutput(params: {
 export default async function presign(
   client: Client,
   argv: string[],
-  auth: BlobRWToken
+  auth: BlobRWToken,
+  warnings: ReadonlyArray<DeprecatedOptionWarning | undefined> = []
 ): Promise<number> {
   const telemetryClient = new BlobPresignTelemetryClient({
     opts: {
@@ -58,7 +68,7 @@ export default async function presign(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -83,7 +93,7 @@ export default async function presign(
 
   if (!pathname) {
     output.error('Missing required argument: pathname');
-    return 1;
+    return 2;
   }
 
   const access = parseAccessFlag(accessFlag);
@@ -104,7 +114,7 @@ export default async function presign(
 
   if (Boolean(delegationTokenFlag) !== Boolean(clientSigningTokenFlag)) {
     output.error(
-      'The --delegation-token and --client-signing-token flags must be passed together. Pass both, or pass neither to issue a token automatically.'
+      'The --delegation-token and --client-signing-token options must be passed together. Pass both, or pass neither to issue a token automatically.'
     );
     return 1;
   }
@@ -126,7 +136,7 @@ export default async function presign(
   if (operation === 'get' || operation === 'head') {
     if (ifMatch) {
       output.error(
-        'The --if-match flag can only be used with --operation put or --operation delete.'
+        'The --if-match option can only be used with --operation put or --operation delete.'
       );
       return 1;
     }
@@ -205,6 +215,7 @@ export default async function presign(
       validUntil:
         ('validUntil' in signedToken ? signedToken.validUntil : undefined) ??
         validity.validUntil,
+      warnings,
     });
     return 0;
   } catch (err) {

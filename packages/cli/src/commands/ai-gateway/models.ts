@@ -36,7 +36,7 @@ export default async function models(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(2);
@@ -49,13 +49,19 @@ export default async function models(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('ai-gateway models', subcommandOriginal);
-    output.print(help(modelsSubcommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(modelsSubcommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: modelsSubcommand,
         columns: client.stderr.columns,
       })
@@ -67,7 +73,7 @@ export default async function models(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway models', subcommandOriginal);
         printHelp(modelsListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
@@ -75,13 +81,18 @@ export default async function models(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway models', subcommandOriginal);
         printHelp(modelsEndpointsSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandEndpoints(subcommandOriginal);
       return endpoints(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(modelsSubcommand, { columns: client.stderr.columns }));
+      output.print(
+        help(modelsSubcommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

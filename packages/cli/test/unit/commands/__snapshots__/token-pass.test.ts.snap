@@ -1,0 +1,199 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`token-pass > renders offline help for 'token-pass' [ '--help' ] 1`] = `
+"▲ vercel token-pass [command] [options]
+Set up a coding agent with Vercel Token Pass
+
+Commands:
+  setup  Set up a coding agent with Vercel Token Pass
+
+Options:
+  --agent <NAME>               Coding agent to configure, repeatable; omit to
+                               pick from the detected agents
+  --agent-config <AGENT=PATH>  Override an agent's config file path, e.g.
+                               claude-code=/path/settings.json (repeatable)
+  -a, --all                    Configure every supported coding agent
+  --amount <USD>               Quota budget in dollars for a newly created key
+                               (minimum 1)
+  --apply <MODE>               How to apply non-interactively: edit (write
+                               files) or prompt (emit an agent prompt on stdout;
+                               requires the macOS Keychain) (default: edit)
+  --base-url <URL>             Override the AI Gateway base URL written into
+                               agent configs (advanced; e.g. a preview
+                               deployment). Written verbatim.
+  --dry-run                    Show what would change without writing any files
+  --expiration <PERIOD>        Expiry for a new key: 7d, 30d, 60d, 90d, 1y, or
+                               none (default: none)
+  --include-byok               Include BYOK usage in the new key quota
+  --key <KEY>                  Use an existing AI Gateway API key instead of
+                               creating one
+  --name <NAME>                Name for a newly created API key
+  --no-backup                  Do not write .bak backups of changed files
+  --no-keychain                Always write the key into config files instead of
+                               the macOS Keychain
+  --no-session-migration       Do not copy existing Codex Desktop sessions for
+                               use with the Vercel AI Gateway provider.
+  --reconfigure                Re-run even if already configured, to rotate the
+                               key or switch team
+  --refresh-period <PERIOD>    Quota refresh cadence for a new key: daily,
+                               weekly, monthly, or none
+  --shell-rc <PATH>            Shell rc file to write the env exports into
+  -y, --yes                    Accept default value for all prompts
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Set up detected coding agents with Vercel Token Pass
+    vercel token-pass
+
+  Set up OpenCode without prompts
+    vercel token-pass --agent opencode --yes
+
+  Preview Token Pass setup
+    vercel token-pass --agent opencode --dry-run
+"
+`;
+
+exports[`token-pass > renders offline help for 'token-pass' [ 'setup', '--help' ] 1`] = `
+"▲ vercel token-pass setup [options]
+Set up a coding agent with Vercel Token Pass
+
+Options:
+  --agent <NAME>               Coding agent to configure, repeatable; omit to
+                               pick from the detected agents
+  --agent-config <AGENT=PATH>  Override an agent's config file path, e.g.
+                               claude-code=/path/settings.json (repeatable)
+  -a, --all                    Configure every supported coding agent
+  --amount <USD>               Quota budget in dollars for a newly created key
+                               (minimum 1)
+  --apply <MODE>               How to apply non-interactively: edit (write
+                               files) or prompt (emit an agent prompt on stdout;
+                               requires the macOS Keychain) (default: edit)
+  --base-url <URL>             Override the AI Gateway base URL written into
+                               agent configs (advanced; e.g. a preview
+                               deployment). Written verbatim.
+  --dry-run                    Show what would change without writing any files
+  --expiration <PERIOD>        Expiry for a new key: 7d, 30d, 60d, 90d, 1y, or
+                               none (default: none)
+  --include-byok               Include BYOK usage in the new key quota
+  --key <KEY>                  Use an existing AI Gateway API key instead of
+                               creating one
+  --name <NAME>                Name for a newly created API key
+  --no-backup                  Do not write .bak backups of changed files
+  --no-keychain                Always write the key into config files instead of
+                               the macOS Keychain
+  --no-session-migration       Do not copy existing Codex Desktop sessions for
+                               use with the Vercel AI Gateway provider.
+  --reconfigure                Re-run even if already configured, to rotate the
+                               key or switch team
+  --refresh-period <PERIOD>    Quota refresh cadence for a new key: daily,
+                               weekly, monthly, or none
+  --shell-rc <PATH>            Shell rc file to write the env exports into
+  -y, --yes                    Accept default value for all prompts
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Set up OpenCode with Vercel Token Pass
+    vercel token-pass setup --agent opencode --yes
+"
+`;
+
+exports[`token-pass > renders offline help for 'tokenpass' [ '--help' ] 1`] = `
+"▲ vercel token-pass [command] [options]
+Set up a coding agent with Vercel Token Pass
+
+Commands:
+  setup  Set up a coding agent with Vercel Token Pass
+
+Options:
+  --agent <NAME>               Coding agent to configure, repeatable; omit to
+                               pick from the detected agents
+  --agent-config <AGENT=PATH>  Override an agent's config file path, e.g.
+                               claude-code=/path/settings.json (repeatable)
+  -a, --all                    Configure every supported coding agent
+  --amount <USD>               Quota budget in dollars for a newly created key
+                               (minimum 1)
+  --apply <MODE>               How to apply non-interactively: edit (write
+                               files) or prompt (emit an agent prompt on stdout;
+                               requires the macOS Keychain) (default: edit)
+  --base-url <URL>             Override the AI Gateway base URL written into
+                               agent configs (advanced; e.g. a preview
+                               deployment). Written verbatim.
+  --dry-run                    Show what would change without writing any files
+  --expiration <PERIOD>        Expiry for a new key: 7d, 30d, 60d, 90d, 1y, or
+                               none (default: none)
+  --include-byok               Include BYOK usage in the new key quota
+  --key <KEY>                  Use an existing AI Gateway API key instead of
+                               creating one
+  --name <NAME>                Name for a newly created API key
+  --no-backup                  Do not write .bak backups of changed files
+  --no-keychain                Always write the key into config files instead of
+                               the macOS Keychain
+  --no-session-migration       Do not copy existing Codex Desktop sessions for
+                               use with the Vercel AI Gateway provider.
+  --reconfigure                Re-run even if already configured, to rotate the
+                               key or switch team
+  --refresh-period <PERIOD>    Quota refresh cadence for a new key: daily,
+                               weekly, monthly, or none
+  --shell-rc <PATH>            Shell rc file to write the env exports into
+  -y, --yes                    Accept default value for all prompts
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Set up detected coding agents with Vercel Token Pass
+    vercel token-pass
+
+  Set up OpenCode without prompts
+    vercel token-pass --agent opencode --yes
+
+  Preview Token Pass setup
+    vercel token-pass --agent opencode --dry-run
+"
+`;
+
+exports[`token-pass > renders offline help for 'tokenpass' [ 'setup', '--help' ] 1`] = `
+"▲ vercel token-pass setup [options]
+Set up a coding agent with Vercel Token Pass
+
+Options:
+  --agent <NAME>               Coding agent to configure, repeatable; omit to
+                               pick from the detected agents
+  --agent-config <AGENT=PATH>  Override an agent's config file path, e.g.
+                               claude-code=/path/settings.json (repeatable)
+  -a, --all                    Configure every supported coding agent
+  --amount <USD>               Quota budget in dollars for a newly created key
+                               (minimum 1)
+  --apply <MODE>               How to apply non-interactively: edit (write
+                               files) or prompt (emit an agent prompt on stdout;
+                               requires the macOS Keychain) (default: edit)
+  --base-url <URL>             Override the AI Gateway base URL written into
+                               agent configs (advanced; e.g. a preview
+                               deployment). Written verbatim.
+  --dry-run                    Show what would change without writing any files
+  --expiration <PERIOD>        Expiry for a new key: 7d, 30d, 60d, 90d, 1y, or
+                               none (default: none)
+  --include-byok               Include BYOK usage in the new key quota
+  --key <KEY>                  Use an existing AI Gateway API key instead of
+                               creating one
+  --name <NAME>                Name for a newly created API key
+  --no-backup                  Do not write .bak backups of changed files
+  --no-keychain                Always write the key into config files instead of
+                               the macOS Keychain
+  --no-session-migration       Do not copy existing Codex Desktop sessions for
+                               use with the Vercel AI Gateway provider.
+  --reconfigure                Re-run even if already configured, to rotate the
+                               key or switch team
+  --refresh-period <PERIOD>    Quota refresh cadence for a new key: daily,
+                               weekly, monthly, or none
+  --shell-rc <PATH>            Shell rc file to write the env exports into
+  -y, --yes                    Accept default value for all prompts
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Set up OpenCode with Vercel Token Pass
+    vercel token-pass setup --agent opencode --yes
+"
+`;
