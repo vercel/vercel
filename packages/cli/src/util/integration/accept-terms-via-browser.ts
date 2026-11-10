@@ -5,8 +5,8 @@ import type Client from '../client';
 import {
   buildCommandWithGlobalFlags,
   buildIntegrationCommandTailFromArgv,
-  outputActionRequired,
   shouldEmitNonInteractiveCommandError,
+  writeActionRequired,
 } from '../agent-output';
 import { AGENT_REASON } from '../agent-output-constants';
 import { packageName } from '../pkg-name';
@@ -17,48 +17,54 @@ import type { Integration, IntegrationInstallation } from './types';
 const POLL_INTERVAL_MS = 2000;
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
+export type BrowserTermsResult =
+  | { status: 'accepted'; installation: IntegrationInstallation }
+  /** The terms URL was handed back as an `action_required` payload. */
+  | { status: 'action_required' }
+  | { status: 'timeout' };
+
 export async function acceptTermsViaBrowser(
   client: Client,
   integration: Integration,
   teamId: string,
   teamSlug: string,
   timeoutMs: number = DEFAULT_TIMEOUT_MS
-): Promise<IntegrationInstallation | null> {
+): Promise<BrowserTermsResult> {
   const url = new URL(
     `https://vercel.com/${encodeURIComponent(teamSlug)}/~/integrations/accept-terms/${encodeURIComponent(integration.slug)}`
   );
   url.searchParams.set('source', 'cli');
 
-  // Non-interactive mode (AI agent): emit structured action_required payload
-  // and exit 1. Done before opening a browser so AI agents / CI don't spawn
-  // one they have no way to interact with.
-  if (shouldEmitNonInteractiveCommandError(client)) {
+  // Without a TTY (coding agents, CI, scripts) nobody is watching a browser
+  // tab, and the caller is blocked until this command exits. Hand back the
+  // terms URL right away instead of opening a browser and polling.
+  // `--non-interactive` gets the same result in a TTY.
+  if (!client.stdin.isTTY || shouldEmitNonInteractiveCommandError(client)) {
     const tail = buildIntegrationCommandTailFromArgv(client.argv);
-    const policyLinks = getMarketplacePolicyLinks(integration);
-    outputActionRequired(
-      client,
-      {
-        status: 'action_required',
-        reason: AGENT_REASON.INTEGRATION_TERMS_ACCEPTANCE_REQUIRED,
-        message: `Accept marketplace terms for "${integration.name}" in your browser before this install can finish. Open verification_uri to start. This command does not wait for acceptance in non-interactive mode.`,
-        verification_uri: url.href,
-        policy_links: policyLinks,
-        userActionRequired: true,
-        hint: `Read policy_links, complete verification_uri in the browser, then retry install from next[]. Confirm with ${packageName} integration installations.`,
-        next: [
-          {
-            command: buildCommandWithGlobalFlags(
-              client.argv,
-              tail,
-              packageName,
-              { prependGlobalFlags: true }
-            ),
-            when: 'Retry install after terms are accepted (browser or dashboard)',
-          },
-        ],
-      },
-      1
-    );
+    writeActionRequired(client, {
+      status: 'action_required',
+      reason: AGENT_REASON.INTEGRATION_TERMS_ACCEPTANCE_REQUIRED,
+      message: `Accept marketplace terms for "${integration.name}" in your browser before this install can finish. Open verification_uri to start. This command does not wait for acceptance without an interactive terminal.`,
+      verification_uri: url.href,
+      policy_links: getMarketplacePolicyLinks(integration),
+      userActionRequired: true,
+      hint: `Read policy_links, complete verification_uri in the browser, then retry install from next[]. Confirm with ${packageName} integration installations.`,
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(client.argv, tail, packageName, {
+            prependGlobalFlags: true,
+          }),
+          when: 'Retry install after terms are accepted (browser or dashboard)',
+        },
+      ],
+    });
+    if (!shouldEmitNonInteractiveCommandError(client)) {
+      output.error(
+        `Marketplace terms for "${integration.name}" must be accepted in a browser before this install can finish.`
+      );
+      output.log(`Accept them here, then run this command again: ${url.href}`);
+    }
+    return { status: 'action_required' };
   }
 
   output.log(
@@ -87,7 +93,7 @@ export async function acceptTermsViaBrowser(
       if (teamInstallation) {
         output.stopSpinner();
         output.success('Terms accepted in browser.');
-        return teamInstallation;
+        return { status: 'accepted', installation: teamInstallation };
       }
     } catch (error) {
       output.debug(`Polling error (will retry): ${error}`);
@@ -98,5 +104,5 @@ export async function acceptTermsViaBrowser(
   output.error(
     'Timed out waiting for terms acceptance. Please try again and accept terms in the browser within 5 minutes.'
   );
-  return null;
+  return { status: 'timeout' };
 }

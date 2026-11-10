@@ -233,14 +233,13 @@ export function omitGlobalFlagsFromArgs(args: string[]): string[] {
 
 /**
  * Returns the `integration …` argv tail without global flags, for suggested retry commands.
+ * `vercel install …` has no `integration` token, so the whole invocation is kept.
  */
 export function buildIntegrationCommandTailFromArgv(argv: string[]): string {
   const args = argv.slice(2);
   const idx = args.indexOf('integration');
-  if (idx === -1) {
-    return 'integration';
-  }
-  return omitGlobalFlagsFromArgs(args.slice(idx)).join(' ');
+  const tail = omitGlobalFlagsFromArgs(idx === -1 ? args : args.slice(idx));
+  return tail.length ? tail.join(' ') : 'integration';
 }
 
 /**

@@ -227,21 +227,25 @@ export async function addAutoProvision(
       // Server declares browser install required (e.g. needs device fingerprint)
       integration.capabilities?.requiresBrowserInstall
     ) {
-      // Browser flow: open browser for terms acceptance, poll for installation
-      const browserInstallation = await acceptTermsViaBrowser(
+      // Browser flow: in a TTY, open browser for terms acceptance and poll
+      // for installation. Without one, hand back the terms URL instead.
+      const termsResult = await acceptTermsViaBrowser(
         client,
         integration,
         team.id,
         contextName
       );
-      if (!browserInstallation) {
+      if (termsResult.status !== 'accepted') {
         telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
           ...baseProps,
-          reason: 'browser_terms_timeout',
+          reason:
+            termsResult.status === 'action_required'
+              ? 'terms_action_required'
+              : 'browser_terms_timeout',
         });
         return 1;
       }
-      browserInstallationId = browserInstallation.id;
+      browserInstallationId = termsResult.installation.id;
     } else {
       // Interactive TTY: keep existing prompt behavior
       const policies = await promptForTermAcceptance(client, integration);

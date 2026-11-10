@@ -410,39 +410,92 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should open browser for terms acceptance in non-TTY mode', async () => {
+    it('should return the terms URL as action_required without opening a browser in non-TTY mode', async () => {
       client.reset();
       useUser();
       const teams = useTeams('team_dummy');
       const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
       client.config.currentTeam = t.id;
 
-      useAutoProvision({
+      // The installation would appear on the next poll, so a run that still
+      // polled would provision. A non-TTY run must not wait for it.
+      const { requestBodies } = useAutoProvision({
         responseKey: 'provisioned',
         withInstallation: false,
         installationAppearsAfterPolls: 1,
       });
 
+      // No TTY and no agent detected (CI, scripts, undetected agents)
       client.stdin.isTTY = false;
-      client.setArgv('integration', 'add', 'acme');
-      const exitCodePromise = integrationCommand(client);
+      client.isAgent = false;
+      client.nonInteractive = false;
+      client.setArgv('integration', 'add', 'acme', '--cwd', '/tmp/proj');
 
-      await expect(client.stderr).toOutput(
-        'Waiting for terms acceptance in browser...'
-      );
-      await expect(client.stderr).toOutput('Terms accepted in browser.');
-      await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
-      );
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
+      expect(requestBodies).toHaveLength(0);
 
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-      expect(openMock).toHaveBeenCalledWith(
-        expect.stringContaining('/~/integrations/accept-terms/acme')
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('integration_terms_acceptance_required');
+      expect(payload.verification_uri).toBe(
+        `https://vercel.com/${encodeURIComponent(t.slug)}/~/integrations/accept-terms/acme?source=cli`
+      );
+      expect(payload.userActionRequired).toBe(true);
+      expect(payload.policy_links?.marketplace_addendum).toMatch(
+        /vercel\.com\/legal\/integration-marketplace-end-users-addendum/
+      );
+      expect(payload.next).toEqual([
+        {
+          command: 'vercel --cwd /tmp/proj integration add acme',
+          when: 'Retry install after terms are accepted (browser or dashboard)',
+        },
+      ]);
+
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        'Marketplace terms for "Acme Integration" must be accepted in a browser'
+      );
+      expect(stderr).toContain(payload.verification_uri);
+      expect(stderr).not.toContain('Waiting for terms acceptance in browser');
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_dropped',
+            value: expect.stringContaining('"reason":"terms_action_required"'),
+          }),
+        ])
       );
     });
 
-    it('should open browser for terms acceptance when AI agent detected', async () => {
+    it('should return the terms URL as action_required for `vercel install` in non-TTY mode', async () => {
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+      });
+
+      client.stdin.isTTY = false;
+      client.setArgv('install', 'acme');
+
+      const exitCode = await install(client);
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
+
+      // The retry command repeats `install`, not a bare `vercel integration`.
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.status).toBe('action_required');
+      expect(payload.next?.[0]?.command).toBe('vercel install acme');
+    });
+
+    it('should open browser for terms acceptance when AI agent detected in a TTY', async () => {
       client.reset();
       useUser();
       const teams = useTeams('team_dummy');
@@ -455,6 +508,7 @@ describe('integration add (auto-provision)', () => {
         installationAppearsAfterPolls: 1,
       });
 
+      client.stdin.isTTY = true;
       client.isAgent = true;
       client.setArgv('integration', 'add', 'acme');
       const exitCodePromise = integrationCommand(client);
@@ -509,7 +563,9 @@ describe('integration add (auto-provision)', () => {
     });
 
     it('should emit action_required JSON and not wait for terms when non-interactive', async () => {
-      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((
+        code?: number
+      ) => {
         throw new Error(`exit:${code ?? 0}`);
       }) as () => never);
       client.reset();
@@ -536,7 +592,11 @@ describe('integration add (auto-provision)', () => {
         '/tmp/proj'
       );
 
-      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      // Returns instead of calling process.exit, so the drop telemetry is
+      // recorded and flushed.
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      expect(exitSpy).not.toHaveBeenCalled();
 
       // The browser must NOT be opened in non-interactive mode — AI agents
       // and CI have no way to interact with it. The URL is delivered via
@@ -564,8 +624,47 @@ describe('integration add (auto-provision)', () => {
       );
       expect(payload.next).toHaveLength(1);
 
+      // Machine mode: the JSON payload is the only result.
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('Terms accepted in browser.');
+      expect(stderr).not.toContain('must be accepted in a browser');
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_dropped',
+            value: expect.stringContaining('"reason":"terms_action_required"'),
+          }),
+        ])
+      );
+    });
+
+    it('should emit action_required JSON for --non-interactive in a TTY', async () => {
+      client.reset();
+      useUser();
+      const teams = useTeams('team_dummy');
+      const t = Array.isArray(teams) ? teams[0] : teams.teams[0];
+      client.config.currentTeam = t.id;
+
+      useAutoProvision({
+        responseKey: 'provisioned',
+        withInstallation: false,
+        installationAppearsAfterPolls: 1,
+      });
+
+      client.stdin.isTTY = true;
+      client.isAgent = true;
+      client.setArgv('integration', 'add', 'acme', '--non-interactive');
+
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
+
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('integration_terms_acceptance_required');
       expect(client.stderr.getFullOutput()).not.toContain(
-        'Terms accepted in browser.'
+        'Waiting for terms acceptance in browser'
       );
     });
 
@@ -600,7 +699,7 @@ describe('integration add (auto-provision)', () => {
         100 // 100ms timeout — will expire almost immediately
       );
 
-      expect(result).toBeNull();
+      expect(result).toEqual({ status: 'timeout' });
       expect(openMock).toHaveBeenCalledWith(
         expect.stringContaining('/~/integrations/accept-terms/acme')
       );

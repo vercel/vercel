@@ -9,6 +9,7 @@ import {
   buildCommandWithScope,
   buildCommandWithYes,
   buildCommandWithGlobalFlags,
+  buildIntegrationCommandTailFromArgv,
   getGlobalFlagsFromArgv,
   getPreservedArgsForEnvAdd,
   getPreservedArgsForEnvPull,
@@ -594,6 +595,44 @@ describe('getGlobalFlagsFromArgv', () => {
       '--non-interactive',
       '--yes',
     ]);
+  });
+});
+
+describe('buildIntegrationCommandTailFromArgv', () => {
+  it('keeps the `integration …` tail without global flags', () => {
+    expect(
+      buildIntegrationCommandTailFromArgv([
+        'node',
+        'vc.js',
+        '--cwd',
+        '/tmp/p',
+        'integration',
+        'add',
+        'neon',
+        '--non-interactive',
+      ])
+    ).toBe('integration add neon');
+  });
+
+  it('keeps the whole invocation for `vercel install`', () => {
+    expect(
+      buildIntegrationCommandTailFromArgv([
+        'node',
+        'vc.js',
+        '--scope',
+        'my-team',
+        'install',
+        'neon',
+        '--plan',
+        'free',
+      ])
+    ).toBe('install neon --plan free');
+  });
+
+  it('falls back to `integration` when argv has no command', () => {
+    expect(buildIntegrationCommandTailFromArgv(['node', 'vc.js'])).toBe(
+      'integration'
+    );
   });
 });
 
