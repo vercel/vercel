@@ -8,6 +8,8 @@ import {
   getNextConfig,
   getServerlessPages,
   normalizePrefetches,
+  getDynamicRoutes,
+  localizeDynamicRoutes,
   getDefaultNextDeploymentId,
   getMaxUncompressedLambdaSize,
   getGroupMaxUncompressedLambdaSize,
@@ -473,6 +475,77 @@ describe('normalizePrefetches', () => {
       'foo/index.prefetch.rsc',
       'foo/bar/baz.prefetch.rsc',
     ]);
+  });
+});
+
+describe('getDynamicRoutes segment prefetch fallback', () => {
+  const prerenderManifest = {
+    bypassToken: null,
+    staticRoutes: {},
+    blockingFallbackRoutes: {},
+    fallbackRoutes: {},
+    omittedRoutes: {},
+    notFoundRoutes: [],
+    isLocalePrefixed: false,
+  } as any;
+
+  async function getRoutes(entryDirectory: string, basePath: string) {
+    const routesManifest = {
+      version: 3,
+      basePath,
+      pages404: true,
+      redirects: [],
+      rewrites: [],
+      headers: [],
+      staticRoutes: [],
+      dynamicRoutes: [
+        {
+          page: '/[slug]',
+          regex: '^/(?<nxtPslug>[^/]+?)(?:/)?$',
+          namedRegex: '^/(?<nxtPslug>[^/]+?)(?:/)?$',
+          routeKeys: { nxtPslug: 'nxtPslug' },
+        },
+      ],
+    } as any;
+
+    const routes = await getDynamicRoutes({
+      entryPath: '/',
+      entryDirectory,
+      dynamicPages: [],
+      routesManifest,
+      isServerMode: true,
+      isAppPPREnabled: false,
+      isAppClientSegmentCacheEnabled: true,
+      isAppClientParamParsingEnabled: false,
+      prerenderManifest,
+    });
+
+    return localizeDynamicRoutes(
+      routes,
+      basePath,
+      entryDirectory,
+      {},
+      prerenderManifest,
+      routesManifest,
+      true
+    );
+  }
+
+  const segmentSrc = '(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)';
+
+  it('keeps the basePath in the dest of the segment to .rsc rewrite', async () => {
+    const routes = await getRoutes('docs', '/docs');
+    const route = routes.find(r => r.src.includes(segmentSrc));
+    expect(route).toMatchObject({
+      src: `^/docs/${segmentSrc}(?:/)?$`,
+      dest: '/docs/$path.rsc',
+    });
+  });
+
+  it('does not add a prefix without a basePath', async () => {
+    const routes = await getRoutes('.', '');
+    const route = routes.find(r => r.src.includes(segmentSrc));
+    expect(route?.dest).toBe('/$path.rsc');
   });
 });
 

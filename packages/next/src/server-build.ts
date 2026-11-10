@@ -2553,6 +2553,27 @@ export async function serverBuild({
       // with that routing section
       ...afterFilesRewrites,
 
+      // when a basePath is used the `/index.rsc` normalization above leaves
+      // the bare basePath (e.g. `/docs`), which doesn't resolve to the
+      // `index.rsc` output, so restore it for RSC requests
+      ...(appPathRoutesManifest && entryDirectory && entryDirectory !== '.'
+        ? [
+            {
+              src: `^${path.posix.join('/', entryDirectory)}/?$`,
+              has: [
+                {
+                  type: 'header',
+                  key: rscHeader,
+                  value: '1',
+                },
+              ],
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              continue: true,
+              override: true,
+            },
+          ]
+        : []),
+
       // ensure non-normalized /.rsc from rewrites is handled
       ...(appPathRoutesManifest
         ? [
