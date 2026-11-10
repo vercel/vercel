@@ -821,6 +821,39 @@ const autoProvisionResponses: Record<
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
   },
+  no_eligible_plan: {
+    kind: 'unknown',
+    reason: 'no_eligible_plan',
+    error_message:
+      'Acme Product has no free plan available for this team, for example because the free tier is already in use. Choose a paid plan to continue.',
+    plans: [
+      {
+        id: 'pro',
+        name: 'Pro',
+        type: 'subscription',
+        description: 'Pro plan',
+        cost: '$20.00/month',
+      },
+      {
+        id: 'enterprise_v2',
+        name: 'Enterprise',
+        type: 'subscription',
+        description: 'Enterprise plan',
+      },
+    ],
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installation: { id: 'acme-install' },
+  },
+  no_eligible_plan_without_plans: {
+    kind: 'unknown',
+    reason: 'no_eligible_plan',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installation: { id: 'acme-install' },
+  },
   multiple_installations: {
     kind: 'unknown',
     reason: 'multiple_installations',

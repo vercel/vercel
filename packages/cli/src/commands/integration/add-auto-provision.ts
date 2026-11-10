@@ -7,6 +7,8 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import getScope from '../../util/get-scope';
 import indent from '../../util/output/indent';
+import { remoteText } from '../../util/output/remote-text';
+import { quoteArg } from '../../util/flags/quote-arg';
 import { autoProvisionResource } from '../../util/integration/auto-provision-resource';
 import { resolveAndFetchIntegration } from '../../util/integration/fetch-integration';
 import { fetchInstallations } from '../../util/integration/fetch-installations';
@@ -491,6 +493,16 @@ export async function addAutoProvision(
     if (options.environments?.length) {
       url.searchParams.set('environment', options.environments.join(','));
     }
+    if (fallback.reason === 'no_eligible_plan') {
+      const slug =
+        integration.products.length > 1
+          ? `${integration.slug}/${product.slug}`
+          : integration.slug;
+      return handleNoEligiblePlan(client, fallback, url, {
+        slug,
+        metadata: options.metadata ?? [],
+      });
+    }
     const setupMessage = fallback.error_message
       ? `Additional setup required: ${fallback.error_message}`
       : 'Additional setup required.';
@@ -788,4 +800,89 @@ export async function addAutoProvision(
   }
 
   return setupResult.exitCode;
+}
+
+/**
+ * The integration has no free plan for this team, so a person must choose a
+ * paid one: with `--billing-plan`, which provisions directly when a payment
+ * method is on file, or in the browser.
+ */
+function handleNoEligiblePlan(
+  client: Client,
+  fallback: AutoProvisionFallback,
+  url: URL,
+  { slug, metadata }: { slug: string; metadata: string[] }
+): number {
+  const plans = (fallback.plans ?? []).map(plan => ({
+    id: remoteText(plan.id),
+    name: remoteText(plan.name),
+    ...(plan.cost ? { cost: remoteText(plan.cost) } : {}),
+  }));
+  const remoteMessage = fallback.error_message
+    ? remoteText(fallback.error_message)
+    : undefined;
+  const headline = `Can't provision ${slug} on a free plan. None is available to this team.`;
+  // Plans can depend on metadata such as the region, so keep it.
+  const planCommand = buildCommandWithGlobalFlags(
+    client.argv,
+    [
+      'integration add',
+      slug,
+      ...metadata.map(entry => `--meta ${quoteArg(entry)}`),
+      '--billing-plan <BILLING_PLAN>',
+    ].join(' '),
+    packageName,
+    { prependGlobalFlags: true }
+  );
+
+  outputActionRequired(client, {
+    status: 'action_required',
+    reason: AGENT_REASON.INTEGRATION_SETUP_REQUIRED,
+    message: `${headline} A person must choose a paid plan, from data.plans or in the browser at verification_uri. This command does not wait for it in non-interactive mode.`,
+    verification_uri: url.href,
+    userActionRequired: true,
+    hint: 'Ask the user which paid plan to use before running next[0]. It starts a paid plan.',
+    data: { plans, ...(remoteMessage ? { remoteMessage } : {}) },
+    next: [
+      ...(plans.length
+        ? [
+            {
+              command: planCommand,
+              when: 'Only after a person chooses a plan from data.plans. Provisions directly unless payment is needed, which returns a URL to pay in the browser',
+            },
+          ]
+        : []),
+      {
+        command: buildCommandWithGlobalFlags(
+          client.argv,
+          'integration list',
+          packageName,
+          { prependGlobalFlags: true }
+        ),
+        when: 'Confirm the resource exists after a plan is chosen in the browser',
+      },
+    ],
+  });
+
+  output.error(headline);
+  if (remoteMessage) {
+    output.print(`  Vercel API: ${remoteMessage}\n`);
+  }
+  if (plans.length) {
+    const idWidth = Math.max(...plans.map(plan => plan.id.length));
+    output.print('  Paid plans:\n');
+    for (const plan of plans) {
+      const cost = plan.cost ? ` (${plan.cost})` : '';
+      output.print(`    ${plan.id.padEnd(idWidth)}  ${plan.name}${cost}\n`);
+    }
+    output.print(
+      `\nTo provision a paid plan, run this command with its ID:\n    ${planCommand}\n\n`
+    );
+  }
+  output.log('Opening browser to choose a plan…');
+  output.log(`Visit this URL if the browser does not open: ${url.href}`);
+  open(url.href).catch((err: unknown) =>
+    output.debug(`Failed to open browser: ${err}`)
+  );
+  return 1;
 }

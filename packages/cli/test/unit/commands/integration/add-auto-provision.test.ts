@@ -753,6 +753,106 @@ describe('integration add (auto-provision)', () => {
       expect(payload.next?.[0]?.command).toContain('integration list');
     });
 
+    it('should explain no_eligible_plan and list the paid plans', async () => {
+      useAutoProvision({ responseKey: 'no_eligible_plan' });
+
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        "Error: Can't provision acme on a free plan. None is available to this team."
+      );
+      await expect(client.stderr).toOutput(
+        '  Vercel API: Acme Product has no free plan available for this team, for example because the free tier is already in use. Choose a paid plan to continue.'
+      );
+      await expect(client.stderr).toOutput(
+        '  Paid plans:\n' +
+          '    pro            Pro ($20.00/month)\n' +
+          '    enterprise_v2  Enterprise\n'
+      );
+      await expect(client.stderr).toOutput(
+        "    vercel integration add acme --meta 'region=us-east-1' --billing-plan <BILLING_PLAN>"
+      );
+      await expect(client.stderr).toOutput(
+        'Visit this URL if the browser does not open: https://vercel.com/acme/~/integrations/checkout/acme?'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).toHaveBeenCalledTimes(1);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'Additional setup required'
+      );
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_web_fallback',
+            value: expect.stringContaining('"reason":"no_eligible_plan"'),
+          }),
+        ])
+      );
+    });
+
+    it('should emit the paid plans as action_required JSON when non-interactive', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      useAutoProvision({ responseKey: 'no_eligible_plan' });
+
+      client.nonInteractive = true;
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+
+      expect(openMock).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload).toMatchObject({
+        status: 'action_required',
+        reason: 'integration_setup_required',
+        userActionRequired: true,
+        data: {
+          plans: [
+            { id: 'pro', name: 'Pro', cost: '$20.00/month' },
+            { id: 'enterprise_v2', name: 'Enterprise' },
+          ],
+          remoteMessage: expect.stringContaining(
+            'has no free plan available for this team'
+          ),
+        },
+      });
+      expect(payload.message).toContain("Can't provision acme on a free plan.");
+      expect(payload.message).not.toContain('Acme Product');
+      expect(payload.verification_uri).toMatch(
+        /^https:\/\/vercel\.com\/acme\/~\/integrations\/checkout\/acme\?/
+      );
+      expect(payload.next[0].command).toContain(
+        "integration add acme --meta 'region=us-east-1' --billing-plan <BILLING_PLAN>"
+      );
+      expect(payload.next[1].command).toContain('integration list');
+      expect(payload.hint).toContain('Ask the user which paid plan to use');
+    });
+
+    it('should hand off to the browser for no_eligible_plan without a plan list', async () => {
+      useAutoProvision({ responseKey: 'no_eligible_plan_without_plans' });
+
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        "Error: Can't provision acme on a free plan. None is available to this team."
+      );
+      await expect(client.stderr).toOutput(
+        'Visit this URL if the browser does not open: https://vercel.com/acme/~/integrations/checkout/acme?'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).toHaveBeenCalledTimes(1);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('Paid plans:');
+      expect(stderr).not.toContain('--billing-plan');
+    });
+
     it('should forward --metadata to browser fallback URL', async () => {
       useAutoProvision({ responseKey: 'metadata' });
 

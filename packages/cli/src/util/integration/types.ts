@@ -221,6 +221,14 @@ interface AutoProvisionInstallationInfo {
   status?: string;
 }
 
+interface AutoProvisionFallbackPlan {
+  id: string;
+  name: string;
+  type?: string;
+  description?: string;
+  cost?: string;
+}
+
 export interface AutoProvisionFallback {
   kind: string;
   reason?: string;
@@ -230,6 +238,8 @@ export interface AutoProvisionFallback {
   product: AutoProvisionProduct;
   installation?: { id: string };
   installations?: AutoProvisionInstallationInfo[];
+  /** Enabled plans to choose from when `reason` is `no_eligible_plan`. */
+  plans?: AutoProvisionFallbackPlan[];
 }
 
 export type AutoProvisionResult =
