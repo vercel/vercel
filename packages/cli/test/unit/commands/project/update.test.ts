@@ -1753,6 +1753,34 @@ describe('project update', () => {
       ).toBeUndefined();
     });
 
+    it('applies --function-cpu with --yes without a TTY', async () => {
+      useScope('pro');
+      useSettingsProject({}, body => {
+        expect(body).toEqual({
+          resourceConfig: { functionDefaultMemoryType: 'performance' },
+        });
+      });
+      const fetchSpy = vi.spyOn(client, 'fetch');
+      client.stdin.isTTY = false;
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--function-cpu',
+        'performance',
+        '--yes'
+      );
+
+      await expect(project(client)).resolves.toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain(
+        'must be confirmed in an interactive terminal'
+      );
+      expect(
+        fetchSpy.mock.calls.find(([, options]) => options?.method === 'PATCH')
+      ).toBeDefined();
+    });
+
     it('does not let --yes bypass charge-sensitive updates without a TTY', async () => {
       useScope('pro');
       useSettingsProject({});
@@ -1763,8 +1791,8 @@ describe('project update', () => {
         'project',
         'update',
         'my-project',
-        '--function-cpu',
-        'performance',
+        '--build-machine',
+        'turbo',
         '--yes'
       );
 

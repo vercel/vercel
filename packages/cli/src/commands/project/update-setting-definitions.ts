@@ -328,7 +328,8 @@ export const advancedSettingDefinitions: readonly AdvancedSettingDefinition[] =
       target: 'resourceConfig',
       field: 'functionDefaultMemoryType',
       requiresPaidPlan: () => true,
-      hasCostImpact: () => true,
+      // Function CPU is a first-party runtime setting, not a purchase: like
+      // other project settings, `--yes` applies it without a terminal prompt.
     },
     {
       key: 'buildMachineType',
