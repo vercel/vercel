@@ -1629,9 +1629,18 @@ describe('integration add (auto-provision)', () => {
   });
 
   describe('--metadata flag', () => {
+    let requestBodies: ReturnType<typeof useAutoProvision>['requestBodies'];
+
     beforeEach(() => {
-      useAutoProvision({ responseKey: 'provisioned' });
+      ({ requestBodies } = useAutoProvision({ responseKey: 'provisioned' }));
     });
+
+    const droppedEvent = () => {
+      const event = client.telemetryEventStore.readonlyEvents.find(
+        e => e.key === 'output:marketplace_install_flow_dropped'
+      );
+      return event ? JSON.parse(String(event.value)) : undefined;
+    };
 
     it('should error on invalid metadata value before prompting for resource name', async () => {
       client.setArgv(
@@ -1648,7 +1657,27 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should error on unknown metadata key', async () => {
+    it('should suggest the closest value and record the key for an invalid value', async () => {
+      client.setArgv('integration', 'add', 'acme', '--meta', 'region=us-east');
+      const exitCode = await integrationCommand(client);
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Metadata "region" must be one of: us-west-1, us-east-1, got: "us-east". Did you mean "us-east-1"?'
+      );
+      expect(requestBodies).toHaveLength(0);
+      expect(droppedEvent()).toMatchObject({
+        reason: 'metadata_parse_error',
+        metadata_error: 'invalid_value',
+        metadata_key: 'region',
+      });
+      // The value is never sent
+      for (const event of client.telemetryEventStore.readonlyEvents) {
+        expect(String(event.value)).not.toContain('us-east"');
+      }
+    });
+
+    it('should warn about and ignore an unknown key when required fields are satisfied', async () => {
+      // acme's only required field, region, has a default
       client.setArgv(
         'integration',
         'add',
@@ -1656,11 +1685,112 @@ describe('integration add (auto-provision)', () => {
         '--metadata',
         'unknown=value'
       );
+      const exitCodePromise = integrationCommand(client);
+      await expect(client.stderr).toOutput(
+        'Ignoring unknown metadata key: "unknown". Valid keys: region'
+      );
+      await expect(client.stderr).toOutput('successfully provisioned');
+      expect(await exitCodePromise).toEqual(0);
+
+      expect(requestBodies).toHaveLength(1);
+      expect((requestBodies[0] as Record<string, unknown>).metadata).toEqual(
+        {}
+      );
+      expect(droppedEvent()).toBeUndefined();
+    });
+
+    it('should send the valid keys and suggest a fix for the ignored one', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--meta',
+        'region=iad1',
+        '--meta',
+        'auht=true'
+      );
+      const exitCodePromise = integrationCommand(client);
+      await expect(client.stderr).toOutput(
+        'Ignoring unknown metadata key: "auht". Did you mean "auth"? Valid keys: region, auth, readRegions'
+      );
+      await expect(client.stderr).toOutput('successfully provisioned');
+      expect(await exitCodePromise).toEqual(0);
+
+      expect((requestBodies[0] as Record<string, unknown>).metadata).toEqual({
+        region: 'iad1',
+      });
+    });
+
+    it('should error on an unknown key when a required field is missing', async () => {
+      // acme-full-schema requires region, which has no default
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--meta',
+        'regoin=iad1'
+      );
+      const exitCodePromise = integrationCommand(client);
+      await expect(client.stderr).toOutput(
+        'Error: Unknown metadata key: "regoin". Did you mean "region"? Valid keys: region, auth, readRegions'
+      );
+      await expect(client.stderr).toOutput(
+        'Error: Required metadata missing: "region"'
+      );
+      expect(await exitCodePromise).toEqual(1);
+      expect(requestBodies).toHaveLength(0);
+
+      // The mistyped key is not in the schema, so it is not recorded
+      expect(droppedEvent()).toMatchObject({
+        reason: 'metadata_parse_error',
+        metadata_error: 'unknown_key',
+        metadata_key: null,
+      });
+      for (const event of client.telemetryEventStore.readonlyEvents) {
+        expect(String(event.value)).not.toContain('regoin');
+        expect(String(event.value)).not.toContain('iad1');
+      }
+    });
+
+    it('should report unknown keys as errors alongside an invalid value', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme-full-schema',
+        '--meta',
+        'unknown=value',
+        '--meta',
+        'auth=yes'
+      );
+      const exitCodePromise = integrationCommand(client);
+      await expect(client.stderr).toOutput(
+        'Error: Unknown metadata key: "unknown". Valid keys: region, auth, readRegions'
+      );
+      await expect(client.stderr).toOutput(
+        'Error: Metadata "auth" must be "true" or "false", got: "yes"'
+      );
+      expect(await exitCodePromise).toEqual(1);
+
+      // The invalid value is what failed the command, so it is recorded
+      expect(droppedEvent()).toMatchObject({
+        reason: 'metadata_parse_error',
+        metadata_error: 'invalid_value',
+        metadata_key: 'auth',
+      });
+    });
+
+    it('should record a flag without "=" as a format error', async () => {
+      client.setArgv('integration', 'add', 'acme', '--meta', 'region');
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
-        'Error: Unknown metadata key: "unknown"'
+        'Error: Invalid metadata format: "region". Expected KEY=VALUE. Valid keys: region'
       );
+      expect(droppedEvent()).toMatchObject({
+        reason: 'metadata_parse_error',
+        metadata_error: 'invalid_format',
+        metadata_key: 'region',
+      });
     });
 
     it('should error on invalid metadata format', async () => {
@@ -1676,6 +1806,12 @@ describe('integration add (auto-provision)', () => {
       await expect(client.stderr).toOutput(
         'Error: Invalid metadata format: "no-equals-sign". Expected KEY=VALUE'
       );
+      // Not a schema key, so it may be a value and is not recorded
+      expect(droppedEvent()).toMatchObject({
+        reason: 'metadata_parse_error',
+        metadata_error: 'invalid_format',
+        metadata_key: null,
+      });
     });
 
     it('should accept valid metadata and skip prompts', async () => {

@@ -1,14 +1,143 @@
-import output from '../../output-manager';
+import didYouMean from '../did-you-mean';
+import { remoteText } from '../output/remote-text';
 import {
   getAllOptionValues,
+  getVisibleOptions,
   isServerHandledRegion,
   isHiddenOnCreate,
 } from './format-schema-help';
-import type { Metadata, MetadataSchema } from './types';
+import type { Metadata, MetadataSchema, MetadataSchemaProperty } from './types';
+
+/**
+ * Why a `--meta` flag was rejected: the key is not in the schema, the value
+ * does not fit the key's type or options, or the flag is not `KEY=VALUE`.
+ */
+export type MetadataParseErrorKind =
+  | 'unknown_key'
+  | 'invalid_value'
+  | 'invalid_format';
+
+export interface MetadataParseError {
+  kind: MetadataParseErrorKind;
+  /**
+   * The key as typed (the whole flag for `invalid_format`). It is user input,
+   * so check it against the schema before recording it anywhere.
+   */
+  key: string;
+  message: string;
+}
 
 interface ParseMetadataResult {
   metadata: Metadata;
-  errors: string[];
+  errors: MetadataParseError[];
+}
+
+const SUGGESTION_THRESHOLD = 0.7;
+
+/** The closest candidate to `input`, ignoring case, if any is close enough. */
+function closestMatch(
+  input: string,
+  candidates: readonly string[]
+): string | undefined {
+  const lowered = input.toLowerCase();
+  const exact = candidates.find(c => c.toLowerCase() === lowered);
+  if (exact !== undefined) {
+    return exact;
+  }
+  const match = didYouMean(
+    lowered,
+    candidates.map(c => c.toLowerCase()),
+    SUGGESTION_THRESHOLD
+  ) as string | undefined;
+  return match === undefined
+    ? undefined
+    : candidates.find(c => c.toLowerCase() === match);
+}
+
+function didYouMeanHint(
+  input: string,
+  candidates: readonly string[]
+): string | undefined {
+  const match = closestMatch(input, candidates);
+  return match === undefined
+    ? undefined
+    : `Did you mean ${JSON.stringify(remoteText(match))}?`;
+}
+
+function formatList(values: readonly string[]): string {
+  return values.map(remoteText).join(', ');
+}
+
+/** Joins sentences, adding a period only where one is missing. */
+function sentences(...parts: (string | undefined)[]): string {
+  let text = '';
+  for (const part of parts) {
+    if (!part) continue;
+    text = !text
+      ? part
+      : /[.?!]$/.test(text)
+        ? `${text} ${part}`
+        : `${text}. ${part}`;
+  }
+  return text;
+}
+
+/** The keys to offer: those shown in `--help`, or every key if all are hidden. */
+function listedKeys(schema: MetadataSchema): string[] {
+  const keys = Object.keys(schema.properties);
+  const visible = keys.filter(key => !isHiddenOnCreate(schema.properties[key]));
+  return visible.length > 0 ? visible : keys;
+}
+
+function validKeysHint(schema: MetadataSchema): string {
+  const keys = listedKeys(schema);
+  return keys.length > 0
+    ? `Valid keys: ${formatList(keys)}`
+    : 'This product does not accept metadata.';
+}
+
+function unknownKeyHint(key: string, schema: MetadataSchema): string {
+  return sentences(
+    didYouMeanHint(key, listedKeys(schema)),
+    validKeysHint(schema)
+  );
+}
+
+/** The values to offer: those shown in `--help`, or every value if all are hidden. */
+function listedOptions(prop: MetadataSchemaProperty): string[] | undefined {
+  return getVisibleOptions(prop) ?? getAllOptionValues(prop);
+}
+
+function getProperty(
+  schema: MetadataSchema,
+  key: string
+): MetadataSchemaProperty | undefined {
+  // `Object.hasOwn`, so keys like "constructor" are not read off the prototype
+  return Object.hasOwn(schema.properties, key)
+    ? schema.properties[key]
+    : undefined;
+}
+
+/**
+ * Whether `key` is defined by the schema, so it is a partner's field name
+ * rather than arbitrary user input.
+ */
+export function isSchemaKey(schema: MetadataSchema, key: string): boolean {
+  return getProperty(schema, key) !== undefined;
+}
+
+/**
+ * The warning shown when an unknown key is dropped instead of failing the
+ * command.
+ */
+export function formatIgnoredMetadataKeyWarning(
+  error: MetadataParseError,
+  schema: MetadataSchema
+): string {
+  return sentences(
+    `Ignoring unknown metadata key: "${error.key}"`,
+    unknownKeyHint(error.key, schema)
+  );
 }
 
 /**
@@ -19,7 +148,7 @@ export function parseMetadataFlags(
   schema: MetadataSchema
 ): ParseMetadataResult {
   const metadata: Metadata = {};
-  const errors: string[] = [];
+  const errors: MetadataParseError[] = [];
 
   if (!rawMetadata?.length) {
     return { metadata, errors };
@@ -28,16 +157,33 @@ export function parseMetadataFlags(
   for (const item of rawMetadata) {
     const eqIndex = item.indexOf('=');
     if (eqIndex === -1) {
-      errors.push(`Invalid metadata format: "${item}". Expected KEY=VALUE`);
+      errors.push({
+        kind: 'invalid_format',
+        key: item.trim(),
+        message: sentences(
+          `Invalid metadata format: "${item}". Expected KEY=VALUE`,
+          validKeysHint(schema)
+        ),
+      });
       continue;
     }
 
     const key = item.slice(0, eqIndex).trim();
     const value = item.slice(eqIndex + 1).trim();
+    const invalidValue = (message: string) => {
+      errors.push({ kind: 'invalid_value', key, message });
+    };
 
-    const propSchema = schema.properties[key];
+    const propSchema = getProperty(schema, key);
     if (!propSchema) {
-      errors.push(`Unknown metadata key: "${key}"`);
+      errors.push({
+        kind: 'unknown_key',
+        key,
+        message: sentences(
+          `Unknown metadata key: "${key}"`,
+          unknownKeyHint(key, schema)
+        ),
+      });
       continue;
     }
 
@@ -48,26 +194,26 @@ export function parseMetadataFlags(
       } else if (value === 'false') {
         metadata[key] = false;
       } else {
-        errors.push(
+        invalidValue(
           `Metadata "${key}" must be "true" or "false", got: "${value}"`
         );
       }
     } else if (propSchema.type === 'number') {
       if (value === '') {
-        errors.push(`Metadata "${key}" must be a number, got: ""`);
+        invalidValue(`Metadata "${key}" must be a number, got: ""`);
         continue;
       }
       const num = Number(value);
       if (Number.isNaN(num) || !Number.isFinite(num)) {
-        errors.push(`Metadata "${key}" must be a number, got: "${value}"`);
+        invalidValue(`Metadata "${key}" must be a number, got: "${value}"`);
         continue;
       }
       if (propSchema.minimum !== undefined && num < propSchema.minimum) {
-        errors.push(`Metadata "${key}" must be >= ${propSchema.minimum}`);
+        invalidValue(`Metadata "${key}" must be >= ${propSchema.minimum}`);
         continue;
       }
       if (propSchema.maximum !== undefined && num > propSchema.maximum) {
-        errors.push(`Metadata "${key}" must be <= ${propSchema.maximum}`);
+        invalidValue(`Metadata "${key}" must be <= ${propSchema.maximum}`);
         continue;
       }
       metadata[key] = num;
@@ -83,25 +229,27 @@ export function parseMetadataFlags(
         let hasError = false;
         for (const item of items) {
           if (item === '') {
-            errors.push(`Metadata "${key}" contains invalid number: ""`);
+            invalidValue(`Metadata "${key}" contains invalid number: ""`);
             hasError = true;
             break;
           }
           const num = Number(item);
           if (Number.isNaN(num) || !Number.isFinite(num)) {
-            errors.push(`Metadata "${key}" contains invalid number: "${item}"`);
+            invalidValue(
+              `Metadata "${key}" contains invalid number: "${item}"`
+            );
             hasError = true;
             break;
           }
           if (propSchema.minimum !== undefined && num < propSchema.minimum) {
-            errors.push(
+            invalidValue(
               `Metadata "${key}" contains number ${num} below minimum ${propSchema.minimum}`
             );
             hasError = true;
             break;
           }
           if (propSchema.maximum !== undefined && num > propSchema.maximum) {
-            errors.push(
+            invalidValue(
               `Metadata "${key}" contains number ${num} above maximum ${propSchema.maximum}`
             );
             hasError = true;
@@ -113,14 +261,19 @@ export function parseMetadataFlags(
           metadata[key] = nums;
         }
       } else {
-        // Validate each item against ui:options if present
+        // Validate each item against ui:options if present. Hidden options
+        // are accepted, but only the visible ones are listed and suggested.
         const validValues = getAllOptionValues(propSchema);
         if (validValues) {
+          const listed = listedOptions(propSchema) ?? validValues;
           const prevErrorCount = errors.length;
           for (const item of items) {
             if (!validValues.includes(item)) {
-              errors.push(
-                `Metadata "${key}" contains invalid value: "${item}". Must be one of: ${validValues.join(', ')}`
+              invalidValue(
+                sentences(
+                  `Metadata "${key}" contains invalid value: "${item}". Must be one of: ${formatList(listed)}`,
+                  didYouMeanHint(item, listed)
+                )
               );
             }
           }
@@ -131,12 +284,17 @@ export function parseMetadataFlags(
         metadata[key] = items;
       }
     } else {
-      // Validate select options if present
+      // Validate select options if present. Hidden options are accepted,
+      // but only the visible ones are listed and suggested.
       const validValues = getAllOptionValues(propSchema);
       if (validValues) {
         if (!validValues.includes(value)) {
-          errors.push(
-            `Metadata "${key}" must be one of: ${validValues.join(', ')}`
+          const listed = listedOptions(propSchema) ?? validValues;
+          invalidValue(
+            sentences(
+              `Metadata "${key}" must be one of: ${formatList(listed)}, got: "${value}"`,
+              didYouMeanHint(value, listed)
+            )
           );
           continue;
         }
@@ -180,19 +338,4 @@ export function validateRequiredMetadata(
   }
 
   return errors;
-}
-
-/**
- * Validate required metadata and print errors.
- * Returns true if validation passed, false if there were errors.
- */
-export function validateAndPrintRequiredMetadata(
-  metadata: Metadata,
-  schema: MetadataSchema
-): boolean {
-  const errors = validateRequiredMetadata(metadata, schema);
-  for (const error of errors) {
-    output.error(error);
-  }
-  return errors.length === 0;
 }

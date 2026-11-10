@@ -1,6 +1,11 @@
 import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { addSubcommand } from '../../../../commands/integration/command';
+import {
+  isSchemaKey,
+  type MetadataParseError,
+} from '../../../integration/parse-metadata';
+import type { MetadataSchema } from '../../../integration/types';
 
 export class IntegrationAddTelemetryClient
   extends TelemetryClient
@@ -104,6 +109,24 @@ export class IntegrationAddTelemetryClient
     this.trackCommandOutput({
       key: event,
       value: JSON.stringify(props),
+    });
+  }
+
+  /**
+   * Records a `--meta` parse failure as `marketplace_install_flow_dropped`,
+   * with why it failed and which key. The key is sent only when the schema
+   * defines it, so a mistyped key is never sent, and values never are.
+   */
+  trackMetadataParseError(
+    props: Record<string, unknown>,
+    error: Pick<MetadataParseError, 'kind' | 'key'>,
+    schema: MetadataSchema
+  ) {
+    this.trackMarketplaceEvent('marketplace_install_flow_dropped', {
+      ...props,
+      reason: 'metadata_parse_error',
+      metadata_error: error.kind,
+      metadata_key: isSchemaKey(schema, error.key) ? error.key : null,
     });
   }
 

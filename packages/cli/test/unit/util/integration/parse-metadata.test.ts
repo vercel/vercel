@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatIgnoredMetadataKeyWarning,
+  isSchemaKey,
   parseMetadataFlags,
   validateRequiredMetadata,
 } from '../../../../src/util/integration/parse-metadata';
 import { formatMetadataSchemaHelp } from '../../../../src/util/integration/format-schema-help';
 import type { MetadataSchema } from '../../../../src/util/integration/types';
+
+const messages = (result: ReturnType<typeof parseMetadataFlags>) =>
+  result.errors.map(error => error.message);
 
 describe('parseMetadataFlags', () => {
   const basicSchema: MetadataSchema = {
@@ -52,29 +57,31 @@ describe('parseMetadataFlags', () => {
 
   it('rejects invalid format (no equals sign)', () => {
     const result = parseMetadataFlags(['region'], basicSchema);
-    expect(result.errors).toEqual([
-      'Invalid metadata format: "region". Expected KEY=VALUE',
+    expect(messages(result)).toEqual([
+      'Invalid metadata format: "region". Expected KEY=VALUE. Valid keys: region, version, storage',
     ]);
     expect(result.metadata).toEqual({});
   });
 
   it('rejects unknown keys', () => {
     const result = parseMetadataFlags(['unknown=value'], basicSchema);
-    expect(result.errors).toEqual(['Unknown metadata key: "unknown"']);
+    expect(messages(result)).toEqual([
+      'Unknown metadata key: "unknown". Valid keys: region, version, storage',
+    ]);
     expect(result.metadata).toEqual({});
   });
 
   it('validates select options (string array)', () => {
     const result = parseMetadataFlags(['region=invalid-region'], basicSchema);
-    expect(result.errors).toEqual([
-      'Metadata "region" must be one of: us-east-1, us-west-2, eu-central-1',
+    expect(messages(result)).toEqual([
+      'Metadata "region" must be one of: us-east-1, us-west-2, eu-central-1, got: "invalid-region"',
     ]);
   });
 
   it('validates select options (object array)', () => {
     const result = parseMetadataFlags(['version=99'], basicSchema);
-    expect(result.errors).toEqual([
-      'Metadata "version" must be one of: 14, 15, 16',
+    expect(messages(result)).toEqual([
+      'Metadata "version" must be one of: 14, 15, 16, got: "99"',
     ]);
   });
 
@@ -87,19 +94,19 @@ describe('parseMetadataFlags', () => {
 
   it('validates number must be a number', () => {
     const result = parseMetadataFlags(['storage=abc'], basicSchema);
-    expect(result.errors).toEqual([
+    expect(messages(result)).toEqual([
       'Metadata "storage" must be a number, got: "abc"',
     ]);
   });
 
   it('validates minimum constraint', () => {
     const result = parseMetadataFlags(['storage=0'], basicSchema);
-    expect(result.errors).toEqual(['Metadata "storage" must be >= 1']);
+    expect(messages(result)).toEqual(['Metadata "storage" must be >= 1']);
   });
 
   it('validates maximum constraint', () => {
     const result = parseMetadataFlags(['storage=500'], basicSchema);
-    expect(result.errors).toEqual(['Metadata "storage" must be <= 256']);
+    expect(messages(result)).toEqual(['Metadata "storage" must be <= 256']);
   });
 
   it('handles empty/undefined input', () => {
@@ -134,12 +141,14 @@ describe('parseMetadataFlags', () => {
       basicSchema
     );
     expect(result.errors).toHaveLength(3);
-    expect(result.errors).toContain('Unknown metadata key: "unknown"');
-    expect(result.errors).toContain(
+    expect(messages(result)).toContain(
+      'Unknown metadata key: "unknown". Valid keys: region, version, storage'
+    );
+    expect(messages(result)).toContain(
       'Metadata "storage" must be a number, got: "abc"'
     );
-    expect(result.errors).toContain(
-      'Metadata "region" must be one of: us-east-1, us-west-2, eu-central-1'
+    expect(messages(result)).toContain(
+      'Metadata "region" must be one of: us-east-1, us-west-2, eu-central-1, got: "invalid"'
     );
   });
 
@@ -176,14 +185,14 @@ describe('parseMetadataFlags', () => {
 
     it('rejects non-boolean values', () => {
       const result = parseMetadataFlags(['auth=yes'], boolSchema);
-      expect(result.errors).toEqual([
+      expect(messages(result)).toEqual([
         'Metadata "auth" must be "true" or "false", got: "yes"',
       ]);
     });
 
     it('rejects numeric values for boolean', () => {
       const result = parseMetadataFlags(['auth=1'], boolSchema);
-      expect(result.errors).toEqual([
+      expect(messages(result)).toEqual([
         'Metadata "auth" must be "true" or "false", got: "1"',
       ]);
     });
@@ -238,7 +247,7 @@ describe('parseMetadataFlags', () => {
         ['readRegions=sfo1,invalid'],
         arraySchema
       );
-      expect(result.errors).toEqual([
+      expect(messages(result)).toEqual([
         'Metadata "readRegions" contains invalid value: "invalid". Must be one of: sfo1, iad1, fra1, dub1',
       ]);
     });
@@ -258,7 +267,7 @@ describe('parseMetadataFlags', () => {
 
     it('rejects non-numeric values in number array', () => {
       const result = parseMetadataFlags(['computeSize=0.25,abc'], arraySchema);
-      expect(result.errors).toEqual([
+      expect(messages(result)).toEqual([
         'Metadata "computeSize" contains invalid number: "abc"',
       ]);
     });
@@ -277,12 +286,12 @@ describe('parseMetadataFlags', () => {
         },
       };
       const belowMin = parseMetadataFlags(['ports=0,80'], schemaWithMinMax);
-      expect(belowMin.errors).toEqual([
+      expect(messages(belowMin)).toEqual([
         'Metadata "ports" contains number 0 below minimum 1',
       ]);
 
       const aboveMax = parseMetadataFlags(['ports=80,70000'], schemaWithMinMax);
-      expect(aboveMax.errors).toEqual([
+      expect(messages(aboveMax)).toEqual([
         'Metadata "ports" contains number 70000 above maximum 65535',
       ]);
 
@@ -319,6 +328,218 @@ describe('parseMetadataFlags', () => {
       expect(result.errors).toEqual([]);
       expect(result.metadata).toEqual({ tags: ['a', 'b'] });
     });
+  });
+});
+
+describe('parseMetadataFlags error details', () => {
+  const schema: MetadataSchema = {
+    type: 'object',
+    properties: {
+      region: {
+        type: 'string',
+        'ui:control': 'select',
+        'ui:options': ['us-east-1', 'us-west-2', 'eu-central-1'],
+      },
+      plan: {
+        type: 'string',
+        'ui:control': 'select',
+        'ui:options': [
+          { value: 'free', label: 'Free' },
+          { value: 'pro', label: 'Pro' },
+          { value: 'legacy', label: 'Legacy', hidden: true },
+        ],
+      },
+      readRegions: {
+        type: 'array',
+        'ui:control': 'multi-select',
+        items: { type: 'string' },
+        'ui:options': ['sfo1', 'iad1', 'fra1'],
+      },
+      compute: {
+        type: 'string',
+        'ui:control': 'input',
+        'ui:hidden': true,
+      },
+      storage: {
+        type: 'number',
+        'ui:control': 'input',
+        minimum: 1,
+      },
+    },
+    required: ['region'],
+  };
+  const validKeys = 'Valid keys: region, plan, readRegions, storage';
+
+  it('suggests the closest key and lists the valid keys for an unknown key', () => {
+    const result = parseMetadataFlags(['regoin=us-east-1'], schema);
+    expect(result.errors).toEqual([
+      {
+        kind: 'unknown_key',
+        key: 'regoin',
+        message: `Unknown metadata key: "regoin". Did you mean "region"? ${validKeys}`,
+      },
+    ]);
+    expect(result.metadata).toEqual({});
+  });
+
+  it('suggests a key that differs only in case', () => {
+    const result = parseMetadataFlags(['Region=us-east-1'], schema);
+    expect(messages(result)).toEqual([
+      `Unknown metadata key: "Region". Did you mean "region"? ${validKeys}`,
+    ]);
+  });
+
+  it('lists the valid keys without a suggestion when nothing is close', () => {
+    const result = parseMetadataFlags(['database=main'], schema);
+    expect(messages(result)).toEqual([
+      `Unknown metadata key: "database". ${validKeys}`,
+    ]);
+  });
+
+  it('accepts hidden keys but does not list them', () => {
+    const result = parseMetadataFlags(['compute=2'], schema);
+    expect(result.errors).toEqual([]);
+    expect(result.metadata).toEqual({ compute: '2' });
+  });
+
+  it('treats keys inherited from Object.prototype as unknown', () => {
+    const result = parseMetadataFlags(['constructor=x', 'toString=y'], schema);
+    expect(result.errors.map(error => error.kind)).toEqual([
+      'unknown_key',
+      'unknown_key',
+    ]);
+    expect(result.metadata).toEqual({});
+  });
+
+  it('says so when the schema has no keys', () => {
+    const result = parseMetadataFlags(['region=iad1'], {
+      type: 'object',
+      properties: {},
+    });
+    expect(messages(result)).toEqual([
+      'Unknown metadata key: "region". This product does not accept metadata.',
+    ]);
+  });
+
+  it('lists the valid keys for a flag without "="', () => {
+    const result = parseMetadataFlags(['region'], schema);
+    expect(result.errors).toEqual([
+      {
+        kind: 'invalid_format',
+        key: 'region',
+        message: `Invalid metadata format: "region". Expected KEY=VALUE. ${validKeys}`,
+      },
+    ]);
+  });
+
+  it('suggests the closest value for an invalid select value', () => {
+    const result = parseMetadataFlags(['region=us-east'], schema);
+    expect(result.errors).toEqual([
+      {
+        kind: 'invalid_value',
+        key: 'region',
+        message:
+          'Metadata "region" must be one of: us-east-1, us-west-2, eu-central-1, got: "us-east". Did you mean "us-east-1"?',
+      },
+    ]);
+    expect(result.metadata).toEqual({});
+  });
+
+  it('suggests a value that differs only in case', () => {
+    const result = parseMetadataFlags(['region=US-WEST-2'], schema);
+    expect(messages(result)).toEqual([
+      'Metadata "region" must be one of: us-east-1, us-west-2, eu-central-1, got: "US-WEST-2". Did you mean "us-west-2"?',
+    ]);
+  });
+
+  it('accepts hidden options but lists and suggests only visible ones', () => {
+    expect(parseMetadataFlags(['plan=legacy'], schema)).toEqual({
+      metadata: { plan: 'legacy' },
+      errors: [],
+    });
+    expect(messages(parseMetadataFlags(['plan=legacyy'], schema))).toEqual([
+      'Metadata "plan" must be one of: free, pro, got: "legacyy"',
+    ]);
+  });
+
+  it('suggests the closest value for an invalid array item', () => {
+    const result = parseMetadataFlags(['readRegions=sfo1,iad'], schema);
+    expect(result.errors).toEqual([
+      {
+        kind: 'invalid_value',
+        key: 'readRegions',
+        message:
+          'Metadata "readRegions" contains invalid value: "iad". Must be one of: sfo1, iad1, fra1. Did you mean "iad1"?',
+      },
+    ]);
+  });
+
+  it('marks type and range failures as invalid values', () => {
+    const result = parseMetadataFlags(['storage=abc', 'storage=0'], schema);
+    expect(result.errors.map(({ kind, key }) => ({ kind, key }))).toEqual([
+      { kind: 'invalid_value', key: 'storage' },
+      { kind: 'invalid_value', key: 'storage' },
+    ]);
+  });
+
+  it('strips control characters from schema values in messages', () => {
+    const result = parseMetadataFlags(['tier=x'], {
+      type: 'object',
+      properties: {
+        tier: {
+          type: 'string',
+          'ui:control': 'select',
+          'ui:options': ['basic\u001b[31m', 'pro'],
+        },
+      },
+    });
+    expect(messages(result)).toEqual([
+      'Metadata "tier" must be one of: basic, pro, got: "x"',
+    ]);
+  });
+});
+
+describe('formatIgnoredMetadataKeyWarning', () => {
+  const schema: MetadataSchema = {
+    type: 'object',
+    properties: {
+      region: {
+        type: 'string',
+        'ui:control': 'vercel-region',
+        'ui:options': ['iad1', 'sfo1'],
+      },
+      name: { type: 'string', 'ui:control': 'input' },
+    },
+  };
+
+  it('names the ignored key, the closest key and the valid keys', () => {
+    const [error] = parseMetadataFlags(['regoin=iad1'], schema).errors;
+    expect(formatIgnoredMetadataKeyWarning(error, schema)).toEqual(
+      'Ignoring unknown metadata key: "regoin". Did you mean "region"? Valid keys: region, name'
+    );
+  });
+
+  it('omits the suggestion when nothing is close', () => {
+    const [error] = parseMetadataFlags(['plan=pro'], schema).errors;
+    expect(formatIgnoredMetadataKeyWarning(error, schema)).toEqual(
+      'Ignoring unknown metadata key: "plan". Valid keys: region, name'
+    );
+  });
+});
+
+describe('isSchemaKey', () => {
+  const schema: MetadataSchema = {
+    type: 'object',
+    properties: {
+      region: { type: 'string', 'ui:control': 'input' },
+    },
+  };
+
+  it('is true only for keys the schema defines', () => {
+    expect(isSchemaKey(schema, 'region')).toBe(true);
+    expect(isSchemaKey(schema, 'regoin')).toBe(false);
+    expect(isSchemaKey(schema, 'constructor')).toBe(false);
+    expect(isSchemaKey(schema, '__proto__')).toBe(false);
   });
 });
 

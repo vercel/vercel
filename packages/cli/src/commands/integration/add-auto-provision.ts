@@ -42,8 +42,9 @@ import {
 } from '../../util/integration/post-provision-setup';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 import {
+  formatIgnoredMetadataKeyWarning,
   parseMetadataFlags,
-  validateAndPrintRequiredMetadata,
+  validateRequiredMetadata,
 } from '../../util/integration/parse-metadata';
 import {
   isServerHandledRegion,
@@ -284,18 +285,42 @@ export async function addAutoProvision(
       options.metadata,
       mergedParsingSchema
     );
-    if (errors.length) {
+    // Unknown keys (often a guessed or mistyped key) are dropped with a
+    // warning when every required field is still satisfied. Any other parse
+    // error, or an unknown key while a required field is missing, fails.
+    // Required fields are checked against the merged schema (both product
+    // and installation required).
+    const unknownKeyErrors = errors.filter(e => e.kind === 'unknown_key');
+    const otherErrors = errors.filter(e => e.kind !== 'unknown_key');
+    const missingRequired = otherErrors.length
+      ? []
+      : validateRequiredMetadata(parsed, mergedParsingSchema);
+    if (
+      otherErrors.length ||
+      (unknownKeyErrors.length && missingRequired.length)
+    ) {
       for (const error of errors) {
+        output.error(error.message);
+      }
+      for (const error of missingRequired) {
         output.error(error);
       }
-      telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
-        ...baseProps,
-        reason: 'metadata_parse_error',
-      });
+      telemetry.trackMetadataParseError(
+        baseProps,
+        otherErrors[0] ?? unknownKeyErrors[0],
+        mergedParsingSchema
+      );
       return 1;
     }
-    // Validate required fields against the merged schema (both product + installation required)
-    if (!validateAndPrintRequiredMetadata(parsed, mergedParsingSchema)) {
+    for (const error of unknownKeyErrors) {
+      output.warning(
+        formatIgnoredMetadataKeyWarning(error, mergedParsingSchema)
+      );
+    }
+    if (missingRequired.length) {
+      for (const error of missingRequired) {
+        output.error(error);
+      }
       telemetry.trackMarketplaceEvent('marketplace_install_flow_dropped', {
         ...baseProps,
         reason: 'metadata_validation_failed',
