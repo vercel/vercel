@@ -48,6 +48,7 @@ interface MariaDBPool {
 interface MongoDBPool {
   options?: {
     maxIdleTimeMS?: number; // From MongoClientOptions
+    minPoolSizeCheckFrequencyMS?: number; // From the driver's ConnectionPoolOptions
   };
   on?: (
     event:
@@ -170,6 +171,34 @@ function settlePendingIdleWait(dbPool: DbPool) {
   }
 }
 
+// Extra time to wait after the idle timeout so the pool has actually closed the
+// idle connection before the invocation is allowed to settle.
+const DEFAULT_IDLE_MARGIN_MS = 100;
+
+// The MongoDB driver does not close a connection the instant it exceeds
+// maxIdleTimeMS: perished connections are pruned on the next checkout or by the
+// pool's background maintenance pass, which runs every
+// minPoolSizeCheckFrequencyMS (default 100ms). Allow two maintenance intervals.
+const MONGODB_DEFAULT_MAINTENANCE_INTERVAL_MS = 100;
+
+function getIdleMargin(dbPool: DbPool): number {
+  if (
+    'options' in dbPool &&
+    dbPool.options &&
+    'maxIdleTimeMS' in dbPool.options
+  ) {
+    const frequency = (dbPool as MongoDBPool).options
+      ?.minPoolSizeCheckFrequencyMS;
+    return (
+      2 *
+      (typeof frequency === 'number' && frequency > 0
+        ? frequency
+        : MONGODB_DEFAULT_MAINTENANCE_INTERVAL_MS)
+    );
+  }
+  return DEFAULT_IDLE_MARGIN_MS;
+}
+
 const maximumDuration = 15 * 60 * 1000 - 1000; // 15 minutes - 1 second
 
 function waitUntilIdleTimeout(dbPool: DbPool) {
@@ -195,7 +224,7 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
 
   // Don't wait longer than the current invocation can run.
   const waitTime = Math.min(
-    getIdleTimeout(dbPool) + 100,
+    getIdleTimeout(dbPool) + getIdleMargin(dbPool),
     Math.max(100, remainingDuration)
   );
   const timeout = setTimeout(() => {

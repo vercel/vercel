@@ -462,7 +462,10 @@ describe('db-connections', () => {
     function createMongoPool() {
       const listeners: Record<string, () => void> = {};
       return {
-        options: { maxIdleTimeMS: 5000 },
+        options: { maxIdleTimeMS: 5000 } as {
+          maxIdleTimeMS: number;
+          minPoolSizeCheckFrequencyMS?: number;
+        },
         on: vi.fn((event: string, cb: () => void) => {
           listeners[event] = cb;
         }),
@@ -482,7 +485,20 @@ describe('db-connections', () => {
 
       await vi.advanceTimersByTimeAsync(5000);
       expect(settled).toEqual([]);
-      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(settled).toEqual(['wait-1']);
+    });
+
+    test('allows two maintenance intervals after maxIdleTimeMS', async () => {
+      const settled = setup();
+      const pool = createMongoPool();
+      pool.options.minPoolSizeCheckFrequencyMS = 500;
+      attachDatabasePool(pool);
+      pool.listeners.connectionCheckedIn();
+
+      await vi.advanceTimersByTimeAsync(5999);
+      expect(settled).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
       expect(settled).toEqual(['wait-1']);
     });
 
@@ -496,7 +512,7 @@ describe('db-connections', () => {
       await vi.advanceTimersByTimeAsync(0);
       expect(settled).toEqual([]);
 
-      await vi.advanceTimersByTimeAsync(5100);
+      await vi.advanceTimersByTimeAsync(5200);
       expect(settled).toEqual(['wait-1']);
     });
 
@@ -513,7 +529,7 @@ describe('db-connections', () => {
       await vi.advanceTimersByTimeAsync(0);
       expect(settled).toEqual([]);
 
-      await vi.advanceTimersByTimeAsync(4100);
+      await vi.advanceTimersByTimeAsync(4200);
       expect(settled).toEqual(['wait-1']);
       await vi.advanceTimersByTimeAsync(1000);
       expect(settled).toEqual(['wait-1', 'wait-2']);
@@ -530,7 +546,7 @@ describe('db-connections', () => {
       await vi.advanceTimersByTimeAsync(0);
       expect(settled).toEqual(['wait-1']);
 
-      await vi.advanceTimersByTimeAsync(5100);
+      await vi.advanceTimersByTimeAsync(5200);
       expect(settled).toEqual(['wait-1', 'wait-2']);
     });
   });
