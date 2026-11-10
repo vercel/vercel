@@ -1,5 +1,6 @@
 import { remove } from 'fs-extra';
-import { join, basename } from 'path';
+import slugify from '@sindresorhus/slugify';
+import { join, basename, extname } from 'path';
 import { getPlatformEnv } from '@vercel/build-utils';
 import { LocalFileSystemDetector, getWorkspaces } from '@vercel/fs-detectors';
 import type {
@@ -16,19 +17,27 @@ import {
 } from '../projects/link';
 import { linkRepoProject } from './repo';
 import createProject from '../projects/create-project';
+import getProjectByIdOrName from '../projects/get-project-by-id-or-name';
+import { singleFileProjectSettings } from '../deploy/single-file';
 import type Client from '../client';
 import { printError } from '../error';
 import pull from '../../commands/env/pull';
 import { parseGitConfig, pluckRemoteUrls } from '../create-git-meta';
+import { getGitConfigPath } from '../git-helpers';
 import {
   selectAndParseRemoteUrl,
+  parseRepoUrl,
   checkExistsAndConnect,
+  type RepoInfo,
 } from '../git/connect-git-provider';
 
 import toHumanPath from '../humanize-path';
 import { isDirectory } from '../fs';
 import selectOrg from '../input/select-org';
-import inputProject, { BACK_TO_TEAM_SELECTION } from '../input/input-project';
+import inputProject, {
+  BACK_TO_TEAM_SELECTION,
+  SWITCH_GIT_REMOTE,
+} from '../input/input-project';
 import { validateRootDirectory } from '../validate-paths';
 import { inputRootDirectory } from '../input/input-root-directory';
 import {
@@ -36,7 +45,7 @@ import {
   type PartialProjectSettings,
 } from '../input/edit-project-settings';
 import type { EmojiLabel } from '../emoji';
-import { CantParseJSONFile, isAPIError } from '../errors-ts';
+import { CantParseJSONFile, isAPIError, ProjectNotFound } from '../errors-ts';
 import output from '../../output-manager';
 import { detectProjects } from '../projects/detect-projects';
 import readConfig from '../config/read-config';
@@ -58,6 +67,7 @@ import {
 import { searchProjectsByRepoRoot } from '../projects/search-project-across-teams';
 import type { CrossTeamMatch } from '../projects/search-project-across-teams';
 import { isPromptCanceledError } from '../input/prompt-cancellation';
+import { findRepoRoot, resolveGitRemote } from './repo';
 
 export interface SetupAndLinkOptions {
   autoConfirm?: boolean;
@@ -67,6 +77,8 @@ export interface SetupAndLinkOptions {
   selectedOrg?: Org;
   successEmoji?: EmojiLabel;
   projectName?: string;
+  /** Deploy only this file; use static settings without inspecting its parent. */
+  singleFile?: string;
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
   pullEnv?: boolean;
@@ -78,7 +90,18 @@ export interface SetupAndLinkOptions {
    * fail fast rather than creating a new project.
    */
   failIfNotFound?: boolean;
+  /**
+   * With `failIfNotFound`, create a missing `projectName` in the selected team
+   * instead of failing. The name resolves exactly, and the project (found or
+   * created) is not written to `.vercel/`, like any other explicit `--project`.
+   */
+  createIfNotFound?: boolean;
 }
+
+export type ProjectLinkResultWithGitGuidance = ProjectLinkResult & {
+  /** The user was already asked about Git during this command invocation. */
+  gitConnectOffered?: boolean;
+};
 
 function isCrossTeamMatch(value: unknown): value is CrossTeamMatch {
   return (
@@ -287,21 +310,30 @@ export default async function setupAndLink(
     selectedOrg,
     successEmoji = 'link',
     projectName,
+    singleFile,
     nonInteractive = false,
     pullEnv = true,
     v0,
+    createIfNotFound = false,
   }: SetupAndLinkOptions
-): Promise<ProjectLinkResult> {
+): Promise<ProjectLinkResultWithGitGuidance> {
   const { config } = client;
   const gitProjectName = projectName;
-  projectName = projectName ?? basename(path);
+  projectName =
+    projectName ??
+    (singleFile
+      ? slugify(basename(singleFile, extname(singleFile))) || 'file'
+      : basename(path));
 
   if (!isDirectory(path)) {
     output.error(`Expected directory but found file: ${path}`);
     return { status: 'error', exitCode: 1, reason: 'PATH_IS_FILE' };
   }
   if (!link) {
-    link = await getLinkedProject(client, { cwd: path });
+    link = await getLinkedProject(client, {
+      cwd: path,
+      skipProjectRootResolution: Boolean(singleFile),
+    });
   }
   const isTTY = client.stdin.isTTY;
   let rootDirectory: string | null = null;
@@ -317,7 +349,10 @@ export default async function setupAndLink(
   // without requiring `--yes`). The env link itself is what makes commands
   // work here, so leave local link files untouched.
   if (getPlatformEnv('ORG_ID') && getPlatformEnv('PROJECT_ID')) {
-    const envLink = await getLinkedProject(client, { cwd: path });
+    const envLink = await getLinkedProject(client, {
+      cwd: path,
+      skipProjectRootResolution: Boolean(singleFile),
+    });
     if (envLink.status === 'error') {
       return envLink;
     }
@@ -325,7 +360,10 @@ export default async function setupAndLink(
       config.currentTeam =
         envLink.org.type === 'team' ? envLink.org.id : undefined;
       output.print('\n');
-      printAlignedLabel('Directory', toHumanPath(path));
+      printAlignedLabel(
+        singleFile ? 'File' : 'Directory',
+        toHumanPath(singleFile ?? path)
+      );
       printAlignedLabel('Source', 'VERCEL_ORG_ID and VERCEL_PROJECT_ID');
       output.print('\n');
       printAlignedLabel(
@@ -361,7 +399,10 @@ export default async function setupAndLink(
 
   // The command invocation carries setup intent; show the local target as state.
   output.print('\n');
-  printAlignedLabel('Directory', toHumanPath(path));
+  printAlignedLabel(
+    singleFile ? 'File' : 'Directory',
+    toHumanPath(singleFile ?? path)
+  );
   output.print('\n');
 
   // Every command that establishes a link gets the same interactive flow:
@@ -370,12 +411,14 @@ export default async function setupAndLink(
   // resolved directly.
   const interactive = isTTY && !nonInteractive;
   const searchableTeamPicker = interactive;
-  const showProjectSuggestions = interactive && !gitProjectName;
+  const showProjectSuggestions = interactive && !gitProjectName && !singleFile;
 
   let projectOrNewProjectName: Awaited<ReturnType<typeof inputProject>>;
   // When the team was auto-selected as the only choice, there is no other
   // team to go back to, so the project picker hides that option.
   let teamAutoSelected = false;
+  // Remembers a remote chosen via "Switch Git remote" across picker loops.
+  let selectedGitRemoteName: string | undefined;
   for (;;) {
     if (!org) {
       const orgMeta: { choiceCount?: number } = {};
@@ -392,18 +435,29 @@ export default async function setupAndLink(
       teamAutoSelected = orgMeta.choiceCount === 1;
     }
 
+    if (createIfNotFound) {
+      const existing = await getProjectByIdOrName(client, projectName, org.id);
+      projectOrNewProjectName =
+        existing instanceof ProjectNotFound ? projectName : existing;
+      break;
+    }
+
     let repoMatches: CrossTeamMatch[] = [];
+    let gitRemoteNames: string[] = [];
+    let currentGitRemoteName: string | undefined;
     if (showProjectSuggestions) {
       output.spinner('Searching for existing projects…', 1000);
       try {
-        repoMatches = await searchProjectsByRepoRoot({
+        const repoSearch = await searchProjectsByRepoRoot({
           client,
           cwd: path,
           gitProjectName,
           orgs: [org],
-          autoConfirm,
-          nonInteractive,
+          remoteName: selectedGitRemoteName,
         });
+        repoMatches = repoSearch.matches;
+        gitRemoteNames = repoSearch.remoteNames;
+        currentGitRemoteName = repoSearch.remote?.remoteName;
       } catch (err) {
         if (isPromptCanceledError(err)) {
           throw err;
@@ -423,7 +477,11 @@ export default async function setupAndLink(
         false,
         showProjectSuggestions,
         searchableTeamPicker && !selectedOrg && !teamAutoSelected,
-        repoMatches
+        repoMatches,
+        {
+          remoteNames: gitRemoteNames,
+          currentRemoteName: currentGitRemoteName,
+        }
       );
     } catch (err) {
       if (
@@ -437,6 +495,25 @@ export default async function setupAndLink(
 
     if (projectOrNewProjectName === BACK_TO_TEAM_SELECTION) {
       org = undefined;
+      selectedGitRemoteName = undefined;
+      continue;
+    }
+    if (projectOrNewProjectName === SWITCH_GIT_REMOTE) {
+      const rootPath = await findRepoRoot(path);
+      if (!rootPath) {
+        continue;
+      }
+      try {
+        const remote = await resolveGitRemote(client, rootPath, {
+          yes: false,
+        });
+        selectedGitRemoteName = remote?.remoteName;
+      } catch (err) {
+        if (isPromptCanceledError(err)) {
+          throw err;
+        }
+        output.debug(`Failed to switch Git remote: ${err}`);
+      }
       continue;
     }
     break;
@@ -456,33 +533,47 @@ export default async function setupAndLink(
   } else {
     const project = projectOrNewProjectName;
 
-    await linkFolderToProject(
-      client,
-      path,
-      {
-        projectId: project.id,
-        orgId: org.id,
-      },
-      project.name,
-      org.slug,
-      successEmoji,
-      autoConfirm,
-      pullEnv
-    );
+    if (!createIfNotFound) {
+      await linkFolderToProject(
+        client,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug,
+        successEmoji,
+        autoConfirm,
+        pullEnv
+      );
+    }
     return { status: 'linked', org, project };
   }
 
   config.currentTeam = org.type === 'team' ? org.id : undefined;
-  const rootServicesSetup = await getServicesSetupState(path);
+
+  // Ask before settings/create so the transcript is questions then results,
+  // and the connect prompt does not follow the `Created` row. A project made
+  // for one `--project` deploy is never connected: every push would deploy it.
+  const gitConnectIntent =
+    singleFile || createIfNotFound
+      ? null
+      : await resolveGitConnectIntent(client, path, autoConfirm);
+
+  const rootServicesSetup = singleFile
+    ? null
+    : await getServicesSetupState(path);
   const configFileName =
-    (await findSourceVercelConfigFile(path)) ?? 'vercel.json';
+    (singleFile ? undefined : await findSourceVercelConfigFile(path)) ??
+    'vercel.json';
 
   try {
     let settings: ProjectSettings = {};
     let pathWithRootDirectory = path;
     let rootInferredServicesChoice: InferredServicesChoice | null = null;
 
-    if (!rootServicesSetup.hasConfiguredServices) {
+    if (rootServicesSetup && !rootServicesSetup.hasConfiguredServices) {
       rootInferredServicesChoice = await promptForInferredServicesSetup({
         client,
         autoConfirm,
@@ -498,11 +589,10 @@ export default async function setupAndLink(
     // 1. Explicit services config at the repo root.
     // 2. Inferred services layout at the repo root -> prompt for deployment mode.
     // 3. Standard framework setup flow.
-    if (rootServicesSetup.hasConfiguredServices) {
-      displayConfiguredServicesSetup(
-        rootServicesSetup.detectServicesResult,
-        configFileName
-      );
+    if (singleFile) {
+      settings = { ...singleFileProjectSettings };
+    } else if (rootServicesSetup?.hasConfiguredServices) {
+      displayConfiguredServicesSetup(rootServicesSetup, configFileName);
       settings.framework = 'services';
     } else if (rootInferredServicesChoice?.type === 'services') {
       settings.framework = 'services';
@@ -566,7 +656,7 @@ export default async function setupAndLink(
 
       if (selectedRootServicesSetup?.hasConfiguredServices) {
         displayConfiguredServicesSetup(
-          selectedRootServicesSetup.detectServicesResult,
+          selectedRootServicesSetup,
           configFileName
         );
         settings.framework = 'services';
@@ -649,24 +739,42 @@ export default async function setupAndLink(
       v0,
     });
 
-    await linkFolderToProject(
+    if (createIfNotFound) {
+      output.print('\n');
+      printAlignedLabel('Created', `${org.slug}/${project.name}`, {
+        gutter: '✓',
+      });
+    } else {
+      await linkFolderToProject(
+        client,
+        path,
+        {
+          projectId: project.id,
+          orgId: org.id,
+        },
+        project.name,
+        org.slug,
+        successEmoji,
+        autoConfirm,
+        false, // don't prompt to pull env for newly created projects
+        'Created'
+      );
+    }
+
+    await applyGitConnectIntent(
       client,
-      path,
-      {
-        projectId: project.id,
-        orgId: org.id,
-      },
-      project.name,
-      org.slug,
-      successEmoji,
+      gitConnectIntent,
+      project,
       autoConfirm,
-      false, // don't prompt to pull env for newly created projects
-      'Created'
+      org
     );
 
-    await connectGitRepository(client, path, project, autoConfirm, org);
-
-    return { status: 'linked', org, project };
+    return {
+      status: 'linked',
+      org,
+      project,
+      ...(gitConnectIntent?.offered && { gitConnectOffered: true }),
+    };
   } catch (err) {
     if (isPromptCanceledError(err)) {
       throw err;
@@ -687,40 +795,84 @@ export default async function setupAndLink(
   }
 }
 
-export async function connectGitRepository(
+/** A remote the user agreed to connect, resolved before the project exists. */
+type GitConnectIntent = { repoInfo?: RepoInfo; offered: boolean } | null;
+
+/**
+ * Asks whether to connect a detected Git remote. Runs before `createProject`
+ * so the question never follows the `✓ Created` row; `applyGitConnectIntent`
+ * does the connecting once a project id exists.
+ *
+ * Default is No (`y/N`) until connect preflight lands — connecting mutates
+ * the project for every future push. `--yes` / non-interactive still connect
+ * without prompting, preferring `origin`.
+ */
+export async function resolveGitConnectIntent(
   client: Client,
   path: string,
-  project: { id: string; link?: any },
-  autoConfirm: boolean,
-  org: Org
-): Promise<void> {
+  autoConfirm: boolean
+): Promise<GitConnectIntent> {
   try {
-    const gitConfig = await parseGitConfig(join(path, '.git/config'));
+    const gitConfigPath =
+      getGitConfigPath({ cwd: path }) ?? join(path, '.git/config');
+    const gitConfig = await parseGitConfig(gitConfigPath);
 
     if (!gitConfig) {
-      return;
+      return null;
     }
 
     const remoteUrls = pluckRemoteUrls(gitConfig);
     if (!remoteUrls || Object.keys(remoteUrls).length === 0) {
-      return;
+      return null;
     }
 
-    output.print('\n');
+    const skipPrompts = autoConfirm || client.nonInteractive;
 
     const shouldConnect =
-      autoConfirm ||
-      (await client.input.confirm(`Connect detected Git repository?`, true));
+      skipPrompts ||
+      (await client.input.confirm(
+        `Connect this Git repository to automatically deploy changes on every push?`,
+        false
+      ));
 
     if (!shouldConnect) {
-      return;
+      return { offered: true };
     }
 
-    const repoInfo = await selectAndParseRemoteUrl(client, remoteUrls);
+    // Multiple remotes would otherwise prompt, so prefer `origin`.
+    const repoInfo = skipPrompts
+      ? parseRepoUrl(remoteUrls.origin ?? Object.values(remoteUrls)[0])
+      : await selectAndParseRemoteUrl(client, remoteUrls);
+
     if (!repoInfo) {
-      return;
+      return null;
     }
 
+    return { repoInfo, offered: !skipPrompts };
+  } catch (error) {
+    if (isPromptCanceledError(error)) {
+      throw error;
+    }
+    // Silently ignore git detection errors to not disrupt the main flow
+    output.debug(`Failed to detect git repository: ${error}`);
+    return null;
+  }
+}
+
+/** Connects the remote resolved by `resolveGitConnectIntent`. */
+export async function applyGitConnectIntent(
+  client: Client,
+  intent: GitConnectIntent,
+  project: { id: string; link?: any },
+  autoConfirm: boolean,
+  org: Org
+): Promise<void> {
+  if (!intent?.repoInfo) {
+    return;
+  }
+
+  const { repoInfo } = intent;
+  try {
     await checkExistsAndConnect({
       client,
       confirm: autoConfirm,
@@ -739,4 +891,29 @@ export async function connectGitRepository(
     // Silently ignore git connection errors to not disrupt the main flow
     output.debug(`Failed to connect git repository: ${error}`);
   }
+}
+
+/**
+ * Detects, prompts, and connects in one step.
+ *
+ * `setupAndLink` uses the split `resolveGitConnectIntent` /
+ * `applyGitConnectIntent` pair so the prompt lands before project creation.
+ */
+export async function connectGitRepository(
+  client: Client,
+  path: string,
+  project: { id: string; link?: any },
+  autoConfirm: boolean,
+  org: Org
+): Promise<void> {
+  let intent: GitConnectIntent;
+  try {
+    intent = await resolveGitConnectIntent(client, path, autoConfirm);
+  } catch (error) {
+    if (isPromptCanceledError(error)) {
+      return;
+    }
+    throw error;
+  }
+  await applyGitConnectIntent(client, intent, project, autoConfirm, org);
 }

@@ -137,6 +137,7 @@ describe('blob list-stores', () => {
         contextName: 'my-team',
         team: { id: 'team_123', slug: 'my-team' } as any,
         user: {} as any,
+        app: null,
       });
     });
 
@@ -168,6 +169,7 @@ describe('blob list-stores', () => {
         contextName: '',
         team: null,
         user: {} as any,
+        app: null,
       });
 
       const exitCode = await listStores(client, []);
@@ -229,6 +231,7 @@ describe('blob list-stores', () => {
         contextName: 'my-team',
         team: { id: 'team_123', slug: 'my-team' } as any,
         user: {} as any,
+        app: null,
       });
       client.fetch = vi.fn().mockResolvedValue({ stores: [] });
 
@@ -467,7 +470,7 @@ describe('blob list-stores', () => {
     it('should return 1 when argument parsing fails', async () => {
       const exitCode = await listStores(client, ['--invalid-flag']);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when API call fails', async () => {
@@ -489,14 +492,6 @@ describe('blob list-stores', () => {
       const exitCode = await listStores(client, []);
 
       expect(exitCode).toBe(1);
-    });
-  });
-
-  describe('telemetry', () => {
-    it('should initialize telemetry client', async () => {
-      const exitCode = await listStores(client, []);
-
-      expect(exitCode).toBe(0);
     });
   });
 

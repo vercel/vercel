@@ -3,7 +3,7 @@ import type { Builder } from '@vercel/build-utils';
 import {
   BACKEND_REWRITE_BEHAVIOR_WARNING,
   hasBackendRewriteBehaviorChange,
-} from '../../../../src/util/build/backend-rewrite-warning';
+} from '@vercel-internals/cli-builder-integration/backend-rewrite-warning';
 
 function builder(framework: string, use = '@vercel/static-build'): Builder {
   return {
@@ -20,7 +20,9 @@ describe('backend rewrite behavior warning', () => {
     'django',
     'python',
     'fasthtml',
-  ])('warns for an internal rewrite in a %s project', framework => {
+    'go',
+    'container',
+  ])('warns for an internal rewrite in a %s backend project', framework => {
     expect(
       hasBackendRewriteBehaviorChange({
         projectRewrites: [{ source: '/old', destination: '/new' }],
@@ -29,22 +31,46 @@ describe('backend rewrite behavior warning', () => {
     ).toBe(true);
   });
 
-  it('does not infer Python from the builder package', () => {
+  it.each([
+    'express',
+    'hono',
+    'h3',
+    'koa',
+    'nestjs',
+    'fastify',
+    'elysia',
+  ])('warns for an internal rewrite in a %s Node backend project', framework => {
     expect(
       hasBackendRewriteBehaviorChange({
         projectRewrites: [{ source: '/old', destination: '/new' }],
-        builders: [builder('other', '@vercel/python@canary')],
+        builders: [builder(framework)],
+      })
+    ).toBe(true);
+  });
+
+  it.each([
+    '@vercel/python@canary',
+    '@vercel/go@canary',
+    '@vercel/container@canary',
+  ])('does not infer the framework from the %s builder package', use => {
+    expect(
+      hasBackendRewriteBehaviorChange({
+        projectRewrites: [{ source: '/old', destination: '/new' }],
+        builders: [builder('other', use)],
       })
     ).toBe(false);
   });
 
-  it('does not warn for other frameworks or external rewrites', () => {
+  it('does not warn for non-backend frameworks', () => {
     expect(
       hasBackendRewriteBehaviorChange({
         projectRewrites: [{ source: '/old', destination: '/new' }],
-        builders: [builder('express', '@vercel/express')],
+        builders: [builder('nextjs')],
       })
     ).toBe(false);
+  });
+
+  it('does not warn for external rewrites', () => {
     expect(
       hasBackendRewriteBehaviorChange({
         projectRewrites: [
@@ -68,6 +94,24 @@ describe('backend rewrite behavior warning', () => {
           },
         ],
         builders: [builder('fastapi')],
+      })
+    ).toBe(false);
+  });
+
+  it('does not warn when there are no rewrites', () => {
+    expect(
+      hasBackendRewriteBehaviorChange({
+        projectRewrites: undefined,
+        builders: [builder('fastapi')],
+      })
+    ).toBe(false);
+  });
+
+  it('does not warn when there are no builders', () => {
+    expect(
+      hasBackendRewriteBehaviorChange({
+        projectRewrites: [{ source: '/old', destination: '/new' }],
+        builders: null,
       })
     ).toBe(false);
   });

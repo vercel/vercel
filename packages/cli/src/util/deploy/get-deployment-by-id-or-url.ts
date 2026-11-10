@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import getDeployment from '../get-deployment';
-import getTeamById from '../teams/get-team-by-id';
+import getTeamByIdOrSlug from '../teams/get-team-by-id-or-slug';
 import { isValidName } from '../is-valid-name';
 import type Client from '../client';
 import type { Deployment, Team } from '@vercel-internals/types';
@@ -41,7 +41,9 @@ export async function getDeploymentByIdOrURL({
     );
 
     const [teamResult, deploymentResult] = await Promise.allSettled([
-      config.currentTeam ? getTeamById(client, config.currentTeam) : undefined,
+      config.currentTeam
+        ? getTeamByIdOrSlug(client, config.currentTeam)
+        : undefined,
       getDeployment(client, contextName, deployIdOrUrl),
     ]);
 

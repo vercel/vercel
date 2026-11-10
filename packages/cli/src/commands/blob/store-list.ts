@@ -65,7 +65,7 @@ export default async function listStores(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const showAll = parsedArgs.flags['--all'] ?? false;

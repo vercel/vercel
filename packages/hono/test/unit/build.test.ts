@@ -170,7 +170,7 @@ describe('failing fixtures', () => {
       const fileList = readDirectoryRecursively(workPath);
 
       const files = createFiles(workPath, fileList);
-      expect(
+      await expect(
         build({
           files,
           workPath,
@@ -186,7 +186,7 @@ describe('failing fixtures', () => {
 });
 
 describe('error messages', () => {
-  it('should error when no entrypoints exist', () => {
+  it('should error when no entrypoints exist', async () => {
     const workPath = join(
       __dirname,
       '../failing-fixtures',
@@ -196,7 +196,7 @@ describe('error messages', () => {
     const fileList = readDirectoryRecursively(workPath);
 
     const files = createFiles(workPath, fileList);
-    expect(
+    await expect(
       build({
         files,
         workPath,
@@ -211,13 +211,13 @@ describe('error messages', () => {
     );
   });
 
-  it('should error when no entrypoint imports framework package', () => {
+  it('should error when no entrypoint imports framework package', async () => {
     const workPath = join(__dirname, '../failing-fixtures', '03-no-entrypoint');
 
     const fileList = readDirectoryRecursively(workPath);
 
     const files = createFiles(workPath, fileList);
-    expect(
+    await expect(
       build({
         files,
         workPath,

@@ -97,14 +97,18 @@ import {
   PseudoLayerResult,
   updateRouteSrc,
   validateEntrypoint,
+  validateStaticFiles,
   getOperationType,
   isApiPage,
   getFunctionsConfigManifest,
   require_,
   getServerlessPages,
   RenderingMode,
+  getDefaultNextDeploymentId,
 } from './utils';
 import { getAppRouterPathnameFilesMap } from './metadata';
+
+export { getDevManifest } from './dev-manifest';
 
 export const version = 2;
 export const htmlContentType = 'text/html; charset=utf-8';
@@ -281,6 +285,7 @@ export const build: BuildV2 = async buildOptions => {
     lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entryPath, true);
 
@@ -288,6 +293,8 @@ export const build: BuildV2 = async buildOptions => {
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -515,14 +522,22 @@ export const build: BuildV2 = async buildOptions => {
     env.NODE_ENV = 'production';
   }
 
-  if (
+  const isAdapterEnabled =
     // integration tests expect outputs object
     !process.env.NEXT_BUILDER_INTEGRATION &&
     process.env.NEXT_ENABLE_ADAPTER === '1' &&
-    semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION)
-  ) {
+    semver.gte(nextVersion, MINIMUM_NEXT_ADAPTER_VERSION);
+
+  if (isAdapterEnabled) {
     env.NEXT_ADAPTER_PATH = path.join(__dirname, 'adapter/index.js');
     env.NEXT_ADAPTER_VERCEL_CONFIG = JSON.stringify(config);
+  } else {
+    // Adapter builds get `deploymentId` assigned via the adapter's
+    // `modifyConfig` instead.
+    const defaultNextDeploymentId = getDefaultNextDeploymentId(env);
+    if (defaultNextDeploymentId) {
+      env.NEXT_DEPLOYMENT_ID = defaultNextDeploymentId;
+    }
   }
 
   const shouldRunCompileStep =
@@ -589,7 +604,7 @@ export const build: BuildV2 = async buildOptions => {
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: config.framework ?? undefined,
+      framework: buildOptions.diagnosticsValues?.framework,
       serviceType: buildOptions.service
         ? getReportedServiceType(buildOptions.service)
         : undefined,
@@ -634,9 +649,11 @@ export const build: BuildV2 = async buildOptions => {
       }
     }
 
+    // This is the intended codepath if isAdapterEnabled, where the adapter itself outputs .next/output.
     return {
       buildOutputPath: path.join(entryPath, outputDirectory, 'output'),
       buildOutputVersion,
+      framework: { slug: 'nextjs', version: nextVersion },
     } as BuildResultBuildOutput;
   }
 
@@ -1039,6 +1056,7 @@ export const build: BuildV2 = async buildOptions => {
 
     // This handles pages, `public/`, and `static/`.
     const filesAfterBuild = await glob('**', outDirectory);
+    validateStaticFiles(filesAfterBuild, '_next/static/');
 
     const output: Files = {
       ...filesAfterBuild,
@@ -1877,6 +1895,7 @@ export const build: BuildV2 = async buildOptions => {
       isApiLambda: boolean;
       lambdaIdentifier: string;
       lambdaCombinedBytes: number;
+      affinity?: NodejsLambda['affinity'];
       maxConcurrency?: number;
     };
     const apiLambdaGroups: Array<LambdaGroup> = [];
@@ -2003,6 +2022,7 @@ export const build: BuildV2 = async buildOptions => {
               isApiLambda: !!routeIsApi,
               pseudoLayer: group.pseudoLayer,
               lambdaCombinedBytes: group.pseudoLayerBytes,
+              affinity: group.affinity,
               maxConcurrency: group.maxConcurrency,
               lambdaIdentifier: path.join(
                 entryDirectory,
@@ -2110,6 +2130,7 @@ export const build: BuildV2 = async buildOptions => {
           };
           let lambdaOptions: {
             architecture?: NodejsLambda['architecture'];
+            affinity?: NodejsLambda['affinity'];
             memory?: number;
             maxDuration?: number | 'max';
             maxConcurrency?: number;
@@ -2402,6 +2423,7 @@ export const build: BuildV2 = async buildOptions => {
                 ),
                 operationType,
                 runtime: nodeVersion.runtime,
+                affinity: group.affinity,
                 maxConcurrency: group.maxConcurrency,
                 nextVersion,
               });

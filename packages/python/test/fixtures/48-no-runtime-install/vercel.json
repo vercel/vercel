@@ -1,0 +1,7 @@
+{
+  "build": {
+    "env": {
+      "VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL": "1"
+    }
+  }
+}

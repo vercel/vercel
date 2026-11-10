@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
-import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesDisableSubcommand } from '../command';
 import {
@@ -9,9 +8,26 @@ import {
   resolveRule,
   detectExistingDraft,
   offerAutoPublish,
+  resolveFirewallScope,
+  refuseManagedBotMutation,
+  mentionsPriorityProject,
+  mapFirewallApiError,
 } from '../shared';
 import { formatActionDisplay } from '../../../util/firewall/format';
-import { outputAgentError } from '../../../util/agent-output';
+import {
+  outputAgentError,
+  shouldEmitNonInteractiveCommandError,
+  type AgentErrorPayload,
+} from '../../../util/agent-output';
+import {
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../../util/agent-output-constants';
+import { quoteArg } from '../../../util/flags/quote-arg';
+import { apiServerMessage } from '../../../util/firewall/server-message';
+import { teamCache } from '../../../util/teams/get-team-by-id-or-slug';
+import type { FirewallScope } from '../../../util/firewall/scope';
+import type { FirewallRule } from '../../../util/firewall/types';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
 import stamp from '../../../util/output/stamp';
@@ -25,22 +41,22 @@ export default async function disable(client: Client, argv: string[]) {
   );
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(
-    client,
-    'firewall',
-    parsed.flags['--project']
-  );
-  if (typeof link === 'number') return link;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
   let identifier = parsed.args[0] as string | undefined;
 
-  output.spinner(`Fetching rules for ${chalk.bold(project.name)}`);
+  const reserved = refuseManagedBotMutation(
+    client,
+    scope,
+    identifier,
+    'disable'
+  );
+  if (reserved !== null) return reserved;
 
-  const { active, draft } = await listFirewallConfigs(client, project.id, {
-    teamId,
-  });
+  output.spinner(`Fetching rules for ${chalk.bold(scope.displayName)}`);
+
+  const { active, draft } = await listFirewallConfigs(client, scope);
   const currentRules = draft?.rules || active?.rules || [];
 
   if (currentRules.length === 0) {
@@ -71,18 +87,18 @@ export default async function disable(client: Client, argv: string[]) {
                 when: 'replace <name-or-id>',
               },
               {
-                command: withGlobalFlags(client, 'firewall rules list'),
+                command: withGlobalFlags(client, 'firewall rules list', scope),
                 when: 'list rules',
               },
             ],
           },
-          1
+          2
         );
       }
       output.error(
-        `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules disable <name-or-id>')}`
+        `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules disable <name-or-id>', scope)}`
       );
-      return 1;
+      return 2;
     }
 
     const enabledRules = currentRules.filter(r => r.active !== false);
@@ -112,7 +128,7 @@ export default async function disable(client: Client, argv: string[]) {
   if (allMatches.length === 0) {
     output.stopSpinner();
     output.error(
-      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to view all rules.`
+      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list', scope))} to view all rules.`
     );
     return 1;
   }
@@ -143,7 +159,8 @@ export default async function disable(client: Client, argv: string[]) {
           next: matches.map(r => ({
             command: withGlobalFlags(
               client,
-              `firewall rules disable "${r.id}" --yes`
+              `firewall rules disable "${r.id}" --yes`,
+              scope
             ),
             when: `disable "${r.name}"`,
           })),
@@ -177,42 +194,84 @@ export default async function disable(client: Client, argv: string[]) {
   output.spinner('Staging changes');
 
   try {
-    const hadExistingDraft = await detectExistingDraft(
-      client,
-      project.id,
-      teamId
-    );
+    const hadExistingDraft = await detectExistingDraft(client, scope);
 
-    await patchFirewallDraft(
-      client,
-      project.id,
-      {
-        action: 'rules.update',
-        id: rule.id,
-        value: {
-          name: rule.name,
-          description: rule.description,
-          active: false,
-          conditionGroup: rule.conditionGroup,
-          action: rule.action,
-        },
+    await patchFirewallDraft(client, scope, {
+      action: 'rules.update',
+      id: rule.id,
+      value: {
+        name: rule.name,
+        description: rule.description,
+        active: false,
+        conditionGroup: rule.conditionGroup,
+        action: rule.action,
       },
-      { teamId }
-    );
+    });
 
     output.log(
       `${chalk.cyan('Disabled')} rule "${chalk.bold(rule.name)}" ${chalk.gray(disableStamp())}`
     );
 
-    await offerAutoPublish(client, project.id, hadExistingDraft, {
-      teamId,
+    await offerAutoPublish(client, scope, hadExistingDraft, {
       skipPrompts: parsed.flags['--yes'] as boolean,
     });
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    output.error(error.message || 'Failed to disable rule');
+    output.stopSpinner();
+    const priority = failPriorityDisable(client, e, scope, rule);
+    if (priority !== null) return priority;
+    output.error(mapFirewallApiError(e, scope, 'Failed to disable rule'));
     return 1;
   }
+}
+
+/**
+ * Disabling still submits the rule's conditions, and the API rejects a
+ * Priority-only condition when the project is not Priority. Enabling Priority
+ * would not let this disable succeed in a useful way: the rule has to be
+ * removed.
+ */
+function failPriorityDisable(
+  client: Client,
+  error: unknown,
+  scope: FirewallScope,
+  rule: FirewallRule
+): number | null {
+  const serverMessage = apiServerMessage(error);
+  if (!serverMessage || !mentionsPriorityProject(serverMessage)) return null;
+
+  const cached = scope.teamId ? teamCache.get(scope.teamId) : undefined;
+  const scopeArg =
+    scope.type === 'team'
+      ? scope.displayName
+      : (scope.teamSlug ?? cached?.slug ?? scope.teamId);
+  const scopeFlag = scopeArg ? ` --scope ${quoteArg(scopeArg)}` : '';
+  const command = `firewall rules remove ${quoteArg(rule.name)}${scopeFlag}`;
+  const message = `This rule cannot be disabled while ${scope.displayName} is not a Priority project. Remove it instead.`;
+  const nextCommand = withGlobalFlags(client, command, scope, {
+    preserveProject: true,
+    excludeFlags: ['--non-interactive', '--yes', '--scope', '--team'],
+  });
+  const payload: AgentErrorPayload = {
+    status: AGENT_STATUS.ERROR,
+    reason: AGENT_REASON.INVALID_ARGUMENTS,
+    message,
+    userActionRequired: true,
+    hint: nextCommand,
+    retryable: false,
+    ...(scopeArg ? { scope: scopeArg } : {}),
+    next: [
+      {
+        command: nextCommand,
+        when: 'remove the rule instead of disabling it',
+      },
+    ],
+  };
+  if (shouldEmitNonInteractiveCommandError(client)) {
+    outputAgentError(client, payload, 1);
+  }
+  output.error(message);
+  output.log(nextCommand);
+  return 1;
 }

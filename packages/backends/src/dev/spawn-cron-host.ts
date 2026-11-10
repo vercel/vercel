@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import getPort from 'get-port';
+import { getNodeExecPath } from '@vercel/build-utils';
 
 const require_ = createRequire(import.meta.url);
 
@@ -62,7 +63,7 @@ export async function spawnCronHost(
   env.__VC_DISPATCH_SHIM_ABS = shimAbs;
   env.__VC_PORT = String(port);
 
-  const child = spawn(process.execPath, ['--import', tsxBin, opts.hostPath], {
+  const child = spawn(getNodeExecPath(), ['--import', tsxBin, opts.hostPath], {
     cwd: opts.cwd,
     env,
     stdio: ['ignore', 'pipe', 'pipe'],

@@ -7,6 +7,13 @@ import { generateConfigValidator } from './scripts/precompile-config-validator.m
 // Get peer dependencies to externalize them (they may not be installed in CI)
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const peerDeps = Object.keys(pkg.peerDependencies || {});
+const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
+const supportsVlt = nodeMajor > 22 || (nodeMajor === 22 && nodeMinor >= 22);
+const vltTests = [
+  'test/unit/builders/vlt-builder-importer.test.ts',
+  'test/unit/builders/vlt-builder-reify.test.ts',
+  'test/unit/scripts/generate-builder-graph.test.ts',
+];
 
 export default mergeConfig(rootConfig, {
   // Exercise the same precompiled validator that the production build ships.
@@ -16,7 +23,10 @@ export default mergeConfig(rootConfig, {
     },
   },
   test: {
+    globalSetup: ['./vitest.global-setup.mts'],
     setupFiles: ['./vitest.setup.mts'],
+    // The Testserver lane has its own config (vitest.testserver.config.mts).
+    exclude: ['test/testserver/**', ...(supportsVlt ? [] : vltTests)],
   },
   ssr: {
     // Externalize peer dependencies so Vite doesn't try to resolve them

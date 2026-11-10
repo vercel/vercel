@@ -12,8 +12,6 @@ vi.mock('child_process', () => ({
 }));
 
 describe('httpstat', () => {
-  let originalProcessArgv: string[];
-
   const setupLinkedProject = async () => {
     const { setupUnitFixture } = await import(
       '../../../helpers/setup-unit-fixture'
@@ -35,8 +33,6 @@ describe('httpstat', () => {
   };
 
   beforeEach(async () => {
-    originalProcessArgv = process.argv;
-
     const childProcess = await import('child_process');
     spawnMock = vi.mocked(childProcess.spawn);
 
@@ -51,7 +47,6 @@ describe('httpstat', () => {
   });
 
   afterEach(() => {
-    process.argv = originalProcessArgv;
     vi.clearAllMocks();
   });
 
@@ -94,7 +89,7 @@ describe('httpstat', () => {
     it('prints help message', async () => {
       client.setArgv('httpstat', '--help');
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.getFullOutput()).toContain(
         'Execute httpstat with automatic deployment URL and protection bypass'
       );
@@ -153,60 +148,48 @@ describe('httpstat', () => {
     it('should reject unrecognized flags before --', async () => {
       client.setArgv('httpstat', '/api/hello', '--invalid-flag');
       const exitCode = await httpstat(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('unknown or unexpected option');
-    });
-
-    it('should handle process.argv parsing for httpstat flags after --', () => {
-      process.argv = [
-        'node',
-        'vercel',
-        'httpstat',
-        '/api/hello',
-        '--',
-        '-H',
-        'Content-Type: application/json',
-        '-X',
-        'POST',
-      ];
-
-      const separatorIndex = process.argv.indexOf('--');
-      const httpstatFlags =
-        separatorIndex !== -1 ? process.argv.slice(separatorIndex + 1) : [];
-
-      expect(httpstatFlags).toEqual([
-        '-H',
-        'Content-Type: application/json',
-        '-X',
-        'POST',
-      ]);
     });
   });
 
   describe('--deployment flag', () => {
-    it('should accept deployment ID with dpl_ prefix', async () => {
-      client.setArgv(
-        'httpstat',
-        '/api/hello',
-        '--deployment',
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      const separatorIndex = client.argv.indexOf('--');
-      expect(separatorIndex).toBe(-1);
-    });
+    it('discovers the owning team for a protected deployment ID', async () => {
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_deleted';
+      useTeams('team_wrong');
+      createTeam('team_target');
+      client.scenario.get('/v13/deployments/dpl_target', (req, res) => {
+        if (req.query.teamId !== 'team_target') {
+          return res.status(404).json({ error: { code: 'not_found' } });
+        }
+        res.json({
+          id: 'dpl_target',
+          url: 'target.vercel.app',
+          projectId: 'prj_target',
+          ownerId: 'team_target',
+        });
+      });
+      client.scenario.get('/v9/projects/prj_target', (req, res) => {
+        expect(req.query.teamId).toBe('team_target');
+        res.json({
+          id: 'prj_target',
+          name: 'target',
+          protectionBypass: { secret: { scope: 'automation-bypass' } },
+        });
+      });
+      client.setArgv('httpstat', '/api/hello', '--deployment', 'dpl_target');
 
-    it('should accept deployment ID without dpl_ prefix', async () => {
-      client.setArgv(
+      expect(await httpstat(client)).toBe(0);
+      expect(spawnMock).toHaveBeenCalledWith(
         'httpstat',
-        '/api/hello',
-        '--deployment',
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
+        expect.arrayContaining([
+          'https://target.vercel.app/api/hello',
+          'x-vercel-protection-bypass: secret',
+        ]),
+        expect.any(Object)
       );
-      const deploymentIndex = client.argv.indexOf('--deployment');
-      expect(deploymentIndex).toBeGreaterThan(-1);
-      expect(client.argv[deploymentIndex + 1]).toBe(
-        'ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
+      expect(client.config.currentTeam).toBe('team_deleted');
     });
 
     it('should accept a full deployment URL', async () => {
@@ -238,42 +221,6 @@ describe('httpstat', () => {
           value: '[REDACTED]',
         },
       ]);
-    });
-  });
-
-  describe('--protection-bypass flag', () => {
-    it('should accept a protection bypass secret', async () => {
-      client.setArgv(
-        'httpstat',
-        '/api/hello',
-        '--protection-bypass',
-        'my-secret-token'
-      );
-
-      const bypassIndex = client.argv.indexOf('--protection-bypass');
-      expect(bypassIndex).toBeGreaterThan(-1);
-      expect(client.argv[bypassIndex + 1]).toBe('my-secret-token');
-    });
-
-    it('should work with both --deployment and --protection-bypass', async () => {
-      client.setArgv(
-        'httpstat',
-        '/api/hello',
-        '--deployment',
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV',
-        '--protection-bypass',
-        'my-secret-token'
-      );
-
-      const deploymentIndex = client.argv.indexOf('--deployment');
-      const bypassIndex = client.argv.indexOf('--protection-bypass');
-
-      expect(deploymentIndex).toBeGreaterThan(-1);
-      expect(bypassIndex).toBeGreaterThan(-1);
-      expect(client.argv[deploymentIndex + 1]).toBe(
-        'dpl_ERiL45NJvP8ghWxgbvCM447bmxwV'
-      );
-      expect(client.argv[bypassIndex + 1]).toBe('my-secret-token');
     });
   });
 

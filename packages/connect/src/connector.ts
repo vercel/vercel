@@ -3,6 +3,7 @@ import {
   createConnectErrorFromResponse,
   type ConnectOptions,
 } from './token.js';
+import { resolveBaseUrl } from './internal/base-url.js';
 
 /**
  * Connector metadata as returned by Vercel Connect. This is the stable, useful
@@ -41,7 +42,8 @@ export async function getConnectorMetadata(
 ): Promise<ConnectorMetadata> {
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
 
-  const endpoint = `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent(connector)}`;
+  const baseUrl = resolveBaseUrl(options);
+  const endpoint = `${baseUrl}/v1/connect/connectors/${encodeURIComponent(connector)}`;
 
   const response = await fetch(endpoint, {
     method: 'GET',

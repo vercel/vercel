@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { homedir } from 'node:os';
-import XDGAppPaths from 'xdg-app-paths';
+
+type XDGAppPathsFactory = typeof import('xdg-app-paths');
 
 function isReadableDirectory(targetPath: string): boolean {
   try {
@@ -13,13 +14,34 @@ function isReadableDirectory(targetPath: string): boolean {
   }
 }
 
+function getAppPaths(appName: string) {
+  // xdg-app-paths infers a default app name when loaded, which requires a
+  // process entrypoint that is not present in every server runtime.
+  const XDGAppPaths = require('xdg-app-paths') as XDGAppPathsFactory;
+  return XDGAppPaths(appName);
+}
+
+function getDataDirectories(appName: string): string[] {
+  return getAppPaths(appName).dataDirs();
+}
+
+/** Canonical platform application-data directory for the Vercel CLI. */
+export function getDataPath(): string {
+  return getDataDirectories('com.vercel.cli')[0];
+}
+
+/** Canonical platform cache directory for the Vercel CLI. */
+export function getCachePath(): string {
+  return getAppPaths('com.vercel.cli').cache();
+}
+
 export function getGlobalPathConfig(): string {
-  const vercelDirectories = XDGAppPaths('com.vercel.cli').dataDirs();
+  const vercelDirectories = getDataDirectories('com.vercel.cli');
 
   const possibleConfigPaths = [
     ...vercelDirectories, // latest vercel directory
     path.join(homedir(), '.now'), // legacy config in user's home directory
-    ...XDGAppPaths('now').dataDirs(), // legacy XDG directory
+    ...getDataDirectories('now'), // legacy XDG directory
   ];
 
   return (

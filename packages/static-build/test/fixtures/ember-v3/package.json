@@ -47,6 +47,6 @@
     "qunit-dom": "^0.8.4"
   },
   "engines": {
-    "node": "20.*"
+    "node": "24.x"
   }
 }

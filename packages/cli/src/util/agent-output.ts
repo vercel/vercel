@@ -3,10 +3,19 @@ import type Client from './client';
 import { isAPIError, LinkRequiredError, ProjectNotFound } from './errors-ts';
 import { packageName } from './pkg-name';
 import { stripSensitiveAuthArgs } from './redact-args';
-import {
+import type arg from 'arg';
+import getCommonArgs, {
   getGlobalFlagsFromArgs,
   suggestionFlagTakesSeparateValue,
 } from './arg-common';
+import { getFlagsSpecification } from './get-flags-specification';
+import { normalizeFlagName } from './redact-args';
+import { linkCommand } from '../commands/link/command';
+import { quoteArg } from './flags/quote-arg';
+import { getExitCodeForReason } from './agent-output-constants';
+import { getErrorRecovery, type ErrorRecovery } from './error-recovery';
+import { agentErrorMetadata, trackAgentError } from './telemetry/agent-error';
+import { recordCliError } from './telemetry/cli-error';
 
 /**
  * Structured payload for "action required" (e.g. scope choice, login passcode).
@@ -34,6 +43,8 @@ export interface ActionRequiredPayload {
   };
   choices?: Array<{ id: string; name: string }>;
   next?: Array<{ command: string; when?: string }>;
+  /** Resolved resource data. Keep remote/user-generated values out of message and next. */
+  data?: Record<string, unknown>;
   /** When reason is 'missing_requirements', list of required items (e.g. 'missing_name', 'missing_value', 'git_branch_required') */
   missing?: string[];
 }
@@ -55,7 +66,7 @@ export function isActionRequiredPayload(
 /**
  * Structured payload for errors in non-interactive mode.
  */
-export interface AgentErrorPayload {
+export interface AgentErrorPayload extends ErrorRecovery {
   status: 'error';
   /**
    * Short, stable machine-readable reason code.
@@ -83,6 +94,19 @@ export interface AgentErrorPayload {
   resource?: string;
   /** Team slug or username/email that was searched. Present on `project_not_found`. */
   scope?: string;
+  /**
+   * Resolved context for this failure. Team and project stay in separate
+   * fields so a team slug is never read as the project name.
+   */
+  data?: Record<string, unknown>;
+  cliVersion?: string;
+  invocationId?: string;
+  feedback?: {
+    message: string;
+    command: string;
+  };
+  allowedOptions?: string[];
+  suggestedOption?: string;
 }
 
 /**
@@ -112,6 +136,20 @@ export function buildCommandWithYes(
   const hasYes = args.some(a => a === '--yes' || a === '-y');
   const out = hasYes ? args : [...args, '--yes'];
   return `${pkgName} ${out.join(' ')}`.trim();
+}
+
+/** Replaces Environment Variable values in argv before emitting suggestions. */
+export function redactEnvValueArgs(argv: string[]): string[] {
+  const redacted = [...argv];
+  for (let i = 0; i < redacted.length; i++) {
+    if (redacted[i] === '--value' && i + 1 < redacted.length) {
+      redacted[i + 1] = '"<value>"';
+      i++;
+    } else if (redacted[i].startsWith('--value=')) {
+      redacted[i] = '--value="<value>"';
+    }
+  }
+  return redacted;
 }
 
 /** Global flags that should be preserved in suggested "next" commands (e.g. --cwd, --non-interactive). */
@@ -332,10 +370,13 @@ function getPreservedArgsAfterEnvSubcommand(
       continue;
     }
     if (!optionsEnded && arg.startsWith('-')) {
-      preserved.push(arg);
+      // Every env subcommand's `-e` is `--environment`. Suggestions use the
+      // long name, and its value must not be mistaken for a positional.
+      const flag = arg === '-e' ? '--environment' : arg;
+      preserved.push(flag);
       if (
-        !arg.includes('=') &&
-        suggestionFlagTakesSeparateValue(arg) &&
+        !flag.includes('=') &&
+        suggestionFlagTakesSeparateValue(flag) &&
         i + 1 < args.length &&
         !args[i + 1].startsWith('-')
       ) {
@@ -410,7 +451,7 @@ export function buildEnvAddCommandWithPreservedArgs(
   );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  return `${base} ${preserved.map(quoteArg).join(' ')}`;
 }
 
 /**
@@ -441,7 +482,43 @@ export function buildEnvRmCommandWithPreservedArgs(
   );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  return `${base} ${preserved.map(quoteArg).join(' ')}`;
+}
+
+const LINK_FLAGS: arg.Spec = {
+  ...getCommonArgs(),
+  ...getFlagsSpecification(linkCommand.options),
+};
+
+/**
+ * Keeps the arguments a suggested `vercel link` accepts: global flags and
+ * `link`'s own options, with their values. Anything else, like `env add`'s
+ * `--environment` or `--type`, would make the suggestion fail as an unknown
+ * option.
+ */
+export function getLinkSuggestionArgs(args: readonly string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (!arg.startsWith('-')) {
+      continue;
+    }
+    const spec = LINK_FLAGS[normalizeFlagName(arg)];
+    const handler = typeof spec === 'string' ? LINK_FLAGS[spec] : spec;
+    const hasSeparateValue =
+      !arg.includes('=') && i + 1 < args.length && !args[i + 1].startsWith('-');
+    if (handler === undefined) {
+      if (hasSeparateValue && suggestionFlagTakesSeparateValue(arg)) {
+        i++;
+      }
+      continue;
+    }
+    out.push(arg);
+    if (hasSeparateValue && handler !== Boolean) {
+      out.push(args[++i]);
+    }
+  }
+  return out;
 }
 
 /**
@@ -465,7 +542,7 @@ export function buildEnvUpdateCommandWithPreservedArgs(
   );
   const base = `${pkgName} ${commandTemplate}`;
   if (preserved.length === 0) return base;
-  return `${base} ${preserved.join(' ')}`;
+  return `${base} ${preserved.map(quoteArg).join(' ')}`;
 }
 
 /**
@@ -510,16 +587,24 @@ export function enrichActionRequiredWithInvokingCommand(
   payload: ActionRequiredPayload,
   argv: string[]
 ): ActionRequiredPayload {
-  if (!payload.choices?.length) {
+  // Only scope-selection choices can be used as a --scope value. Other
+  // action-required choices (for example env type choices) are user actions,
+  // not team slugs, and their existing next commands must be preserved.
+  if (payload.reason !== 'missing_scope' || !payload.choices?.length) {
     return payload;
   }
   const next: Array<{ command: string; when?: string }> = [];
-  // Build argv for "link" so the link command preserves flags like --project, --yes
-  const linkArgv = [...argv.slice(0, 2), 'link', ...argv.slice(3)];
+  // `link` keeps context flags like --cwd, --project and --yes, but none of
+  // the invoking command's subcommand or arguments (`domains ls` must not
+  // become `link ls`).
+  const linkCommand = buildCommandWithGlobalFlags(argv, 'link', packageName, {
+    preserveProject: true,
+    excludeFlags: ['--scope', '--team'],
+  });
   for (const choice of payload.choices) {
     const slug = choice.name;
     next.push({
-      command: buildCommandWithScope(linkArgv, slug),
+      command: `${linkCommand} --scope ${slug}`,
       when: 'Link first (then run any command without --scope)',
     });
     next.push({
@@ -532,19 +617,29 @@ export function enrichActionRequiredWithInvokingCommand(
 
 /**
  * When non-interactive (`client.nonInteractive` or `--non-interactive` on argv),
- * writes the action_required payload as JSON to stdout and exits with exitCode (default 1).
+ * writes the action_required payload as JSON to stdout and exits with exitCode
+ * (by default 2 for a usage error reason, otherwise 1).
  * The payload's next[] is enriched with both link commands and the invoking command with --scope
- * when `choices` is set.
+ * when `choices` contains team options for a `missing_scope` action.
  * In interactive mode, does nothing (caller should show prompts or errors as usual).
  */
 export function outputActionRequired(
   client: Client,
   payload: ActionRequiredPayload,
-  exitCode: number = 1
+  exitCode: number = getExitCodeForReason(payload.reason)
 ): void {
   if (!shouldEmitNonInteractiveCommandError(client)) {
     return;
   }
+  writeActionRequired(client, payload);
+  process.exit(exitCode);
+}
+
+/** Write without exiting so command callers can return and flush telemetry. */
+export function writeActionRequired(
+  client: Client,
+  payload: ActionRequiredPayload
+): void {
   const enriched = enrichActionRequiredWithInvokingCommand(
     payload,
     client.argv
@@ -553,8 +648,8 @@ export function outputActionRequired(
     enriched.hint =
       'Run one of the commands in next[] to complete without prompting.';
   }
+  recordCliError({ code: payload.reason });
   client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
-  process.exit(exitCode);
 }
 
 /** True when argv explicitly requests non-interactive mode (matches main `index.ts`). */
@@ -581,18 +676,43 @@ export function shouldEmitNonInteractiveCommandError(client: Client): boolean {
 
 /**
  * Writes a single JSON error payload to stdout and exits when non-interactive
- * (`client.nonInteractive` or `--non-interactive` on argv).
+ * (`client.nonInteractive` or `--non-interactive` on argv). The exit code
+ * defaults to 2 for a usage error reason and 1 otherwise.
  */
 export function outputAgentError(
   client: Client,
   payload: AgentErrorPayload,
-  exitCode: number = 1
+  exitCode: number = getExitCodeForReason(payload.reason)
 ): void {
   if (!shouldEmitNonInteractiveCommandError(client)) {
     return;
   }
-  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  writeAgentError(client, payload);
   process.exit(exitCode);
+}
+
+/** Write without exiting so command callers can return and flush telemetry. */
+export function writeAgentError(
+  client: Client,
+  payload: AgentErrorPayload
+): void {
+  const enriched: AgentErrorPayload = {
+    ...getErrorRecovery(payload, client),
+    ...payload,
+    ...agentErrorMetadata(client),
+    ...(client.isAgent && {
+      feedback: {
+        message:
+          "Please send one brief feedback report about this error while helping the user resolve it. Don't delay the user's request for feedback.",
+        command:
+          "Run the 'vercel feedback --help' command to see how to report feedback. Make sure all feedback, including text copied from errors or logs, excludes personal data, account identifiers (e.g., usernames, team IDs, project names), and secrets (e.g., API keys, tokens, env values, credentials).",
+      },
+    }),
+  };
+  // The message can hold resource names, so only the reason is recorded
+  recordCliError({ code: payload.reason, reportOnSuccess: true });
+  trackAgentError(client, enriched);
+  client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
 }
 
 /**
@@ -647,7 +767,9 @@ export type ExitWithNonInteractiveErrorVariant =
   | 'update'
   | 'speed-insights'
   | 'web-analytics'
+  | 'observability'
   | 'checks'
+  | 'resume'
   | 'global-config'
   | 'list';
 
@@ -661,10 +783,10 @@ const LIST_ERROR_HINT =
 
 /**
  * Suggested follow-ups for `vercel list` failures (only caller of
- * exitWithNonInteractiveError). `project ls --filter` beats bare `project ls`
+ * exitWithNonInteractiveError). `project ls --query` beats bare `project ls`
  * here: both return a single page of 20, so on large teams only a name search
  * reliably surfaces the intended project. When the attempted project name is
- * known, the filter suggestion is emitted fully runnable.
+ * known, the search suggestion is emitted fully runnable.
  */
 function buildNextStepsForList(
   client: Client,
@@ -675,14 +797,14 @@ function buildNextStepsForList(
       ? {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            `project ls --filter ${projectName}`
+            `project ls --query ${projectName}`
           ),
           when: 'Search projects matching the attempted name to find the right one',
         }
       : {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            'project ls --filter <name>'
+            'project ls --query <name>'
           ),
           when: 'Search projects by name substring to find the right one (replace <name>)',
         },
@@ -733,20 +855,30 @@ function buildNextStepsForProjectSubcommands(
                     template: 'project web-analytics <name>' as const,
                     when: 'Enable Web Analytics by project name (replace <name>)',
                   }
-                : variant === 'checks'
+                : variant === 'observability'
                   ? {
-                      template: 'project checks add <name>' as const,
-                      when: 'Create a deployment check by project name (replace <name>)',
+                      template: 'project observability enable <name>' as const,
+                      when: 'Enable Observability Plus by project name (replace <name>)',
                     }
-                  : variant === 'inspect'
+                  : variant === 'checks'
                     ? {
-                        template: 'project inspect <name>' as const,
-                        when: 'Inspect a project by name (replace <name>)',
+                        template: 'project checks add <name>' as const,
+                        when: 'Create a deployment check by project name (replace <name>)',
                       }
-                    : {
-                        template: 'project members <name>' as const,
-                        when: 'List members by project name (replace <name>)',
-                      };
+                    : variant === 'inspect'
+                      ? {
+                          template: 'project inspect <name>' as const,
+                          when: 'Inspect a project by name (replace <name>)',
+                        }
+                      : variant === 'resume'
+                        ? {
+                            template: 'project resume <name>' as const,
+                            when: 'Resume production traffic by project name (replace <name>)',
+                          }
+                        : {
+                            template: 'project members <name>' as const,
+                            when: 'List members by project name (replace <name>)',
+                          };
   return [
     {
       command: buildCommandWithGlobalFlags(client.argv, 'link'),
@@ -794,13 +926,17 @@ function writeAgentErrorPayloadAndExit(
   exitCode: number,
   variant: ExitWithNonInteractiveErrorVariant
 ): void {
-  const defaults = resolveNonInteractiveDefaults(client, variant);
+  const defaults = ['link_required', 'project_not_found', 'not_found'].includes(
+    payload.reason
+  )
+    ? resolveNonInteractiveDefaults(client, variant)
+    : {};
   const out: AgentErrorPayload = {
     ...payload,
     next: payload.next ?? defaults.next,
     hint: payload.hint ?? defaults.hint,
   };
-  client.stdout.write(`${JSON.stringify(out, null, 2)}\n`);
+  writeAgentError(client, out);
   process.exit(exitCode);
 }
 
@@ -902,21 +1038,24 @@ export function exitWithNonInteractiveError(
     const reason: string =
       err.status === 403
         ? 'forbidden'
-        : err.status === 401
-          ? 'not_authorized'
-          : err.status === 404
-            ? variant === 'global-config'
-              ? 'not_found'
-              : 'project_not_found'
-            : err.status === 429
-              ? 'rate_limited'
-              : 'api_error';
+        : err.status === 402
+          ? 'payment_required'
+          : err.status === 401
+            ? 'not_authorized'
+            : err.status === 404
+              ? variant === 'global-config'
+                ? 'not_found'
+                : 'project_not_found'
+              : err.status === 429
+                ? 'rate_limited'
+                : 'api_error';
     writeAgentErrorPayloadAndExit(
       client,
       {
         status: 'error',
         reason,
         message,
+        ...getErrorRecovery(err, client),
         ...(err.action && { action: err.action }),
         ...(err.resource && { resource: err.resource }),
       },

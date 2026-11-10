@@ -1,0 +1,5 @@
+fastapi
+flask
+pydantic
+sanic==25.3.0
+starlette

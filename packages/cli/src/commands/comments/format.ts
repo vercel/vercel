@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import ms from 'ms';
+import ellipsis from '../../util/output/ellipsis';
 import { ALIGNED_LABEL_WIDTH } from '../../util/output/print-aligned-label';
 import type { CommentActor, CommentMessage, Thread } from './types';
 
@@ -47,18 +48,8 @@ export function displayPath(thread: Thread): string {
   return thread.context?.path || '/';
 }
 
-/** Truncate on grapheme boundaries so we never split emoji or combining marks. */
 export function truncate(text: string, max: number): string {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  const segmenter = new Intl.Segmenter();
-  const graphemes = [...segmenter.segment(normalized)];
-  if (graphemes.length <= max) {
-    return normalized;
-  }
-  return `${graphemes
-    .slice(0, Math.max(0, max - 1))
-    .map(s => s.segment)
-    .join('')}…`;
+  return ellipsis(text.replace(/\s+/g, ' ').trim(), max);
 }
 
 export function firstMessageText(thread: Thread): string {

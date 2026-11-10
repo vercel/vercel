@@ -10,14 +10,23 @@ import { packageName } from '../../../util/pkg-name';
 const projectScopeOption = {
   ...projectOption,
   shorthand: 'p',
-  description: 'Project name or ID (defaults to the linked project).',
+  description: 'Project name or ID (default: linked project).',
+} as const;
+
+const nextOption = {
+  name: 'next',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Show the next page using the cursor from the previous output',
+  argument: 'CURSOR',
 } as const;
 
 const cursorOption = {
   name: 'cursor',
   shorthand: 'c',
   type: String,
-  deprecated: false,
+  deprecated: true,
   description: 'Cursor from a previous page to continue listing from',
   argument: 'STRING',
 } as const;
@@ -42,6 +51,7 @@ export const imageLsSubcommand = {
       description: 'Only list images that have no tags',
     },
     limitOption,
+    nextOption,
     cursorOption,
     formatOption,
     jsonOption,
@@ -82,8 +92,8 @@ export const imageInspectSubcommand = {
 } as const;
 
 export const imageRmSubcommand = {
-  name: 'rm',
-  aliases: ['remove', 'delete'],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete an image from a repository',
   arguments: [
     {
@@ -99,11 +109,11 @@ export const imageRmSubcommand = {
   examples: [
     {
       name: 'Delete an image by id',
-      value: `${packageName} vcr image rm my-app img_abc123`,
+      value: `${packageName} vcr image delete my-app img_abc123`,
     },
     {
       name: 'Delete an image without the confirmation prompt',
-      value: `${packageName} vcr image rm my-app img_abc123 --yes`,
+      value: `${packageName} vcr image delete my-app img_abc123 --yes`,
     },
   ],
 } as const;

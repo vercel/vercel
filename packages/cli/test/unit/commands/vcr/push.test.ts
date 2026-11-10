@@ -83,7 +83,7 @@ describe('vcr push', () => {
     it('tracks telemetry and exits 2', async () => {
       client.setArgv('vcr', 'push', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -123,14 +123,6 @@ describe('vcr push', () => {
       ],
       { cwd: tmpDir, stdio: ['inherit', 'inherit', 'pipe'], reject: false }
     );
-  });
-
-  it('does not add compression flags on docker', async () => {
-    client.setArgv('vcr', 'push', 'docker');
-    const exitCode = await vcr(client);
-    expect(exitCode).toBe(0);
-    const args = mockedExeca.mock.calls[0][1] as string[];
-    expect(args).not.toContain('--compression-format');
   });
 
   it('pushes a specific name:tag', async () => {

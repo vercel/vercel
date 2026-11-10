@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { z } from 'zod';
 import {
   debug,
+  getNodeExecPath,
   isExperimentalBackendsWithoutIntrospectionEnabled,
   type Span,
 } from '@vercel/build-utils';
@@ -76,7 +77,7 @@ export const introspectApp = async (args: {
       // Use spawn to support different runtimes (node, bun, etc.)
       debug('Spawning introspection process');
       const child = spawn(
-        'node',
+        getNodeExecPath(),
         ['-r', cjsLoaderPath, '--import', rolldownEsmLoaderPath, handlerPath],
         {
           stdio: ['pipe', 'pipe', 'pipe'],
@@ -217,6 +218,15 @@ export const introspectApp = async (args: {
     {
       src: '/(.*)',
       dest: '/',
+      // Expose the resolved (post-rewrite) path to the framework Lambda so
+      // application routing observes the rewritten destination.
+      transforms: [
+        {
+          type: 'request.path' as const,
+          op: 'set' as const,
+          args: '/$1',
+        },
+      ],
     },
   ];
 
@@ -246,6 +256,15 @@ const defaultResult = (args: {
       {
         src: '/(.*)',
         dest: '/',
+        // Expose the resolved (post-rewrite) path to the framework Lambda so
+        // application routing observes the rewritten destination.
+        transforms: [
+          {
+            type: 'request.path' as const,
+            op: 'set' as const,
+            args: '/$1',
+          },
+        ],
       },
     ],
     framework: getFramework(args),

@@ -77,6 +77,13 @@ export interface EngineLoginResult {
 export const AUTH_FAILURE =
   /\b(?:unauthorized|denied|forbidden)\b\s*:|authentication required|access to the resource is denied|\b(?:401 unauthorized|403 forbidden)\b/i;
 
+/**
+ * stderr signature of Docker's macOS keychain credential helper failing to
+ * overwrite a stale entry for the registry
+ */
+export const CREDENTIAL_STORE_CONFLICT =
+  /already exists in the keychain|errSecDuplicateItem/i;
+
 /** Last few lines of engine stderr, for surfacing an unexpected failure. */
 export function stderrTail(stderr: string): string {
   return stderr.trim().split('\n').slice(-5).join('\n');
@@ -104,6 +111,22 @@ export async function engineLogin(
     exitCode: typeof result.exitCode === 'number' ? result.exitCode : 1,
     stderr: result.stderr ?? '',
   };
+}
+
+/**
+ * Removes the engine's stored credential for the registry. Used to clear a
+ * stale credential-store entry (see CREDENTIAL_STORE_CONFLICT) before retrying
+ * a failed login. Failures are ignored: the retried login surfaces its own
+ * error, and logout is a local-only, idempotent operation.
+ */
+export async function engineLogout(
+  engine: VcrEngine,
+  registry: string
+): Promise<void> {
+  await execa(engine, ['logout', registry], {
+    reject: false,
+    stdio: 'ignore',
+  });
 }
 
 export interface EngineRunResult {

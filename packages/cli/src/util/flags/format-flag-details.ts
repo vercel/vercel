@@ -1,5 +1,7 @@
 import chalk from 'chalk';
 import { formatFlagConditionComparator } from './comparators';
+import { getFlagAttributeType } from './attribute-types';
+import { formatTimestampRhs } from './timestamp';
 import type { FlagCondition, FlagSettings } from './types';
 
 export function resolveTargetingLabel(
@@ -37,8 +39,19 @@ export function formatFlagCondition(
     lhs = `${condition.lhs.kind}.${condition.lhs.attribute}`;
   }
 
+  const attributeType =
+    condition.lhs.type === 'entity'
+      ? getFlagAttributeType(
+          settings,
+          condition.lhs.kind,
+          condition.lhs.attribute
+        )
+      : undefined;
   const cmp = chalk.dim(
-    formatFlagConditionComparator(condition.cmp, condition.cmpOptions)
+    formatFlagConditionComparator(condition.cmp, {
+      ...condition.cmpOptions,
+      attributeType,
+    })
   );
 
   if (condition.rhs === undefined || condition.rhs === null) {
@@ -77,15 +90,15 @@ export function formatFlagCondition(
 
   let rhs: string;
   if (condition.lhs.type === 'entity') {
+    const timestampRhs = formatTimestampRhs(condition.rhs, attributeType);
     const label = resolveTargetingLabel(
       settings,
       condition.lhs.kind,
       condition.lhs.attribute,
       String(condition.rhs)
     );
-    rhs = label
-      ? `${condition.rhs} ${chalk.gray(label)}`
-      : String(condition.rhs);
+    const displayValue = timestampRhs ?? String(condition.rhs);
+    rhs = label ? `${displayValue} ${chalk.gray(label)}` : displayValue;
   } else {
     rhs = String(condition.rhs);
   }

@@ -1,8 +1,9 @@
 import type { GitHubChannelCredentials } from 'eve/channels/github';
 
-import { vercelOidc } from 'eve/channels/auth';
+import { createConnectWebhookVerifier } from '../chat/webhook-verifier.js';
 
 import {
+  getConnectorMetadata,
   getToken,
   type ConnectOptions,
   type ConnectTokenParams,
@@ -32,6 +33,10 @@ export type ConnectGitHubCredentialsParams = Omit<
  *
  * The webhook verifier accepts Connect-forwarded webhooks authenticated
  * with Vercel OIDC instead of GitHub's webhook secret.
+ *
+ * `appSlug` resolves the GitHub App slug from the connector's metadata,
+ * so `githubChannel` can derive its invocation token (`botName`) without
+ * extra configuration when `botName` is not set.
  */
 export function connectGitHubCredentials(
   connector: string,
@@ -39,8 +44,23 @@ export function connectGitHubCredentials(
   options?: ConnectOptions
 ): GitHubChannelCredentials {
   return {
+    appSlug: () => getGitHubAppSlug(connector, options),
     installationToken: () =>
       getToken(connector, { ...params, subject: { type: 'app' } }, options),
-    webhookVerifier: vercelOidc(),
+    webhookVerifier: createConnectWebhookVerifier(),
   };
+}
+
+async function getGitHubAppSlug(
+  connector: string,
+  options?: ConnectOptions
+): Promise<string> {
+  const metadata = await getConnectorMetadata(connector, options);
+  const appSlug = metadata.vendor.appSlug;
+  if (typeof appSlug !== 'string' || appSlug.length === 0) {
+    throw new Error(
+      `Vercel Connect connector ${connector} did not return a GitHub App slug.`
+    );
+  }
+  return appSlug;
 }

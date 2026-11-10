@@ -3,6 +3,7 @@ import stripAnsi from 'strip-ansi';
 import { describe, expect, it } from 'vitest';
 import {
   resolveVariant,
+  formatVariantForCliArg,
   formatVariantForDisplay,
   formatVariantListSummary,
   formatAvailableVariants,
@@ -161,13 +162,31 @@ describe('resolve-variant', () => {
   describe('formatVariantForDisplay', () => {
     it('formats variant with label', () => {
       const result = formatVariantForDisplay(booleanVariants[0]);
-      expect(stripAnsi(result)).toBe('true Enabled');
-      expect(result).toBe(`true ${chalk.dim('Enabled')}`);
+      expect(stripAnsi(result)).toBe('Enabled (true)');
+      expect(result).toBe(`Enabled (${chalk.dim('true')})`);
     });
 
     it('formats variant without label', () => {
       const result = formatVariantForDisplay(stringVariants[2]);
       expect(result).toBe('"off"');
+    });
+  });
+
+  describe('formatVariantForCliArg', () => {
+    it('uses boolean and number values instead of opaque IDs', () => {
+      expect(formatVariantForCliArg(booleanVariants[1])).toBe('false');
+      expect(formatVariantForCliArg(numberVariants[1])).toBe('100');
+    });
+
+    it('uses the raw string value without JSON quotes', () => {
+      expect(formatVariantForCliArg(stringVariants[0])).toBe('control');
+      expect(formatVariantForCliArg(stringVariants[2])).toBe('off');
+    });
+
+    it('serializes JSON values', () => {
+      expect(
+        formatVariantForCliArg({ id: 'obj_1', value: { plan: 'pro' } })
+      ).toBe('{"plan":"pro"}');
     });
   });
 

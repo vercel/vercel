@@ -282,7 +282,7 @@ describe('blob empty-store', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
-        'Missing --yes flag. This is a destructive operation, use --yes to confirm.'
+        'Missing --yes option. This is a destructive operation, use --yes to confirm.'
       );
       // Initial check happened but no deletion
       expect(mockedBlob.list).toHaveBeenCalledTimes(1);
@@ -328,7 +328,7 @@ describe('blob empty-store', () => {
     it('should return 1 when argument parsing fails', async () => {
       const exitCode = await emptyStore(client, ['--invalid-flag'], fullToken);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when token is not available', async () => {

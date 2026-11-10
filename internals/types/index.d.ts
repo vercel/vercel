@@ -33,10 +33,16 @@ export type GlobalConfig = import('@vercel/cli-config').GlobalConfig;
 type Billing = {
   addons: string[];
   cancelation?: number;
+  email?: string;
   period: { start: number; end: number };
   plan: string;
+  planIteration?: string;
   platform: string;
   status: 'active' | 'trialing' | 'overdue' | 'canceled' | 'expired';
+  subscriptions?: {
+    period: { start: number; end: number };
+    frequency: { interval: string; intervalCount: number };
+  }[];
   trial: { start: number; end: number };
 };
 
@@ -75,6 +81,23 @@ export interface Team {
    * Preview Environment Variables to `sensitive` on create.
    */
   sensitiveEnvironmentVariablePolicy?: 'default' | 'on' | 'off';
+  /** Require Production Secret values to be stored separately. */
+  disjunctiveProductionSecretPolicy?: 'default' | 'on' | 'off';
+  /**
+   * Team-wide Security+ subscription. Absent when the team has never had it.
+   * A project can also carry Security+ on its own, so this is not the whole
+   * entitlement — see `resolveFirewallEntitlements`.
+   */
+  securityPlus?: {
+    enabled: boolean;
+    updatedAt: number;
+    firstEnabledAt?: number;
+  };
+  /**
+   * The organization ID, set on an organization's root team and on every child
+   * team. Absent on teams outside an organization.
+   */
+  parentId?: string;
 }
 
 export type Domain = {
@@ -196,6 +219,10 @@ export type Deployment = {
   initReadyAt?: number;
   inspectorUrl?: string | null;
   lambdas?: Build[];
+  manualProvisioning?: {
+    state: 'PENDING' | 'COMPLETE' | 'TIMEOUT';
+    completedAt?: number;
+  };
   meta?: {
     [key: string]: string | undefined;
   };
@@ -203,6 +230,7 @@ export type Deployment = {
   name: string;
   ownerId?: string;
   plan?: 'enterprise' | 'hobby' | 'oss' | 'pro';
+  prebuilt?: boolean;
   previewCommentsEnabled?: boolean;
   private?: boolean;
   proposedExpiration?: number;
@@ -222,8 +250,26 @@ export type Deployment = {
     | 'INITIALIZING'
     | 'QUEUED'
     | 'READY'
-    | 'CANCELED';
+    | 'CANCELED'
+    | 'BLOCKED';
+  readyStateReason?: string;
   regions: string[];
+  resourceConfig?: {
+    buildMachine?: {
+      purchaseType?: 'basic' | 'enhanced' | 'turbo' | 'standard';
+      defaultPurchaseType?: 'basic' | 'standard' | 'enhanced';
+      machineSelectionType?: 'elastic' | 'fixed';
+      selectionSource?:
+        | 'project-setting'
+        | 'team-setting'
+        | 'team-entitlement'
+        | 'plan-default'
+        | 'elastic-algorithm'
+        | 'deployment-override';
+      cores?: number;
+      memory?: number;
+    };
+  };
   routes?: RouteOrMiddleware[] | null;
   source?: 'cli' | 'git' | 'import' | 'import/repo' | 'clone/repo';
   status:
@@ -232,7 +278,8 @@ export type Deployment = {
     | 'INITIALIZING'
     | 'QUEUED'
     | 'READY'
-    | 'CANCELED';
+    | 'CANCELED'
+    | 'BLOCKED';
   target?: 'staging' | 'production' | null;
   team?: {
     id: string;
@@ -372,6 +419,34 @@ export type ProjectProtectionBypass = Record<
   AutomationProtectionBypass | IntegrationAutomationProtectionBypass
 >;
 
+export interface ProjectSandboxConfig {
+  region?: string;
+  failoverRegions?: string[];
+}
+
+/**
+ * One trace sampling rule. `rate` is a fraction from 0 to 1. A rule with no
+ * `env` applies to every environment, and a rule with no `requestPath` applies
+ * to every path in that environment.
+ */
+export interface ProjectTracingSamplingRule {
+  rate: number;
+  env?: 'production' | 'preview';
+  requestPath?: string;
+  /** Tracing destination: Vercel internal or customer external drain. */
+  destination?: 'internal' | 'external';
+}
+
+/**
+ * Tracing configuration for a project. `domains` is a comma-separated list of
+ * drain endpoint domains. The API caps `samplingRules` at ten items.
+ */
+export interface ProjectTracing {
+  domains?: string;
+  ignorePaths?: string[];
+  samplingRules?: ProjectTracingSamplingRule[];
+}
+
 export interface Project extends ProjectSettings {
   id: string;
   analytics?: {
@@ -393,6 +468,10 @@ export interface Project extends ProjectSettings {
   customEnvironments?: CustomEnvironment[];
   rollingRelease?: ProjectRollingRelease;
   protectionBypass?: ProjectProtectionBypass;
+  sandbox?: ProjectSandboxConfig;
+  tracing?: ProjectTracing | null;
+  /** Whether production traffic for the project is paused. */
+  paused?: boolean;
 }
 
 export interface Org {

@@ -1,0 +1,28 @@
+{
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite"
+    },
+    "api-a": {
+      "root": "services/api-a",
+      "runtime": "node",
+      "entrypoint": "index.js"
+    },
+    "api-b": {
+      "root": "services/api-b",
+      "runtime": "node",
+      "entrypoint": "index.js"
+    },
+    "py-a": {
+      "root": "services/py-a",
+      "runtime": "python",
+      "entrypoint": "main.py"
+    },
+    "py-b": {
+      "root": "services/py-b",
+      "runtime": "python",
+      "entrypoint": "main.py"
+    }
+  }
+}

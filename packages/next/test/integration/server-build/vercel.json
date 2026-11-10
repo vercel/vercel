@@ -20,6 +20,11 @@
             "maxDuration": 5,
             "maxConcurrency": 6
           },
+          "pages/api/another.js": {
+            "affinity": {
+              "mode": "strict"
+            }
+          },
           "pages/dynamic/[slug].js": {
             "maxDuration": 5,
             "maxConcurrency": 4

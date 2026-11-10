@@ -56,7 +56,8 @@ export function getPrettyError(obj: {
       const suggestion = getSuggestion(prop, params.additionalProperty);
       message += `should NOT have additional property \`${params.additionalProperty}\`. ${suggestion}`;
     } else if (params && typeof params.missingProperty === 'string') {
-      message += `missing required property \`${params.missingProperty}\`.`;
+      // Ajv prefixes a property required inside `anyOf` with a dot.
+      message += `missing required property \`${params.missingProperty.replace(/^\./, '')}\`.`;
     } else {
       message += `${ajvMessage}.`;
     }

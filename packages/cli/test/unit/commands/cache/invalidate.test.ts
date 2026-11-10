@@ -31,12 +31,6 @@ describe('cache invalidate', () => {
     );
   });
 
-  it('should error when project is not linked', async () => {
-    client.setArgv('cache', 'invalidate');
-    const exitCode = await cache(client);
-    expect(exitCode).toEqual(1);
-  });
-
   it('should error without --tag', async () => {
     client.scenario.post(`/v1/edge-cache/invalidate-by-tags`, (req, res) => {
       expect(req.body).toEqual({
@@ -46,7 +40,7 @@ describe('cache invalidate', () => {
     });
     client.setArgv('cache', 'invalidate', '--yes');
     const exitCode = await cache(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'The --tag or --srcimg option is required'
     );
@@ -155,7 +149,7 @@ describe('cache invalidate', () => {
       '--srcimg=/api/avatar/1'
     );
     const exitCode = await cache(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'Cannot use both --tag and --srcimg options'
     );

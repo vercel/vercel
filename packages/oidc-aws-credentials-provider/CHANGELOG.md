@@ -1,5 +1,101 @@
 # @vercel/oidc
 
+## 3.3.16
+
+### Patch Changes
+
+- @vercel/oidc@4.0.4
+
+## 3.3.15
+
+### Patch Changes
+
+- @vercel/oidc@4.0.3
+
+## 3.3.14
+
+### Patch Changes
+
+- @vercel/oidc@4.0.2
+
+## 3.3.13
+
+### Patch Changes
+
+- Updated dependencies [d032cfb]
+  - @vercel/oidc@4.0.1
+
+## 3.3.12
+
+### Patch Changes
+
+- Updated dependencies [baad6f5]
+  - @vercel/oidc@5.0.0
+
+## 3.3.11
+
+### Patch Changes
+
+- Updated dependencies [ec76b68]
+  - @vercel/oidc@4.0.0
+
+## 3.3.10
+
+### Patch Changes
+
+- @vercel/oidc@3.8.10
+
+## 3.3.9
+
+### Patch Changes
+
+- @vercel/oidc@3.8.9
+
+## 3.3.8
+
+### Patch Changes
+
+- @vercel/oidc@3.8.8
+
+## 3.3.7
+
+### Patch Changes
+
+- @vercel/oidc@3.8.7
+
+## 3.3.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.6
+
+## 3.3.5
+
+### Patch Changes
+
+- @vercel/oidc@3.8.5
+
+## 3.3.4
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/oidc@3.8.4
+
+## 3.3.3
+
+### Patch Changes
+
+- @vercel/oidc@3.8.3
+
+## 3.3.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc@3.8.2
+
 ## 3.3.1
 
 ### Patch Changes

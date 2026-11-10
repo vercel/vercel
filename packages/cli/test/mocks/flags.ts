@@ -8,6 +8,8 @@ import type {
   Segment,
   SegmentMembershipOperation,
   UpdateFlagRequest,
+  StaleFlag,
+  FlagsProjectConnection,
 } from '../../src/util/flags/types';
 
 type FlagWithMockEtag = Flag & {
@@ -44,6 +46,10 @@ export const defaultFlagSettings: FlagSettings = {
         {
           key: 'userId',
           type: 'string',
+        },
+        {
+          key: 'signupAt',
+          type: 'timestamp',
         },
       ],
     },
@@ -154,6 +160,17 @@ export const defaultFlags: Flag[] = [
     revision: 2,
     seed: 67890,
     typeName: 'flag',
+  },
+];
+
+export const defaultStaleFlags: StaleFlag[] = [
+  {
+    slug: 'my-feature',
+    reason: 'unused',
+  },
+  {
+    slug: 'another-feature',
+    reason: 'redundant',
   },
 ];
 
@@ -339,7 +356,8 @@ export function useFlags(
   segmentsList: Segment[] = defaultSegments,
   onUpdateFlag?: (request: UpdateFlagRequest) => void,
   onGetSettings?: () => void,
-  versionsList: FlagVersion[] = defaultFlagVersions
+  versionsList: FlagVersion[] = defaultFlagVersions,
+  staleFlagCandidates: Array<StaleFlag | null> = defaultStaleFlags
 ) {
   // Get flag settings
   client.scenario.get(
@@ -350,9 +368,26 @@ export function useFlags(
     }
   );
 
-  // List flags (v2: paginated, supports tag/createdBy/maintainerId filters)
+  // Update flag settings (entities are replaced as a whole)
+  client.scenario.patch(
+    '/v1/projects/:projectId/feature-flags/settings',
+    (req, res) => {
+      if (req.body.entities) {
+        settings.entities = req.body.entities;
+      }
+      if (req.body.enabled !== undefined) {
+        settings.enabled = req.body.enabled;
+      }
+      if (req.body.environments) {
+        settings.environments = req.body.environments;
+      }
+      res.status(201).json(settings);
+    }
+  );
+
+  // Database-backed v1 and search-backed v2 listings share pagination here.
   client.scenario.get(
-    '/v2/projects/:projectId/feature-flags/flags',
+    '/:version(v1|v2)/projects/:projectId/feature-flags/flags',
     (req, res) => {
       const state = req.query.state || 'active';
       const createdBy = req.query.createdBy as string | undefined;
@@ -425,6 +460,25 @@ export function useFlags(
           hasNext: next !== null,
         },
       });
+    }
+  );
+
+  client.scenario.get(
+    '/v1/projects/:projectId/feature-flags/stale-flags',
+    (req, res) => {
+      const limit = req.query.limit
+        ? Number(req.query.limit)
+        : staleFlagCandidates.length;
+      const offset = req.query.cursor ? Number(req.query.cursor) : 0;
+      const candidatePage = staleFlagCandidates.slice(offset, offset + limit);
+      const page = candidatePage.filter(
+        (flag): flag is StaleFlag => flag !== null
+      );
+      const nextOffset = offset + limit;
+      const next =
+        nextOffset < staleFlagCandidates.length ? String(nextOffset) : null;
+
+      res.json({ data: page, pagination: { next } });
     }
   );
 
@@ -758,6 +812,88 @@ export function useFlags(
   );
 
   return { flags: flagsList, sdkKeys: sdkKeysList, segments: segmentsList };
+}
+
+export const defaultFlagsConnections: FlagsProjectConnection[] = [
+  {
+    sourceProjectId: 'vercel-flags-test',
+    consumerProjectId: 'storefront',
+    createdBy: 'user_123',
+    createdAt: Date.now() - 86400000,
+  },
+];
+
+export function useFlagsConnections(
+  connectionsList: FlagsProjectConnection[] = [...defaultFlagsConnections]
+) {
+  client.scenario.get(
+    '/v1/projects/:projectId/feature-flags/connections',
+    (req, res) => {
+      const { projectId } = req.params;
+      const data =
+        req.query.role === 'consumer'
+          ? connectionsList.filter(c => c.consumerProjectId === projectId)
+          : connectionsList.filter(c => c.sourceProjectId === projectId);
+      res.json({ data });
+    }
+  );
+
+  client.scenario.put(
+    '/v1/projects/:projectId/feature-flags/connections',
+    (req, res) => {
+      const { projectId } = req.params;
+      const { consumerProjectId } = req.body;
+      if (
+        connectionsList.some(
+          c =>
+            c.sourceProjectId === projectId &&
+            c.consumerProjectId === consumerProjectId
+        )
+      ) {
+        res.status(409).json({
+          error: {
+            code: 'flags_project_connection_exists',
+            message:
+              'A flags project connection between these projects already exists.',
+          },
+        });
+        return;
+      }
+      const connection: FlagsProjectConnection = {
+        sourceProjectId: projectId,
+        consumerProjectId,
+        createdBy: 'user_123',
+        createdAt: Date.now(),
+      };
+      connectionsList.push(connection);
+      res.json(connection);
+    }
+  );
+
+  client.scenario.delete(
+    '/v1/projects/:projectId/feature-flags/connections/:consumerProjectId',
+    (req, res) => {
+      const { projectId, consumerProjectId } = req.params;
+      const index = connectionsList.findIndex(
+        c =>
+          c.sourceProjectId === projectId &&
+          c.consumerProjectId === consumerProjectId
+      );
+      if (index === -1) {
+        res.status(404).json({
+          error: {
+            code: 'flags_project_connection_not_found',
+            message: 'The requested flags project connection was not found.',
+          },
+        });
+        return;
+      }
+      connectionsList.splice(index, 1);
+      res.status(204).send();
+    }
+  );
+
+  return connectionsList;
 }
 
 function toArray(value: unknown): string[] {

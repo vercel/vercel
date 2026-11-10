@@ -20,12 +20,25 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
     }
   }
 
+  trackCliFlagTokenPass(tokenPass: boolean | undefined) {
+    if (tokenPass) {
+      this.trackCliFlag('token-pass');
+    }
+  }
+
   trackCliOptionKey(key: string | undefined) {
     if (key) {
       this.trackCliOption({ option: 'key', value: this.redactedValue });
     }
   }
 
+  trackCliOptionAmount(amount: number | undefined) {
+    if (amount !== undefined) {
+      this.trackCliOption({ option: 'amount', value: this.redactedValue });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionBudget(budget: number | undefined) {
     if (budget !== undefined) {
       this.trackCliOption({ option: 'budget', value: this.redactedValue });
@@ -74,6 +87,12 @@ export class AiGatewayCodingAgentsSetupTelemetryClient
   trackCliFlagNoBackup(noBackup: boolean | undefined) {
     if (noBackup) {
       this.trackCliFlag('no-backup');
+    }
+  }
+
+  trackCliFlagNoSessionMigration(noSessionMigration: boolean | undefined) {
+    if (noSessionMigration) {
+      this.trackCliFlag('no-session-migration');
     }
   }
 

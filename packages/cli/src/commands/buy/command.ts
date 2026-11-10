@@ -10,6 +10,7 @@ import {
   CUSTOM_ENVIRONMENTS_PER_PACK,
   customEnvironmentPackEnvironments,
 } from '../../util/buy/custom-environment-addon';
+import { buySubcommand as domainsBuySubcommand } from '../domains/command';
 
 const EXAMPLE_CUSTOM_ENVIRONMENT_COUNT = customEnvironmentPackEnvironments(
   CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT
@@ -62,18 +63,15 @@ export const creditsSubcommand = {
   ],
 } as const;
 
-export const SUPPORTED_ADDON_ALIASES = ['siem', 'customEnvironment'] as const;
-export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
-
-export const ADDON_LABELS: Record<AddonAlias, string> = {
-  siem: 'SIEM',
-  customEnvironment: 'Custom Environment',
-};
+export const SUPPORTED_ADDON_NAMES = [
+  'custom-environment',
+  'observability-plus',
+] as const;
 
 export const addonSubcommand = {
   name: 'addon',
   aliases: ['addons', 'add-on'],
-  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_ALIASES.join(', ')}. Custom environment purchases are per project and use packs (each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments).`,
+  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_NAMES.join(', ')}. Observability Plus does not accept a quantity. Custom environment purchases are per project and use packs (each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments).`,
   arguments: [
     {
       name: 'addon-name',
@@ -81,7 +79,7 @@ export const addonSubcommand = {
     },
     {
       name: 'quantity',
-      required: true,
+      required: false,
     },
   ],
   options: [
@@ -94,16 +92,16 @@ export const addonSubcommand = {
   ],
   examples: [
     {
-      name: 'Purchase 1 SIEM addon',
-      value: `${packageName} buy addon siem 1`,
+      name: 'Purchase Observability Plus',
+      value: `${packageName} buy addon observability-plus`,
     },
     {
       name: `Purchase ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} custom environment packs (${EXAMPLE_CUSTOM_ENVIRONMENT_COUNT} environments) for a project`,
-      value: `${packageName} buy addon customEnvironment ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} --project my-app`,
+      value: `${packageName} buy addon custom-environment ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} --project my-app`,
     },
     {
       name: 'Remove purchased custom environment capacity',
-      value: `${packageName} buy addon customEnvironment 0 --project my-app --yes`,
+      value: `${packageName} buy addon custom-environment 0 --project my-app --yes`,
     },
   ],
 } as const;
@@ -143,11 +141,16 @@ export const domainSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  // `buy domain` runs `domains buy`, so it takes the same options.
+  options: domainsBuySubcommand.options,
   examples: [
     {
       name: 'Purchase a domain',
       value: `${packageName} buy domain example.com`,
+    },
+    {
+      name: 'From an agent or script: buy at the price a person approved, with the billing info for the address',
+      value: `${packageName} buy domain example.com --scope my-team --amount 20.00 --use-billing-details --first-name Jane --last-name Doe --phone +11122233344 --no-auto-renew`,
     },
   ],
 } as const;
@@ -170,8 +173,8 @@ export const buyCommand = {
       value: `${packageName} buy credits v0 100`,
     },
     {
-      name: 'Purchase the SIEM addon',
-      value: `${packageName} buy addon siem 1`,
+      name: 'Purchase Observability Plus',
+      value: `${packageName} buy addon observability-plus`,
     },
     {
       name: 'Upgrade to Pro',

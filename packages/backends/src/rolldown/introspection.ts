@@ -2,6 +2,7 @@ import type { BuildOptions, Files, Span } from '@vercel/build-utils';
 import {
   debug,
   FileBlob,
+  getNodeExecPath,
   isExperimentalBackendsWithoutIntrospectionEnabled,
 } from '@vercel/build-utils';
 import { spawn } from 'node:child_process';
@@ -108,7 +109,7 @@ export const introspection = async (
         let streamClosed = false;
 
         const child = spawn(
-          'node',
+          getNodeExecPath(),
           [
             '-r',
             rolldownCjsLoaderPath,

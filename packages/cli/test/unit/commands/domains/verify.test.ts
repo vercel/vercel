@@ -43,7 +43,7 @@ function useDomainConfig(
 }
 
 function useOwnedDomainNotFound(domain = DOMAIN) {
-  client.scenario.get(`/v4/domains/${domain}`, (_req, res) => {
+  client.scenario.get(`/v5/domains/${domain}`, (_req, res) => {
     res.status(404).json({
       error: { code: 'not_found', message: 'Domain not found' },
     });
@@ -51,7 +51,7 @@ function useOwnedDomainNotFound(domain = DOMAIN) {
 }
 
 function useOwnedDomain(domain = DOMAIN) {
-  client.scenario.get(`/v4/domains/${domain}`, (_req, res) => {
+  client.scenario.get(`/v5/domains/${domain}`, (_req, res) => {
     res.json({
       domain: {
         name: domain,
@@ -70,7 +70,7 @@ function useNoProjectDomain(domain = DOMAIN) {
 }
 
 function useOwnedDomainForbidden() {
-  client.scenario.get(`/v4/domains/${DOMAIN}`, (_req, res) => {
+  client.scenario.get(`/v5/domains/${DOMAIN}`, (_req, res) => {
     res.status(403).json({
       error: {
         code: 'forbidden',
@@ -89,7 +89,7 @@ describe('domains verify', () => {
     it('tracks telemetry', async () => {
       client.setArgv('domains', 'verify', '--help');
       const exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -104,7 +104,7 @@ describe('domains verify', () => {
     client.setArgv('domains', 'verify');
     const exitCodePromise = domains(client);
     await expect(client.stderr).toOutput('expects one argument');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('succeeds when the domain is configured and verified for a project', async () => {
@@ -578,7 +578,7 @@ describe('domains verify', () => {
         '--cwd=/tmp/site'
       );
 
-      expect(await domains(client)).toBe(1);
+      expect(await domains(client)).toBe(2);
 
       const payload = JSON.parse(client.stdout.getFullOutput());
       expect(payload).toMatchObject({
@@ -643,7 +643,7 @@ describe('domains verify', () => {
       client.setArgv('domains', 'verify', DOMAIN, '--format', 'yaml');
       const exitCodePromise = domains(client);
       await expect(client.stderr).toOutput('Invalid output format');
-      expect(await exitCodePromise).toBe(1);
+      expect(await exitCodePromise).toBe(2);
     });
   });
 

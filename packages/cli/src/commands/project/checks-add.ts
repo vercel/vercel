@@ -61,11 +61,11 @@ export async function checksAdd(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.args.length > 1) {
@@ -149,7 +149,7 @@ export async function checksAdd(
       output.error(
         '`--requires` is required when using `--check-name` (build-ready, deployment-url, or none).'
       );
-      return 1;
+      return 2;
     }
     if (!REQUIRES.includes(requires as (typeof REQUIRES)[number])) {
       emitValidationError(
@@ -158,7 +158,7 @@ export async function checksAdd(
         1
       );
       output.error(`\`--requires\` must be one of: ${REQUIRES.join(', ')}`);
-      return 1;
+      return 2;
     }
     body = {
       name: checkName.trim(),
@@ -178,7 +178,7 @@ export async function checksAdd(
         output.error(
           `\`--blocks\` must be one of: ${BLOCKING_STAGES.join(', ')}`
         );
-        return 1;
+        return 2;
       }
       body.blocks = blocksFlag;
     }

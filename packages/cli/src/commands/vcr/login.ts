@@ -17,9 +17,11 @@ import { validateVcrJsonOutput, validateVcrChoice } from './utils/validators';
 import { emitVcrArgParseError, handleVcrApiError } from './utils/errors';
 import {
   AUTH_FAILURE,
+  CREDENTIAL_STORE_CONFLICT,
   VCR_ENGINES,
   VCR_LOGIN_USERNAME,
   engineLogin,
+  engineLogout,
   isEngineInstalled,
   resolveRegistry,
   stderrTail,
@@ -51,7 +53,7 @@ export default async function login(
       'vcr login <engine> --project <name-or-id>'
     );
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -85,7 +87,7 @@ export default async function login(
           },
         ],
       },
-      1
+      2
     );
     return outputError(client, fr.jsonOutput, 'MISSING_ARGUMENTS', message);
   }
@@ -142,7 +144,20 @@ export default async function login(
       }
     );
 
-    const result = await engineLogin(engine, registry, token);
+    let result = await engineLogin(engine, registry, token);
+    if (
+      result.exitCode !== 0 &&
+      CREDENTIAL_STORE_CONFLICT.test(result.stderr)
+    ) {
+      // The credential helper (macOS keychain) has a stale entry for the
+      // registry that it cannot overwrite (errSecDuplicateItem, -25299).
+      // `logout` deletes the stale entry, so clear it and retry once.
+      output.debug(
+        `Stale ${registry} credential in the ${engine} credential store; running \`${engine} logout\` and retrying`
+      );
+      await engineLogout(engine, registry);
+      result = await engineLogin(engine, registry, token);
+    }
     if (result.exitCode !== 0) {
       const message = AUTH_FAILURE.test(result.stderr)
         ? `Authentication to ${registry} as "${VCR_LOGIN_USERNAME}" was rejected. The OIDC token may be expired or lack access to this project.`

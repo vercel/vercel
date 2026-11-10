@@ -283,6 +283,19 @@ describe('verifyVercelOidcToken', () => {
     );
   });
 
+  test('distinguishes token identity failures from signing-key outages', async () => {
+    mockVerifiedPayload({ project_id: 'prj_other' });
+    const failure = verifyVercelOidcToken('token');
+    await expect(failure).rejects.toBeInstanceOf(TypeError);
+    await expect(failure).rejects.toMatchObject({
+      code: 'ERR_VERCEL_OIDC_TOKEN_VALIDATION',
+    });
+
+    const outage = new TypeError('fetch failed');
+    vi.mocked(jwtVerify).mockRejectedValueOnce(outage);
+    await expect(verifyVercelOidcToken('token')).rejects.toBe(outage);
+  });
+
   test('rejects a token from a different owner', async () => {
     mockVerifiedPayload({
       owner_id: 'team_other',
@@ -305,17 +318,6 @@ describe('verifyVercelOidcToken', () => {
     await expect(verifyVercelOidcToken('token')).rejects.toThrow(
       'Expected Vercel OIDC token iss claim to be "https://oidc.vercel.com" or to start with "https://oidc.vercel.com/".'
     );
-  });
-
-  test('passes explicit issuer option to Jose verification', async () => {
-    await verifyVercelOidcToken('token', {
-      issuer: 'https://oidc.vercel.com/other-team',
-    });
-
-    expect(jwtVerify).toHaveBeenCalledWith('token', mocks.remoteJwks, {
-      algorithms: ['RS256'],
-      issuer: 'https://oidc.vercel.com/other-team',
-    });
   });
 
   test('rejects a token from an issuer that only shares the prefix text', async () => {

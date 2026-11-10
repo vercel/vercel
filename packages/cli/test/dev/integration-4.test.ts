@@ -23,7 +23,7 @@ test(
 );
 
 test(
-  '[vercel dev] Next.js experimental_upgradeWebSocket',
+  '[vercel dev] Next.js upgradeWebSocket',
   withLocalDev('nextjs-websocket', async port => {
     await expect(webSocketEcho(port, '/api/ws', 'hello')).resolves.toBe(
       'echo:hello'
@@ -171,6 +171,18 @@ test(
     await testPath(200, '/', 'hi from middleware');
     await testPath(200, '/another', 'hi from middleware');
   })
+);
+
+test(
+  '[vercel dev] Explicit `proxy` entrypoint that returns a 200 response',
+  testFixtureStdio(
+    'proxy-response',
+    async (testPath: any) => {
+      await testPath(200, '/', 'hi from proxy');
+      await testPath(200, '/another', 'hi from proxy');
+    },
+    { skipDeploy: true }
+  )
 );
 
 test(

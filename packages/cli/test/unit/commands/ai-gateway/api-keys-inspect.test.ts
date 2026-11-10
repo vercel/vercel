@@ -52,7 +52,7 @@ describe('ai-gateway api-keys inspect', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'api-keys', 'inspect', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:api-keys', value: 'api-keys' },
@@ -74,6 +74,26 @@ describe('ai-gateway api-keys inspect', () => {
     expect(await exitCodePromise).toBe(0);
   });
 
+  it.each([
+    { metadata: { tokenPass: true }, expected: 'yes' },
+    { metadata: { tokenPass: false }, expected: 'no' },
+    { metadata: {}, expected: 'no' },
+    { metadata: undefined, expected: 'no' },
+  ])('shows token pass as $expected', async ({ metadata, expected }) => {
+    const team = useTeam();
+    useUser();
+    useGetApiKey({ ...sampleApiKey, metadata });
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'api-keys', 'inspect', 'key_1');
+
+    expect(await aiGateway(client)).toBe(0);
+    const row = client.stdout
+      .getFullOutput()
+      .split('\n')
+      .find(line => line.trim().startsWith('token pass'));
+    expect(row?.trim().split(/\s{2,}/)).toEqual(['token pass', expected]);
+  });
+
   it('shows details for a key without a quota', async () => {
     const team = useTeam();
     useUser();
@@ -89,12 +109,72 @@ describe('ai-gateway api-keys inspect', () => {
     expect(await exitCodePromise).toBe(0);
   });
 
+  it('shows the zdr exemption for an exempt key', async () => {
+    const team = useTeam();
+    useUser();
+    useGetApiKey({
+      ...sampleApiKey,
+      metadata: { zdr: { enableNonZdrModels: true } },
+    });
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'api-keys', 'inspect', 'key_1');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('zdr exempt');
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('omits the zdr row for a non-exempt key', async () => {
+    const team = useTeam();
+    useUser();
+    useGetApiKey();
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'api-keys', 'inspect', 'key_1');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('created by');
+    expect(await exitCodePromise).toBe(0);
+    expect(client.stdout.getFullOutput()).not.toContain('zdr exempt');
+  });
+
+  it('shows the bypass-all-settings exemption for a bypass-all-settings key', async () => {
+    const team = useTeam();
+    useUser();
+    useGetApiKey({
+      ...sampleApiKey,
+      metadata: { bypassAll: true },
+    });
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'api-keys', 'inspect', 'key_1');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('bypass all settings');
+    expect(await exitCodePromise).toBe(0);
+  });
+
+  it('omits the bypass-all-settings row for a normal key', async () => {
+    const team = useTeam();
+    useUser();
+    useGetApiKey();
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'api-keys', 'inspect', 'key_1');
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('created by');
+    expect(await exitCodePromise).toBe(0);
+    expect(client.stdout.getFullOutput()).not.toContain('bypass all settings');
+  });
+
   it('requires an id', async () => {
     useUser();
     client.setArgv('ai-gateway', 'api-keys', 'inspect');
     const exitCodePromise = aiGateway(client);
     await expect(client.stderr).toOutput('expects an API key id');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('reports a 404 as not found', async () => {
@@ -110,10 +190,10 @@ describe('ai-gateway api-keys inspect', () => {
     expect(await exitCodePromise).toBe(1);
   });
 
-  it('outputs JSON with --format json', async () => {
+  it.each([true, false])('preserves tokenPass=%s in JSON', async tokenPass => {
     const team = useTeam();
     useUser();
-    useGetApiKey();
+    useGetApiKey({ ...sampleApiKey, metadata: { tokenPass } });
     client.config.currentTeam = team.id;
     client.setArgv(
       'ai-gateway',
@@ -127,6 +207,40 @@ describe('ai-gateway api-keys inspect', () => {
     const exitCodePromise = aiGateway(client);
 
     await expect(client.stdout).toOutput('"apiKey"');
+    expect(await exitCodePromise).toBe(0);
+    expect(
+      JSON.parse(client.stdout.getFullOutput()).apiKey.metadata.tokenPass
+    ).toBe(tokenPass);
+  });
+
+  it('names the api-key default for a key without a quota', async () => {
+    const team = useTeam();
+    useUser();
+    const { quota, ...noQuota } = sampleApiKey;
+    void quota;
+    client.scenario.get(`/v1/api-keys/${noQuota.id}`, (_req, res) => {
+      res.json({ apiKey: noQuota });
+    });
+    client.scenario.get('/ai-gateway/budgets/defaults/list', (_req, res) => {
+      res.json({
+        defaults: [
+          {
+            scopeType: 'api-key',
+            limitAmount: 50,
+            refreshPeriod: 'monthly',
+            active: true,
+            createdAt: 1,
+            updatedAt: 2,
+          },
+        ],
+      });
+    });
+    client.config.currentTeam = team.id;
+    client.setArgv('ai-gateway', 'api-keys', 'inspect', noQuota.id);
+
+    const exitCodePromise = aiGateway(client);
+
+    await expect(client.stdout).toOutput('$50 a month (default)');
     expect(await exitCodePromise).toBe(0);
   });
 });

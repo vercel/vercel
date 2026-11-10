@@ -1,0 +1,13 @@
+{
+  "projectSettings": {
+    "framework": "ruby"
+  },
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_BUILDPACK_RUBY": "1"
+    }
+  },
+  "env": {
+    "SECRET_KEY_BASE": "synthetic-ruby-buildpack-fixture-only-not-a-real-secret-0123456789abcdef"
+  }
+}

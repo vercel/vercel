@@ -14,12 +14,11 @@ import {
   VERCEL_RUNTIME_VERSION,
   VERCEL_WORKERS_VERSION,
 } from './package-versions';
+import { getQueueAdapterBootstrap } from './conditional-vendoring';
 import {
-  getConditionalInjectedPackages,
-  getQueueIntegrations,
-} from './conditional-vendoring';
-import {
+  getLocalSdkSourcePaths,
   isLegacyWorkersProject,
+  QUEUE_WORKFLOW_SDK_REQUIREMENT,
   resolveWorkflowServingMode,
   type WorkflowServingMode,
 } from './sdk-detection';
@@ -40,10 +39,13 @@ import {
   BUILDER_INSTALLER_STEP,
   BUILDER_COMPILE_STEP,
   BUILDER_PRE_DEPLOY_STEP,
+  findMatchingFunction,
   getLambdaOptionsFromFunction,
   type BuildOptions,
-  type GlobOptions,
+  type BuildResultVX,
+  type ScheduleFunctionBuildConfig,
   type BuildVX,
+  type Config,
   type DevSubscriber,
   type Files,
   type GetDevSidecarsOptions,
@@ -52,7 +54,10 @@ import {
   type TriggerEvent,
   FileFsRef,
   PythonFramework,
+  staticShadowRoutes,
+  staticFallbackRoutes,
   type PrepareCache,
+  type StaticPromotionResult,
 } from '@vercel/build-utils';
 import {
   discoverPackage,
@@ -60,6 +65,7 @@ import {
   resolveVendorDir,
   installRequirementsFile,
   installRequirement,
+  type UvProjectInfo,
 } from './install';
 import {
   PythonDependencyExternalizer,
@@ -82,12 +88,17 @@ import {
 import { resolvePythonVersion, pythonVersionString } from './version';
 import { generateProjectManifest } from './diagnostics';
 import { buildCronRouteTable, getServiceCrons } from './crons';
+import {
+  createScheduleHandlerModule,
+  getGeneratedScheduleHandlerPath,
+} from './schedules';
 import { startDevServer } from './start-dev-server';
 import {
   runPyprojectScript,
   ensureVenv,
   createVenvEnv,
   getVenvPythonBin,
+  getSeedPackagesMissingFromLock,
 } from './utils';
 import { validateBuildArch } from './platform-info';
 import { runQuirks } from './quirks';
@@ -97,8 +108,9 @@ import {
   type DjangoCollectStaticResult,
 } from './django';
 import {
+  getFastAPICdnBundle,
   runFastAPICollectStatic,
-  type FastAPICollectStaticResult,
+  fastapiStaticOptions,
 } from './fastapi';
 import {
   collectImportClosure,
@@ -121,12 +133,16 @@ import {
 } from './compileall';
 import { InstalledPythonDistributions } from './installed-distributions';
 import {
+  apschedulerSubscriberIdentities,
   createQueueHandlerModule,
   generatedPythonPathToModule,
+  getApschedulerPreviewConfig,
   getGeneratedQueueHandlerPath,
   getPyprojectSubscribers,
+  hasPyprojectSubscribers,
   getSubscriberConsumerName,
   getSubscriberOutputPath,
+  queueTopicPatternsOverlap,
   resolveQueueSubscribers,
   type Subscriber,
   type SubscriberDeclaration,
@@ -135,6 +151,8 @@ import {
   getPyprojectWorkflows,
   getWorkflowConsumerName,
   getWorkflowOutputPath,
+  isWorkflowQueueTopic,
+  WORKFLOW_DEV_TOPIC_PATTERN,
   WORKFLOW_TOPIC_PATTERN,
   type PyprojectWorkflow,
 } from './workflows';
@@ -143,6 +161,10 @@ import {
   IMPORT_CLOSURE_TIMEOUT_MS,
   withTimeout,
 } from './import-closure';
+import {
+  getRegExpFromMatchers,
+  resolveMiddlewareMatcher,
+} from '@vercel/build-utils';
 
 const writeFile = fs.promises.writeFile;
 const PYTHON_ENTRYPOINT_DOCS_URL =
@@ -213,7 +235,9 @@ export async function getDevSidecars({
           use: build.use,
           src: subscriber.entrypoint,
           config: {
-            handlerFunction: subscriber.variableName,
+            ...(subscriber.variableName === undefined
+              ? {}
+              : { handlerFunction: subscriber.variableName }),
             pythonQueueSidecar: 'subscriber',
           },
         },
@@ -236,7 +260,7 @@ export async function getDevSidecars({
             pythonQueueSidecar: 'workflow',
           },
         },
-        topics: [{ topic: WORKFLOW_TOPIC_PATTERN }],
+        topics: [{ topic: WORKFLOW_DEV_TOPIC_PATTERN }],
       })
     ),
   ];
@@ -300,7 +324,7 @@ interface DjangoFrameworkHookResult extends FrameworkHookResult {
 }
 
 interface FastAPIFrameworkHookResult extends FrameworkHookResult {
-  fastapiStatic: FastAPICollectStaticResult;
+  fastapiStatic: StaticPromotionResult;
 }
 
 type FrameworkHook = (
@@ -452,7 +476,9 @@ const frameworkHooks: Partial<Record<PythonFramework, FrameworkHook>> = {
       pythonEnv,
       outputStaticDir,
       entrypointAbs,
-      variableName
+      variableName,
+      // Suppress middleware mounts unless the user explicitly set cdn = true.
+      staticCdn !== true
     );
     if (!fastapiStatic) return;
 
@@ -481,10 +507,15 @@ import os
 import os.path
 import site
 import sys
+import time
+
+# Cold start baseline, read back by vercel_runtime.vc_init
+_vc_boot_start_ms = int(time.monotonic() * 1000)
 
 _here = os.path.dirname(__file__)
 
 os.environ.update({
+  "__VC_PY_BOOT_START_MS": str(_vc_boot_start_ms),
   "__VC_HANDLER_MODULE_NAME": "${moduleName}",
   "__VC_HANDLER_ENTRYPOINT": "${entrypoint}",
   "__VC_HANDLER_ENTRYPOINT_ABS": os.path.join(_here, "${entrypoint}"),
@@ -589,37 +620,52 @@ function getTargetPlatform(isDev: boolean): TargetPlatform {
   return { uvPlatform: UV_LINUX_TARGET, architecture: 'x86_64' };
 }
 
+function getMatchingFunction(
+  config: BuildOptions['config'],
+  entrypoint: string | undefined,
+  isScheduleEntrypoint = false
+) {
+  if (!entrypoint) {
+    return;
+  }
+  // Schedule entrypoints match `functions` keys by their full path, like
+  // every other runtime, and the same way `resolvePython` in
+  // `@vercel-internals/runtimes` groups them. Other Python builds also accept
+  // the path without `.py`.
+  const candidates =
+    entrypoint.endsWith('.py') && !isScheduleEntrypoint
+      ? [entrypoint, entrypoint.slice(0, -'.py'.length)]
+      : [entrypoint];
+  return findMatchingFunction(config?.functions, candidates);
+}
+
+function normalizeGlobs(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : typeof value === 'string'
+      ? [value]
+      : [];
+}
 async function getPythonLambdaOptions({
   config,
   entrypoint,
+  isScheduleEntrypoint = false,
 }: {
   config: BuildOptions['config'];
   entrypoint: string;
+  isScheduleEntrypoint?: boolean;
 }) {
-  if (!config?.functions) {
-    return {};
-  }
+  const match = getMatchingFunction(config, entrypoint, isScheduleEntrypoint);
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: match?.sourceFile ?? entrypoint,
+    config,
+    isScheduleEntrypoint,
+  });
 
-  const sources = new Set<string>([entrypoint]);
-  if (entrypoint.endsWith('.py')) {
-    sources.add(entrypoint.slice(0, -'.py'.length));
-  }
-
-  for (const sourceFile of sources) {
-    const lambdaOptions = await getLambdaOptionsFromFunction({
-      sourceFile,
-      config,
-    });
-
-    if (Object.keys(lambdaOptions).length > 0) {
-      // Python resolves the target wheel platform before the Lambda is created,
-      // so the Lambda architecture must stay aligned with that build target.
-      delete lambdaOptions.architecture;
-      return lambdaOptions;
-    }
-  }
-
-  return {};
+  // Python resolves the target wheel platform before the Lambda is created,
+  // so the Lambda architecture must stay aligned with that build target.
+  delete lambdaOptions.architecture;
+  return lambdaOptions;
 }
 
 /**
@@ -632,6 +678,7 @@ async function getPythonLambdaOptions({
 async function installInjectedPackage({
   name,
   requirement,
+  extraRequirements = [],
   envOverride,
   allowLocalSource,
   uv,
@@ -641,6 +688,7 @@ async function installInjectedPackage({
 }: {
   name: string;
   requirement: string;
+  extraRequirements?: string[];
   envOverride: string | undefined;
   allowLocalSource: boolean;
   uv: UvRunner;
@@ -652,6 +700,9 @@ async function installInjectedPackage({
   const isLocalDev =
     allowLocalSource && fs.existsSync(join(localDir, 'pyproject.toml'));
   const dep = envOverride || (isLocalDev ? localDir : requirement);
+  // Keep extra pins off local/override installs so SDK checkouts can resolve
+  // their own shared vendored-deps version.
+  const extras = envOverride || isLocalDev ? [] : extraRequirements;
   // override exclude-newer, since we want vercel-runtime updates to
   // take effect immediately after release
   const noExclude = ['--exclude-newer-package', `${name}=false`];
@@ -663,169 +714,43 @@ async function installInjectedPackage({
       'install',
       '--link-mode',
       'copy',
+      // The pin has no hash, so override `require-hashes` from the user's
+      // uv config. `uv.pip` drops UV_REQUIRE_HASHES.
+      '--no-require-hashes',
       ...pipPlatformArgs,
       ...noExclude,
+      ...extras,
       dep,
     ],
   });
 }
 
-export const build: BuildVX = async ({
+async function setupPythonToolchain({
+  builderSpan,
   workPath,
-  repoRootPath,
-  files: originalFiles,
-  entrypoint: rawEntrypoint,
-  meta = {},
-  config,
-  span: parentSpan,
-  service,
-  registerPreDeploy,
-}) => {
-  let entrypoint: string | undefined =
-    rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
-
-  // A "pyproject.toml" entrypoint opts the build into declared-only mode: the
-  // web app comes from `tool.vercel.entrypoint` (if present), and workers come
-  // from `tool.vercel.subscribers` / `tool.vercel.workflows`. Filename-based
-  // auto-detection never runs, so a service builds exactly what its
-  // pyproject.toml declares.
-  const isPyprojectEntrypoint =
-    entrypoint !== undefined && basename(entrypoint) === 'pyproject.toml';
-  if (isPyprojectEntrypoint && entrypoint !== 'pyproject.toml') {
-    throw new NowBuildError({
-      code: 'PYTHON_INVALID_PYPROJECT_ENTRYPOINT',
-      message:
-        `A "pyproject.toml" entrypoint must sit at the service root. ` +
-        `Set the service "root" to "${dirname(entrypoint!)}" and use entrypoint "pyproject.toml".`,
-    });
-  }
-
-  const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
-  const framework = config?.framework;
-  let subscriberDeclarations: SubscriberDeclaration[] = [];
-  let subscribers: Subscriber[] = [];
-  let workflows: PyprojectWorkflow[] = [];
-  // Projects that directly depend on the legacy `vercel-workers` SDK keep
-  // the pre-vercel-queue integration (legacy subscriber schema, worker env
-  // markers, injected vercel-workers).
-  let legacyWorkersProject = false;
-  // How `tool.vercel.workflows` entrypoints are served (see sdk-detection).
-  let workflowMode: WorkflowServingMode = 'workers';
-  let spawnEnv: NodeJS.ProcessEnv | undefined;
-  // Custom install command from dashboard/project settings, if any.
-  let projectInstallCommand: string | undefined;
-  // Track whether a custom install command was used. When true, runtime
-  // dependency installation is disabled because custom install commands may
-  // install dependencies not tracked in uv.lock.
-  let hasCustomCommand = false;
-
-  const target = getTargetPlatform(meta.isDev ?? false);
-
-  debug(`workPath: ${workPath}`);
-
-  workPath = await downloadFilesInWorkPath({
-    workPath,
-    files: originalFiles,
-    entrypoint,
-    meta,
-  });
-
-  // `tool.vercel.subscribers` and `tool.vercel.workflows` compile into
-  // additional worker Lambdas. They apply to standalone Python framework apps,
-  // and to explicit "pyproject.toml" entrypoints that opt a service into
-  // declared-only worker composition. They are intentionally not implicit for
-  // other service builds: services can share one pyproject.toml, and composing
-  // its workers into every service build would duplicate queue consumers. Bare
-  // `api/**` functions are excluded for the same reason: they build once per
-  // file sharing this workPath, so emitting workers there would duplicate them.
-  legacyWorkersProject = await isLegacyWorkersProject(workPath);
-  if (isPyprojectEntrypoint || (!service && isPythonFramework(framework))) {
-    subscriberDeclarations = await getPyprojectSubscribers(workPath, {
-      legacySchema: legacyWorkersProject,
-    });
-    workflows = await getPyprojectWorkflows(workPath);
-  }
-
-  try {
-    // See: https://stackoverflow.com/a/44728772/376773
-    //
-    // The `setup.cfg` is required for `vercel dev` on MacOS, where without
-    // this file being present in the src dir then this error happens:
-    //
-    // distutils.errors.DistutilsOptionError: must supply either home
-    // or prefix/exec-prefix -- not both
-    if (meta.isDev) {
-      const setupCfg = join(workPath, 'setup.cfg');
-      await writeFile(setupCfg, '[install]\nprefix=\n');
-    }
-  } catch (err) {
-    console.log('Failed to create "setup.cfg" file');
-    throw err;
-  }
-
-  // Entrypoint discovery
-  let detected: DetectedPythonEntrypoint | undefined;
-
-  const handlerFunction =
-    typeof config?.handlerFunction === 'string'
-      ? config.handlerFunction
-      : undefined;
-
-  if (isPyprojectEntrypoint) {
-    // Declared-only mode: use `tool.vercel.entrypoint` when present, and
-    // never fall back to filename-based detection. The helper hard-errors on
-    // a declared-but-unresolvable entrypoint, so a typo cannot silently drop
-    // the web app. A pyproject.toml with neither a web entrypoint nor declared
-    // workers has nothing to build.
-    const declared = await getVercelToolsEntrypoint(workPath, repoRootPath);
-    if (declared) {
-      detected = { entrypoint: declared };
-    } else if (subscriberDeclarations.length === 0 && workflows.length === 0) {
-      throw new NowBuildError({
-        code: 'PYTHON_PYPROJECT_NOTHING_TO_BUILD',
-        message:
-          'Entrypoint "pyproject.toml" declares nothing to build. Set "tool.vercel.entrypoint" ' +
-          'for a web app and/or declare "[[tool.vercel.subscribers]]" or ' +
-          '"[[tool.vercel.workflows]]" entries in pyproject.toml.',
-      });
-    }
-    entrypoint = undefined;
-  } else {
-    detected =
-      (await detectPythonEntrypoint(
-        config.framework as PythonFramework,
-        workPath,
-        entrypoint
-          ? {
-              filePath: entrypoint,
-              // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
-              // For other services, handlerFunction is used as the entrypoint variable name.
-              varName:
-                service && isScheduleTriggeredService(service)
-                  ? undefined
-                  : handlerFunction,
-            }
-          : undefined,
-        service,
-        repoRootPath
-      )) ?? undefined;
-  }
-
-  if (detected?.error && detected?.baseDir === undefined) {
-    throw detected?.error;
-  }
-
-  const entryDirectory =
-    detected?.baseDir ?? (entrypoint ? dirname(entrypoint) : '.');
-
-  const entrypointAbsDir = join(workPath, entryDirectory);
-  const rootDir = repoRootPath ?? workPath;
-
+  entrypointDir,
+  rootDir,
+  venvPath,
+  meta,
+}: {
+  builderSpan: Span;
+  workPath: string;
+  entrypointDir: string;
+  rootDir: string;
+  venvPath: string;
+  meta: Pick<NonNullable<BuildOptions['meta']>, 'isDev'>;
+}): Promise<{
+  pythonPackage: Awaited<ReturnType<typeof discoverPackage>>;
+  pythonVersion: ReturnType<typeof resolvePythonVersion>['pythonVersion'];
+  uv: UvRunner;
+  uvCacheDir: string;
+  restoredCache: string;
+}> {
   const pythonPackage = await builderSpan
     .child('vc.builder.python.discover')
     .trace(() =>
       discoverPackage({
-        entrypointDir: entrypointAbsDir,
+        entrypointDir,
         rootDir,
       })
     );
@@ -876,9 +801,6 @@ export const build: BuildVX = async ({
   const uvVersion = checkUvBinaryVersion(uv.getPath());
   console.log(`Using ${uvVersion}`);
 
-  const venvPath = service?.name
-    ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
-    : join(workPath, '.vercel', 'python', '.venv');
   const hasCachedVenv = fs.existsSync(join(venvPath, 'pyvenv.cfg'));
   const hasCachedUv = fs.existsSync(uvCacheDir);
   const restoredCache =
@@ -903,471 +825,127 @@ export const build: BuildVX = async ({
     });
   });
 
-  // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
-  if (isPythonFramework(framework)) {
-    const {
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      turboSupportsCorepackHome,
-    } = await scanParentDirs(workPath, true);
-    spawnEnv = getEnvForPackageManager({
-      cliType,
-      lockfileVersion,
-      packageJsonPackageManager,
-      env: process.env,
-      turboSupportsCorepackHome,
-      projectCreatedAt: config?.projectSettings?.createdAt,
-    });
+  return { pythonPackage, pythonVersion, uv, uvCacheDir, restoredCache };
+}
 
-    const installCommand = config?.projectSettings?.installCommand;
-    if (typeof installCommand === 'string') {
-      const trimmed = installCommand.trim();
-      if (trimmed) {
-        projectInstallCommand = trimmed;
-      } else {
-        console.log('Skipping "install" command...');
-      }
-    }
-  }
+async function runUvManagedInstall({
+  workPath,
+  rootDir,
+  venvPath,
+  pythonPackage,
+  pythonVersion,
+  uv,
+  uvCacheDir,
+  lockCacheKey,
+  pythonPlatform,
+  extraSyncParams,
+}: {
+  workPath: string;
+  rootDir: string;
+  venvPath: string;
+  pythonPackage: Awaited<ReturnType<typeof discoverPackage>>;
+  pythonVersion: ReturnType<typeof resolvePythonVersion>['pythonVersion'];
+  uv: UvRunner;
+  uvCacheDir: string;
+  lockCacheKey: string;
+  pythonPlatform: string | undefined;
+  extraSyncParams?: { onlyGroup?: string; noInstallProject?: boolean };
+}): Promise<UvProjectInfo> {
+  // Compute the path where we stash a copy of the generated uv.lock
+  // so `uv lock` can validate it on the next build instead of
+  // re-resolving all packages from PyPI.
+  const cachedLockPath = join(uvCacheDir, lockCacheKey);
 
-  const baseEnv = spawnEnv || process.env;
-  const pythonEnv = createVenvEnv(venvPath, baseEnv, uvCacheDir);
-
-  pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
-
-  // If a custom install command is configured, treat it as an override for
-  // the default dependency installation: run the command inside the build
-  // virtualenv
-  let assumeDepsInstalled = false;
-
-  // Track the lock file path and project info for package classification (used when runtime install is enabled)
-  let uvLockPath: string | null = null;
-  let uvProjectDir: string | null = null;
-  let projectName: string | undefined;
-  let usedUvManagedInstall = false;
-
-  await builderSpan
-    .child(BUILDER_INSTALLER_STEP, {
-      installCommand: projectInstallCommand || undefined,
-      runtime: 'python',
-      'python.cache.restored': restoredCache,
-    })
-    .trace(async () => {
-      if (projectInstallCommand) {
-        // Custom commands may not prune removed packages, so always
-        // start from a fresh venv to avoid stale dependency accumulation.
-        await fs.promises.rm(venvPath, { recursive: true, force: true });
-        await ensureVenv({
-          pythonVersion,
-          venvPath,
-          uvPath: uv.getPath(),
-          uvCacheDir,
-          quiet: true,
-        });
-        console.log(
-          `Running "install" command: \`${projectInstallCommand}\`...`
-        );
-        await execCommand(projectInstallCommand, {
-          env: pythonEnv,
-          cwd: workPath,
-        });
-        assumeDepsInstalled = true;
-        hasCustomCommand = true;
-      } else {
-        // Check and run a custom vercel install command from project manifest.
-        // This will return `false` if no script was ran.
-        const hasCustomScript = await runPyprojectScript(
-          workPath,
-          ['vercel-install', 'now-install', 'install'],
-          pythonEnv,
-          /* useUserVirtualEnv */ false
-        );
-        if (hasCustomScript) {
-          assumeDepsInstalled = true;
-          hasCustomCommand = true;
-        }
-      }
-
-      if (!assumeDepsInstalled) {
-        // Compute the path where we stash a copy of the generated uv.lock
-        // so `uv lock` can validate it on the next build instead of
-        // re-resolving all packages from PyPI.
-        const lockCacheKey = service?.name
-          ? `uv.lock.${service.name}`
-          : 'uv.lock';
-        const cachedLockPath = join(uvCacheDir, lockCacheKey);
-
-        // Default installation path: use uv to normalize manifests into a uv.lock and
-        // sync dependencies into the virtualenv, including required runtime deps.
-        // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
-        // for consistent installation logic and idempotency.
-        const { projectDir, lockPath, lockFileProvidedByUser } =
-          await ensureUvProject({
-            workPath,
-            rootDir,
-            venvPath,
-            pythonPackage,
-            pythonVersion: pythonVersionString(pythonVersion),
-            uv,
-            requireBinaryWheels: false,
-            cachedLockPath,
-          });
-
-        uvLockPath = lockPath;
-        uvProjectDir = projectDir;
-
-        // Get the project name from the already-discovered package info
-        projectName = pythonPackage?.manifest?.data?.project?.name;
-
-        // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
-        // so we can use `uv sync` to install dependencies into the active
-        // virtual environment.
-        // Use --frozen for user-provided lock files (respects exact versions),
-        // --locked for generated lock files (validates consistency).
-        await uv.sync({
-          venvPath,
-          projectDir,
-          frozen: lockFileProvidedByUser,
-          locked: !lockFileProvidedByUser,
-          pythonPlatform: target.uvPlatform,
-        });
-        usedUvManagedInstall = true;
-
-        // Stash the lock file into the cache dir so prepareCache
-        // preserves it and the next build can skip full resolution.
-        if (lockPath && fs.existsSync(lockPath)) {
-          await fs.promises.mkdir(uvCacheDir, { recursive: true });
-          await fs.promises.copyFile(lockPath, cachedLockPath);
-        }
-      }
-    });
-
-  // Run the project build command (if any) AFTER dependencies are installed.
-  if (isPythonFramework(framework)) {
-    const projectBuildCommand =
-      config?.projectSettings?.buildCommand ??
-      // fallback if provided directly on config (some callers set this)
-      (config as any)?.buildCommand;
-    await builderSpan
-      .child(BUILDER_COMPILE_STEP, {
-        buildCommand: projectBuildCommand || undefined,
-      })
-      .trace(async () => {
-        if (projectBuildCommand) {
-          console.log(`Running "${projectBuildCommand}"`);
-          await execCommand(projectBuildCommand, {
-            env: pythonEnv,
-            cwd: workPath,
-          });
-        } else {
-          await runPyprojectScript(
-            workPath,
-            ['vercel-build', 'now-build', 'build'],
-            pythonEnv
-          );
-        }
-      });
-  }
-
-  // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
-  const hookResult = await runFrameworkHook(framework, {
-    pythonEnv,
+  // Default installation path: use uv to normalize manifests into a uv.lock and
+  // sync dependencies into the virtualenv, including required runtime deps.
+  // Ensure all installation paths are normalized into a pyproject.toml and uv.lock
+  // for consistent installation logic and idempotency.
+  const result = await ensureUvProject({
     workPath,
+    rootDir,
     venvPath,
-    entrypoint,
-    detected,
-    pyprojectData: pythonPackage.manifest?.data,
-  });
-
-  // Collect the resolved entrypoint from detection or hook, preferring the
-  // hook. In declared-only mode the hook must not introduce a web app that
-  // pyproject.toml did not declare, so only the declared entrypoint counts.
-  const resolved = isPyprojectEntrypoint
-    ? detected?.entrypoint
-    : (hookResult?.entrypoint ?? detected?.entrypoint);
-  if (!resolved && detected?.error) {
-    throw detected?.error;
-  }
-
-  entrypoint = resolved?.entrypoint;
-  // Declared-only builds may consist of workers alone (no web app).
-  const isWorkersOnly =
-    !entrypoint &&
-    isPyprojectEntrypoint &&
-    (subscriberDeclarations.length > 0 || workflows.length > 0);
-  if (!entrypoint && !isWorkersOnly) {
-    throw new NowBuildError({
-      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
-      message:
-        'No Python entrypoint could be detected. Please specify an entrypoint file.',
-    });
-  }
-
-  const djangoStatic: DjangoCollectStaticResult | null =
-    (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
-  const fastapiStatic: FastAPICollectStaticResult | null =
-    (hookResult as FastAPIFrameworkHookResult | undefined)?.fastapiStatic ??
-    null;
-  const importSeeds: string[] =
-    (hookResult as DjangoFrameworkHookResult | undefined)?.importSeeds ?? [];
-  const cdnOutputDir =
-    djangoStatic?.cdnOutputDir ?? fastapiStatic?.cdnOutputDir ?? null;
-
-  const pipPlatformArgs = target.uvPlatform
-    ? ['--python-platform', target.uvPlatform]
-    : [];
-
-  // We intentionally do not inject vercel-runtime into the
-  // manifest — that would surprise users running `vercel build` locally —
-  // and we cannot re-run `uv sync` after this, since sync would remove them.
-  await installInjectedPackage({
-    name: 'vercel-runtime',
-    requirement: `vercel-runtime==${VERCEL_RUNTIME_VERSION}`,
-    envOverride: baseEnv.VERCEL_RUNTIME_PYTHON,
-    allowLocalSource: true,
+    pythonPackage,
+    pythonVersion: pythonVersionString(pythonVersion),
     uv,
-    venvPath,
-    projectDir: join(workPath, entryDirectory),
-    pipPlatformArgs,
+    requireBinaryWheels: false,
+    cachedLockPath,
   });
+  const { projectDir, lockPath, lockFileProvidedByUser } = result;
 
-  // Legacy vercel-workers projects bring their own adapter integration
-  // through the vercel-workers runtime; injecting or activating the
-  // vercel-queue adapters there would install two competing transports.
-  const conditionalInjectedPackages =
-    usedUvManagedInstall && !legacyWorkersProject
-      ? await getConditionalInjectedPackages({
-          pythonPackage,
-          env: baseEnv,
-        })
-      : [];
-
-  for (const injectedPackage of conditionalInjectedPackages) {
-    await installInjectedPackage({
-      ...injectedPackage,
-      uv,
+  // `ensureUvProject` would have produced a `pyproject.toml` or `uv.lock`
+  // so we can use `uv sync` to install dependencies into the active
+  // virtual environment.
+  // Use --frozen for user-provided lock files (respects exact versions),
+  // --locked for generated lock files (validates consistency).
+  if (extraSyncParams !== undefined) {
+    await uv.sync({
       venvPath,
-      projectDir: join(workPath, entryDirectory),
-      pipPlatformArgs,
+      projectDir,
+      frozen: lockFileProvidedByUser,
+      locked: !lockFileProvidedByUser,
+      pythonPlatform,
+      ...extraSyncParams,
     });
   }
 
-  if (workflows.length > 0) {
-    workflowMode = await resolveWorkflowServingMode({
-      pythonPackage,
-      uv,
-      venvPath,
-      projectDir: join(workPath, entryDirectory),
-      uvLockPath,
-    });
+  // Stash the lock file into the cache dir so prepareCache
+  // preserves it and the next build can skip full resolution.
+  if (lockPath && fs.existsSync(lockPath)) {
+    await fs.promises.mkdir(uvCacheDir, { recursive: true });
+    await fs.promises.copyFile(lockPath, cachedLockPath);
   }
 
-  // The legacy vercel-workers integration needs the vercel-workers package
-  // in the bundle: for legacy projects it backs the worker bootstrap, and
-  // for pre-vercel-queue `vercel` SDKs it backs `vercel.workflow` serving.
-  const shouldInstallVercelWorkers =
-    legacyWorkersProject ||
-    (workflows.length > 0 && workflowMode === 'workers');
+  return result;
+}
 
-  if (shouldInstallVercelWorkers) {
-    await installInjectedPackage({
-      name: 'vercel-workers',
-      requirement: `vercel-workers==${VERCEL_WORKERS_VERSION}`,
-      envOverride: baseEnv.VERCEL_WORKERS_PYTHON,
-      allowLocalSource: true,
-      uv,
-      venvPath,
-      projectDir: join(workPath, entryDirectory),
-      pipPlatformArgs,
-    });
-  }
-
-  // Run quirks: detect dependencies that need special handling (e.g. prisma)
-  // and perform fix-up routines before bundling.
-  const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
-
-  // Apply build-time env vars from quirks so subsequent build steps can use them
-  if (quirksResult.buildEnv) {
-    Object.assign(pythonEnv, quirksResult.buildEnv);
-  }
-
-  // Queue adapter integrations the project's dependencies require; both
-  // introspection and the generated handler modules activate them right
-  // after importing the subscriber module (each installer retroactively
-  // registers apps the import created) and fail hard when activation
-  // fails. Legacy vercel-workers projects use the legacy integration
-  // instead (see the conditional injection gate above).
-  const queueIntegrations = legacyWorkersProject
-    ? []
-    : await getQueueIntegrations({ pythonPackage });
-
-  const writeGeneratedQueueHandler = async (
-    outputPath: string,
-    declaration: SubscriberDeclaration
-  ) => {
-    const generatedPath = getGeneratedQueueHandlerPath(outputPath);
-    await fs.promises.mkdir(dirname(join(workPath, generatedPath)), {
-      recursive: true,
-    });
-    await fs.promises.writeFile(
-      join(workPath, generatedPath),
-      createQueueHandlerModule(declaration, queueIntegrations)
-    );
+async function packFunctionBundle({
+  builderSpan,
+  workPath,
+  uvLockPath,
+  uvProjectDir,
+  projectName,
+  pythonVersion,
+  hasCustomCommand,
+  alwaysBundlePackages,
+  initialFiles,
+  additionalExcludes,
+  compileAllEnabled,
+  compileEnv,
+  venvPath,
+  entrypoint,
+  importClosureContext,
+  largeFunctionLabel,
+}: {
+  builderSpan: Span;
+  workPath: string;
+  uvLockPath: string | null;
+  uvProjectDir: string | null;
+  projectName: string | undefined;
+  pythonVersion: ReturnType<typeof resolvePythonVersion>['pythonVersion'];
+  hasCustomCommand: boolean;
+  alwaysBundlePackages: string[];
+  initialFiles?: Files;
+  additionalExcludes?: string[];
+  compileAllEnabled: boolean;
+  compileEnv: NodeJS.ProcessEnv;
+  venvPath: string;
+  entrypoint: string | undefined;
+  importClosureContext: {
+    frameworkSeeds: string[];
+    extraPythonPath: string | undefined;
+    subscriberDeclarations: Pick<SubscriberDeclaration, 'moduleName'>[];
+    subscribers: Pick<Subscriber, 'name'>[];
+    workflows: Pick<PyprojectWorkflow, 'name' | 'moduleName'>[];
+    workflowMode: WorkflowServingMode;
   };
-
-  if (subscriberDeclarations.length > 0 && !legacyWorkersProject) {
-    subscribers = await resolveQueueSubscribers({
-      declarations: subscriberDeclarations,
-      uv,
-      venvPath,
-      projectDir: join(workPath, entryDirectory),
-      integrations: queueIntegrations,
-    });
-
-    if (workflowMode === 'queue') {
-      // Workflow subscriptions register on `__wkf_*` topics in the same
-      // import graph; keep them out of topic-less subscriber lambdas so
-      // workflow traffic is consumed only by the workflow Lambda.
-      for (const subscriber of subscribers) {
-        if (!subscriber.topicPatterns) {
-          subscriber.subscriptions = subscriber.subscriptions.filter(
-            subscription => !subscription.topic.startsWith('__wkf_')
-          );
-        }
-      }
-    }
-
-    for (const subscriber of subscribers) {
-      await writeGeneratedQueueHandler(
-        getSubscriberOutputPath(subscriber.name),
-        subscriber
-      );
-    }
-  }
-
-  // For SDKs ported to vercel-queue, workflow entrypoints are served exactly
-  // like subscribers: introspect the registered `__wkf_*` subscriptions and
-  // serve them through a generated `vercel.queue.asgi_app()` module.
-  const workflowQueueSubscriptions = new Map<
-    string,
-    Subscriber['subscriptions']
-  >();
-  if (workflows.length > 0 && workflowMode === 'queue') {
-    const resolved = await resolveQueueSubscribers({
-      declarations: workflows.map(workflow => ({
-        name: workflow.name,
-        entrypoint: workflow.entrypoint,
-        moduleName: workflow.moduleName,
-        variableName: workflow.variableName,
-        topicPatterns: [WORKFLOW_TOPIC_PATTERN],
-      })),
-      uv,
-      venvPath,
-      projectDir: join(workPath, entryDirectory),
-      kind: 'workflow',
-      integrations: queueIntegrations,
-    });
-    for (const workflow of resolved) {
-      workflowQueueSubscriptions.set(workflow.name, workflow.subscriptions);
-      await writeGeneratedQueueHandler(
-        getWorkflowOutputPath(workflow.name),
-        workflow
-      );
-    }
-  }
-
-  // Register a pre-deploy command that will be fired in the end of the
-  // build process (if all builders including this one succeed)
-  const preDeployCommand = config?.preDeployCommand;
-  if (registerPreDeploy && typeof preDeployCommand === 'string') {
-    const capturedEnv = { ...pythonEnv };
-    const capturedCwd = workPath;
-    registerPreDeploy(async () => {
-      await builderSpan
-        .child(BUILDER_PRE_DEPLOY_STEP, {
-          preDeployCommand,
-        })
-        .trace(async () => {
-          console.log(`Running pre-deploy command: \`${preDeployCommand}\``);
-          await execCommand(preDeployCommand, {
-            env: capturedEnv,
-            cwd: capturedCwd,
-          });
-        });
-    });
-  }
-
+  largeFunctionLabel: string;
+}): Promise<{
+  pycachePrefix: string | undefined;
+  vendorDir: string;
+  files: Files;
+  installedDistributions: InstalledPythonDistributions;
+}> {
   const vendorDir = resolveVendorDir();
-
-  let crons: Awaited<ReturnType<typeof getServiceCrons>>;
-  let runtimeTrampoline: string | undefined;
-  if (entrypoint) {
-    debug('Entrypoint is', entrypoint);
-    const moduleName = entrypointToModule(entrypoint);
-
-    if (handlerFunction) {
-      const entrypointPath = join(workPath, entrypoint);
-      const source = await fs.promises.readFile(entrypointPath, 'utf-8');
-      const found = await containsTopLevelCallable(source, handlerFunction);
-      if (!found) {
-        throw new NowBuildError({
-          code: 'PYTHON_HANDLER_NOT_FOUND',
-          message:
-            `Handler function "${handlerFunction}" not found in ${entrypoint}. ` +
-            `Ensure it is defined at the module's top level.`,
-        });
-      }
-    }
-
-    // Since `vercel dev` renames source files, we must reference the original
-    const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
-    const entrypointWithSuffix = `${entrypoint}${suffix}`;
-    debug('Entrypoint with suffix is', entrypointWithSuffix);
-
-    crons = await getServiceCrons({
-      service,
-      entrypoint,
-      rawEntrypoint,
-      handlerFunction,
-      pythonBin: getVenvPythonBin(venvPath),
-      env: pythonEnv,
-      workPath,
-    });
-
-    // Build trampoline env line for cron routing.
-    // Injected into os.environ.update() in the Python trampoline source,
-    // not lambdaEnv, because the platform rejects env var names with
-    // leading underscores.
-    const extraTrampolineEnv: string[] = [];
-    if (crons?.length) {
-      // Single-quote the JSON so embedded double quotes don't need escaping
-      // in the surrounding Python dict literal. Backslashes would be
-      // misinterpreted by Python's string parser, but cron paths/handlers
-      // only contain [a-zA-Z0-9_./:-] so JSON.stringify won't produce any.
-      const json = JSON.stringify(buildCronRouteTable(crons));
-      assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
-      extraTrampolineEnv.push(`"__VC_CRON_ROUTES": '${json}'`);
-    }
-
-    const variableName = resolved?.variableName ?? '';
-
-    runtimeTrampoline = createRuntimeTrampoline({
-      moduleName,
-      entrypoint: entrypointWithSuffix,
-      vendorDir,
-      variableName,
-      extraEnv: extraTrampolineEnv,
-    });
-  }
-
-  const compileAllEnabled = shouldCompileAll({
-    isDev: meta.isDev,
-    hasCustomCommand,
-    // A pre-deploy command can rewrite source after the build, which would make
-    // unchecked-hash precompiled bytecode stale; skip precompilation to avoid serving it.
-    hasPreDeployCommand: typeof preDeployCommand === 'string',
-  });
 
   const predefinedExcludes = [
     '.git/**',
@@ -1388,70 +966,31 @@ export const build: BuildVX = async ({
     '**/package-lock.json',
   ];
 
-  const lambdaEnv = {} as Record<string, string>;
-  lambdaEnv.PYTHONPATH = vendorDir;
-  // Lambda uses a read-only filesystem; skip .pyc generation to avoid
-  // wasted syscalls on every import.
-  lambdaEnv.PYTHONDONTWRITEBYTECODE = '1';
-  Object.assign(lambdaEnv, quirksResult.env);
-  if (shouldInstallVercelWorkers) {
-    lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
-  }
-  if (queueIntegrations.length > 0) {
-    // Every function of the project may publish through the adapter's
-    // transport (not just subscriber lambdas), so the runtime activates
-    // the required integrations at startup in all of them.
-    lambdaEnv.VERCEL_QUEUE_INTEGRATIONS = queueIntegrations
-      .map(
-        ({ module, installer, servingActivator }) =>
-          `${module}:${installer}` +
-          (servingActivator ? `:${servingActivator}` : '')
-      )
-      .join(',');
-  }
-
-  const globOptions: GlobOptions = {
+  const files: Files = await glob('**', {
     cwd: workPath,
-    ignore:
-      config && typeof config.excludeFiles === 'string'
-        ? [...predefinedExcludes, config.excludeFiles]
-        : predefinedExcludes,
-  };
+    ignore: [...predefinedExcludes, ...(additionalExcludes ?? [])],
+  });
+  Object.assign(files, initialFiles);
 
-  const files: Files = await glob('**', globOptions);
   const appPythonSourceFiles = Object.keys(files)
     .filter(file => file.endsWith('.py'))
     .map(file => join(workPath, file))
     .sort();
 
-  // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
-  // backend is in use. The CDN serves static assets; only the manifest is
-  // needed at runtime so Django can resolve hashed filenames for {% static %}.
-  if (djangoStatic?.manifestRelPath) {
-    files[djangoStatic.manifestRelPath] = new FileFsRef({
-      fsPath: join(workPath, djangoStatic.manifestRelPath),
-    });
-  }
+  let pycachePrefix: string | undefined;
 
-  // in order to allow the user to have `server.py`, we
-  // need our `server.py` to be called something else
-  const handlerPyFilename = 'vc__handler__python';
-
-  // "fasthtml" framework requires a `.sesskey` file to exist,
-  // otherwise it tries to create one at runtime, which fails
-  // due Lambda's read-only filesystem
-  if (config.framework === 'fasthtml') {
-    const { SESSKEY = '' } = process.env;
-    files['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
-  }
-
-  await builderSpan
+  const installedDistributions = await builderSpan
     .child('vc.builder.python.bundle')
     .trace(async bundleSpan => {
       const installedDistributions = await InstalledPythonDistributions.load({
         venvPath,
         pythonMajor: pythonVersion.major,
         pythonMinor: pythonVersion.minor,
+        // Without a uv.lock (custom install commands), a seeded package may
+        // be one the project installed on purpose, so it stays bundled.
+        excludePackages: uvLockPath
+          ? await getSeedPackagesMissingFromLock(uvLockPath)
+          : [],
       });
 
       // Bundle dependencies, using runtime installation for oversized bundles
@@ -1464,12 +1003,7 @@ export const build: BuildVX = async ({
         projectName,
         pythonVersion,
         hasCustomCommand,
-        alwaysBundlePackages: [
-          ...(quirksResult.alwaysBundlePackages ?? []),
-          ...(shouldInstallVercelWorkers
-            ? ['vercel-workers', 'vercel_workers']
-            : []),
-        ],
+        alwaysBundlePackages,
       });
 
       // analyze() always computes source-only sizes so threshold
@@ -1479,8 +1013,8 @@ export const build: BuildVX = async ({
       // size-limit enforcement that may throw) so the span is tagged even
       // for oversized bundles that subsequently fail the build. On
       // successful builds the attribute is overwritten at the end of this
-      // span with the final bundle size (including compiled bytecode and
-      // runtime-install tooling).
+      // span with the same footprint plus the runtime-install tooling
+      // shipped in the zip.
       const depAnalysis = await depExternalizer.analyze(files, {
         onSized: ({ totalSizeBytes, runtimeInstallEnabled }) => {
           bundleSpan.setAttributes({
@@ -1495,13 +1029,13 @@ export const build: BuildVX = async ({
       const compileAllOptions = compileAllEnabled
         ? {
             pythonBin: getVenvPythonBin(venvPath),
-            env: pythonEnv,
+            env: compileEnv,
           }
         : null;
 
       const compileSources = async ({
         includePackages,
-        pycachePrefix,
+        pycachePrefix: pycachePrefixArg,
       }: {
         includePackages?: string[];
         pycachePrefix?: string;
@@ -1519,7 +1053,7 @@ export const build: BuildVX = async ({
             const result = await runCompileAll({
               ...compileAllOptions,
               sourceFiles: [...appPythonSourceFiles, ...vendorSourceFiles],
-              pycachePrefix,
+              pycachePrefix: pycachePrefixArg,
             });
             timings = result.timings;
 
@@ -1549,13 +1083,8 @@ export const build: BuildVX = async ({
                 getImportClosureOptions({
                   workPath,
                   entrypoint,
-                  frameworkSeeds: importSeeds,
-                  extraPythonPath: hookResult?.extraPythonPath,
-                  subscriberDeclarations,
-                  subscribers,
-                  workflows,
-                  workflowMode,
                   sitePackageDirs,
+                  ...importClosureContext,
                 })
               ),
               IMPORT_CLOSURE_TIMEOUT_MS,
@@ -1639,7 +1168,6 @@ export const build: BuildVX = async ({
                 100
               ).toFixed(2),
             });
-
             return selectedSize;
           });
       };
@@ -1772,7 +1300,7 @@ export const build: BuildVX = async ({
 
           // Point the runtime at the tree only when bytecode shipped.
           if (bytesAdded > 0) {
-            lambdaEnv.PYTHONPYCACHEPREFIX = RUNTIME_PYCACHE_PREFIX;
+            pycachePrefix = RUNTIME_PYCACHE_PREFIX;
           }
         } catch (err) {
           console.log(
@@ -1784,7 +1312,7 @@ export const build: BuildVX = async ({
 
       const announceLargeFunction = () =>
         console.log(
-          `Function "${entrypoint ?? rawEntrypoint}" exceeds the standard size limit; enabling large functions (beta).`
+          `Function "${largeFunctionLabel}" exceeds the standard size limit; enabling large functions (beta).`
         );
 
       // How the bundle was packed, for the span attributes below:
@@ -1792,6 +1320,10 @@ export const build: BuildVX = async ({
       // - runtime-install: public deps deferred to a cold-start `uv sync`
       // - hive:            large functions; everything in the zip
       let packingMode: 'standard' | 'runtime-install' | 'hive';
+
+      // Runtime-install tooling shipped in the zip; 0 for standard and
+      // hive bundles.
+      let runtimeToolingBytes = 0;
 
       if (depAnalysis.runtimeInstallEnabled) {
         // Pack the zip and defer the rest to runtime install. If it can't be
@@ -1805,6 +1337,7 @@ export const build: BuildVX = async ({
         const bundleResult = await depExternalizer.generateBundle(files, {
           bytecodeFirst,
         });
+        runtimeToolingBytes = bundleResult.runtimeToolingBytes ?? 0;
         if (bundleResult.fellBackToFullBundle) {
           packingMode = 'hive';
           announceLargeFunction();
@@ -1865,18 +1398,1051 @@ export const build: BuildVX = async ({
         }
       }
 
-      // Final span attributes: overwrite the source-only size recorded by
-      // onSized with the shipped bundle size (now including compiled
-      // bytecode and runtime-install tooling). Cheap: calculateBundleSize
-      // memoizes stat results on the FileFsRefs, and every file has been
-      // through at least one sizing pass by this point.
+      // Final span attributes: totalSizeBytes is the full function
+      // footprint (source + venv + runtime-install tooling), independent
+      // of packing mode and bytecode fill; shippedSizeBytes is the zip
+      // size that counts toward the platform size limits.
       bundleSpan.setAttributes({
         'python.bundle.totalSizeBytes': String(
+          depAnalysis.totalBundleSize + runtimeToolingBytes
+        ),
+        'python.bundle.shippedSizeBytes': String(
           await calculateBundleSize(files)
         ),
         'python.bundle.packingMode': packingMode,
       });
+
+      return installedDistributions;
     });
+
+  return { pycachePrefix, vendorDir, files, installedDistributions };
+}
+
+async function buildProxyMiddleware({
+  workPath,
+  repoRootPath,
+  files: originalFiles,
+  entrypoint,
+  config,
+  meta,
+  builderSpan,
+}: {
+  workPath: string;
+  repoRootPath: string | undefined;
+  files: Files;
+  entrypoint: string;
+  config: Config;
+  meta: NonNullable<BuildOptions['meta']>;
+  builderSpan: Span;
+}): Promise<BuildResultVX> {
+  const target = getTargetPlatform(meta.isDev ?? false);
+
+  debug(`workPath: ${workPath}`);
+
+  workPath = await downloadFilesInWorkPath({
+    workPath,
+    files: originalFiles,
+    entrypoint,
+    meta,
+  });
+
+  // The proxy entrypoint variable is resolved upstream and always passed in
+  // via config.handlerFunction.
+  const proxyHandlerFunction = config.handlerFunction;
+  if (typeof proxyHandlerFunction !== 'string' || !proxyHandlerFunction) {
+    throw new Error(
+      'Python proxy build requires "config.handlerFunction" to be set'
+    );
+  }
+
+  const proxySource = await fs.promises.readFile(
+    join(workPath, entrypoint),
+    'utf-8'
+  );
+  if (!(await containsTopLevelCallable(proxySource, proxyHandlerFunction))) {
+    throw new NowBuildError({
+      code: 'PYTHON_HANDLER_NOT_FOUND',
+      message:
+        `Handler function "${proxyHandlerFunction}" not found in ${entrypoint}. ` +
+        `Ensure it is defined at the module's top level.`,
+    });
+  }
+
+  const rootDir = repoRootPath ?? workPath;
+  const venvPath = join(workPath, '.vercel', 'python', 'vercel.proxy', '.venv');
+  const { pythonPackage, pythonVersion, uv, uvCacheDir, restoredCache } =
+    await setupPythonToolchain({
+      builderSpan,
+      workPath,
+      entrypointDir: join(workPath, dirname(entrypoint)),
+      rootDir,
+      venvPath,
+      meta,
+    });
+
+  const { projectDir, lockPath: uvLockPath } = await builderSpan
+    .child(BUILDER_INSTALLER_STEP, {
+      runtime: 'python',
+      'python.cache.restored': restoredCache,
+    })
+    .trace(() =>
+      runUvManagedInstall({
+        workPath,
+        rootDir,
+        venvPath,
+        pythonPackage,
+        pythonVersion,
+        uv,
+        uvCacheDir,
+        lockCacheKey: 'uv.lock',
+        pythonPlatform: target.uvPlatform,
+        // Install only the proxy's dependency group into the proxy venv;
+        // the project itself is neither built nor installed.
+        // If the group is absent the proxy has no extra deps — skip sync.
+        // Group names are normalized on read, so `vercel.proxy` is keyed
+        // as `vercel-proxy`.
+        extraSyncParams:
+          'vercel-proxy' in
+          (pythonPackage?.manifest?.data?.['dependency-groups'] ?? {})
+            ? { onlyGroup: 'vercel.proxy', noInstallProject: true }
+            : undefined,
+      })
+    );
+
+  const pipPlatformArgs = target.uvPlatform
+    ? ['--python-platform', target.uvPlatform]
+    : [];
+
+  // We intentionally do not inject vercel-runtime into the
+  // manifest — that would surprise users running `vercel build` locally —
+  // and we cannot re-run `uv sync` after this, since sync would remove them.
+  await installInjectedPackage({
+    name: 'vercel-runtime',
+    requirement: `vercel-runtime==${VERCEL_RUNTIME_VERSION}`,
+    envOverride: process.env.VERCEL_RUNTIME_PYTHON,
+    allowLocalSource: true,
+    uv,
+    venvPath,
+    projectDir,
+    pipPlatformArgs,
+  });
+
+  const projectName = pythonPackage?.manifest?.data?.project?.name;
+  const compileAllEnabled = shouldCompileAll({
+    isDev: meta.isDev ?? false,
+    hasCustomCommand: false,
+  });
+  const pythonEnv = createVenvEnv(venvPath, process.env, uvCacheDir);
+
+  const functionConfig = getMatchingFunction(
+    config,
+    entrypoint
+  )?.functionConfig;
+  const includeFilesPatterns = [
+    ...normalizeGlobs(config?.includeFiles),
+    ...normalizeGlobs(functionConfig?.includeFiles),
+  ];
+  const excludeFilesPatterns = [
+    ...normalizeGlobs(config?.excludeFiles),
+    ...normalizeGlobs(functionConfig?.excludeFiles),
+  ];
+  const initialFiles: Files = {};
+  for (const pattern of includeFilesPatterns) {
+    Object.assign(initialFiles, await glob(pattern, workPath));
+  }
+
+  const { pycachePrefix, vendorDir, files } = await packFunctionBundle({
+    builderSpan,
+    workPath,
+    uvLockPath,
+    uvProjectDir: projectDir,
+    projectName,
+    pythonVersion,
+    hasCustomCommand: false,
+    alwaysBundlePackages: [],
+    initialFiles,
+    additionalExcludes: excludeFilesPatterns,
+    compileAllEnabled,
+    compileEnv: pythonEnv,
+    venvPath,
+    entrypoint,
+    importClosureContext: {
+      frameworkSeeds: [],
+      extraPythonPath: undefined,
+      subscriberDeclarations: [],
+      subscribers: [],
+      workflows: [],
+      workflowMode: 'workers',
+    },
+    largeFunctionLabel: entrypoint,
+  });
+
+  const moduleName = entrypointToModule(entrypoint);
+  const variableName = proxyHandlerFunction;
+  const handlerPyFilename = 'vc__handler__python';
+  const runtimeTrampoline = createRuntimeTrampoline({
+    moduleName,
+    entrypoint,
+    vendorDir,
+    variableName,
+    extraEnv: [],
+  });
+  files[`${handlerPyFilename}.py`] = new FileBlob({ data: runtimeTrampoline });
+
+  const lambdaOptions = await getPythonLambdaOptions({ config, entrypoint });
+  const output = new Lambda({
+    files,
+    handler: `${handlerPyFilename}.vc_handler`,
+    runtime: pythonVersion.runtime,
+    ...lambdaOptions,
+    architecture: target.architecture,
+    environment: {
+      PYTHONPATH: vendorDir,
+      PYTHONDONTWRITEBYTECODE: '1',
+      ...(pycachePrefix ? { PYTHONPYCACHEPREFIX: pycachePrefix } : {}),
+    },
+    supportsResponseStreaming: true,
+  });
+
+  const matcher = resolveMiddlewareMatcher(
+    config.middlewareMatcher as string | string[] | undefined,
+    undefined,
+    entrypoint
+  );
+  const src = getRegExpFromMatchers(matcher);
+  const middlewareRawSrc: string[] = !matcher
+    ? []
+    : Array.isArray(matcher)
+      ? [...matcher]
+      : [matcher as string];
+
+  return {
+    resultVersion: 3,
+    result: {
+      output,
+      routes: [
+        {
+          src,
+          middlewareRawSrc,
+          middlewarePath: entrypoint.replace(/\.py$/i, ''),
+          continue: true,
+          override: true,
+        },
+      ],
+    },
+  };
+}
+
+export const build: BuildVX = async ({
+  workPath,
+  repoRootPath,
+  files: originalFiles,
+  entrypoint: rawEntrypoint,
+  meta = {},
+  config,
+  span: parentSpan,
+  service,
+  diagnosticsValues,
+  registerPreDeploy,
+}) => {
+  let entrypoint: string | undefined =
+    rawEntrypoint === '<detect>' ? undefined : rawEntrypoint;
+
+  const builderSpan = parentSpan ?? new Span({ name: 'vc.builder' });
+
+  if (config?.middleware === true && entrypoint) {
+    return buildProxyMiddleware({
+      workPath,
+      repoRootPath,
+      files: originalFiles,
+      entrypoint,
+      config,
+      meta,
+      builderSpan,
+    });
+  }
+
+  // A "pyproject.toml" entrypoint opts the build into declared-only mode: the
+  // web app comes from `tool.vercel.entrypoint` (if present), and workers come
+  // from `tool.vercel.subscribers` / `tool.vercel.workflows`. Filename-based
+  // auto-detection never runs, so a service builds exactly what its
+  // pyproject.toml declares.
+  const isPyprojectEntrypoint =
+    entrypoint !== undefined && basename(entrypoint) === 'pyproject.toml';
+  if (isPyprojectEntrypoint && entrypoint !== 'pyproject.toml') {
+    throw new NowBuildError({
+      code: 'PYTHON_INVALID_PYPROJECT_ENTRYPOINT',
+      message:
+        `A "pyproject.toml" entrypoint must sit at the service root. ` +
+        `Set the service "root" to "${dirname(entrypoint!)}" and use entrypoint "pyproject.toml".`,
+    });
+  }
+
+  const framework = config?.framework;
+  let subscriberDeclarations: SubscriberDeclaration[] = [];
+  let subscribers: Subscriber[] = [];
+  let workflows: PyprojectWorkflow[] = [];
+  // Projects that directly depend on the legacy `vercel-workers` SDK keep
+  // the pre-vercel-queue integration (legacy subscriber schema, worker env
+  // markers, injected vercel-workers).
+  let legacyWorkersProject = false;
+  // How `tool.vercel.workflows` entrypoints are served (see sdk-detection).
+  let workflowMode: WorkflowServingMode = 'workers';
+  let spawnEnv: NodeJS.ProcessEnv | undefined;
+  // Custom install command from dashboard/project settings, if any.
+  let projectInstallCommand: string | undefined;
+  // Track whether a custom install command was used. When true, runtime
+  // dependency installation is disabled because custom install commands may
+  // install dependencies not tracked in uv.lock.
+  let hasCustomCommand = false;
+
+  const target = getTargetPlatform(meta.isDev ?? false);
+
+  debug(`workPath: ${workPath}`);
+
+  workPath = await downloadFilesInWorkPath({
+    workPath,
+    files: originalFiles,
+    entrypoint,
+    meta,
+  });
+
+  // `tool.vercel.subscribers` and `tool.vercel.workflows` compile into
+  // additional worker Lambdas. They apply to standalone Python framework apps,
+  // and to explicit "pyproject.toml" entrypoints that opt a service into
+  // declared-only worker composition. They are intentionally not implicit for
+  // other service builds: services can share one pyproject.toml, and composing
+  // its workers into every service build would duplicate queue consumers. Bare
+  // `api/**` functions are excluded for the same reason: they build once per
+  // file sharing this workPath, so emitting workers there would duplicate them.
+  legacyWorkersProject = await isLegacyWorkersProject(workPath);
+  if (isPyprojectEntrypoint || (!service && isPythonFramework(framework))) {
+    subscriberDeclarations = await getPyprojectSubscribers(workPath, {
+      legacySchema: legacyWorkersProject,
+    });
+    workflows = await getPyprojectWorkflows(workPath);
+  }
+
+  try {
+    // See: https://stackoverflow.com/a/44728772/376773
+    //
+    // The `setup.cfg` is required for `vercel dev` on MacOS, where without
+    // this file being present in the src dir then this error happens:
+    //
+    // distutils.errors.DistutilsOptionError: must supply either home
+    // or prefix/exec-prefix -- not both
+    if (meta.isDev) {
+      const setupCfg = join(workPath, 'setup.cfg');
+      await writeFile(setupCfg, '[install]\nprefix=\n');
+    }
+  } catch (err) {
+    console.log('Failed to create "setup.cfg" file');
+    throw err;
+  }
+
+  // Entrypoint discovery
+  let detected: DetectedPythonEntrypoint | undefined;
+
+  // Schedule entrypoints are scripts the platform runs once per firing. The
+  // orchestrator already resolved their source files and packed every
+  // entrypoint with the same `functions` config into this build, so the
+  // first one stands in for the function's config and has no app variable
+  // to detect.
+  const scheduleFunction: ScheduleFunctionBuildConfig | undefined =
+    config?.scheduleFunction;
+  const scheduleEntrypoint = scheduleFunction?.entrypoints[0];
+  const handlerFunction =
+    typeof config?.handlerFunction === 'string'
+      ? config.handlerFunction
+      : undefined;
+
+  if (isPyprojectEntrypoint) {
+    // Declared-only mode: use `tool.vercel.entrypoint` when present, and
+    // never fall back to filename-based detection. The helper hard-errors on
+    // a declared-but-unresolvable entrypoint, so a typo cannot silently drop
+    // the web app. A pyproject.toml with neither a web entrypoint nor declared
+    // workers has nothing to build.
+    const declared = await getVercelToolsEntrypoint(workPath, repoRootPath);
+    if (declared) {
+      detected = { entrypoint: declared };
+    } else if (subscriberDeclarations.length === 0 && workflows.length === 0) {
+      throw new NowBuildError({
+        code: 'PYTHON_PYPROJECT_NOTHING_TO_BUILD',
+        message:
+          'Entrypoint "pyproject.toml" declares nothing to build. Set "tool.vercel.entrypoint" ' +
+          'for a web app and/or declare "[[tool.vercel.subscribers]]" or ' +
+          '"[[tool.vercel.workflows]]" entries in pyproject.toml.',
+      });
+    }
+    entrypoint = undefined;
+  } else if (scheduleEntrypoint) {
+    detected = {
+      entrypoint: {
+        entrypoint: scheduleEntrypoint.sourceFile,
+        variableName: '',
+      },
+    };
+  } else {
+    detected =
+      (await detectPythonEntrypoint(
+        config.framework as PythonFramework,
+        workPath,
+        entrypoint
+          ? {
+              filePath: entrypoint,
+              // For schedule-triggered jobs, the WSGI variable is always 'app' (created dynamically).
+              // For other services, handlerFunction is used as the entrypoint variable name.
+              varName:
+                service && isScheduleTriggeredService(service)
+                  ? undefined
+                  : handlerFunction,
+            }
+          : undefined,
+        service,
+        repoRootPath
+      )) ?? undefined;
+  }
+
+  if (detected?.error && detected?.baseDir === undefined) {
+    throw detected?.error;
+  }
+
+  const entryDirectory =
+    detected?.baseDir ?? (entrypoint ? dirname(entrypoint) : '.');
+
+  const entrypointAbsDir = join(workPath, entryDirectory);
+  const rootDir = repoRootPath ?? workPath;
+
+  const venvPath = service?.name
+    ? join(workPath, '.vercel', 'python', 'services', service.name, '.venv')
+    : join(workPath, '.vercel', 'python', '.venv');
+  const { pythonPackage, pythonVersion, uv, uvCacheDir, restoredCache } =
+    await setupPythonToolchain({
+      builderSpan,
+      workPath,
+      entrypointDir: entrypointAbsDir,
+      rootDir,
+      venvPath,
+      meta,
+    });
+
+  // For Python frameworks, set up the env and extract the install command (vercel.json/dashboard)
+  if (isPythonFramework(framework)) {
+    const {
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      packageJsonDevEngines,
+      turboSupportsCorepackHome,
+    } = await scanParentDirs(workPath, true);
+    spawnEnv = getEnvForPackageManager({
+      cliType,
+      lockfileVersion,
+      packageJsonPackageManager,
+      packageJsonDevEngines,
+      env: process.env,
+      turboSupportsCorepackHome,
+      projectCreatedAt: config?.projectSettings?.createdAt,
+    });
+
+    const installCommand = config?.projectSettings?.installCommand;
+    if (typeof installCommand === 'string') {
+      const trimmed = installCommand.trim();
+      if (trimmed) {
+        projectInstallCommand = trimmed;
+      } else {
+        console.log('Skipping "install" command...');
+      }
+    }
+  }
+
+  const baseEnv = spawnEnv || process.env;
+  const pythonEnv = createVenvEnv(venvPath, baseEnv, uvCacheDir);
+
+  pythonEnv.VERCEL_PYTHON_VENV_PATH = venvPath;
+
+  // If a custom install command is configured, treat it as an override for
+  // the default dependency installation: run the command inside the build
+  // virtualenv
+  let assumeDepsInstalled = false;
+
+  // Track the lock file path and project info for package classification (used when runtime install is enabled)
+  let uvLockPath: string | null = null;
+  let uvProjectDir: string | null = null;
+  let projectName: string | undefined;
+  let usedUvManagedInstall = false;
+
+  await builderSpan
+    .child(BUILDER_INSTALLER_STEP, {
+      installCommand: projectInstallCommand || undefined,
+      runtime: 'python',
+      'python.cache.restored': restoredCache,
+    })
+    .trace(async () => {
+      if (projectInstallCommand) {
+        // Custom commands may not prune removed packages, so always
+        // start from a fresh venv to avoid stale dependency accumulation.
+        await fs.promises.rm(venvPath, { recursive: true, force: true });
+        await ensureVenv({
+          pythonVersion,
+          venvPath,
+          uvPath: uv.getPath(),
+          uvCacheDir,
+          quiet: true,
+        });
+        console.log(
+          `Running "install" command: \`${projectInstallCommand}\`...`
+        );
+        await execCommand(projectInstallCommand, {
+          env: pythonEnv,
+          cwd: workPath,
+        });
+        assumeDepsInstalled = true;
+        hasCustomCommand = true;
+      } else {
+        // Check and run a custom vercel install command from project manifest.
+        // This will return `false` if no script was ran.
+        const hasCustomScript = await runPyprojectScript(
+          workPath,
+          ['vercel-install', 'now-install', 'install'],
+          pythonEnv,
+          /* useUserVirtualEnv */ false
+        );
+        if (hasCustomScript) {
+          assumeDepsInstalled = true;
+          hasCustomCommand = true;
+        }
+      }
+
+      if (!assumeDepsInstalled) {
+        const { projectDir, lockPath } = await runUvManagedInstall({
+          workPath,
+          rootDir,
+          venvPath,
+          pythonPackage,
+          pythonVersion,
+          uv,
+          uvCacheDir,
+          lockCacheKey: service?.name ? `uv.lock.${service.name}` : 'uv.lock',
+          pythonPlatform: target.uvPlatform,
+          extraSyncParams: {},
+        });
+
+        uvLockPath = lockPath;
+        uvProjectDir = projectDir;
+
+        // Get the project name from the already-discovered package info
+        projectName = pythonPackage?.manifest?.data?.project?.name;
+        usedUvManagedInstall = true;
+      }
+    });
+
+  // Run the project build command (if any) AFTER dependencies are installed.
+  if (isPythonFramework(framework)) {
+    const projectBuildCommand =
+      config?.projectSettings?.buildCommand ??
+      // fallback if provided directly on config (some callers set this)
+      (config as any)?.buildCommand;
+    await builderSpan
+      .child(BUILDER_COMPILE_STEP, {
+        buildCommand: projectBuildCommand || undefined,
+      })
+      .trace(async () => {
+        if (projectBuildCommand) {
+          console.log(`Running "${projectBuildCommand}"`);
+          await execCommand(projectBuildCommand, {
+            env: pythonEnv,
+            cwd: workPath,
+          });
+        } else {
+          await runPyprojectScript(
+            workPath,
+            ['vercel-build', 'now-build', 'build'],
+            pythonEnv
+          );
+        }
+      });
+  }
+
+  // Run per-framework hooks (e.g. entrypoint detection and collectstatic for Django).
+  const hookResult = await runFrameworkHook(framework, {
+    pythonEnv,
+    workPath,
+    venvPath,
+    entrypoint,
+    detected,
+    pyprojectData: pythonPackage.manifest?.data,
+  });
+
+  // Collect the resolved entrypoint from detection or hook, preferring the
+  // hook. In declared-only mode the hook must not introduce a web app that
+  // pyproject.toml did not declare, so only the declared entrypoint counts.
+  const resolved = isPyprojectEntrypoint
+    ? detected?.entrypoint
+    : (hookResult?.entrypoint ?? detected?.entrypoint);
+  if (!resolved && detected?.error) {
+    throw detected?.error;
+  }
+
+  entrypoint = resolved?.entrypoint;
+  // Declared-only builds may consist of workers alone (no web app).
+  const isWorkersOnly =
+    !entrypoint &&
+    isPyprojectEntrypoint &&
+    (subscriberDeclarations.length > 0 || workflows.length > 0);
+  if (!entrypoint && !isWorkersOnly) {
+    throw new NowBuildError({
+      code: 'PYTHON_ENTRYPOINT_NOT_FOUND',
+      message:
+        'No Python entrypoint could be detected. Please specify an entrypoint file.',
+    });
+  }
+
+  const djangoStatic: DjangoCollectStaticResult | null =
+    (hookResult as DjangoFrameworkHookResult | undefined)?.djangoStatic ?? null;
+  const fastapiStatic: StaticPromotionResult | null =
+    (hookResult as FastAPIFrameworkHookResult | undefined)?.fastapiStatic ??
+    null;
+  const importSeeds: string[] =
+    (hookResult as DjangoFrameworkHookResult | undefined)?.importSeeds ?? [];
+  const cdnOutputDir =
+    djangoStatic?.cdnOutputDir ?? fastapiStatic?.outputStaticDir ?? null;
+
+  const pipPlatformArgs = target.uvPlatform
+    ? ['--python-platform', target.uvPlatform]
+    : [];
+
+  // We intentionally do not inject vercel-runtime into the
+  // manifest — that would surprise users running `vercel build` locally —
+  // and we cannot re-run `uv sync` after this, since sync would remove them.
+  await installInjectedPackage({
+    name: 'vercel-runtime',
+    requirement: `vercel-runtime==${VERCEL_RUNTIME_VERSION}`,
+    envOverride: baseEnv.VERCEL_RUNTIME_PYTHON,
+    allowLocalSource: true,
+    uv,
+    venvPath,
+    projectDir: join(workPath, entryDirectory),
+    pipPlatformArgs,
+  });
+
+  const queueAdapterBootstrap = await getQueueAdapterBootstrap({
+    pythonPackage,
+    env: baseEnv,
+    legacyWorkersProject,
+    hasDeclaredSubscribers: await hasPyprojectSubscribers(workPath),
+  });
+  // Injection mutates the venv, so it only applies to uv-managed installs.
+  const queueAdapterInjectedPackages = usedUvManagedInstall
+    ? queueAdapterBootstrap.injectedPackages
+    : [];
+
+  for (const injectedPackage of queueAdapterInjectedPackages) {
+    await installInjectedPackage({
+      ...injectedPackage,
+      uv,
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      pipPlatformArgs,
+    });
+  }
+
+  // Local vercel SDK checkout override (VERCEL_SDK_PYTHON): reinstall the
+  // SDK packages from source before serving-mode resolution and queue
+  // introspection so both observe the overridden install.
+  const localSdkSourcePaths = await getLocalSdkSourcePaths({
+    pythonPackage,
+    env: baseEnv,
+  });
+  if (localSdkSourcePaths.length > 0) {
+    debug(
+      `Installing vercel SDK override from ${baseEnv.VERCEL_SDK_PYTHON}: ` +
+        localSdkSourcePaths.join(', ')
+    );
+    await uv.pip({
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      args: [
+        'install',
+        '--link-mode',
+        'copy',
+        // Without --no-sources, uv resolves the checkout's workspace
+        // dependencies as editable .pth installs pointing at the (build
+        // only) checkout mount — invisible to bundling and dangling at
+        // runtime. Explicit paths stay real installs; the remaining
+        // workspace siblings resolve from PyPI.
+        '--no-sources',
+        ...pipPlatformArgs,
+        ...localSdkSourcePaths,
+      ],
+    });
+  }
+
+  if (workflows.length > 0) {
+    workflowMode = await resolveWorkflowServingMode({
+      pythonPackage,
+      uv,
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      uvLockPath,
+    });
+    // The legacy serving mode attaches every workflow consumer to the shared
+    // `__wkf_*` topic, so a second Lambda would fail on runs registered only
+    // in the first. Namespaced topics require a vercel-queue SDK.
+    if (workflowMode === 'workers' && workflows.length > 1) {
+      throw new NowBuildError({
+        code: 'PYTHON_INVALID_WORKFLOW_CONFIG',
+        message:
+          '"tool.vercel.workflows" declares multiple entrypoints, which requires ' +
+          `${QUEUE_WORKFLOW_SDK_REQUIREMENT} with a distinct namespace per ` +
+          'Workflows registry; the installed SDK serves every workflow on the shared __wkf_* topic',
+      });
+    }
+  }
+
+  // The legacy vercel-workers integration needs the vercel-workers package
+  // in the bundle: for legacy projects it backs the worker bootstrap, and
+  // for pre-vercel-queue `vercel` SDKs it backs `vercel.workflow` serving.
+  const shouldInstallVercelWorkers =
+    legacyWorkersProject ||
+    (workflows.length > 0 && workflowMode === 'workers');
+
+  if (shouldInstallVercelWorkers) {
+    await installInjectedPackage({
+      name: 'vercel-workers',
+      requirement: `vercel-workers==${VERCEL_WORKERS_VERSION}`,
+      envOverride: baseEnv.VERCEL_WORKERS_PYTHON,
+      allowLocalSource: true,
+      uv,
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      pipPlatformArgs,
+    });
+  }
+
+  // Run quirks: detect dependencies that need special handling (e.g. prisma)
+  // and perform fix-up routines before bundling.
+  const quirksResult = await runQuirks({ venvPath, pythonEnv, workPath });
+
+  // Apply build-time env vars from quirks so subsequent build steps can use them
+  if (quirksResult.buildEnv) {
+    Object.assign(pythonEnv, quirksResult.buildEnv);
+  }
+
+  // Queue adapter integrations the project's dependencies require; both
+  // introspection and the generated handler modules activate them right
+  // around importing the subscriber module (according to whether the adapter
+  // must observe declarations during import) and fail hard when activation
+  // fails.
+  const queueIntegrations = queueAdapterBootstrap.integrations;
+
+  const writeGeneratedQueueHandler = async (
+    outputPath: string,
+    declaration: SubscriberDeclaration
+  ) => {
+    const generatedPath = getGeneratedQueueHandlerPath(outputPath);
+    await fs.promises.mkdir(dirname(join(workPath, generatedPath)), {
+      recursive: true,
+    });
+    await fs.promises.writeFile(
+      join(workPath, generatedPath),
+      createQueueHandlerModule(declaration, queueIntegrations)
+    );
+  };
+
+  if (subscriberDeclarations.length > 0 && !legacyWorkersProject) {
+    subscribers = await resolveQueueSubscribers({
+      declarations: subscriberDeclarations,
+      uv,
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      integrations: queueIntegrations,
+    });
+
+    if (workflowMode === 'queue') {
+      // Workflow subscriptions register on workflow-shaped topics in the
+      // same import graph; keep them out of topic-less subscriber lambdas
+      // so workflow traffic is consumed only by the workflow Lambdas.
+      for (const subscriber of subscribers) {
+        if (!subscriber.topicPatterns) {
+          subscriber.subscriptions = subscriber.subscriptions.filter(
+            subscription => !isWorkflowQueueTopic(subscription.topic)
+          );
+        }
+      }
+    }
+
+    for (const subscriber of subscribers) {
+      await writeGeneratedQueueHandler(
+        getSubscriberOutputPath(subscriber.name),
+        subscriber
+      );
+    }
+  }
+
+  // For SDKs ported to vercel-queue, workflow entrypoints are served exactly
+  // like subscribers: introspect the registered workflow subscriptions —
+  // whose topics carry the registry's namespace — and serve them through a
+  // generated runtime callback handler.
+  const workflowQueueSubscriptions = new Map<
+    string,
+    Subscriber['subscriptions']
+  >();
+  if (workflows.length > 0 && workflowMode === 'queue') {
+    const resolved = await resolveQueueSubscribers({
+      declarations: workflows.map(workflow => ({
+        name: workflow.name,
+        entrypoint: workflow.entrypoint,
+        moduleName: workflow.moduleName,
+        variableName: workflow.variableName,
+      })),
+      uv,
+      venvPath,
+      projectDir: join(workPath, entryDirectory),
+      kind: 'workflow',
+      integrations: queueIntegrations,
+    });
+    // Registries sharing a namespace subscribe with the same (topic,
+    // consumer group) pairs, so their Lambdas would split each other's
+    // deliveries and fail on runs registered only in the other entrypoint.
+    for (let i = 0; i < resolved.length; i++) {
+      for (let j = i + 1; j < resolved.length; j++) {
+        const overlaps = resolved[i].subscriptions.some(left =>
+          resolved[j].subscriptions.some(right =>
+            queueTopicPatternsOverlap(left.topic, right.topic)
+          )
+        );
+        if (overlaps) {
+          throw new NowBuildError({
+            code: 'PYTHON_INVALID_WORKFLOW_CONFIG',
+            message:
+              `workflow entrypoints "${resolved[i].moduleName}:${resolved[i].variableName}" and ` +
+              `"${resolved[j].moduleName}:${resolved[j].variableName}" subscribe to overlapping ` +
+              'queue topics; construct each vercel.workflow.Workflows registry with a distinct namespace',
+          });
+        }
+      }
+    }
+    for (const workflow of resolved) {
+      workflowQueueSubscriptions.set(workflow.name, workflow.subscriptions);
+      await writeGeneratedQueueHandler(
+        getWorkflowOutputPath(workflow.name),
+        workflow
+      );
+    }
+  }
+
+  // Register a pre-deploy command that will be fired in the end of the
+  // build process (if all builders including this one succeed)
+  const preDeployCommand = config?.preDeployCommand;
+  if (registerPreDeploy && typeof preDeployCommand === 'string') {
+    const capturedEnv = { ...pythonEnv };
+    const capturedCwd = workPath;
+    registerPreDeploy(async () => {
+      await builderSpan
+        .child(BUILDER_PRE_DEPLOY_STEP, {
+          preDeployCommand,
+        })
+        .trace(async () => {
+          console.log(`Running pre-deploy command: \`${preDeployCommand}\``);
+          await execCommand(preDeployCommand, {
+            env: capturedEnv,
+            cwd: capturedCwd,
+          });
+        });
+    });
+  }
+
+  const vendorDir = resolveVendorDir();
+
+  let crons: Awaited<ReturnType<typeof getServiceCrons>>;
+  let runtimeTrampoline: string | undefined;
+  if (entrypoint) {
+    debug('Entrypoint is', entrypoint);
+
+    if (handlerFunction) {
+      const entrypointPath = join(workPath, entrypoint);
+      const source = await fs.promises.readFile(entrypointPath, 'utf-8');
+      const found = await containsTopLevelCallable(source, handlerFunction);
+      if (!found) {
+        throw new NowBuildError({
+          code: 'PYTHON_HANDLER_NOT_FOUND',
+          message:
+            `Handler function "${handlerFunction}" not found in ${entrypoint}. ` +
+            `Ensure it is defined at the module's top level.`,
+        });
+      }
+    }
+
+    if (!scheduleEntrypoint) {
+      const moduleName = entrypointToModule(entrypoint);
+      // Since `vercel dev` renames source files, we must reference the original
+      const suffix = meta.isDev && !entrypoint.endsWith('.py') ? '.py' : '';
+      const entrypointWithSuffix = `${entrypoint}${suffix}`;
+      debug('Entrypoint with suffix is', entrypointWithSuffix);
+
+      crons = await getServiceCrons({
+        service,
+        entrypoint,
+        rawEntrypoint,
+        handlerFunction,
+        pythonBin: getVenvPythonBin(venvPath),
+        env: pythonEnv,
+        workPath,
+      });
+
+      // Build trampoline env line for cron routing.
+      // Injected into os.environ.update() in the Python trampoline source,
+      // not lambdaEnv, because the platform rejects env var names with
+      // leading underscores.
+      const extraTrampolineEnv: string[] = [];
+      if (crons?.length) {
+        // Single-quote the JSON so embedded double quotes don't need escaping
+        // in the surrounding Python dict literal. Backslashes would be
+        // misinterpreted by Python's string parser, but cron paths/handlers
+        // only contain [a-zA-Z0-9_./:-] so JSON.stringify won't produce any.
+        const json = JSON.stringify(buildCronRouteTable(crons));
+        assert(!json.includes('\\'), `backslash in cron route table: ${json}`);
+        extraTrampolineEnv.push(`"__VC_CRON_ROUTES": '${json}'`);
+      }
+
+      const variableName = resolved?.variableName ?? '';
+      runtimeTrampoline = createRuntimeTrampoline({
+        moduleName,
+        entrypoint: entrypointWithSuffix,
+        vendorDir,
+        variableName,
+        extraEnv: extraTrampolineEnv,
+      });
+    }
+  }
+
+  const compileAllEnabled = shouldCompileAll({
+    isDev: meta.isDev,
+    hasCustomCommand,
+    // A pre-deploy command can rewrite source after the build, which would make
+    // unchecked-hash precompiled bytecode stale; skip precompilation to avoid serving it.
+    hasPreDeployCommand: typeof preDeployCommand === 'string',
+  });
+
+  const lambdaEnv = {} as Record<string, string>;
+  lambdaEnv.PYTHONPATH = vendorDir;
+  // Lambda uses a read-only filesystem; skip .pyc generation to avoid
+  // wasted syscalls on every import.
+  lambdaEnv.PYTHONDONTWRITEBYTECODE = '1';
+  Object.assign(lambdaEnv, quirksResult.env);
+  if (shouldInstallVercelWorkers) {
+    lambdaEnv.VERCEL_HAS_WORKER_SERVICES = '1';
+  }
+  if (queueIntegrations.length > 0) {
+    // Activate every detected adapter through the same runtime path in every
+    // Function. The runtime passes register_queues=False outside queue-serving
+    // processes when an installer supports that distinction.
+    lambdaEnv.VERCEL_QUEUE_INTEGRATIONS = queueIntegrations
+      .map(
+        ({ module, installer, servingActivator }) =>
+          `${module}:${installer}` +
+          (servingActivator ? `:${servingActivator}` : '')
+      )
+      .join(',');
+  }
+  const apschedulerSubscribers = apschedulerSubscriberIdentities(subscribers);
+  if (apschedulerSubscribers.length > 0) {
+    lambdaEnv.VERCEL_APSCHEDULER_SUBSCRIBERS = JSON.stringify(
+      apschedulerSubscribers
+    );
+    const previewConfig = await getApschedulerPreviewConfig(workPath);
+    if (previewConfig) {
+      lambdaEnv.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS = String(
+        previewConfig.idleTimeoutSeconds
+      );
+    }
+  }
+
+  const functionConfig = getMatchingFunction(
+    config,
+    entrypoint,
+    scheduleEntrypoint !== undefined
+  )?.functionConfig;
+  const includeFilesPatterns = [
+    ...normalizeGlobs(config?.includeFiles),
+    ...normalizeGlobs(functionConfig?.includeFiles),
+  ];
+  const excludeFilesPatterns = [
+    ...normalizeGlobs(config?.excludeFiles),
+    ...normalizeGlobs(functionConfig?.excludeFiles),
+  ];
+  const cdnBundle = getFastAPICdnBundle(
+    fastapiStatic?.discovery.mounts ?? [],
+    workPath,
+    pythonPackage.manifest?.data?.tool?.vercel?.fastapi
+  );
+  // Initial file set merged into the glob result before bundling.
+  const initialFiles: Files = {};
+  for (const pattern of includeFilesPatterns) {
+    Object.assign(initialFiles, await glob(pattern, workPath));
+  }
+  Object.assign(initialFiles, cdnBundle.directoryStubs);
+
+  // Re-inject staticfiles.json into the Lambda bundle if a manifest storage
+  // backend is in use. The CDN serves static assets; only the manifest is
+  // needed at runtime so Django can resolve hashed filenames for {% static %}.
+  if (djangoStatic?.manifestRelPath) {
+    initialFiles[djangoStatic.manifestRelPath] = new FileFsRef({
+      fsPath: join(workPath, djangoStatic.manifestRelPath),
+    });
+  }
+
+  // in order to allow the user to have `server.py`, we
+  // need our `server.py` to be called something else
+  const handlerPyFilename = 'vc__handler__python';
+
+  // "fasthtml" framework requires a `.sesskey` file to exist,
+  // otherwise it tries to create one at runtime, which fails
+  // due Lambda's read-only filesystem
+  if (config.framework === 'fasthtml') {
+    const { SESSKEY = '' } = process.env;
+    initialFiles['.sesskey'] = new FileBlob({ data: `"${SESSKEY}"` });
+  }
+
+  const { pycachePrefix, files, installedDistributions } =
+    await packFunctionBundle({
+      builderSpan,
+      workPath,
+      uvLockPath,
+      uvProjectDir,
+      projectName,
+      pythonVersion,
+      hasCustomCommand,
+      alwaysBundlePackages: [
+        ...(quirksResult.alwaysBundlePackages ?? []),
+        ...(shouldInstallVercelWorkers
+          ? ['vercel-workers', 'vercel_workers']
+          : []),
+      ],
+      initialFiles,
+      additionalExcludes: [
+        ...excludeFilesPatterns,
+        ...cdnBundle.excludePatterns,
+      ],
+      compileAllEnabled,
+      compileEnv: pythonEnv,
+      venvPath,
+      entrypoint,
+      importClosureContext: {
+        frameworkSeeds: importSeeds,
+        extraPythonPath: hookResult?.extraPythonPath,
+        subscriberDeclarations,
+        subscribers,
+        workflows,
+        workflowMode,
+      },
+      largeFunctionLabel: entrypoint ?? rawEntrypoint,
+    });
+
+  if (pycachePrefix) {
+    lambdaEnv.PYTHONPYCACHEPREFIX = pycachePrefix;
+  }
 
   let output: Lambda | undefined;
   if (entrypoint && runtimeTrampoline) {
@@ -1896,7 +2462,9 @@ export const build: BuildVX = async ({
       runtime: pythonVersion.runtime,
       ...lambdaOptions,
       architecture: target.architecture,
-      environment: lambdaEnv,
+      environment: {
+        ...lambdaEnv,
+      },
       supportsResponseStreaming: true,
     });
   }
@@ -1941,7 +2509,12 @@ export const build: BuildVX = async ({
       handler: `${handlerPyFilename}.vc_handler`,
       runtime: pythonVersion.runtime,
       architecture: target.architecture,
-      environment: lambdaEnv,
+      environment: {
+        ...lambdaEnv,
+        // The runtime activates publish-side integrations before importing the
+        // generated subscriber module, so the identity must already be present.
+        VERCEL_PYTHON_SUBSCRIBER_ID: subscriber.name,
+      },
       experimentalTriggers,
       supportsResponseStreaming: true,
     });
@@ -1957,6 +2530,11 @@ export const build: BuildVX = async ({
       const consumer = getSubscriberConsumerName(declaration.name);
       const legacy = declaration.legacy;
       assert(legacy, 'legacy subscriber declarations must carry legacy config');
+      const { variableName } = declaration;
+      assert(
+        variableName,
+        'legacy subscriber declarations must name an entrypoint object'
+      );
       const experimentalTriggers: TriggerEvent[] = legacy.topics.map(topic => ({
         type: 'queue/v2beta',
         topic,
@@ -1972,7 +2550,7 @@ export const build: BuildVX = async ({
               moduleName: declaration.moduleName,
               entrypoint: declaration.entrypoint,
               vendorDir,
-              variableName: declaration.variableName,
+              variableName,
             }),
           }),
         },
@@ -2068,7 +2646,7 @@ export const build: BuildVX = async ({
         pythonPackage,
         pythonVersion,
         uvLockPath,
-        framework,
+        framework: diagnosticsValues?.framework,
         serviceType: service ? getReportedServiceType(service) : undefined,
       });
     } catch (err) {
@@ -2076,6 +2654,43 @@ export const build: BuildVX = async ({
         `Failed to write project manifest: ${err instanceof Error ? err.message : String(err)}`
       );
     }
+  }
+
+  if (scheduleFunction && scheduleEntrypoint) {
+    const lambdaOptions = await getPythonLambdaOptions({
+      config,
+      entrypoint: scheduleEntrypoint.sourceFile,
+      isScheduleEntrypoint: true,
+    });
+    const generatedPath = getGeneratedScheduleHandlerPath(
+      scheduleFunction.outputPath
+    );
+    const scheduleLambda = new Lambda({
+      files: {
+        ...files,
+        [generatedPath]: new FileBlob({
+          data: createScheduleHandlerModule(scheduleFunction),
+        }),
+        [`${handlerPyFilename}.py`]: new FileBlob({
+          data: createRuntimeTrampoline({
+            moduleName: generatedPythonPathToModule(generatedPath),
+            entrypoint: generatedPath,
+            vendorDir,
+            variableName: 'app',
+          }),
+        }),
+      },
+      handler: `${handlerPyFilename}.vc_handler`,
+      runtime: pythonVersion.runtime,
+      ...lambdaOptions,
+      architecture: target.architecture,
+      environment: { ...lambdaEnv },
+      supportsResponseStreaming: true,
+    });
+    return {
+      resultVersion: 2,
+      result: { output: { [scheduleFunction.outputPath]: scheduleLambda } },
+    };
   }
 
   // Subscribers and workflows only attach to framework apps, named services,
@@ -2116,14 +2731,44 @@ export const build: BuildVX = async ({
     src: `/${outputPath}`,
     dest: `/${outputPath}`,
   }));
+  // Static files are served from the CDN by `handle: 'filesystem'`. Two route
+  // sets adjust that for routing precedence: "shadowing" routes emitted before
+  // it divert paths a higher-priority app handler owns to the Lambda (so the app
+  // wins over a colliding CDN file), and "fallback" routes emitted in
+  // `handle: 'miss'` serve a CDN file for otherwise-unmatched paths.
+  const staticOptions = fastapiStatic
+    ? fastapiStaticOptions(installedDistributions)
+    : undefined;
+  const shadowingRoutes = fastapiStatic
+    ? staticShadowRoutes(
+        fastapiStatic.discovery.shadowRoutes,
+        lambdaPath,
+        staticOptions
+      )
+    : [];
+  // Fallbacks come from copied mounts only; the nested-mount guard uses every
+  // discovered mount, since each owns its namespace even if its copy failed.
+  const fallbackRoutes = fastapiStatic
+    ? staticFallbackRoutes(
+        fastapiStatic.copiedMounts,
+        fastapiStatic.discovery.mounts,
+        staticOptions
+      )
+    : [];
   const routes =
     isNonWebService || !output
       ? queueRoutes.length > 0
         ? queueRoutes
         : undefined
       : [
+          ...shadowingRoutes,
+          ...cdnBundle.redirects,
           { handle: 'filesystem' as const },
           ...queueRoutes,
+          ...(fallbackRoutes.length > 0
+            ? [{ handle: 'miss' as const }, ...fallbackRoutes]
+            : []),
+          { handle: 'rewrite' as const },
           // This route matches the resolved destination after rewrites. Copy
           // that path into the runtime request before dispatching the shared
           // framework Lambda so application routing observes the rewrite.

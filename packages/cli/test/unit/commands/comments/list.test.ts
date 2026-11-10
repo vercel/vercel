@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import comments from '../../../../src/commands/comments';
 import { inferBranch } from '../../../../src/commands/comments/scope';
-import getProjectByNameOrId from '../../../../src/util/projects/get-project-by-id-or-name';
-import { ProjectNotFound } from '../../../../src/util/errors-ts';
+import { APIError } from '../../../../src/util/errors-ts';
+import getOrgById from '../../../../src/util/projects/get-org-by-id';
 import {
   makeMessage,
   makeThread,
@@ -12,10 +12,15 @@ import {
   mockLinkedProject,
   mockTeamScope,
 } from './helpers';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 vi.mock('../../../../src/util/projects/link');
-vi.mock('../../../../src/util/get-scope');
-vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
+vi.mock('../../../../src/util/projects/get-org-by-id');
+vi.mock('../../../../src/util/get-scope', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('../../../../src/util/get-scope')>();
+  return { ...actual, default: vi.fn() };
+});
 vi.mock('../../../../src/commands/comments/scope', async importOriginal => {
   const actual =
     await importOriginal<
@@ -25,7 +30,7 @@ vi.mock('../../../../src/commands/comments/scope', async importOriginal => {
 });
 
 const mockedInferBranch = vi.mocked(inferBranch);
-const mockedGetProject = vi.mocked(getProjectByNameOrId);
+const mockedGetOrgById = vi.mocked(getOrgById);
 
 describe('comments list', () => {
   beforeEach(() => {
@@ -33,6 +38,7 @@ describe('comments list', () => {
     client.reset();
     mockLinkedProject();
     mockTeamScope();
+    mockedGetOrgById.mockResolvedValue(null);
     mockedInferBranch.mockReturnValue({ value: 'feat-x', source: 'git' });
   });
 
@@ -125,7 +131,7 @@ describe('comments list', () => {
     client.setArgv('comments', 'inspect', '-ULOL');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('comments inspect -- <arg>');
   });
@@ -134,7 +140,7 @@ describe('comments list', () => {
     client.setArgv('comments', 'inspect', 'icZ9BnPPINuK', '--branch', 'main');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('--branch');
     expect(stderr).toContain('comments inspect --help');
@@ -209,23 +215,121 @@ describe('comments list', () => {
       status: 'unresolved',
       branch: { value: 'feat-x', source: 'git' },
     });
-    expect(parsed.pagination).toEqual({ nextCursor: 'abc' });
+    // `next` is the standard key; `nextCursor` stays for existing scripts.
+    expect(parsed.pagination).toEqual({ nextCursor: 'abc', next: 'abc' });
     expect(parsed.threads).toHaveLength(1);
     expect(parsed.threads[0].id).toBe(thread.id);
   });
 
-  it('echoes an explicit --branch in filters with source flag', async () => {
+  it.each([
+    '--git-branch',
+    '--branch',
+  ])('echoes an explicit %s in filters with source flag', async flag => {
     client.scenario.get('/toolbar/threads', (_req, res) => {
       res.json({ pagination: {}, threads: [] });
     });
 
-    client.setArgv('comments', '--branch', 'main', '--format', 'json');
+    client.setArgv('comments', flag, 'main', '--format', 'json');
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
     const parsed = JSON.parse(client.stdout.getFullOutput());
     expect(parsed.filters.branch).toEqual({ value: 'main', source: 'flag' });
     expect(parsed.scope.inferredBranch).toBeUndefined();
+    // The deprecation warning is skipped for JSON output.
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+  });
+
+  describe('the deprecated --branch', () => {
+    const DEPRECATED = '--branch is deprecated. Use --git-branch.';
+
+    it('filters by the branch and warns', async () => {
+      let requestQuery: Record<string, unknown> | undefined;
+      client.scenario.get('/toolbar/threads', (req, res) => {
+        requestQuery = req.query;
+        res.json({ pagination: {}, threads: [makeThread()] });
+      });
+
+      client.setArgv('comments', '--branch', 'main');
+      const exitCode = await comments(client);
+
+      expect(exitCode).toBe(0);
+      expect(requestQuery?.branch).toBe('main');
+      expect(client.stderr.getFullOutput()).toContain(`! ${DEPRECATED}`);
+    });
+
+    it('does not warn for --git-branch', async () => {
+      client.scenario.get('/toolbar/threads', (_req, res) => {
+        res.json({ pagination: {}, threads: [makeThread()] });
+      });
+
+      client.setArgv('comments', '--git-branch', 'main');
+      const exitCode = await comments(client);
+
+      expect(exitCode).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+    });
+
+    it.each([
+      ['comments', '--branch', 'main', '--git-branch', 'feat'],
+      ['comments', '--branch', 'main', '--git-branch', 'feat', '--json'],
+    ])('exits 2 without a request when both names are given: %j', async (...argv) => {
+      let requested = false;
+      client.scenario.get('/toolbar/threads', (_req, res) => {
+        requested = true;
+        res.json({ pagination: {}, threads: [] });
+      });
+
+      client.setArgv(...argv);
+      const exitCode = await comments(client);
+
+      expect(exitCode).toBe(2);
+      expect(requested).toBe(false);
+      const message = "Can't use --branch with --git-branch. Use --git-branch.";
+      expect(
+        client.stdout.getFullOutput() + client.stderr.getFullOutput()
+      ).toContain(message);
+    });
+
+    it('teaches --git-branch in the next-page hint', async () => {
+      client.scenario.get('/toolbar/threads', (_req, res) => {
+        res.json({
+          pagination: { nextCursor: 'abc' },
+          threads: [makeThread()],
+        });
+      });
+
+      client.setArgv('comments', '--branch', 'a', '--branch=b');
+      const exitCode = await comments(client);
+
+      expect(exitCode).toBe(0);
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        'comments --git-branch a --git-branch=b --next abc'
+      );
+      expect(stderr).not.toMatch(/--branch[ =][ab]/);
+    });
+
+    it.each([
+      ['--git-branch', 'option:git-branch'],
+      ['--branch', 'option:branch'],
+    ])('tracks %s telemetry without the branch name', async (flag, key) => {
+      client.scenario.get('/toolbar/threads', (_req, res) => {
+        res.json({ pagination: {}, threads: [makeThread()] });
+      });
+
+      client.setArgv('comments', flag, 'secret-branch');
+      await comments(client);
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ key, value: '[REDACTED]' }),
+        ])
+      );
+      expect(
+        JSON.stringify(client.telemetryEventStore.readonlyEvents)
+      ).not.toContain('secret-branch');
+    });
   });
 
   it('suggests the exact branch when empty and all probe results share one', async () => {
@@ -252,7 +356,8 @@ describe('comments list', () => {
     expect(calls).toBe(2);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain('No unresolved comments on feat-x');
-    expect(stderr).toContain('--branch main');
+    expect(stderr).toContain('comments --git-branch main');
+    expect(stderr).not.toContain('--branch main');
   });
 
   it('suggests --all-branches when empty and probe spans branches', async () => {
@@ -305,6 +410,68 @@ describe('comments list', () => {
     expect(requestQuery?.author).toBe('user_dummy');
   });
 
+  it('filters by recorded page path with --page-path', async () => {
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [] });
+    });
+
+    client.setArgv('comments', '--page-path', '/docs/*', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.page).toBe('/docs/*');
+    expect(client.telemetryEventStore.readonlyEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'option:page-path',
+          value: '[REDACTED]',
+        }),
+      ])
+    );
+  });
+
+  it('continues accepting --page as a page-path filter', async () => {
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [] });
+    });
+
+    client.setArgv('comments', '--page', '/docs/*', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.page).toBe('/docs/*');
+    expect(client.telemetryEventStore.readonlyEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'option:page', value: '[REDACTED]' }),
+      ])
+    );
+  });
+
+  it('rejects --author me for an app principal', async () => {
+    mockedGetScope.mockResolvedValue({
+      contextName: 'my-team',
+      team: { id: 'team_dummy', slug: 'my-team' },
+      user: null,
+      app: { id: 'app_dummy', name: 'Dummy App' },
+    } as never);
+
+    client.setArgv('comments', '--author', 'me', '--format', 'json');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'USER_REQUIRED',
+        message:
+          "Can't resolve `--author me` when authenticated as an app. Use an author ID with `--author`, or authenticate with a user token.",
+      },
+    });
+  });
+
   it('discloses the author filter with an ID hint on empty results', async () => {
     client.scenario.get('/toolbar/threads', (_req, res) => {
       res.json({ pagination: {}, threads: [] });
@@ -335,10 +502,40 @@ describe('comments list', () => {
     expect(stderr).toContain('--project');
   });
 
-  it('resolves an explicit --project against the current team', async () => {
-    mockedGetProject.mockResolvedValue({
-      id: 'prj_other',
-      name: 'other-project',
+  it('uses local metadata to resolve an explicit project owner and infer the branch', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_other', slug: 'other-team', type: 'team' },
+      repoRoot: '/repo',
+    } as never);
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [makeThread()] });
+    });
+
+    client.setArgv('comments', '--project', 'other-project');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(mockedGetLinkedProject).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        projectName: 'other-project',
+        projectNameIsExplicit: true,
+      })
+    );
+    expect(requestQuery?.teamId).toBe('team_other');
+    expect(requestQuery?.projectId).toBe('prj_other');
+    expect(requestQuery?.branch).toBe('feat-x');
+  });
+
+  it('does not infer a branch for an explicit project without matching local metadata', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
     } as never);
     let requestQuery: Record<string, unknown> | undefined;
     client.scenario.get('/toolbar/threads', (req, res) => {
@@ -350,22 +547,41 @@ describe('comments list', () => {
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
-    expect(mockedGetProject).toHaveBeenCalledWith(
-      client,
-      'other-project',
-      'team_dummy'
-    );
-    expect(requestQuery?.projectId).toBe('prj_other');
-    // Branch inference is gated on link-sourced scope: with an explicit
-    // --project, the cwd's git branch belongs to some unrelated checkout.
     expect(requestQuery?.branch).toBeUndefined();
     expect(client.stderr.getFullOutput()).toContain('all branches');
   });
 
+  it('resolves a local project when the current scope is a personal account', async () => {
+    mockedGetScope.mockResolvedValue({
+      contextName: 'personal-account',
+      team: null,
+      user: { id: 'user_dummy', username: 'personal-account' },
+    } as never);
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_other', slug: 'other-team', type: 'team' },
+      repoRoot: '/repo',
+    } as never);
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [makeThread()] });
+    });
+
+    client.setArgv('comments', '--project', 'other-project');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.teamId).toBe('team_other');
+    expect(requestQuery?.branch).toBe('feat-x');
+  });
+
   it('carries scope flags into the inspect hint', async () => {
-    mockedGetProject.mockResolvedValue({
-      id: 'prj_other',
-      name: 'other-project',
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'linked',
+      project: { id: 'prj_other', name: 'other-project' },
+      org: { id: 'team_dummy', slug: 'my-team', type: 'team' },
     } as never);
     client.scenario.get('/toolbar/threads', (_req, res) => {
       res.json({ pagination: {}, threads: [makeThread()] });
@@ -380,14 +596,79 @@ describe('comments list', () => {
     );
   });
 
-  it('errors when --project is not found in the team', async () => {
-    mockedGetProject.mockResolvedValue(new ProjectNotFound('nope') as never);
+  it('names the resolved scope when --project is not found', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+      orgId: 'team_dummy',
+    } as never);
+    mockedGetOrgById.mockResolvedValue({
+      id: 'team_dummy',
+      slug: 'my-team',
+      type: 'team',
+    });
 
     client.setArgv('comments', '--project', 'nope');
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(1);
     expect(client.stderr.getFullOutput()).toContain('nope');
+    expect(client.stderr.getFullOutput()).toContain('(my-team)');
+  });
+
+  it('preserves the project context exit code in JSON mode', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'error',
+      exitCode: 2,
+    } as never);
+
+    client.setArgv(
+      'comments',
+      '--project',
+      'other-project',
+      '--format',
+      'json'
+    );
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(2);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'PROJECT_CONTEXT_ERROR',
+        message: 'Could not resolve the project context.',
+      },
+    });
+  });
+
+  it('writes a JSON error when explicit project resolution fails', async () => {
+    mockedGetLinkedProject.mockRejectedValue(
+      new APIError(
+        'Project lookup failed',
+        {
+          status: 500,
+          headers: new Headers(),
+        } as never,
+        { code: 'internal_server_error' }
+      )
+    );
+
+    client.setArgv(
+      'comments',
+      '--project',
+      'other-project',
+      '--format',
+      'json'
+    );
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      error: {
+        code: 'internal_server_error',
+        message: 'Project lookup failed',
+      },
+    });
   });
 
   it('writes the JSON error envelope to stdout and exits 1 on API failure', async () => {
@@ -419,7 +700,7 @@ describe('comments list', () => {
 
     expect(exitCode).toBe(0);
     const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain('To display the next page');
+    expect(stderr).toContain('  Next page:\n    vercel comments --next abc\n');
     expect(stderr).not.toContain('sekrit123');
     expect(stderr).not.toContain('--token');
   });
@@ -432,13 +713,13 @@ describe('comments list', () => {
       });
     });
 
-    client.setArgv('comments', '--branch', 'a', '--branch', 'b');
+    client.setArgv('comments', '--git-branch', 'a', '--git-branch', 'b');
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
     const stderr = client.stderr.getFullOutput();
-    expect(stderr).toContain('--branch a --branch b');
-    expect(stderr).not.toContain('--branch a,b');
+    expect(stderr).toContain('--git-branch a --git-branch b');
+    expect(stderr).not.toContain('--git-branch a,b');
   });
 
   it('quotes remote branch names in probe suggestions', async () => {
@@ -458,7 +739,7 @@ describe('comments list', () => {
 
     expect(exitCode).toBe(0);
     expect(client.stderr.getFullOutput()).toContain(
-      "--branch 'evil$(rm -rf ~)'"
+      "--git-branch 'evil$(rm -rf ~)'"
     );
   });
 
@@ -478,8 +759,10 @@ describe('comments list', () => {
     const exitCode = await comments(client);
 
     expect(exitCode).toBe(0);
-    // POSIX single-quote escape renders as: --branch 'feat'\''s'
-    expect(client.stderr.getFullOutput()).toContain("--branch 'feat'\\''s'");
+    // POSIX single-quote escape renders as: --git-branch 'feat'\''s'
+    expect(client.stderr.getFullOutput()).toContain(
+      "--git-branch 'feat'\\''s'"
+    );
   });
 
   it('honors an explicit --scope over the linked directory', async () => {
@@ -502,7 +785,7 @@ describe('comments list', () => {
     client.setArgv('comments', '--status', 'closed');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('closed');
   });
 
@@ -522,5 +805,96 @@ describe('comments list', () => {
     expect(exitCode).toBe(0);
     expect(requestQuery?.cursor).toBe('cursor123');
     expect(client.stderr.getFullOutput()).toContain('--next dGhyZWFk');
+  });
+
+  it('still reads the hidden -N as --next, and warns', async () => {
+    let requestQuery: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      requestQuery = req.query;
+      res.json({ pagination: {}, threads: [makeThread()] });
+    });
+
+    client.setArgv('comments', '-N', 'cursor123');
+    const exitCode = await comments(client);
+
+    expect(exitCode).toBe(0);
+    expect(requestQuery?.cursor).toBe('cursor123');
+    expect(client.stderr.getFullOutput()).toContain(
+      '! -N is deprecated. Use --next.'
+    );
+  });
+});
+
+describe('comments list renamed options', () => {
+  // Runs `comments list` with a fresh client, recording the threads request.
+  async function run(...args: string[]) {
+    client.reset();
+    vi.clearAllMocks();
+    mockLinkedProject();
+    mockTeamScope();
+    mockedGetOrgById.mockResolvedValue(null);
+    mockedInferBranch.mockReturnValue({ value: 'feat-x', source: 'git' });
+    let query: Record<string, unknown> | undefined;
+    client.scenario.get('/toolbar/threads', (req, res) => {
+      query = req.query;
+      res.json({ pagination: { next: 'cursor_2' }, threads: [] });
+    });
+    client.setArgv('comments', 'list', ...args);
+    const exitCode = await comments(client);
+    return {
+      exitCode,
+      query,
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  it.each([
+    ['--search', ['--search', 'typo'], ['--query', 'typo']],
+    [
+      '--content-id',
+      ['--content-id', 'c1', '--content-id', 'c2'],
+      ['--content', 'c1', '--content', 'c2'],
+    ],
+  ])('still accepts %s, with one warning', async (typed, oldArgs, newArgs) => {
+    const now = await run(...newArgs);
+    const before = await run(...oldArgs);
+    const name = newArgs[0];
+
+    expect(now.exitCode).toBe(0);
+    expect(now.stderr).not.toContain('deprecated');
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.query).toEqual(now.query);
+    expect(before.stdout).toBe(now.stdout);
+    const warning = `! ${typed} is deprecated. Use ${name}.\n`;
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain(warning);
+    // The filter summary and the next page name the new option.
+    expect(before.stderr.replace(warning, '')).toBe(now.stderr);
+    expect(now.stderr).toContain(`${name} `);
+    expect(now.stderr).not.toContain(`${typed} `);
+
+    const nowJson = await run(...newArgs, '--json');
+    const beforeJson = await run(...oldArgs, '--json');
+    expectDeprecationInJson(
+      beforeJson.stdout,
+      nowJson.stdout,
+      `${typed} is deprecated. Use ${name}.`
+    );
+    expect(beforeJson.stderr).not.toContain('deprecated');
+  });
+
+  it.each([
+    [['--query', 'a', '--search', 'b'], "Can't use --query with --search."],
+    [
+      ['--content', 'c1', '--content-id', 'c2'],
+      "Can't use --content with --content-id.",
+    ],
+  ])('rejects %j before any request', async (args, message) => {
+    const result = await run(...args);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(message);
+    expect(result.query).toBeUndefined();
   });
 });

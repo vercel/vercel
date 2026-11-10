@@ -8,6 +8,7 @@ import {
 } from '../../../util/agent-output';
 import { AGENT_REASON } from '../../../util/agent-output-constants';
 import type { VcrTelemetryClient } from '../../../util/telemetry/commands/vcr';
+import { warnDeprecatedSubcommand } from '../../../util/warn-deprecated-subcommand';
 
 const TAGS_CONFIG = {
   ls: ['ls', 'list'],
@@ -19,7 +20,10 @@ export default async function tags(
   argv: string[],
   telemetry: VcrTelemetryClient
 ): Promise<number> {
-  const { subcommand, args } = getSubcommand(argv, TAGS_CONFIG);
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
+    argv,
+    TAGS_CONFIG
+  );
 
   if (subcommand == null) {
     const message =
@@ -39,16 +43,19 @@ export default async function tags(
           },
         ],
       },
-      1
+      2
     );
     output.error(`${message} Run \`vercel vcr tag --help\`.`);
-    return 1;
+    return 2;
   }
 
   switch (subcommand) {
     case 'ls':
       return (await import('./ls')).default(client, args, telemetry);
     case 'inspect':
+      if (subcommandOriginal === 'get') {
+        warnDeprecatedSubcommand(client, 'vcr tag get', 'vcr tag inspect');
+      }
       return (await import('./inspect')).default(client, args, telemetry);
     default:
       output.error(`Unhandled tags subcommand: ${subcommand}`);

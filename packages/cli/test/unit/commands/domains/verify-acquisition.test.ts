@@ -27,7 +27,7 @@ function useDomainConfig(onRequest?: (req: Request) => void) {
 }
 
 function useOwnedDomainNotFound(onRequest?: (req: Request) => void) {
-  client.scenario.get(`/v4/domains/${DOMAIN}`, (req, res) => {
+  client.scenario.get(`/v5/domains/${DOMAIN}`, (req, res) => {
     onRequest?.(req);
     res.status(404).json({
       error: { code: 'not_found', message: 'Domain not found' },
@@ -101,7 +101,7 @@ describe('domains verify acquisition', () => {
     useUser();
     useDomainConfig();
     let ownershipRequests = 0;
-    client.scenario.get(`/v4/domains/${DOMAIN}`, (_req, res) => {
+    client.scenario.get(`/v5/domains/${DOMAIN}`, (_req, res) => {
       ownershipRequests++;
       res.set('Retry-After', '0');
       res.status(429).json({

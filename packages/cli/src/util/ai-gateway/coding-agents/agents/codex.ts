@@ -1,15 +1,12 @@
 import { join } from 'node:path';
-import type { AgentWarning, CodingAgent } from '../types';
+import type { CodingAgent } from '../types';
 import { mergeToml, pathExists } from '../config-files';
-import { isMacAppInstalled } from '../desktop-apps';
 import {
   GATEWAY_CODEX_BASE_URL,
   GATEWAY_API_KEY_ENV,
   resolveGatewayBaseUrl,
 } from '../gateway';
-
-/** The Codex desktop app shares `~/.codex/config.toml` with the CLI. */
-const CODEX_DESKTOP_APP = 'Codex.app';
+import { planCodexSessionMigration } from '../migrations/codex-sessions';
 
 /**
  * Codex reads `~/.codex/config.toml`. We add a `vercel` model provider pointing
@@ -32,27 +29,10 @@ function codexDir(home: string): string {
 export const codex: CodingAgent = {
   id: 'codex',
   displayName: 'Codex',
+  sessionMigration: { plan: ({ home }) => planCodexSessionMigration(home) },
 
   async detect(home) {
     return pathExists(codexDir(home));
-  },
-
-  async warnings({ home, overrides }) {
-    const warnings: AgentWarning[] = [];
-    if (isMacAppInstalled(CODEX_DESKTOP_APP, home)) {
-      const configPath = this.configPath({ apiKey: '', home, overrides });
-      warnings.push({
-        code: 'desktop_app_breaks',
-        impact: 'The Codex desktop app will stop working.',
-        why: [
-          'The desktop app is installed and cannot use custom model providers, and connecting sets model_provider = "vercel" in the config.toml the app shares with the CLI.',
-          'The Codex CLI keeps working.',
-        ],
-        undo: `remove the model_provider line from ${configPath}`,
-        confirm: 'Configure Codex anyway?',
-      });
-    }
-    return warnings;
   },
 
   configPath(ctx) {

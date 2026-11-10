@@ -1,14 +1,14 @@
 import { TelemetryClient } from '../..';
-import { STANDARD_ENVIRONMENTS } from '../../../target/standard-environments';
+import {
+  STANDARD_ENVIRONMENTS,
+  type StandardEnvironment,
+} from '../../../target/standard-environments';
 import type {
   versionsDiffSubcommand,
   versionsListSubcommand,
   versionsSubcommand,
 } from '../../../../commands/flags/command';
 import type { TelemetryMethods } from '../../types';
-
-type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];
-
 export class FlagsVersionsTelemetryClient
   extends TelemetryClient
   implements
@@ -57,6 +57,15 @@ export class FlagsVersionsTelemetryClient
       this.trackCliOption({
         option: 'limit',
         value: String(limit),
+      });
+    }
+  }
+
+  trackCliOptionNext(next: string | undefined) {
+    if (next) {
+      this.trackCliOption({
+        option: 'next',
+        value: this.redactedValue,
       });
     }
   }

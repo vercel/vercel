@@ -11,7 +11,7 @@ import {
   isErrnoException,
   isError,
 } from '@vercel/error-utils';
-import { fileNameSymbol } from '@vercel/client';
+import { fileNameSymbol } from '@vercel/client/dist/types';
 import getGlobalPathConfig from './global-path';
 import getLocalPathConfig from './local-path';
 import { NowError } from '../now-error';
@@ -23,36 +23,37 @@ import { VERCEL_DIR as PROJECT_VERCEL_DIR } from '../projects/link';
 import {
   VERCEL_CONFIG_EXTENSIONS,
   DEFAULT_VERCEL_CONFIG_FILENAME,
-} from '../compile-vercel-config';
+} from './constants';
 
 import output from '../../output-manager';
 
-const VERCEL_DIR = getGlobalPathConfig();
-const CONFIG_FILE_PATH = config.getConfigFilePath(VERCEL_DIR);
-const AUTH_CONFIG_FILE_PATH = config.getAuthConfigFilePath(VERCEL_DIR);
+// Resolved on first use rather than at import: the native build worker loads
+// this module before the build's argv (and `--global-config`) is applied.
+let globalDir: string | undefined;
+const getVercelDir = () => (globalDir ??= getGlobalPathConfig());
 
 // reads "global config" file atomically
 export const readConfigFile = (): GlobalConfig => {
-  return config.readGlobalConfigFile(CONFIG_FILE_PATH);
+  return config.readGlobalConfigFile(getConfigFilePath());
 };
 
 // writes whatever's in `stuff` to "global config" file, atomically
 export const writeToConfigFile = (stuff: GlobalConfig): void => {
   try {
-    config.writeGlobalConfigFile(CONFIG_FILE_PATH, stuff);
+    config.writeGlobalConfigFile(getConfigFilePath(), stuff);
   } catch (err: unknown) {
     if (isErrnoException(err)) {
       if (isErrnoException(err) && err.code === 'EPERM') {
         output.error(
           `Not able to create ${highlight(
-            CONFIG_FILE_PATH
+            getConfigFilePath()
           )} (operation not permitted).`
         );
         process.exit(1);
       } else if (err.code === 'EBADF') {
         output.error(
           `Not able to create ${highlight(
-            CONFIG_FILE_PATH
+            getConfigFilePath()
           )} (bad file descriptor).`
         );
         process.exit(1);
@@ -66,7 +67,7 @@ export const writeToConfigFile = (stuff: GlobalConfig): void => {
 export const readAuthConfigFile = (_globalConfig: GlobalConfig): AuthConfig => {
   return {
     ...config.getDefaultAuthConfig(),
-    ...readCliAuthConfig(VERCEL_DIR),
+    ...readCliAuthConfig(getVercelDir()),
   };
 };
 
@@ -75,10 +76,10 @@ export const persistAuthConfig = (
   _globalConfig: GlobalConfig
 ) => {
   try {
-    return persistCliAuthConfig(VERCEL_DIR, authConfig);
+    return persistCliAuthConfig(getVercelDir(), authConfig);
   } catch (err: unknown) {
     const wrappedError = new Error(
-      `Not able to create ${hp(AUTH_CONFIG_FILE_PATH)} (${errorToStringFriendly(
+      `Not able to create ${hp(getAuthConfigFilePath())} (${errorToStringFriendly(
         err
       )}).`
     );
@@ -88,11 +89,11 @@ export const persistAuthConfig = (
 };
 
 export function getConfigFilePath() {
-  return CONFIG_FILE_PATH;
+  return config.getConfigFilePath(getVercelDir());
 }
 
 export function getAuthConfigFilePath() {
-  return AUTH_CONFIG_FILE_PATH;
+  return config.getAuthConfigFilePath(getVercelDir());
 }
 
 export function readLocalConfig(

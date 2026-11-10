@@ -66,7 +66,7 @@ describe('crons run', () => {
     it('prints help and tracks telemetry', async () => {
       client.setArgv('crons', 'run', '--help');
       const exitCode = await crons(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'crons:run' },
       ]);
@@ -234,7 +234,7 @@ describe('crons run', () => {
       client.nonInteractive = true;
 
       const exitCode = await crons(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('required in non-interactive');
     });
   });

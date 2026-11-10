@@ -4,8 +4,18 @@ import {
   parseBudgetScope,
   type BudgetRefreshPeriod,
 } from '../../util/ai-gateway/budgets';
+import { setScopeDefault } from './budgets-scope-default';
+import {
+  describeApiKeyLookupError,
+  findApiKeyByIdOrName,
+  updateApiKeyQuota,
+} from '../../util/ai-gateway/api-keys';
 import { ensureTeam } from '../../util/ai-gateway/ensure-team';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
+import {
+  getTeamMemberByIdentifier,
+  teamMemberLabel,
+} from '../../util/teams/get-team-member';
 import { ProjectNotFound } from '../../util/errors-ts';
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 import output from '../../output-manager';
@@ -14,6 +24,11 @@ import { budgetsSetSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 import { isAPIError } from '../../util/errors-ts';
 import { validateJsonOutput } from '../../util/output-format';
 
@@ -39,83 +54,140 @@ export default async function set(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
-  const limit = opts['--limit'] as number | undefined;
   const refreshPeriod = opts['--refresh-period'] as string | undefined;
-  const includeByok = opts['--include-byok'] as boolean | undefined;
+  const isDefault = opts['--default'] as boolean | undefined;
 
   telemetry.trackCliArgumentScope(args[0]);
   telemetry.trackCliArgumentName(args[1]);
-  telemetry.trackCliOptionLimit(limit);
+  telemetry.trackCliOptionAmount(opts['--amount']);
+  telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
-  telemetry.trackCliFlagIncludeByok(includeByok);
+  telemetry.trackCliFlagDefault(isDefault);
   telemetry.trackCliOptionFormat(opts['--format']);
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
-  const scopeResult = parseBudgetScope(args);
+  const amount = getRenamedOption<number>(opts, '--amount', '--limit', {
+    json: asJson,
+  });
+  if ('error' in amount) {
+    return reportRenamedOptionError(client, amount.error, { json: asJson });
+  }
+  const limit = amount.value;
+
+  const scopeResult = parseBudgetScope(args, { isDefault });
   if ('error' in scopeResult) {
     output.error(scopeResult.error);
-    return 1;
+    return 2;
   }
   const { scope } = scopeResult;
 
   if (limit === undefined || Number.isNaN(limit) || limit < 1) {
-    output.error('The --limit flag is required and must be at least 1.');
-    return 1;
+    output.error('The --amount option is required and must be at least 1.');
+    return 2;
   }
   if (
     refreshPeriod !== undefined &&
     !REFRESH_PERIODS.includes(refreshPeriod as BudgetRefreshPeriod)
   ) {
     output.error(
-      `The --refresh-period flag must be one of: ${REFRESH_PERIODS.join(', ')}.`
+      `The --refresh-period option must be one of: ${REFRESH_PERIODS.join(', ')}.`
     );
-    return 1;
+    return 2;
   }
 
   if (!(await ensureTeam(client))) {
     return 1;
   }
 
+  if (scope.isDefault) {
+    return await setScopeDefault(client, {
+      scopeType: scope.scopeType,
+      limit,
+      refreshPeriod: refreshPeriod as BudgetRefreshPeriod | undefined,
+      asJson,
+      warnings: [amount.warning],
+    });
+  }
+
   let projectId: string | undefined;
-  if (scope.scopeType === 'project') {
+  let userId: string | undefined;
+  let apiKeyId: string | undefined;
+  let scopeLabel = 'team';
+  if (scope.scopeType === 'api-key') {
+    const resolved = await findApiKeyByIdOrName(client, scope.name);
+    if ('error' in resolved) {
+      output.error(describeApiKeyLookupError(scope.name, resolved));
+      return 1;
+    }
+    apiKeyId = resolved.apiKey.id;
+    scopeLabel = `api key ${resolved.apiKey.name || apiKeyId}`;
+  } else if (scope.scopeType === 'project') {
     const resolved = await getProjectByNameOrId(client, scope.name);
     if (resolved instanceof ProjectNotFound) {
       output.error(`Project not found: ${scope.name}`);
       return 1;
     }
     projectId = resolved.id;
+    scopeLabel = `project ${scope.name}`;
+  } else if (scope.scopeType === 'user') {
+    const member = await getTeamMemberByIdentifier(
+      client,
+      client.config.currentTeam as string,
+      scope.name
+    );
+    if (!member) {
+      output.error(`Team member not found: ${scope.name}`);
+      return 1;
+    }
+    userId = member.uid;
+    scopeLabel = `user ${teamMemberLabel(member)}`;
   }
 
   output.spinner('Setting budget…');
 
   try {
-    const budget = await setBudget(client, {
-      scopeType: scope.scopeType,
-      ...(projectId ? { projectId } : {}),
-      limitAmount: limit,
-      ...(refreshPeriod
-        ? { refreshPeriod: refreshPeriod as BudgetRefreshPeriod }
-        : {}),
-      ...(includeByok ? { includeByokInQuota: true } : {}),
-    });
+    // The api-key scope is written through the api-keys quota endpoint;
+    // `/ai-gateway/budgets` serves the rest.
+    const budget =
+      scope.scopeType === 'api-key'
+        ? (
+            await updateApiKeyQuota(client, apiKeyId as string, {
+              limitAmount: limit,
+              ...(refreshPeriod
+                ? { refreshPeriod: refreshPeriod as BudgetRefreshPeriod }
+                : {}),
+              // A re-set re-activates an archived quota, like the budgets upsert.
+              active: true,
+              archived: false,
+            })
+          ).quota
+        : await setBudget(client, {
+            scopeType: scope.scopeType,
+            ...(projectId ? { projectId } : {}),
+            ...(userId ? { userId } : {}),
+            limitAmount: limit,
+            ...(refreshPeriod
+              ? { refreshPeriod: refreshPeriod as BudgetRefreshPeriod }
+              : {}),
+          });
 
     output.stopSpinner();
 
     if (asJson) {
-      client.stdout.write(`${JSON.stringify(budget, null, 2)}\n`);
+      client.stdout.write(
+        `${JSON.stringify(withWarnings(budget, [amount.warning]), null, 2)}\n`
+      );
     } else {
-      const scopeLabel =
-        scope.scopeType === 'project' ? `project ${scope.name}` : 'team';
       printAlignedLabel('Set budget', scopeLabel, { gutter: '✓' });
       printAlignedLabel('Limit', `$${budget.limitAmount}`);
       printAlignedLabel('Refresh', budget.refreshPeriod);

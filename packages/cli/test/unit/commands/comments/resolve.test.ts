@@ -9,7 +9,11 @@ import {
 } from './helpers';
 
 vi.mock('../../../../src/util/projects/link');
-vi.mock('../../../../src/util/get-scope');
+vi.mock('../../../../src/util/get-scope', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('../../../../src/util/get-scope')>();
+  return { ...actual, default: vi.fn() };
+});
 vi.mock('../../../../src/util/projects/get-project-by-id-or-name');
 
 describe('comments resolve/reopen', () => {
@@ -88,7 +92,7 @@ describe('comments resolve/reopen', () => {
     client.setArgv('comments', 'resolve', 'id1', 'id2', '-m', 'Fixed!');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('multiple threads');
   });
 

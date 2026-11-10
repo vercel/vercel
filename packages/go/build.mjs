@@ -18,9 +18,3 @@ const ipcProxyDir = dirname(
 const binDest = join(__dirname, 'bin');
 mkdirSync(binDest, { recursive: true });
 cpSync(join(ipcProxyDir, 'bin'), binDest, { recursive: true });
-
-// utils.go is compiled by the `vercel dev` wrapper (vc-init-dev.go) via `go run`.
-cpSync(
-  join(ipcProxyDir, 'bootstrap', 'utils.go'),
-  join(__dirname, 'bootstrap', 'utils.go')
-);

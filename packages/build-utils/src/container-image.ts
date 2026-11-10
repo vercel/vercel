@@ -1,4 +1,5 @@
 import type { LambdaOptionsBase } from './lambda';
+import { validateMaxConcurrency } from './max-concurrency';
 import type { Env, Files } from './types';
 
 export interface ContainerImageConfig
@@ -8,6 +9,7 @@ export interface ContainerImageConfig
     | 'architecture'
     | 'memory'
     | 'maxDuration'
+    | 'affinity'
     | 'maxConcurrency'
     | 'environment'
     | 'regions'
@@ -35,6 +37,7 @@ export class ContainerImage implements ContainerImageConfig {
   architecture?: ContainerImageConfig['architecture'];
   memory?: ContainerImageConfig['memory'];
   maxDuration?: ContainerImageConfig['maxDuration'];
+  affinity?: ContainerImageConfig['affinity'];
   maxConcurrency?: ContainerImageConfig['maxConcurrency'];
   regions?: ContainerImageConfig['regions'];
   functionFailoverRegions?: ContainerImageConfig['functionFailoverRegions'];
@@ -42,6 +45,7 @@ export class ContainerImage implements ContainerImageConfig {
   supportsCancellation?: ContainerImageConfig['supportsCancellation'];
 
   constructor(params: ContainerImageConfig & { files: Files }) {
+    validateMaxConcurrency(params.maxConcurrency);
     this.type = 'ContainerImage';
     this.files = params.files;
     this.handler = params.handler;
@@ -51,6 +55,7 @@ export class ContainerImage implements ContainerImageConfig {
     this.architecture = params.architecture;
     this.memory = params.memory;
     this.maxDuration = params.maxDuration;
+    this.affinity = params.affinity;
     this.maxConcurrency = params.maxConcurrency;
     this.regions = params.regions;
     this.functionFailoverRegions = params.functionFailoverRegions;

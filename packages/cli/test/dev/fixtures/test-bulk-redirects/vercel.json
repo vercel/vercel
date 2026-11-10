@@ -1,0 +1,7 @@
+{
+  "bulkRedirectsPath": "redirects",
+  "redirects": [
+    { "source": "/conflict", "destination": "/from-vercel-json" },
+    { "source": "/only-json", "destination": "/from-vercel-json-only" }
+  ]
+}

@@ -4,14 +4,16 @@ import type {
   Images,
   ProjectSettings,
   Cron,
+  VercelJsonSchedules,
   ExperimentalServices,
   ExperimentalServiceGroups,
   ExperimentalServicesV2,
   Services,
+  Daemons,
 } from '@vercel/build-utils';
 import type { Header, Route, Redirect, Rewrite } from '@vercel/routing-utils';
 
-export { DeploymentEventType } from './utils';
+export type { DeploymentEventType } from './utils';
 
 /**
  * Minimal interface of an undici `Dispatcher` (e.g. `undici.ProxyAgent`),
@@ -222,6 +224,8 @@ export interface VercelConfig {
   outputDirectory?: string | null;
   images?: Images;
   crons?: Cron[];
+  /** Schedules keyed by name. */
+  schedules?: VercelJsonSchedules;
   bunVersion?: string;
   proxy?: ProxyConfig;
   /**
@@ -245,6 +249,10 @@ export interface VercelConfig {
    * @deprecated Use `services` instead.
    */
   experimentalServicesV2?: ExperimentalServicesV2;
+  /**
+   * Long-running containers without ingress, keyed by name.
+   */
+  daemons?: Daemons;
 }
 
 export interface GitMetadata {

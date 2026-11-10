@@ -45,6 +45,15 @@ export class EnvPullTelemetryClient
     }
   }
 
+  trackCliOptionDeployment(deployment: string | undefined) {
+    if (deployment) {
+      this.trackCliOption({
+        option: 'deployment',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionId(id: string | undefined) {
     if (id) {
       this.trackCliOption({

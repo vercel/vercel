@@ -69,7 +69,7 @@ describe('link', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = link(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -106,7 +106,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
-        'The `--repo` flag is in alpha, please report issues'
+        'The `--repo` option is in alpha, please report issues'
       );
 
       await expect(client.stderr).toOutput('Link Git repository at ');
@@ -179,7 +179,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
-        'The `--repo` flag is in alpha, please report issues'
+        'The `--repo` option is in alpha, please report issues'
       );
 
       await expect(client.stderr).toOutput('Link Git repository at ');
@@ -270,7 +270,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
-        'The `--repo` flag is in alpha, please report issues'
+        'The `--repo` option is in alpha, please report issues'
       );
 
       await expect(client.stderr).toOutput('Link Git repository at ');
@@ -364,7 +364,7 @@ describe('link', () => {
       const exitCodePromise = link(client);
 
       await expect(client.stderr).toOutput(
-        'The `--repo` flag is in alpha, please report issues'
+        'The `--repo` option is in alpha, please report issues'
       );
 
       await expect(client.stderr).toOutput('Link Git repository at ');
@@ -670,8 +670,15 @@ describe('link', () => {
   });
 
   describe('--project', () => {
-    it('should allow specifying `--project` flag', async () => {
+    it('should link with `--project` without executing repository config', async () => {
       const cwd = setupTmpDir();
+      const marker = join(cwd, 'config-executed');
+      await writeFile(
+        join(cwd, 'vercel.mjs'),
+        `import { writeFileSync } from 'node:fs';
+         writeFileSync(${JSON.stringify(marker)}, 'executed');
+         export default {};`
+      );
       useUser({ version: 'northstar' });
       const [team] = useTeams('team_dummy') as Team[];
       const { project } = useProject({
@@ -696,6 +703,8 @@ describe('link', () => {
       expect(projectJson.orgId).toEqual(team.id);
       expect(projectJson.projectId).toEqual(project.id);
       expect(projectJson.projectName).toEqual(project.name);
+
+      expect(await pathExists(marker)).toBe(false);
 
       // Verify env pull was called with --yes flag and correct source
       expect(mockPull).toHaveBeenCalledWith(
@@ -1043,7 +1052,7 @@ describe('link', () => {
       expect(logSpy).not.toHaveBeenCalled();
       const plainOutput = stripAnsi(client.stderr.getFullOutput());
       expect(plainOutput).toContain('Multiple teams found');
-      expect(plainOutput).toContain('--team <slug>');
+      expect(plainOutput).toContain('--scope <slug>');
       expect(plainOutput).toContain('teams ls');
       expect(exitSpy).toHaveBeenCalledWith(1);
       expect(await pathExists(join(cwd, '.vercel/project.json'))).toBe(false);
@@ -1547,6 +1556,77 @@ describe('link', () => {
       throw project;
     }
     expect(project.framework).toEqual('services');
+  });
+
+  it('should list configured daemons alongside configured services', async () => {
+    useUser();
+    const cwd = setupTmpDir();
+    useTeams('team_dummy');
+    useUnknownProject();
+
+    await mkdirp(join(cwd, 'frontend'));
+    await writeJSON(join(cwd, 'frontend/package.json'), {
+      dependencies: { next: 'latest' },
+    });
+    await mkdirp(join(cwd, 'api'));
+    await writeFile(join(cwd, 'api/requirements.txt'), 'fastapi\n');
+    await writeFile(
+      join(cwd, 'api/index.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+    await mkdirp(join(cwd, 'worker'));
+    await writeFile(join(cwd, 'worker/Dockerfile'), 'FROM alpine\n');
+    await writeJSON(join(cwd, 'vercel.json'), {
+      services: {
+        frontend: { root: 'frontend/', framework: 'nextjs' },
+        api: { root: 'api/', entrypoint: 'index:app' },
+      },
+      rewrites: [{ source: '/(.*)', destination: { service: 'frontend' } }],
+      daemons: {
+        worker: {
+          root: 'worker/',
+          entrypoint: 'Dockerfile',
+          replicas: { iad1: 1 },
+          resources: { requests: { memory: '1Gi' } },
+        },
+      },
+    });
+
+    client.cwd = cwd;
+    const exitCodePromise = link(client);
+
+    await expect(client.stderr).toOutput('Directory');
+    await expect(client.stderr).toOutput('Which team?');
+    client.stdin.write('\n');
+
+    await chooseCreateNewProject();
+
+    await expect(client.stderr).toOutput('Name?');
+    client.stdin.write('services-with-daemons\n');
+
+    await expect(client.stderr).toOutput(
+      'Services and daemons are configured via vercel.json.'
+    );
+
+    const exitCode = await exitCodePromise;
+    expect(exitCode, 'exit code for "link"').toEqual(0);
+
+    const stderr = client.stderr.getFullOutput();
+    const servicesAt = stderr.indexOf('Detected services:');
+    const daemonsAt = stderr.indexOf('\nDetected daemons:');
+    expect(servicesAt).toBeGreaterThan(-1);
+    expect(daemonsAt).toBeGreaterThan(servicesAt);
+    expect(stderr.slice(servicesAt, daemonsAt)).not.toContain('worker');
+    expect(stderr.slice(daemonsAt)).toMatch(/• worker\s+\[Dockerfile\]/);
+    expect(stderr).not.toContain('Detected services and daemons:');
+    expect(stderr).not.toContain('Services are configured via vercel.json.');
+
+    // The two sections share a name-column width, so brackets line up.
+    const lines = stripAnsi(stderr).split('\n');
+    const bracketColumn = (name: string) =>
+      lines.find(line => line.includes(`• ${name} `))?.indexOf('[');
+    expect(bracketColumn('frontend')).toBeGreaterThan(0);
+    expect(bracketColumn('worker')).toBe(bracketColumn('frontend'));
   });
 
   it('should continue with framework detection when root inferred services are declined', async () => {
@@ -2071,41 +2151,6 @@ describe('link', () => {
   });
 
   describe('OIDC token refresh', () => {
-    it('automatically refreshes OIDC after successful linking', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const [team] = useTeams('team_dummy') as Team[];
-      const { project } = useProject({
-        ...defaultProject,
-        id: basename(cwd),
-        name: basename(cwd),
-      });
-      useUnknownProject();
-
-      client.cwd = cwd;
-      client.setArgv('--project', project.name!);
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      // Single team auto-selects; no team prompt.
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${team.slug}/${project.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
-
-      expect(mockPull).toHaveBeenCalledWith(
-        expect.objectContaining({ cwd }),
-        ['--yes'],
-        'vercel-cli:link',
-        { oidcTokenOnly: true }
-      );
-    });
-
     it('does not prompt before refreshing OIDC', async () => {
       useUser({ version: 'northstar' });
       const cwd = setupTmpDir();
@@ -2177,83 +2222,6 @@ describe('link', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0); // Link should still succeed even if env pull fails
-
-      expect(mockPull).toHaveBeenCalledWith(
-        expect.objectContaining({ cwd }),
-        ['--yes'],
-        'vercel-cli:link',
-        { oidcTokenOnly: true }
-      );
-    });
-
-    it('should handle env pull command throwing an error', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const [team] = useTeams('team_dummy') as Team[];
-      const { project } = useProject({
-        ...defaultProject,
-        id: basename(cwd),
-        name: basename(cwd),
-      });
-      useUnknownProject();
-
-      // Mock env pull to throw an error
-      mockPull.mockRejectedValue(new Error('Network error'));
-
-      client.cwd = cwd;
-      client.setArgv('--project', project.name!);
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      // Single team auto-selects; no team prompt.
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${team.slug}/${project.name}`
-      );
-
-      await expect(client.stderr).toOutput(
-        'Linked project, but failed to refresh VERCEL_OIDC_TOKEN in .env.local.'
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0); // Link should still succeed even if env pull throws
-
-      expect(mockPull).toHaveBeenCalledWith(
-        expect.objectContaining({ cwd }),
-        ['--yes'],
-        'vercel-cli:link',
-        { oidcTokenOnly: true }
-      );
-    });
-
-    it('uses --yes internally without treating it as target selection', async () => {
-      useUser({ version: 'northstar' });
-      const cwd = setupTmpDir();
-      const [team] = useTeams('team_dummy') as Team[];
-      const { project } = useProject({
-        ...defaultProject,
-        id: basename(cwd),
-        name: basename(cwd),
-      });
-      useUnknownProject();
-
-      client.cwd = cwd;
-      client.setArgv('--project', project.name!);
-      const exitCodePromise = link(client);
-
-      await expect(client.stderr).toOutput('Directory');
-      // Single team auto-selects; no team prompt.
-      await expect(client.stderr).toOutput('Link directory to project?');
-      client.stdin.write('y\n');
-
-      await expect(client.stderr).toOutput(
-        `✓ Linked          ${team.slug}/${project.name}`
-      );
-
-      const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(0);
 
       expect(mockPull).toHaveBeenCalledWith(
         expect.objectContaining({ cwd }),

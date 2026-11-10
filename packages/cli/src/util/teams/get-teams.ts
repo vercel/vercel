@@ -2,7 +2,7 @@ import { URLSearchParams } from 'url';
 import type Client from '../client';
 import type { Team } from '@vercel-internals/types';
 import { APIError, InvalidToken } from '../errors-ts';
-import { teamCache } from './get-team-by-id';
+import { teamCache } from './get-team-by-id-or-slug';
 
 export interface GetTeamsV1Options {
   apiVersion?: 1;

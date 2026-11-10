@@ -393,7 +393,7 @@ test('[vercel dev] should support request body', async () => {
     const body = { hello: 'world' };
 
     // Test that `req.body` works in dev
-    let res = await nodeFetch(`http://localhost:${port}/api/req-body`, {
+    const res = await nodeFetch(`http://localhost:${port}/api/req-body`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -404,13 +404,18 @@ test('[vercel dev] should support request body', async () => {
     expect(await res.json()).toMatchObject({ body, readBody: body });
 
     // Test that `req` "data" events work in dev
-    res = await nodeFetch(`http://localhost:${port}/api/data-events`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const dataEventsRes = await nodeFetch(
+      `http://localhost:${port}/api/data-events`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    validateResponseHeaders(dataEventsRes);
+    expect(await dataEventsRes.json()).toMatchObject(body);
   } finally {
     await dev.kill();
   }

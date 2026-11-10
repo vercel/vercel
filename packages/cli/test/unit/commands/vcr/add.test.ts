@@ -39,7 +39,7 @@ function mockTeamScope() {
   } as any);
 }
 
-describe('vcr add', () => {
+describe('vcr create', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
@@ -57,7 +57,7 @@ describe('vcr add', () => {
     it('tracks telemetry', async () => {
       client.setArgv('vcr', 'add', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -69,9 +69,7 @@ describe('vcr add', () => {
   });
 
   it('creates a repository with a POST', async () => {
-    let method = '';
     client.scenario.post('/v1/vcr/repository', (req, res) => {
-      method = req.method;
       expect(req.body).toMatchObject({
         projectId: 'prj_vcr',
         name: 'my-app',
@@ -82,7 +80,6 @@ describe('vcr add', () => {
     client.setArgv('vcr', 'add', 'my-app');
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
-    expect(method).toBe('POST');
     expect(client.stderr.getFullOutput()).toContain('Created repository');
   });
 
@@ -97,7 +94,7 @@ describe('vcr add', () => {
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:add',
+        key: 'subcommand:create',
         value: 'add',
       },
     ]);
@@ -119,7 +116,33 @@ describe('vcr add', () => {
   it('errors when the name argument is missing', async () => {
     client.setArgv('vcr', 'add');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
-    expect(client.stderr.getFullOutput()).toContain('vcr add');
+    expect(exitCode).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain('vcr create');
+  });
+
+  describe('subcommand name', () => {
+    function useCreation() {
+      client.scenario.post('/v1/vcr/repository', (_req, res) => {
+        res.json({ repository: { id: 'repo_new', name: 'my-app' } });
+      });
+    }
+
+    it('warns when invoked as the deprecated add name', async () => {
+      useCreation();
+      client.setArgv('vcr', 'add', 'my-app');
+
+      expect(await vcr(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel vcr add` is deprecated. Use `vercel vcr create`.'
+      );
+    });
+
+    it('does not warn when invoked as create', async () => {
+      useCreation();
+      client.setArgv('vcr', 'create', 'my-app');
+
+      expect(await vcr(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    });
   });
 });

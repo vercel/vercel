@@ -1,5 +1,23 @@
 # @vercel/routing-utils
 
+## 6.6.0
+
+### Minor Changes
+
+- f8eb285: Fix route ordering so project middleware always runs before builder-generated routes.
+
+## 6.5.0
+
+### Minor Changes
+
+- 852e1a0: Move middleware matcher utils from node builder to general build utils.
+
+## 6.4.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
 ## 6.4.0
 
 ### Minor Changes

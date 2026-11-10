@@ -7,6 +7,10 @@ import { Sema } from 'async-sema';
 import { DeploymentFile, FilesMap } from './utils/hashes';
 import { fetchApi, API_FILES, createDebug } from './utils';
 import { DeploymentError } from './errors';
+import {
+  formatNetworkError,
+  isRetryableNetworkError,
+} from './utils/network-error';
 import { deploy } from './deploy';
 import type {
   FetchDispatcher,
@@ -14,31 +18,6 @@ import type {
   DeploymentOptions,
   DeploymentEventType,
 } from './types';
-
-const isClientNetworkError = (err: unknown): boolean => {
-  if (!(err instanceof Error)) {
-    return false;
-  }
-
-  if (err.message) {
-    // These are common network errors that may happen occasionally and we should retry if we encounter these
-    const matches =
-      err.message.includes('ETIMEDOUT') ||
-      err.message.includes('ECONNREFUSED') ||
-      err.message.includes('ENOTFOUND') ||
-      err.message.includes('ECONNRESET') ||
-      err.message.includes('EAI_FAIL') ||
-      err.message.includes('socket hang up') ||
-      err.message.includes('network socket disconnected');
-    if (matches) {
-      return true;
-    }
-  }
-
-  // Native `fetch` reports network failures as `TypeError: fetch failed` and
-  // carries the underlying error (with the code) in `cause`.
-  return isClientNetworkError((err as { cause?: unknown }).cause);
-};
 
 export async function* upload(
   files: FilesMap,
@@ -229,6 +208,7 @@ export async function* uploadFiles(options: {
 
         let err;
         let result;
+        let retryableServerError = false;
         const abortController = new AbortController();
         abortControllers.add(abortController);
 
@@ -273,6 +253,7 @@ export async function* uploadFiles(options: {
 
             err = new DeploymentError(error);
           } else {
+            retryableServerError = res.status >= 500 && res.status <= 599;
             // If something is wrong with the server, we retry
             debug(`A server error occurred in upload request. Retrying...`);
             const { error } = await res.json();
@@ -280,7 +261,7 @@ export async function* uploadFiles(options: {
             throw new DeploymentError(error);
           }
         } catch (e: any) {
-          debug(`An unexpected error occurred in upload promise:\n${e}`);
+          debug(`Upload failed: ${formatNetworkError(e)}`);
           // Preserve the original error: native `fetch` reports the network
           // error code in `cause`, which wrapping would discard.
           err = e instanceof Error ? e : new Error(String(e));
@@ -289,12 +270,14 @@ export async function* uploadFiles(options: {
         semaphore.release();
 
         if (err) {
-          if (isClientNetworkError(err)) {
-            debug('Network error, retrying: ' + err.message);
+          if (retryableServerError || isRetryableNetworkError(err)) {
+            debug(
+              `Transient upload failure, retrying: ${formatNetworkError(err)}`
+            );
             // If it's a network error, we retry
             throw err;
           } else {
-            debug('Other error, bailing: ' + err.message);
+            debug(`Upload failed without retry: ${formatNetworkError(err)}`);
             // Otherwise we bail
             if (!aborted) {
               aborted = true;

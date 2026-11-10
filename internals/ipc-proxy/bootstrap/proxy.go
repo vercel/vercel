@@ -15,7 +15,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -24,10 +23,11 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"ipc-proxy/ipc"
 )
 
 // hijackAwareResponseWriter reports when an HTTP protocol upgrade has written
@@ -112,73 +112,18 @@ func serveWithUpgradeLifecycle(
 	endRequest()
 }
 
-// IPC message types
-type StartMessage struct {
-	Type    string       `json:"type"`
-	Payload StartPayload `json:"payload"`
-}
-
-type StartPayload struct {
-	InitDuration int `json:"initDuration"`
-	HTTPPort     int `json:"httpPort"`
-}
-
-type EndMessage struct {
-	Type    string     `json:"type"`
-	Payload EndPayload `json:"payload"`
-}
-
-type EndPayload struct {
-	Context RequestContext `json:"context"`
-	Error   interface{}    `json:"error,omitempty"`
-}
-
-type RequestContext struct {
-	InvocationID string `json:"invocationId"`
-	RequestID    uint64 `json:"requestId"`
-}
-
-type UnrecoverableErrorMessage struct {
-	Type    string                    `json:"type"`
-	Payload UnrecoverableErrorPayload `json:"payload"`
-}
-
-type UnrecoverableErrorPayload struct {
-	ExitCode int    `json:"exitCode"`
-	Message  string `json:"message"`
-}
-
 var (
-	ipcConn   net.Conn
-	ipcMutex  sync.Mutex
+	ipcClient *ipc.Client
 	ipcReady  bool
 	startTime time.Time
 )
 
-func sendIPCMessage(msg interface{}) error {
-	if ipcConn == nil {
-		return nil
-	}
-
-	ipcMutex.Lock()
-	defer ipcMutex.Unlock()
-
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
-	// IPC messages are JSON followed by null byte
-	_, err = ipcConn.Write(append(data, 0))
-	return err
-}
-
 // fatal reports an unrecoverable error via IPC and exits.
 func fatal(exitCode int, msg string) {
 	fmt.Fprintln(os.Stderr, msg)
-	sendIPCMessage(UnrecoverableErrorMessage{
+	ipcClient.Send(ipc.UnrecoverableErrorMessage{
 		Type: "unrecoverable-error",
-		Payload: UnrecoverableErrorPayload{
+		Payload: ipc.UnrecoverableErrorPayload{
 			ExitCode: exitCode,
 			Message:  msg,
 		},
@@ -232,12 +177,12 @@ func connectIPC() error {
 		return nil
 	}
 
-	conn, err := net.Dial("unix", ipcPath)
+	client, err := ipc.Dial(ipcPath, 0)
 	if err != nil {
 		return fmt.Errorf("failed to connect to IPC socket: %w", err)
 	}
 
-	ipcConn = conn
+	ipcClient = client
 	return nil
 }
 
@@ -336,9 +281,7 @@ func main() {
 			}
 
 			// Extract Vercel internal headers
-			invocationID := r.Header.Get("X-Vercel-Internal-Invocation-Id")
-			requestIDStr := r.Header.Get("X-Vercel-Internal-Request-Id")
-			requestID, _ := strconv.ParseUint(requestIDStr, 10, 64)
+			requestContext := ipc.ContextFromRequest(r)
 
 			// A successful protocol upgrade detaches the connection from the
 			// request lifecycle. End the invocation at that boundary while the
@@ -347,17 +290,14 @@ func main() {
 			// upgrades. sync.Once prevents a second end message when an upgraded
 			// connection eventually closes and ServeHTTP returns.
 			endRequest := func() {
-				if ipcConn != nil && invocationID != "" {
-					endMsg := EndMessage{
+				if ipcClient != nil && requestContext.InvocationID != "" {
+					endMsg := ipc.EndMessage{
 						Type: "end",
-						Payload: EndPayload{
-							Context: RequestContext{
-								InvocationID: invocationID,
-								RequestID:    requestID,
-							},
+						Payload: ipc.EndPayload{
+							Context: requestContext,
 						},
 					}
-					sendIPCMessage(endMsg)
+					ipcClient.Send(endMsg)
 				}
 			}
 
@@ -384,22 +324,22 @@ func main() {
 
 	// Send server-started IPC message
 	initDuration := int(time.Since(startTime).Milliseconds())
-	startMsg := StartMessage{
+	startMsg := ipc.StartMessage{
 		Type: "server-started",
-		Payload: StartPayload{
+		Payload: ipc.StartPayload{
 			InitDuration: initDuration,
 			HTTPPort:     listenPort,
 		},
 	}
 
-	if err := sendIPCMessage(startMsg); err != nil {
+	if err := ipcClient.Send(startMsg); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to send IPC start message: %v\n", err)
 	} else {
 		ipcReady = true
 	}
 
 	// If no IPC, print the port for local development
-	if ipcConn == nil {
+	if ipcClient == nil {
 		fmt.Printf("Server listening on port %d (proxying to user server on port %d)\n", listenPort, userPort)
 	}
 

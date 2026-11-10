@@ -11,9 +11,9 @@ import type {
 } from './types';
 import {
   isFrontendFramework,
-  assignMountPaths,
   DETECTION_FRAMEWORKS,
-} from './utils';
+} from './runtimes/framework';
+import { assignMountPaths } from './utils';
 
 export interface AutoDetectOptions {
   fs: DetectorFilesystem;
