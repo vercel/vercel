@@ -74,7 +74,7 @@ function runScript(pkgName, script) {
     let pkgJson = null;
     try {
       pkgJson = require(join(cwd, 'package.json'));
-    } catch (e) {
+    } catch (_e) {
       pkgJson = null;
     }
     if (pkgJson && pkgJson.scripts && pkgJson.scripts[script]) {

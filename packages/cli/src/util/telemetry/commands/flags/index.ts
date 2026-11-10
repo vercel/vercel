@@ -20,16 +20,86 @@ export class FlagsTelemetryClient
     });
   }
 
-  trackCliSubcommandAdd(actual: string) {
+  trackCliSubcommandVersions(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'add',
+      subcommand: 'versions',
       value: actual,
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandEvaluations(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'rm',
+      subcommand: 'evaluations',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandStale(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'stale',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandOpen(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'open',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandCreate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'create',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUpdate(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSet(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'set',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTargeting(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'targeting',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUseTargeting(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'use-targeting',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSplit(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'split',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandRollout(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rollout',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDelete(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -37,6 +107,13 @@ export class FlagsTelemetryClient
   trackCliSubcommandArchive(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'archive',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandUnarchive(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'unarchive',
       value: actual,
     });
   }
@@ -62,9 +139,62 @@ export class FlagsTelemetryClient
     });
   }
 
+  trackCliSubcommandConnections(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'connections',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandSegments(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'segments',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandEntities(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'entities',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandLabels(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'labels', value: actual });
+  }
+
+  trackCliSubcommandRules(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'rules',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandTargets(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'targets',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandPrepare(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'prepare',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDatafile(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'datafile',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandOverride(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'override',
       value: actual,
     });
   }

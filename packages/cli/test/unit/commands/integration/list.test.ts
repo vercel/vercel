@@ -446,6 +446,17 @@ describe('integration', () => {
             },
           ]);
         });
+
+        it('omits claim_status entirely for non-sandbox resources', async () => {
+          client.setArgv('integration', 'list', '--format=json');
+          const exitCode = await integrationCommand(client);
+          expect(exitCode, 'exit code for "integration"').toEqual(0);
+
+          const jsonOutput = JSON.parse(client.stdout.getFullOutput());
+          for (const resource of jsonOutput.resources) {
+            expect(resource).not.toHaveProperty('claim_status');
+          }
+        });
       });
     });
 
@@ -472,7 +483,7 @@ describe('integration', () => {
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
-          'Error: No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
+          'Error: No project linked. Either use `vc link` to link a project, or the `--all` option to list all resources.'
         );
       });
 
@@ -505,9 +516,9 @@ describe('integration', () => {
 
         client.setArgv('integration', 'list', 'other-project', '--all');
         const exitCode = await integrationCommand(client);
-        expect(exitCode, 'exit code for "integration"').toEqual(1);
+        expect(exitCode, 'exit code for "integration"').toEqual(2);
         await expect(client.stderr).toOutput(
-          'Error: Cannot specify a project when using the `--all` flag.'
+          'Error: Cannot specify a project when using the `--all` option.'
         );
       });
     });

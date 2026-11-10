@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { type Files, glob, type BuildOptions } from '@vercel/build-utils';
 import { findEntrypoint } from './find-entrypoint.js';
 import {
@@ -7,29 +7,65 @@ import {
   type downloadInstallAndBundle,
 } from './utils.js';
 
+/**
+ * `outputDirectory` is usually the same project setting the static builder uses
+ * (Vite/Webpack/etc. client output). We only reuse it for the Node lambda when we
+ * find a known server entry file under that folder; otherwise we bundle from
+ * source with rolldown. Errors here are swallowed so static-only output trees do
+ * not fail the build.
+ */
+async function findEntrypointInOutputDir(
+  dir: string
+): Promise<string | undefined> {
+  try {
+    return await findEntrypoint(dir);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * `outputDirectory` reaches the builder as `config.outputDirectory` for
+ * zero-config builds (copied from project settings by `fs-detectors`), but
+ * wrapper builders (e.g. `@vercel/express`) read
+ * `config.projectSettings.outputDirectory` — accept both.
+ */
+export const getOutputDirectorySetting = (
+  config: BuildOptions['config']
+): string | undefined => {
+  const setting =
+    config.outputDirectory ?? config.projectSettings?.outputDirectory;
+  return typeof setting === 'string' && setting !== '' ? setting : undefined;
+};
+
 export const maybeDoBuildCommand = async (
   args: BuildOptions,
   downloadResult: Awaited<ReturnType<typeof downloadInstallAndBundle>>
 ) => {
   const buildCommandResult = await maybeExecBuildCommand(args, downloadResult);
-  const outputSetting = args.config.outputDirectory;
+  const outputSetting = getOutputDirectorySetting(args.config);
 
   let outputDir: string | undefined;
   let entrypoint: string | undefined;
-  if (buildCommandResult && outputSetting) {
+  if (buildCommandResult) {
     if (outputSetting) {
       const _outputDir = join(args.workPath, outputSetting);
-      const _entrypoint = await findEntrypoint(_outputDir);
-      if (_entrypoint) {
-        outputDir = _outputDir;
-        entrypoint = _entrypoint;
+      // Skip when `outputDirectory` is the project root itself (e.g. `.`):
+      // globbing it would sweep in `node_modules` and break tracing. Fall back
+      // to the rolldown bundle instead.
+      if (resolve(_outputDir) !== resolve(args.workPath)) {
+        const _entrypoint = await findEntrypointInOutputDir(_outputDir);
+        if (_entrypoint) {
+          outputDir = _outputDir;
+          entrypoint = _entrypoint;
+        }
       }
     } else {
       const commonOutputDirectories = ['dist', 'build', 'output'];
       for (const outputDirectory of commonOutputDirectories) {
         const _outputDir = join(args.workPath, outputDirectory);
         if (existsSync(_outputDir)) {
-          const _entrypoint = await findEntrypoint(_outputDir);
+          const _entrypoint = await findEntrypointInOutputDir(_outputDir);
           if (_entrypoint) {
             outputDir = _outputDir;
             entrypoint = _entrypoint;

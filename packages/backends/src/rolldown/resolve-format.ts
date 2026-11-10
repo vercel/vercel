@@ -4,7 +4,9 @@ import { readFile } from 'node:fs/promises';
 import type { BuildOptions } from '@vercel/build-utils';
 
 export const resolveEntrypointAndFormat = async (
-  args: Pick<BuildOptions, 'entrypoint' | 'workPath'>
+  args: Pick<BuildOptions, 'entrypoint' | 'workPath'> & {
+    defaultFormat?: 'esm' | 'cjs';
+  }
 ) => {
   const extension = extname(args.entrypoint);
   const extensionMap: Record<
@@ -21,7 +23,7 @@ export const resolveEntrypointAndFormat = async (
 
   const extensionInfo = extensionMap[extension] || extensionMap['.js'];
   let resolvedFormat: 'esm' | 'cjs' | undefined =
-    extensionInfo.format === 'auto' ? undefined : extensionInfo.format;
+    extensionInfo.format === 'auto' ? args.defaultFormat : extensionInfo.format;
 
   const packageJsonPath = join(args.workPath, 'package.json');
   let pkg: Record<string, unknown> = {};
@@ -41,7 +43,10 @@ export const resolveEntrypointAndFormat = async (
     }
   }
   if (!resolvedFormat) {
-    throw new Error(`Unable to resolve format for ${args.entrypoint}`);
+    // No `package.json` (and no explicit `defaultFormat`) to infer the module
+    // format from. Default to ESM so a bare `server.ts`/`server.js` works out
+    // of the box without requiring a `package.json` with `"type": "module"`.
+    resolvedFormat = 'esm';
   }
   const resolvedExtension = resolvedFormat === 'esm' ? 'mjs' : 'cjs';
   return { format: resolvedFormat, extension: resolvedExtension };

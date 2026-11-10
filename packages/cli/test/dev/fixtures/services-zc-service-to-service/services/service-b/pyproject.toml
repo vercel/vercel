@@ -1,0 +1,7 @@
+[project]
+name = "services-zc-service-to-service-services-b"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]==0.133.0",
+]

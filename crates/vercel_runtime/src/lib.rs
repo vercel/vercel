@@ -2,6 +2,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn as hyper_service_fn;
 use hyper_util::rt::TokioIo;
 use std::convert::Infallible;
+use std::env;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -16,11 +17,23 @@ pub type Request = hyper::Request<hyper::body::Incoming>;
 #[cfg(feature = "axum")]
 pub mod axum;
 
+#[cfg(feature = "actix")]
+pub mod actix;
+
+pub mod awaiter;
 #[cfg(unix)]
 mod ipc;
 #[cfg(unix)]
 mod ipc_utils;
 mod types;
+
+use crate::awaiter::Awaiter;
+
+lazy_static::lazy_static! {
+    /// Process-global collector of `waitUntil` background work.
+    /// Shared by every request and drained once at shutdown (see [`run`]).
+    static ref AWAITER: Awaiter = Awaiter::new();
+}
 
 use crate::types::IntoFunctionResponse;
 
@@ -29,7 +42,6 @@ use {
     crate::ipc::core::{EndMessage, StartMessage},
     crate::ipc::log::{Level, LogMessage},
     crate::ipc_utils::{IPC_READY, enqueue_or_send_message, flush_init_log_buffer, send_message},
-    std::env,
     std::os::unix::net::UnixStream,
     std::sync::atomic::Ordering,
     std::sync::{Arc, Mutex},
@@ -126,11 +138,31 @@ impl Default for LogContext {
 #[derive(Clone)]
 pub struct AppState {
     pub log_context: LogContext,
+    awaiter: Awaiter,
 }
 
 impl AppState {
     pub fn new(log_context: LogContext) -> Self {
-        Self { log_context }
+        Self {
+            log_context,
+            awaiter: Awaiter::new(),
+        }
+    }
+
+    /// Register a background future to keep running after the response has been
+    /// sent. The future is spawned immediately, and the request's `end` IPC
+    /// message is delayed until its background work settles, bounded by the
+    /// function's `maxDuration`. Work is also tracked from registration for
+    /// process shutdown, even without IPC. In `vc dev`, shutdown waits up to
+    /// [`awaiter::WAIT_UNTIL_TIMEOUT`] seconds.
+    ///
+    /// This future runs regardless of whether the handler succeeded or errored.
+    /// A panic in the future is isolated from the rest of the runtime.
+    pub fn wait_until<F>(&self, future: F)
+    where
+        F: std::future::Future<Output = ()> + Send + 'static,
+    {
+        self.awaiter.wait_until(AWAITER.track(future));
     }
 }
 
@@ -271,7 +303,10 @@ where
         Err(_) => None,
     };
 
-    let port = 3000;
+    let port: u16 = env::var("VERCEL_DEV_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3000);
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     let listener = TcpListener::bind(addr).await?;
 
@@ -297,8 +332,60 @@ where
         println!("Dev server listening: {}", port);
     }
 
+    // Shutdown signal future. On Unix the host terminates the process with
+    // SIGTERM; on other platforms fall back to Ctrl-C. When it fires we stop
+    // accepting new connections and drain any pending `waitUntil` work.
+    let shutdown = async {
+        #[cfg(unix)]
+        {
+            match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+                Ok(mut sigterm) => {
+                    sigterm.recv().await;
+                }
+                Err(_) => {
+                    let _ = tokio::signal::ctrl_c().await;
+                }
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = tokio::signal::ctrl_c().await;
+        }
+    };
+    tokio::pin!(shutdown);
+
     loop {
-        let (stream, _) = listener.accept().await?;
+        let (stream, _) = tokio::select! {
+            accepted = listener.accept() => accepted?,
+            _ = &mut shutdown => {
+                // Drain background `waitUntil` work and pending `end` messages,
+                // then exit. Work is tracked even without IPC or before its
+                // handler returns.
+                //
+                // In `vc dev` (signalled by `VERCEL_DEV=1`) we bound the drain by
+                // `WAIT_UNTIL_TIMEOUT` so a hung task cannot keep the dev process
+                // alive. In production there is no artificial cap: background work
+                // runs until it resolves or the function itself times out, which
+                // matches the Node.js bridge.
+                if std::env::var("VERCEL_DEV").as_deref() == Ok("1") {
+                    if tokio::time::timeout(
+                        std::time::Duration::from_secs(crate::awaiter::WAIT_UNTIL_TIMEOUT),
+                        AWAITER.awaiting(),
+                    )
+                    .await
+                    .is_err()
+                    {
+                        eprintln!(
+                            "A waitUntil() task is still running after {}s and was abandoned at shutdown.",
+                            crate::awaiter::WAIT_UNTIL_TIMEOUT
+                        );
+                    }
+                } else {
+                    AWAITER.awaiting().await;
+                }
+                return Ok(());
+            }
+        };
         let io = TokioIo::new(stream);
         #[cfg(unix)]
         let ipc_stream_clone = ipc_stream.clone();
@@ -341,6 +428,8 @@ where
                         async move {
                             #[cfg(unix)]
                             let ipc_stream_for_end = app_state.log_context.ipc_stream.clone();
+                            #[cfg(unix)]
+                            let request_awaiter = app_state.awaiter.clone();
 
                             if req.uri().path() == "/_vercel/ping" {
                                 let response = hyper::Response::builder()
@@ -377,21 +466,33 @@ where
                                 }
                             };
 
-                            // Send end message via IPC
+                            // Return the response immediately, but keep this invocation
+                            // active until its background work settles. Track the end
+                            // task globally so shutdown also waits for its IPC message.
                             #[cfg(unix)]
                             if let (Some(ipc_stream), Some(inv_id), Some(req_id)) =
-                                (&ipc_stream_for_end, &invocation_id, &request_id)
+                                (ipc_stream_for_end, invocation_id, request_id)
                             {
-                                let end_message = EndMessage::new(inv_id.clone(), *req_id, None);
-                                if let Err(_e) = send_message(ipc_stream, end_message) {
-                                    // Failed to send end message
-                                }
+                                AWAITER.wait_until(async move {
+                                    request_awaiter.awaiting().await;
+                                    let end_message = EndMessage::new(inv_id, req_id, None);
+                                    if let Err(_e) = send_message(&ipc_stream, end_message) {
+                                        // Failed to send end message
+                                    }
+                                });
                             }
 
                             Ok::<_, Infallible>(response)
                         }
                     }),
                 )
+                // Enable HTTP/1.1 upgrades so WebSocket handshakes complete.
+                // hyper injects `hyper::upgrade::OnUpgrade` into the request
+                // extensions and drives the upgraded connection after the 101,
+                // which framework extractors (e.g. axum's `WebSocketUpgrade`)
+                // rely on. The upgraded connection does not delay `end`; only
+                // explicitly registered background work extends the invocation.
+                .with_upgrades()
                 .await
             {
                 // Error serving connection

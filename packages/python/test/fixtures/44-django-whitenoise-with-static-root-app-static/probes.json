@@ -1,0 +1,1 @@
+{"probes":[{"path":"/","status":200,"mustContain":"/static/app/style.css"},{"path":"/static/app/style.css","status":200,"mustContain":"body {"}]}

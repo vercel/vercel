@@ -18,6 +18,7 @@ export const PYTHON_FRAMEWORKS = [
   'flask',
   'django',
   'python', // Generic Python framework preset
+  'fasthtml',
 ] as const;
 
 export const RUNTIME_FRAMEWORKS = ['python'] as const;
@@ -46,8 +47,17 @@ export type PythonFramework = (typeof PYTHON_FRAMEWORKS)[number];
 
 /**
  * Checks if the given framework is a backend framework
+ * TODO: make this function generic to all runtimes' backend frameworks and
+ * update callers to use isNodeBackendFramework for Node-specific frameworks.
  */
 export function isBackendFramework(
+  framework: string | null | undefined
+): framework is BackendFramework {
+  if (!framework) return false;
+  return BACKEND_FRAMEWORKS.includes(framework as BackendFramework);
+}
+
+export function isNodeBackendFramework(
   framework: string | null | undefined
 ): framework is BackendFramework {
   if (!framework) return false;

@@ -1,4 +1,3 @@
-import type { Deployment } from '@vercel-internals/types';
 import * as ERRORS from '../errors-ts';
 import type Client from '../client';
 import createCertForAlias from '../certs/create-cert-for-alias';
@@ -14,17 +13,12 @@ export type AliasRecord = {
 export default async function createAlias(
   client: Client,
   contextName: string,
-  deployment: Deployment,
+  idOrUrl: string,
   alias: string,
   externalDomain: boolean
 ) {
   output.spinner(`Creating alias`);
-  const result = await performCreateAlias(
-    client,
-    contextName,
-    deployment,
-    alias
-  );
+  const result = await performCreateAlias(client, contextName, idOrUrl, alias);
   output.stopSpinner();
 
   if (result instanceof ERRORS.CertMissing) {
@@ -42,7 +36,7 @@ export default async function createAlias(
     const secondTry = await performCreateAlias(
       client,
       contextName,
-      deployment,
+      idOrUrl,
       alias
     );
     output.stopSpinner();
@@ -55,12 +49,12 @@ export default async function createAlias(
 async function performCreateAlias(
   client: Client,
   contextName: string,
-  deployment: Deployment,
+  idOrUrl: string,
   alias: string
 ) {
   try {
     return await client.fetch<AliasRecord>(
-      `/now/deployments/${deployment.id}/aliases`,
+      `/now/deployments/${encodeURIComponent(idOrUrl)}/aliases`,
       {
         method: 'POST',
         body: { alias },
@@ -77,7 +71,7 @@ async function performCreateAlias(
       if (err.code === 'deployment_not_found' || err.code === 'not_found') {
         return new ERRORS.DeploymentNotFound({
           context: contextName,
-          id: deployment.id,
+          id: idOrUrl,
         });
       }
       if (err.code === 'gone') {
@@ -87,7 +81,9 @@ async function performCreateAlias(
         return new ERRORS.InvalidAlias(alias);
       }
       if (err.code === 'deployment_not_ready') {
-        return new ERRORS.DeploymentNotReady({ url: deployment.url });
+        return new ERRORS.DeploymentNotReady({
+          url: idOrUrl,
+        });
       }
       if (err.status === 403) {
         if (err.code === 'alias_in_use') {

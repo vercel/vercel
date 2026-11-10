@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
-import type { addStoreSubcommand } from '../../../../commands/blob/command';
+import type { createStoreSubcommand } from '../../../../commands/blob/command';
 import type { TelemetryMethods } from '../../types';
 
 export class BlobAddStoreTelemetryClient
   extends TelemetryClient
-  implements TelemetryMethods<typeof addStoreSubcommand>
+  implements TelemetryMethods<typeof createStoreSubcommand>
 {
   trackCliOptionAccess(value: string | undefined) {
     if (value) {
@@ -29,6 +29,21 @@ export class BlobAddStoreTelemetryClient
       this.trackCliOption({
         option: 'region',
         value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliFlagYes(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliOptionEnvironment(value: string[] | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'environment',
+        value: value.join(','),
       });
     }
   }

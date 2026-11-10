@@ -2,6 +2,7 @@ import type Client from '../client';
 
 export type IntegrationCategory = {
   id: string;
+  slug: string;
   title: string;
 };
 

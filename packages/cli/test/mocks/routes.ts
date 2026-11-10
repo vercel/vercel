@@ -1152,7 +1152,6 @@ export function useRoutesForInspectDiff() {
     const versionId = req.query.versionId as string;
     const search = req.query.q as string;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let routes: any[] =
       versionId === 'prod-version-id'
         ? [...productionRoutes]
@@ -1225,6 +1224,7 @@ export function useGenerateRoute(options?: {
       dest?: string;
       status?: number;
       headers?: Array<{ key: string; value?: string; op: string }>;
+      requestPath?: { value: string; op: string; env?: string[] };
     }>;
   };
 }) {

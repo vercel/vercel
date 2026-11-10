@@ -1,9 +1,10 @@
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { exportSubcommand } from './command';
-import { parseSubcommandArgs, ensureProjectLink } from './shared';
+import { parseSubcommandArgs, withGlobalFlags } from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
-import { getCommandName } from '../../util/pkg-name';
 import type { RoutingRule } from '../../util/routes/types';
 import type { RouteWithSrc } from '@vercel/routing-utils';
 
@@ -64,33 +65,51 @@ function routesToVercelTs(rules: RoutingRule[]): string {
   const routesContent =
     routeEntries.length > 0 ? `\n${routeEntries.join(',\n')},\n  ` : '';
 
-  return `import { defineConfig } from '@vercel/sdk/config';
+  return `import type { VercelConfig } from '@vercel/config/v1';
 
-export default defineConfig({
+export const config: VercelConfig = {
   routes: [${routesContent}],
-});
+};
 `;
 }
 
 export default async function exportRoutes(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, exportSubcommand);
+  const parsed = await parseSubcommandArgs(argv, exportSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const teamId = org.type === 'team' ? org.id : undefined;
   const { args, flags } = parsed;
-  const format = (flags['--format'] as string) || 'json';
+  const rawFormat = (flags['--output'] as string) || 'json';
+  // Accept both bare and dotted, file-extension-style values (e.g. `ts` or `.ts`).
+  const format = rawFormat.toLowerCase().replace(/^\./, '');
   const nameOrId = args[0];
 
   const validFormats = ['json', 'ts'];
   if (!validFormats.includes(format)) {
-    output.error(
-      `Invalid format: "${format}". Valid formats: ${validFormats.join(', ')}. Usage: ${getCommandName('routes export --format json')}`
-    );
-    return 1;
+    const msg = `Invalid output format: "${rawFormat}". Valid formats: ${validFormats.join(', ')}. Usage: ${withGlobalFlags(client, 'routes export --output json')}`;
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: msg,
+        next: [
+          {
+            command: withGlobalFlags(client, 'routes export --output json'),
+          },
+        ],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
+    return 2;
   }
 
   // Fetch routes
@@ -101,7 +120,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
 
     if (routes.length === 0) {
       output.log(
-        `No routes found. Create one with ${getCommandName('routes add')}.`
+        `No routes found. Create one with ${withGlobalFlags(client, 'routes add')}.`
       );
       return 0;
     }
@@ -118,9 +137,17 @@ export default async function exportRoutes(client: Client, argv: string[]) {
       );
 
       if (routesToExport.length === 0) {
-        output.error(
-          `No route found matching "${nameOrId}". Run ${getCommandName('routes list')} to see all routes.`
-        );
+        const msg = `No route found matching "${nameOrId}". Run ${withGlobalFlags(client, 'routes list')} to see all routes.`;
+        if (client.nonInteractive) {
+          outputAgentError(client, {
+            status: 'error',
+            reason: 'not_found',
+            message: msg,
+            next: [{ command: withGlobalFlags(client, 'routes list') }],
+          });
+          process.exit(1);
+        }
+        output.error(msg);
         return 1;
       }
     }
@@ -131,7 +158,6 @@ export default async function exportRoutes(client: Client, argv: string[]) {
       case 'ts':
         result = routesToVercelTs(routesToExport);
         break;
-      case 'json':
       default:
         result = routesToVercelJson(routesToExport);
         break;
@@ -144,7 +170,17 @@ export default async function exportRoutes(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    output.error(error.message || 'Failed to export routes');
+    const msg = error.message || 'Failed to export routes';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'api_error',
+        message: msg,
+        next: [{ command: withGlobalFlags(client, 'routes export') }],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
     return 1;
   }
 }

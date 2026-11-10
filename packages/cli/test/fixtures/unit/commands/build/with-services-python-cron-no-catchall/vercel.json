@@ -1,0 +1,19 @@
+{
+  "experimentalServices": {
+    "web": {
+      "framework": "fastapi",
+      "entrypoint": "server.py",
+      "routePrefix": "/"
+    },
+    "cleanup-minute": {
+      "type": "cron",
+      "entrypoint": "jobs/cleanup_minute.py",
+      "schedule": "0 0 * * *"
+    },
+    "cleanup-daily": {
+      "type": "cron",
+      "entrypoint": "jobs/cleanup_daily.py",
+      "schedule": "0 0 * * *"
+    }
+  }
+}

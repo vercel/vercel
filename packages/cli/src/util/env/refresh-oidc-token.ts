@@ -52,7 +52,7 @@ export async function* refreshOidcToken(
     try {
       const { exp } = decodeJwt(oidcToken);
       expiresAfterMillis = exp !== undefined ? exp * 1000 - now : undefined;
-    } catch (error) {
+    } catch (_error) {
       // Do nothing.
     }
     if (
@@ -118,7 +118,7 @@ async function pullEnvValuesUntilSuccessful(
   while (!signal.aborted) {
     try {
       return (await pullEnvRecords(client, projectId, source)).env;
-    } catch (error) {
+    } catch (_error) {
       output.debug(
         `Failed to pull environment; trying again in ${Math.round(millisToSecs(millis))}s`
       );

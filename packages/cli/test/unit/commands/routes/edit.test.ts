@@ -3,7 +3,10 @@ import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useProject, defaultProject } from '../../../mocks/project';
 import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 import {
   useEditRoute,
   useEditRouteComprehensive,
@@ -31,14 +34,50 @@ describe('routes edit', () => {
   it('should show help with --help flag', async () => {
     client.setArgv('routes', 'edit', '--help');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(2);
+    expect(exitCode).toEqual(0);
   });
 
   it('should error when no args provided', async () => {
     useEditRoute();
     client.setArgv('routes', 'edit');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
+  });
+
+  it('non-interactive missing flags: suggested command uses single quotes for spaced name (no backslash)', async () => {
+    useEditRouteComprehensive();
+    client.cwd = setupTmpDir();
+    client.config.currentTeam = 'team_dummy';
+    useProject({
+      ...defaultProject,
+      id: 'explicit-routes',
+      name: 'explicit-routes',
+      accountId: 'team_dummy',
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+    client.nonInteractive = true;
+    client.setArgv(
+      'routes',
+      'edit',
+      'API Rewrite',
+      '--yes',
+      '--non-interactive',
+      '--project',
+      'explicit-routes'
+    );
+    await routes(client);
+    const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(payload.reason).toBe('missing_arguments');
+    const nextCmd = payload.next?.[0]?.command ?? '';
+    expect(nextCmd).toContain("'API Rewrite'");
+    expect(nextCmd).toContain('--project explicit-routes');
+    expect(nextCmd).not.toContain('\\"');
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
   });
 
   it('should error when route not found', async () => {
@@ -104,7 +143,7 @@ describe('routes edit', () => {
       const longName = 'a'.repeat(257);
       client.setArgv('routes', 'edit', 'API Rewrite', '--name', longName);
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('256 characters or less');
     });
   });
@@ -163,7 +202,7 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
       client.setArgv('routes', 'edit', 'API Rewrite', '--src-syntax', 'glob');
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('Invalid syntax');
     });
   });
@@ -701,7 +740,7 @@ describe('routes edit', () => {
         '301'
       );
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('requires --dest');
     });
 
@@ -709,7 +748,7 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
       client.setArgv('routes', 'edit', 'Block Admin', '--action', 'rewrite');
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('requires --dest');
     });
 
@@ -717,7 +756,7 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
       client.setArgv('routes', 'edit', 'API Rewrite', '--action', 'set-status');
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('requires --status');
     });
 
@@ -725,7 +764,7 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
       client.setArgv('routes', 'edit', 'API Rewrite', '--action', 'foobar');
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('Invalid action type');
     });
 
@@ -743,7 +782,7 @@ describe('routes edit', () => {
         '404'
       );
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('Invalid redirect status');
     });
 
@@ -751,7 +790,7 @@ describe('routes edit', () => {
       useEditRouteComprehensive();
       client.setArgv('routes', 'edit', 'API Rewrite', '--has', 'invalid');
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('Invalid condition');
     });
   });
@@ -852,17 +891,6 @@ describe('routes edit', () => {
   // ---------------------------------------------------------------------------
 
   describe('additional flag-mode coverage', () => {
-    it('should remove destination with --no-dest alone (no --action)', async () => {
-      useEditRouteComprehensive();
-      // API Rewrite has dest but no status — removing dest makes it action-less
-      client.setArgv('routes', 'edit', 'API Rewrite', '--no-dest');
-      const exitCode = await routes(client);
-      expect(exitCode).toEqual(0);
-
-      const body = capturedBodies.edit as any;
-      expect(body.route.route.dest).toBeUndefined();
-    });
-
     it('should delete a response header via --delete-response-header', async () => {
       useEditRouteComprehensive();
       client.setArgv(
@@ -943,7 +971,7 @@ describe('routes edit', () => {
         longDesc
       );
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('1024 characters or less');
     });
 
@@ -959,7 +987,7 @@ describe('routes edit', () => {
         '999'
       );
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput(
         'Status code must be between 100 and 599'
       );
@@ -970,8 +998,8 @@ describe('routes edit', () => {
       (client.stdin as any).isTTY = false;
       client.setArgv('routes', 'edit', 'API Rewrite');
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('No edit flags provided');
+      expect(exitCode).toEqual(2);
+      await expect(client.stderr).toOutput('No update options provided');
       // Restore TTY for other tests
       (client.stdin as any).isTTY = true;
     });
@@ -988,7 +1016,7 @@ describe('routes edit', () => {
         '--clear-transforms'
       );
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('no action');
     });
 
@@ -1037,7 +1065,7 @@ describe('routes edit', () => {
         '--no-status'
       );
       const exitCode = await routes(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('no action');
     });
   });
@@ -1054,6 +1082,15 @@ describe('routes edit', () => {
             {
               type: 'rewrite',
               dest: 'https://new-backend.internal/$1',
+            },
+            {
+              type: 'modify',
+              subType: 'transform-request-path',
+              requestPath: {
+                value: '/$pathPrefix/$1',
+                op: 'set',
+                env: ['pathPrefix'],
+              },
             },
           ],
         },
@@ -1076,6 +1113,18 @@ describe('routes edit', () => {
       await expect(client.stderr).toOutput('Updated');
 
       await expect(exitCodePromise).resolves.toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.transforms).toEqual(
+        expect.arrayContaining([
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$pathPrefix/$1',
+            env: ['pathPrefix'],
+          },
+        ])
+      );
     });
 
     it('should show error when --ai is used with conflicting flags', async () => {
@@ -1095,7 +1144,7 @@ describe('routes edit', () => {
 
       await expect(client.stderr).toOutput('Cannot use --ai with --dest');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should show error when generate API returns an error', async () => {
@@ -1228,8 +1277,8 @@ describe('routes edit', () => {
       // Should see the edit menu
       await expect(client.stderr).toOutput('What would you like to edit?');
 
-      // Navigate to "Done - save changes" — last option (9th)
-      for (let i = 0; i < 8; i++) {
+      // Navigate to "Done - save changes" — last option (10th)
+      for (let i = 0; i < 9; i++) {
         client.stdin.write('\x1B[B');
       }
       client.stdin.write('\n');
@@ -1461,6 +1510,52 @@ describe('routes edit', () => {
       client.setArgv('routes', 'edit', 'API Rewrite');
       const exitCode = await routes(client);
       expect(exitCode).toEqual(0);
+    });
+
+    it('should add a request path transform interactively', async () => {
+      useEditRouteComprehensive();
+
+      let selectCallCount = 0;
+      const selectResponses = ['manual', 'request-path', 'add', 'done'];
+      client.input.select = vi.fn().mockImplementation(() => {
+        return Promise.resolve(selectResponses[selectCallCount++]);
+      });
+      client.input.text = vi.fn().mockResolvedValue('/:path*');
+
+      client.setArgv('routes', 'edit', 'API Rewrite');
+      const exitCode = await routes(client);
+      expect(exitCode).toEqual(0);
+
+      const body = capturedBodies.edit as any;
+      expect(body.route.route.transforms).toEqual(
+        expect.arrayContaining([
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/:path*',
+          },
+        ])
+      );
+    });
+  });
+
+  describe('subcommand name', () => {
+    it('warns when invoked as the deprecated edit name', async () => {
+      useEditRouteComprehensive();
+      client.setArgv('routes', 'edit', 'API Rewrite', '--description', '');
+
+      expect(await routes(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel routes edit` is deprecated. Use `vercel routes update`.'
+      );
+    });
+
+    it('does not warn when invoked as update', async () => {
+      useEditRouteComprehensive();
+      client.setArgv('routes', 'update', 'API Rewrite', '--description', '');
+
+      expect(await routes(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     });
   });
 });

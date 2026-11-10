@@ -7,22 +7,25 @@ export async function updateCurrentTeamAfterLogin(
   client: Client,
   ssoTeamId?: string
 ) {
+  // `updateConfig` also updates the saved team, so a login run by an agent
+  // still saves the new team for the human.
   if (ssoTeamId) {
-    client.config.currentTeam = ssoTeamId;
+    client.updateConfig({ currentTeam: ssoTeamId });
   } else {
     let user = null;
     try {
       user = await getUser(client);
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       // Shouldn't happen since we just logged in
       output.error('Failed to fetch the logged in user. Please try again.');
       return 1;
     }
 
-    if (user.version === 'northstar' && user.defaultTeamId) {
-      client.config.currentTeam = user.defaultTeamId;
-    } else {
-      delete client.config.currentTeam;
-    }
+    client.updateConfig({
+      currentTeam:
+        user.version === 'northstar' && user.defaultTeamId
+          ? user.defaultTeamId
+          : undefined,
+    });
   }
 }

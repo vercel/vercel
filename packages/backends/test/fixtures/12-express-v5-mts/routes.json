@@ -3,14 +3,14 @@
     "handle": "filesystem"
   },
   {
-    "src": "^(?:\\/users\\/([^\\/]+))(?:\\/$)?$",
-    "dest": "/users/:id",
-    "methods": [
-      "GET"
-    ]
-  },
-  {
     "src": "/(.*)",
-    "dest": "/"
+    "dest": "/",
+    "transforms": [
+      {
+        "type": "request.path",
+        "op": "set",
+        "args": "/$1"
+      }
+    ]
   }
 ]

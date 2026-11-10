@@ -1,8 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import open from 'open';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import buy from '../../../../src/commands/buy';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
+
+vi.mock('open', () => {
+  return {
+    default: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
+const openMock = vi.mocked(open);
 
 function useBuyEndpoint(handler?: (req: any, res: any) => void) {
   client.scenario.post('/v1/billing/buy', (req, res) => {
@@ -27,11 +36,15 @@ function setupTeam() {
 }
 
 describe('buy credits', () => {
+  beforeEach(() => {
+    openMock.mockClear();
+  });
+
   describe('validation', () => {
     it('errors when credit type is missing', async () => {
       client.setArgv('buy', 'credits');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Missing credit type');
     });
 
@@ -45,28 +58,28 @@ describe('buy credits', () => {
     it('errors when amount is missing', async () => {
       client.setArgv('buy', 'credits', 'v0');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Missing amount');
     });
 
     it('errors when amount is not a number', async () => {
       client.setArgv('buy', 'credits', 'v0', 'abc');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Invalid amount "abc"');
     });
 
     it('errors when amount has trailing garbage', async () => {
       client.setArgv('buy', 'credits', 'v0', '50abc');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Invalid amount "50abc"');
     });
 
     it('errors when amount is zero', async () => {
       client.setArgv('buy', 'credits', 'v0', '0');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('positive amount');
     });
 
@@ -75,7 +88,7 @@ describe('buy credits', () => {
       // so this results in an "unknown option" error
       client.setArgv('buy', 'credits', 'v0', '-10');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('unknown or unexpected option');
     });
 
@@ -90,7 +103,7 @@ describe('buy credits', () => {
     it('errors when amount is a decimal', async () => {
       client.setArgv('buy', 'credits', 'v0', '50.5');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Invalid amount "50.5"');
     });
   });
@@ -144,7 +157,7 @@ describe('buy credits', () => {
 
   describe('API errors', () => {
     it('handles missing_stripe_customer error', async () => {
-      setupTeam();
+      const team = setupTeam();
       client.scenario.post('/v1/billing/buy', (_req, res) => {
         res.status(400).json({
           error: {
@@ -157,10 +170,33 @@ describe('buy credits', () => {
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('payment method');
+      expect(openMock).toHaveBeenCalledWith(
+        `https://vercel.com/${team.slug}/~/settings/billing`
+      );
+    });
+
+    it('handles invalid_v0_subscription error', async () => {
+      setupTeam();
+      client.scenario.post('/v1/billing/buy', (_req, res) => {
+        res.status(400).json({
+          error: {
+            code: 'invalid_v0_subscription',
+            message: 'Team must have a paid v0 plan to purchase v0 credits',
+          },
+        });
+      });
+      client.setArgv('buy', 'credits', 'v0', '100', '--yes');
+      const exitCode = await buy(client);
+      expect(exitCode).toBe(1);
+      await expect(client.stderr).toOutput(
+        'Your team must have a paid v0 plan to purchase v0 credits. Upgrade at https://v0.app/pricing'
+      );
+      const stderrOutput = client.stderr.getFullOutput();
+      expect(stderrOutput).not.toContain('An unexpected error occurred');
     });
 
     it('handles payment_failed error', async () => {
-      setupTeam();
+      const team = setupTeam();
       client.scenario.post('/v1/billing/buy', (_req, res) => {
         res.status(402).json({
           error: {
@@ -173,6 +209,9 @@ describe('buy credits', () => {
       const exitCode = await buy(client);
       expect(exitCode).toBe(1);
       await expect(client.stderr).toOutput('Payment failed');
+      expect(openMock).toHaveBeenCalledWith(
+        `https://vercel.com/${team.slug}/~/settings/billing`
+      );
     });
   });
 
@@ -196,7 +235,7 @@ describe('buy credits', () => {
     it('shows help and returns 2', async () => {
       client.setArgv('buy', 'credits', '--help');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
     });
 
     it('tracks telemetry', async () => {

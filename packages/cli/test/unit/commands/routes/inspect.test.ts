@@ -30,7 +30,7 @@ describe('routes inspect', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = routes(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -45,8 +45,38 @@ describe('routes inspect', () => {
     useRoutesForInspect();
     client.setArgv('routes', 'inspect');
     const exitCode = await routes(client);
-    expect(exitCode, 'exit code for missing identifier').toEqual(1);
+    expect(exitCode, 'exit code for missing identifier').toEqual(2);
     await expect(client.stderr).toOutput('Missing route name or ID');
+  });
+
+  it('non-interactive: missing identifier outputs JSON and exits', async () => {
+    useRoutesForInspect();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+    client.nonInteractive = true;
+    client.setArgv('routes', 'inspect', '--non-interactive');
+
+    await routes(client);
+
+    expect(logSpy).toHaveBeenCalled();
+    const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+    expect(payload.status).toBe('error');
+    expect(payload.reason).toBe('missing_arguments');
+    expect(payload.next?.length).toBeGreaterThanOrEqual(1);
+    expect(
+      payload.next.some(
+        (n: { command: string }) =>
+          n.command.includes('routes inspect') &&
+          n.command.includes('<name-or-id>')
+      )
+    ).toBe(true);
+    expect(exitSpy).toHaveBeenCalledWith(2);
+
+    logSpy.mockRestore();
+    exitSpy.mockRestore();
+    client.nonInteractive = false;
   });
 
   it('should inspect a route by exact name', async () => {
@@ -199,6 +229,42 @@ describe('routes inspect', () => {
       expect(exitCode, 'exit code for inspect --diff no changes').toEqual(0);
       // Route is identical in both versions, so show "No staged changes"
       await expect(client.stderr).toOutput('No staged changes');
+    });
+  });
+
+  describe('--json', () => {
+    it('writes the route to stdout', async () => {
+      useRoutesForInspect();
+      client.setArgv('routes', 'inspect', 'Old page redirect', '--json');
+
+      expect(await routes(client)).toBe(0);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.route.name).toBe('Old page redirect');
+      expect(result).not.toHaveProperty('productionRoute');
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).not.toContain('Searching for route');
+      expect(stderr).not.toContain('Route found');
+    });
+
+    it('adds the production route with --diff', async () => {
+      useRoutesForInspectDiff();
+      client.setArgv('routes', 'inspect', 'API Proxy', '--diff', '--json');
+
+      expect(await routes(client)).toBe(0);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.productionRoute.id).toBe(result.route.id);
+      expect(result.productionRoute).not.toEqual(result.route);
+    });
+
+    it('fails instead of prompting when several routes match', async () => {
+      useRoutesForInspect();
+      client.input.select = vi.fn();
+      client.setArgv('routes', 'inspect', 'route', '--json');
+
+      expect(await routes(client)).toBe(1);
+      expect(client.input.select).not.toHaveBeenCalled();
+      expect(client.stdout.getFullOutput()).toBe('');
+      await expect(client.stderr).toOutput('Multiple routes match "route"');
     });
   });
 });

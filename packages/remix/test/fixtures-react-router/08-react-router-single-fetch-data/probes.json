@@ -1,0 +1,32 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "mustContain": "React Router v7 single-fetch .data repro"
+    },
+    {
+      "path": "/_root.data?_routes=root",
+      "mustContain": "root-loader"
+    },
+    {
+      "path": "/api/getClusters.data?_routes=routes%2Fapi.getClusters",
+      "mustContain": "resource-route: /api/getClusters"
+    },
+    {
+      "path": "/api/getClusters.data",
+      "mustContain": "resource-route: /api/getClusters"
+    },
+    {
+      "path": "/api/clusters/42.data?_routes=routes%2Fapi.clusters.%24id",
+      "mustContain": "resource-route: /api/clusters/42"
+    },
+    {
+      "path": "/api/clusters/42.data",
+      "mustContain": "resource-route: /api/clusters/42"
+    },
+    {
+      "path": "/some/random/path",
+      "mustContain": "Splat route"
+    }
+  ]
+}

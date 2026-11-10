@@ -14,11 +14,11 @@
  * never be available.
  */
 
-const https = require('https');
 const { mkdirSync, writeFileSync } = require('fs');
 const { access, mkdir, readFile, unlink, writeFile } = require('fs/promises');
 const path = require('path');
 const { format, inspect } = require('util');
+const { fetchDistTags } = require('./fetch-dist-tags.cjs');
 
 /**
  * An simple output helper which accumulates error and debug log messages in
@@ -49,10 +49,10 @@ class WorkerOutput {
     );
     this.debugLog.push(`[${new Date().toISOString()}] [${type}] ${str}`);
     if (type === 'debug' && this.debugOutputEnabled) {
-      // eslint-disable-next-line no-console
+      // biome-ignore lint/suspicious/noConsole: intentional console usage
       console.error(`> '[debug] [${new Date().toISOString()}] ${str}`);
     } else if (type === 'error') {
-      // eslint-disable-next-line no-console
+      // biome-ignore lint/suspicious/noConsole: intentional console usage
       console.error(`Error: ${str}`);
     }
   }
@@ -118,7 +118,11 @@ process.once('message', async msg => {
     output.debug(`Initializing lock file with pid ${process.pid}`);
     await writeFile(lockFile, String(process.pid), 'utf-8');
 
-    const tags = await fetchDistTags(name);
+    output.debug(`Fetching dist-tags for ${name}`);
+    const tags = await fetchDistTags(name, { timeout: 8000 });
+    if (!tags) {
+      throw new Error('Failed to fetch dist-tags from npm');
+    }
     const version = tags[distTag];
     const expireAt = Date.now() + updateCheckInterval;
     const notifyAt = await getNotifyAt(cacheFile, version);
@@ -161,7 +165,7 @@ if (process.connected) {
   output.debug("Notifying parent we're ready");
   process.send({ type: 'ready' });
 } else {
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: intentional console usage
   console.error('No IPC bridge detected, exiting');
   process.exit(1);
 }
@@ -215,58 +219,4 @@ async function getNotifyAt(cacheFile, version) {
       output.debug(`Error reading latest package cache file: ${err}`);
     }
   }
-}
-
-/**
- * Fetches the dist tags from npm for a given package.
- *
- * @param {string} name The package name
- * @returns A map of dist tags to versions
- */
-async function fetchDistTags(name) {
-  // fetch the latest version from npm
-  const agent = new https.Agent({
-    keepAlive: true,
-    maxSockets: 15, // See: `npm config get maxsockets`
-  });
-  const headers = {
-    accept:
-      'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*',
-  };
-  const url = `https://registry.npmjs.org/-/package/${name}/dist-tags`;
-  output.debug(`Fetching ${url}`);
-
-  return new Promise((resolve, reject) => {
-    const req = https.get(
-      url,
-      {
-        agent,
-        headers,
-      },
-      res => {
-        let buf = '';
-        res.on('data', chunk => {
-          buf += chunk;
-        });
-        res.on('end', () => {
-          try {
-            if (res.statusCode && res.statusCode >= 400) {
-              return reject(
-                new Error(
-                  `Fetch dist-tags failed ${res.statusCode} ${res.statusMessage}`
-                )
-              );
-            }
-
-            resolve(JSON.parse(buf));
-          } catch (err) {
-            reject(err);
-          }
-        });
-      }
-    );
-
-    req.on('error', reject);
-    req.end();
-  });
 }

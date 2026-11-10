@@ -1,7 +1,7 @@
 import type { Context, LoggerServer, Dictionary } from './types';
 import type { IncomingMessage } from 'http';
 
-import { testDeployment } from '../../../test/lib/deployment/test-deployment';
+import { testDeployment } from '../../../test/lib/deployment/test-deployment.js';
 
 import fs from 'fs-extra';
 import http from 'http';
@@ -11,7 +11,7 @@ import ndjson from 'ndjson';
 import os from 'os';
 import path from 'path';
 
-jest.setTimeout(ms('6m'));
+vi.setConfig({ testTimeout: ms('6m'), hookTimeout: ms('6m') });
 
 export function toHeaders(headers: IncomingMessage['headers'] = {}) {
   const obj: Dictionary<string> = {};

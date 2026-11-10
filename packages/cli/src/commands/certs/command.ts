@@ -1,10 +1,14 @@
 import { packageName } from '../../util/pkg-name';
-import { limitOption, nextOption } from '../../util/arg-common';
+import {
+  jsonOption,
+  limitOption,
+  nextCursorOption,
+} from '../../util/arg-common';
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
-  description: 'Remove a certificate by id',
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
+  description: 'Delete a certificate by id',
   arguments: [
     {
       name: 'id',
@@ -14,8 +18,8 @@ export const removeSubcommand = {
   options: [],
   examples: [
     {
-      name: 'Remove a certificate',
-      value: `${packageName} certs rm id`,
+      name: 'Delete a certificate',
+      value: `${packageName} certs delete id`,
     },
   ],
 } as const;
@@ -77,11 +81,12 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'Show all available certificates',
   arguments: [],
-  options: [limitOption, nextOption],
+  options: [limitOption, nextCursorOption, jsonOption],
   examples: [
     {
-      name: 'Paginate results, where `1584722256178` is the time in milliseconds since the UNIX epoch.',
-      value: `${packageName} certs ls --next 1584722256178`,
+      name: 'Show the next page, using the cursor from the previous output',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} certs list --next <CURSOR>`,
     },
   ],
 } as const;

@@ -1,0 +1,212 @@
+import type Client from '../../util/client';
+import { parseArguments } from '../../util/get-args';
+import getInvalidSubcommand from '../../util/get-invalid-subcommand';
+import getSubcommand from '../../util/get-subcommand';
+import { printError } from '../../util/error';
+import { type Command, help } from '../help';
+import overview from './overview';
+import status from './status';
+import diff from './diff';
+import publish from './publish';
+import discard from './discard';
+import systemBypass from './system-bypass';
+import attackMode from './attack-mode';
+import systemMitigations from './system-mitigations';
+import ipBlocks from './ip-blocks';
+import rules from './rules';
+import alerts from './alerts';
+import persistentActions from './persistent-actions';
+import traffic from './traffic';
+import botManagement from './bot-management';
+import {
+  firewallCommand,
+  overviewSubcommand,
+  statusSubcommand,
+  diffSubcommand,
+  publishSubcommand,
+  discardSubcommand,
+  rulesSubcommand,
+  botManagementSubcommand,
+  ipBlocksSubcommand,
+  systemBypassSubcommand,
+  attackModeSubcommand,
+  systemMitigationsSubcommand,
+  alertsSubcommand,
+  persistentActionsSubcommand,
+  trafficSubcommand,
+} from './command';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import output from '../../output-manager';
+import { getCommandAliases } from '..';
+import { FirewallTelemetryClient } from '../../util/telemetry/commands/firewall';
+import { getProjectOptionFromArgs } from '../../util/arg-common';
+
+const COMMAND_CONFIG = {
+  overview: getCommandAliases(overviewSubcommand),
+  status: getCommandAliases(statusSubcommand),
+  rules: getCommandAliases(rulesSubcommand),
+  diff: getCommandAliases(diffSubcommand),
+  publish: getCommandAliases(publishSubcommand),
+  discard: getCommandAliases(discardSubcommand),
+  'ip-blocks': getCommandAliases(ipBlocksSubcommand),
+  'system-bypass': getCommandAliases(systemBypassSubcommand),
+  'attack-mode': getCommandAliases(attackModeSubcommand),
+  'system-mitigations': getCommandAliases(systemMitigationsSubcommand),
+  alerts: getCommandAliases(alertsSubcommand),
+  'persistent-actions': getCommandAliases(persistentActionsSubcommand),
+  traffic: getCommandAliases(trafficSubcommand),
+  'bot-management': getCommandAliases(botManagementSubcommand),
+};
+
+export default async function main(client: Client) {
+  const telemetry = new FirewallTelemetryClient({
+    opts: {
+      store: client.telemetryEventStore,
+    },
+  });
+
+  let parsedArgs;
+  const flagsSpecification = getFlagsSpecification(firewallCommand.options);
+  try {
+    parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification, {
+      permissive: true,
+    });
+  } catch (err) {
+    printError(err);
+    return 2;
+  }
+
+  const subArgs = parsedArgs.args.slice(1);
+  const { subcommand, args, subcommandOriginal } = getSubcommand(
+    subArgs,
+    COMMAND_CONFIG
+  );
+
+  const needHelp = parsedArgs.flags['--help'];
+
+  if (!subcommand && needHelp) {
+    telemetry.trackCliFlagHelp('firewall');
+    output.print(
+      help(firewallCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
+  }
+
+  function printHelp(command: Command) {
+    output.print(
+      help(command, {
+        stream: client.stderr,
+        parent: firewallCommand,
+        columns: client.stderr.columns,
+      })
+    );
+  }
+
+  if (subcommand && !needHelp) {
+    telemetry.trackCliOptionProject(getProjectOptionFromArgs(args));
+    telemetry.trackCliFlagTeamLevel(args.includes('--team-level'));
+  }
+
+  switch (subcommand) {
+    case 'status':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(statusSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandStatus(subcommandOriginal);
+      return status(client, args);
+    case 'overview':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(overviewSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandOverview(subcommandOriginal);
+      return overview(client, args);
+    case 'diff':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(diffSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandDiff(subcommandOriginal);
+      return diff(client, args);
+    case 'publish':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(publishSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandPublish(subcommandOriginal);
+      return publish(client, args);
+    case 'discard':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(discardSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandDiscard(subcommandOriginal);
+      return discard(client, args);
+    case 'rules': {
+      telemetry.trackCliSubcommandRules(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return rules(client, nestedArgs, telemetry);
+    }
+    case 'ip-blocks': {
+      telemetry.trackCliSubcommandIpBlocks(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return ipBlocks(client, nestedArgs, telemetry);
+    }
+    case 'system-bypass': {
+      telemetry.trackCliSubcommandSystemBypass(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return systemBypass(client, nestedArgs, telemetry);
+    }
+    case 'attack-mode': {
+      telemetry.trackCliSubcommandAttackMode(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return attackMode(client, nestedArgs, telemetry);
+    }
+    case 'system-mitigations': {
+      telemetry.trackCliSubcommandSystemMitigations(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return systemMitigations(client, nestedArgs, telemetry);
+    }
+    case 'alerts': {
+      telemetry.trackCliSubcommandAlerts(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return alerts(client, nestedArgs, telemetry);
+    }
+    case 'persistent-actions': {
+      telemetry.trackCliSubcommandPersistentActions(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return persistentActions(client, nestedArgs, telemetry);
+    }
+    case 'traffic': {
+      telemetry.trackCliSubcommandTraffic(subcommandOriginal);
+      const nestedArgs = needHelp ? [...args, '--help'] : args;
+      return traffic(client, nestedArgs, telemetry);
+    }
+    case 'bot-management':
+      if (needHelp) {
+        telemetry.trackCliFlagHelp('firewall', subcommandOriginal);
+        printHelp(botManagementSubcommand);
+        return 0;
+      }
+      telemetry.trackCliSubcommandBotManagement(subcommandOriginal);
+      return botManagement(client, args);
+    default:
+      output.error(getInvalidSubcommand(COMMAND_CONFIG));
+      output.print(
+        help(firewallCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
+      return 2;
+  }
+}

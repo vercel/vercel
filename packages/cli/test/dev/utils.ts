@@ -1,15 +1,20 @@
 import fs from 'fs-extra';
+import net from 'net';
+import { createHash, randomBytes } from 'crypto';
 import { join, resolve } from 'path';
 import type { ExecaChildProcess } from 'execa';
 import _execa, { type Options } from 'execa';
-import nodeFetch, { type RequestInit, type Response } from 'node-fetch';
+import nodeFetch, {
+  type RequestInit,
+  type Response,
+} from '../../src/util/fetch';
 import retry from 'async-retry';
 import { satisfies } from 'semver';
 import stripAnsi from 'strip-ansi';
 import { fetchCachedToken } from '../../../../test/lib/deployment/now-deploy';
 import { spawnSync, execFileSync } from 'child_process';
 
-jest.setTimeout(10 * 60 * 1000);
+vi.setConfig({ testTimeout: 10 * 60 * 1000, hookTimeout: 10 * 60 * 1000 });
 
 const isCI = !!process.env.CI;
 
@@ -19,11 +24,22 @@ export function sleep(ms: number) {
 
 const BASE_PORT = 3000;
 const PORTS_PER_WORKER = 1000;
-const rawWorkerId = Number.parseInt(process.env.JEST_WORKER_ID || '1', 10);
+const rawWorkerId = Number.parseInt(process.env.VITEST_WORKER_ID || '1', 10);
 const workerId =
   Number.isFinite(rawWorkerId) && rawWorkerId > 0 ? rawWorkerId : 1;
 
-// Jest may run dev integration files in parallel workers. Keep each worker
+export function getDevResourcePorts(): {
+  queuePort: number;
+  runtimeCachePort: number;
+} {
+  const workerPortBase = BASE_PORT + (workerId - 1) * PORTS_PER_WORKER;
+  return {
+    queuePort: workerPortBase + PORTS_PER_WORKER - 2,
+    runtimeCachePort: workerPortBase + PORTS_PER_WORKER - 1,
+  };
+}
+
+// Vitest may run dev integration files in parallel workers. Keep each worker
 // in its own port range to avoid cross-worker collisions.
 let port = BASE_PORT + (workerId - 1) * PORTS_PER_WORKER;
 
@@ -121,7 +137,6 @@ function printOutput(fixture: string, stdout: string, stderr: string) {
     return nr === 0 ? '╭' : nr === lines.length - 1 ? '╰' : '│';
   };
 
-  // eslint-disable-next-line no-console
   console.log(
     lines.map((line, index) => ` ${getPrefix(index)} ${line}`).join('\n')
   );
@@ -129,7 +144,6 @@ function printOutput(fixture: string, stdout: string, stderr: string) {
 
 export function shouldSkip(name: string, versions: string) {
   if (!satisfies(process.version, versions)) {
-    // eslint-disable-next-line no-console
     console.log(`Skipping "${name}" because it requires "${versions}".`);
     return true;
   }
@@ -152,10 +166,164 @@ export function validateResponseHeaders(res: Response, podId?: string) {
   }
 }
 
+export function webSocketEcho(
+  port: number,
+  path: string,
+  message: string
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const socket = net.connect(port, '127.0.0.1');
+    const key = randomBytes(16).toString('base64');
+    let buffer: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
+    let handshakeComplete = false;
+    let settled = false;
+
+    const timeout = setTimeout(() => {
+      fail(new Error('Timed out waiting for WebSocket response'));
+    }, 10_000);
+
+    const settle = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      fn();
+    };
+
+    const fail = (error: Error) => {
+      settle(() => {
+        socket.destroy();
+        reject(error);
+      });
+    };
+
+    socket.once('error', fail);
+    socket.on('data', chunk => {
+      buffer = appendBytes(buffer, toBytes(chunk));
+
+      if (!handshakeComplete) {
+        const headerEnd = indexOfBytes(buffer, headerSeparator);
+        if (headerEnd === -1) return;
+
+        const headers = Buffer.from(buffer.subarray(0, headerEnd)).toString(
+          'utf8'
+        );
+        if (!headers.startsWith('HTTP/1.1 101 Switching Protocols')) {
+          fail(new Error(`Unexpected WebSocket handshake:\n${headers}`));
+          return;
+        }
+
+        const accept = createHash('sha1')
+          .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
+          .digest('base64');
+        if (
+          !headers
+            .toLowerCase()
+            .includes(`sec-websocket-accept: ${accept.toLowerCase()}`)
+        ) {
+          fail(new Error(`Unexpected Sec-WebSocket-Accept:\n${headers}`));
+          return;
+        }
+
+        handshakeComplete = true;
+        buffer = buffer.subarray(headerEnd + 4);
+        socket.write(maskedTextFrame(message));
+      }
+
+      const text = readTextFrame(buffer);
+      if (text !== undefined) {
+        settle(() => {
+          socket.end();
+          resolve(text);
+        });
+      }
+    });
+
+    socket.write(
+      [
+        `GET ${path} HTTP/1.1`,
+        `Host: 127.0.0.1:${port}`,
+        'Upgrade: websocket',
+        'Connection: Upgrade',
+        `Sec-WebSocket-Key: ${key}`,
+        'Sec-WebSocket-Version: 13',
+        '',
+        '',
+      ].join('\r\n')
+    );
+  });
+}
+
+const headerSeparator: Uint8Array<ArrayBufferLike> = new Uint8Array([
+  13, 10, 13, 10,
+]);
+
+function appendBytes(
+  a: Uint8Array<ArrayBufferLike>,
+  b: Uint8Array<ArrayBufferLike>
+): Uint8Array<ArrayBufferLike> {
+  const next = new Uint8Array(a.length + b.length);
+  next.set(a, 0);
+  next.set(b, a.length);
+  return next;
+}
+
+function toBytes(buffer: ArrayLike<number>): Uint8Array<ArrayBufferLike> {
+  const bytes = new Uint8Array(buffer.length);
+  for (let i = 0; i < buffer.length; i++) {
+    bytes[i] = buffer[i];
+  }
+  return bytes;
+}
+
+function indexOfBytes(
+  buffer: Uint8Array<ArrayBufferLike>,
+  needle: Uint8Array<ArrayBufferLike>
+): number {
+  for (let i = 0; i <= buffer.length - needle.length; i++) {
+    let matches = true;
+    for (let j = 0; j < needle.length; j++) {
+      if (buffer[i + j] !== needle[j]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return i;
+  }
+  return -1;
+}
+
+function maskedTextFrame(message: string): Uint8Array<ArrayBufferLike> {
+  const payload = Buffer.from(message);
+  const mask = randomBytes(4);
+  const frame = new Uint8Array(6 + payload.length);
+  frame[0] = 0x81;
+  frame[1] = 0x80 | payload.length;
+  frame.set(mask, 2);
+
+  for (let i = 0; i < payload.length; i++) {
+    frame[6 + i] = payload[i] ^ mask[i % 4];
+  }
+
+  return frame;
+}
+
+function readTextFrame(
+  buffer: Uint8Array<ArrayBufferLike>
+): string | undefined {
+  if (buffer.length < 2) return undefined;
+
+  const length = buffer[1] & 0x7f;
+  if (length > 125) {
+    throw new Error('Test WebSocket client only supports small frames');
+  }
+  if (buffer.length < 2 + length) return undefined;
+
+  return Buffer.from(buffer.subarray(2, 2 + length)).toString('utf8');
+}
+
 export async function exec(directory: string, args: string[] = []) {
   const token = await fetchCachedToken();
 
-  // eslint-disable-next-line no-console
   console.log(
     `exec() ${binaryPath} dev ${directory} -t ***${
       process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
@@ -201,16 +369,13 @@ export async function testPath(
   const opts: FetchOptions = {
     retries: isCI ? 5 : 0,
     ...fetchOpts,
-    // @ts-expect-error - this value is part of a hack to work around
-    // https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
-    redirect: 'manual-dont-change',
+    redirect: 'manual',
     status,
   };
   const url = `${origin}${path}`;
   const res = await fetchWithRetry(url, opts);
   const msg = `Testing response from ${fetchOpts.method || 'GET'} ${url}`;
 
-  // eslint-disable-next-line no-console
   console.log(msg);
   expect(res.status, getEnvironmentMessage(isDev)).toBe(status);
   validateResponseHeaders(res);
@@ -231,13 +396,7 @@ export async function testPath(
 
   if (expectedHeaders) {
     Object.entries(expectedHeaders).forEach(([key, expectedValue]) => {
-      let actualValue = res.headers.get(key);
-      if (key.toLowerCase() === 'location' && actualValue === '//') {
-        // HACK: `node-fetch` has strange behavior for location header so fix it
-        // with `manual-dont-change` opt and convert double slash to single.
-        // See https://github.com/node-fetch/node-fetch/issues/417#issuecomment-587233352
-        actualValue = '/';
-      }
+      const actualValue = res.headers.get(key);
       expect(actualValue, getEnvironmentMessage(isDev)).toBe(expectedValue);
     });
   }
@@ -252,14 +411,16 @@ function getEnvironmentMessage(isDev: boolean): string {
 
 export async function testFixture(
   directory: string,
-  opts: Options<null> = {},
+  opts: Options<null> & { skipNpmInstall?: boolean } = {},
   args: string[] = []
 ) {
-  await runNpmInstall(directory);
+  const { skipNpmInstall, ...execaOpts } = opts;
+  if (!skipNpmInstall) {
+    await runNpmInstall(directory);
+  }
 
   const token = await fetchCachedToken();
 
-  // eslint-disable-next-line no-console
   console.log(
     `testFixture() ${binaryPath} dev ${directory} -t ***${
       process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
@@ -283,8 +444,8 @@ export async function testFixture(
       reject: false,
       shell: true,
       stdio: 'pipe',
-      ...opts,
-      env: { ...opts.env, __VERCEL_SKIP_DEV_CMD: '1' },
+      ...execaOpts,
+      env: { ...execaOpts.env, __VERCEL_SKIP_DEV_CMD: '1' },
     }
   );
 
@@ -311,6 +472,8 @@ export async function testFixture(
 
     if (stripAnsi(stderr).includes('Ready! Available at')) {
       readyResolver.resolve(null);
+    } else if (stripAnsi(stderr).includes('Available at:')) {
+      readyResolver.resolve(null);
     }
   });
 
@@ -321,7 +484,6 @@ export async function testFixture(
     devTimer = setTimeout(async () => {
       const pids = Object.keys(await ps(dev.pid!)).join(', ');
 
-      // eslint-disable-next-line no-console
       console.error(
         `Test ${directory} exited with code ${code}, but has timed out closing stdio\n` +
           (pids
@@ -401,11 +563,16 @@ export function testFixtureStdio(
 
         args.push('deploy');
 
-        if (process.env.VERCEL_CLI_VERSION) {
-          args.push(
-            '--build-env',
-            `VERCEL_CLI_VERSION=${process.env.VERCEL_CLI_VERSION}`
-          );
+        const buildEnvNames = [
+          'VERCEL_CLI_VERSION',
+          'VERCEL_RUNTIME_PYTHON',
+          'VERCEL_WORKERS_PYTHON',
+        ] as const;
+        for (const buildEnvName of buildEnvNames) {
+          const buildEnvValue = process.env[buildEnvName];
+          if (buildEnvValue) {
+            args.push('--build-env', `${buildEnvName}=${buildEnvValue}`);
+          }
         }
 
         args.push('--debug');
@@ -441,13 +608,13 @@ export function testFixtureStdio(
 
     let stdout = '';
     let stderr = '';
+    let tornDown = false;
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
     try {
       let printedOutput = false;
 
-      // eslint-disable-next-line no-console
       console.log(
         `testFixtureStdio() ${binaryPath} dev -l ${port} -t ***${
           process.env.VERCEL_TEAM_ID ? ' --scope ***' : ''
@@ -506,7 +673,7 @@ export function testFixtureStdio(
           );
         }
 
-        if (stderr.includes('Command failed')) {
+        if (!tornDown && stderr.includes('Command failed')) {
           await nukeProcessTree(dev.pid!);
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
@@ -540,6 +707,7 @@ export function testFixtureStdio(
       };
       await fn(helperTestPath, port);
     } finally {
+      tornDown = true;
       // @ts-ignore
       await nukeProcessTree(dev.pid);
       await exitResolver;
@@ -569,7 +737,6 @@ async function ps(parentPid: number, pids: Record<string, Array<number>> = {}) {
     }
   } catch (err) {
     const error = err as Error;
-    // eslint-disable-next-line no-console
     console.log(`Failed to get processes: ${error.toString()}`);
   }
   return pids;
@@ -581,7 +748,6 @@ async function nukePID(
   retries: number = 10
 ) {
   if (retries === 0) {
-    // eslint-disable-next-line no-console
     console.log(`pid ${pid} won't die, giving up`);
     return;
   }
@@ -589,10 +755,9 @@ async function nukePID(
   // kill the process
   try {
     process.kill(pid, signal);
-  } catch (e) {
+  } catch (_e) {
     // process does not exist
 
-    // eslint-disable-next-line no-console
     console.log(`pid ${pid} is not running`);
     return;
   }
@@ -602,18 +767,16 @@ async function nukePID(
   try {
     // check if killed
     process.kill(pid, 0);
-  } catch (e) {
-    // eslint-disable-next-line no-console
+  } catch (_e) {
     console.log(`pid ${pid} is not running`);
     return;
   }
 
-  // eslint-disable-next-line no-console
   console.log(`pid ${pid} didn't exit, sending SIGKILL (retries ${retries})`);
   await nukePID(pid, 'SIGKILL', retries - 1);
 }
 
-async function nukeProcessTree(pid: number, signal?: string) {
+export async function nukeProcessTree(pid: number, signal?: string) {
   if (process.platform === 'win32') {
     spawnSync('taskkill', ['/pid', pid.toString(), '/T', '/F'], {
       stdio: 'inherit',
@@ -625,7 +788,6 @@ async function nukeProcessTree(pid: number, signal?: string) {
     [pid]: [],
   });
 
-  // eslint-disable-next-line no-console
   console.log(`Nuking pids: ${Object.keys(pids).join(', ')}`);
   await Promise.all(Object.keys(pids).map(pid => nukePID(Number(pid), signal)));
 }
@@ -636,9 +798,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   await Promise.all(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     Array.from(processList).map(async ([_procId, proc]) => {
-      // eslint-disable-next-line no-console
       console.log(`killing process ${proc.pid} "${proc.spawnargs.join(' ')}"`);
 
       try {
@@ -648,7 +808,6 @@ afterEach(async () => {
 
         // Was already killed
         if (error.code !== 'ESRCH') {
-          // eslint-disable-next-line no-console
           console.error('Failed to kill process', proc.pid, error);
         }
       }

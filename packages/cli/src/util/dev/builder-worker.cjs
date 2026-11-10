@@ -16,9 +16,9 @@ const crypto = require('crypto');
 const ZIP_BUFFER_FILE_THRESHOLD = 256 * 1024 * 1024; // 256MB
 
 process.on('unhandledRejection', err => {
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: intentional console usage
   console.error('Exiting builder due to build error:');
-  // eslint-disable-next-line no-console
+  // biome-ignore lint/suspicious/noConsole: intentional console usage
   console.error(err);
   process.exit(1);
 });
@@ -47,11 +47,19 @@ async function processMessage(message) {
     buildOptions.files[name] = ref;
   }
 
-  const result = await builder.build(buildOptions);
+  let result = await builder.build(buildOptions);
 
   // `@vercel/next` sets this, but it causes "Converting circular
   // structure to JSON" errors, so delete the property...
   delete result.childProcesses;
+
+  // Unwrap BuildResultVX (builder.version === -1) to the actual V2 or V3 result.
+  // effectiveVersion reflects the actual result version for downstream checks.
+  let effectiveVersion = builder.version;
+  if (builder.version === -1) {
+    effectiveVersion = result.resultVersion;
+    result = result.result;
+  }
 
   // Helper to handle zipBuffer - writes to temp file if too large for IPC
   async function processLambdaOutput(output) {
@@ -77,13 +85,20 @@ async function processMessage(message) {
     }
   }
 
-  if (builder.version === 3) {
-    if (result.output.type === 'Lambda') {
+  // Container Lambdas carry an OCI image reference in `handler`, not a code
+  // bundle, so there is nothing to zip. They are built and run locally by the
+  // builder's `startDevServer`; calling `createZip()` on them would throw since
+  // the output is a plain image-reference object.
+  const isZippableLambda = output =>
+    output.type === 'Lambda' && output.runtime !== 'container';
+
+  if (effectiveVersion === 3) {
+    if (isZippableLambda(result.output)) {
       await processLambdaOutput(result.output);
     }
   } else {
     for (const output of Object.values(result.output)) {
-      if (output.type === 'Lambda') {
+      if (isZippableLambda(output)) {
         await processLambdaOutput(output);
       }
     }

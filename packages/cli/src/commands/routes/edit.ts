@@ -1,13 +1,16 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { editSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   resolveRoute,
   offerAutoPromote,
+  shellQuoteRouteIdentifierForSuggestion,
+  withGlobalFlags,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import {
   runInteractiveEditLoop,
   cloneRoute,
@@ -29,15 +32,18 @@ import {
   printGeneratedRoutePreview,
 } from '../../util/routes/ai-transform';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { hasAnyTransformFlags } from '../../util/routes/interactive';
 import type { RoutingRule } from '../../util/routes/types';
 
 export default async function edit(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, editSubcommand);
+  const parsed = await parseSubcommandArgs(argv, editSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -110,10 +116,32 @@ export default async function edit(client: Client, argv: string[]) {
   telemetry.trackCliOptionAi(flags['--ai'] as string | undefined);
 
   if (!identifier) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message:
+            'Route name or ID is required as the first argument after routes update.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes update <name-or-id>'),
+              when: 'replace <name-or-id> with route name or id from routes list',
+            },
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to list routes',
+            },
+          ],
+        },
+        2
+      );
+    }
     output.error(
-      `Route name or ID is required. Usage: ${getCommandName('routes edit <name-or-id>')}`
+      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes update <name-or-id>')}`
     );
-    return 1;
+    return 2;
   }
 
   // Check for existing staging version (for auto-promote logic)
@@ -126,6 +154,26 @@ export default async function edit(client: Client, argv: string[]) {
   output.stopSpinner();
 
   if (routes.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: 'No routes found in this project.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'routes add --ai <description> --yes'
+              ),
+              when: 'add a route first (or use full options)',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error('No routes found in this project.');
     return 1;
   }
@@ -133,10 +181,29 @@ export default async function edit(client: Client, argv: string[]) {
   // Resolve the route
   const originalRoute = await resolveRoute(client, routes, identifier);
   if (!originalRoute) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: `No route found matching "${identifier}".`,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to list routes and pick an exact name or id',
+            },
+            {
+              command: withGlobalFlags(client, 'routes update <name-or-id>'),
+              when: 'retry with a unique name or id',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
-      `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
-      )} to see all routes.`
+      `No route found matching "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'routes list'))} to see all routes.`
     );
     return 1;
   }
@@ -173,10 +240,30 @@ export default async function edit(client: Client, argv: string[]) {
     ];
     const usedConflicts = conflictingFlags.filter(f => flags[f] !== undefined);
     if (usedConflicts.length > 0) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: `Cannot use --ai with ${usedConflicts.join(', ')}. Use --ai alone to describe changes.`,
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  `routes update ${shellQuoteRouteIdentifierForSuggestion(identifier)} --ai <description> --yes`
+                ),
+                when: 'use only --ai with route id/name already set',
+              },
+            ],
+          },
+          2
+        );
+      }
       output.error(
         `Cannot use --ai with ${usedConflicts.join(', ')}. Use --ai alone to describe changes.`
       );
-      return 1;
+      return 2;
     }
 
     return await handleAIEdit(
@@ -215,16 +302,58 @@ export default async function edit(client: Client, argv: string[]) {
     // --- Flag-based mode ---
     const error = applyFlagMutations(route, flags);
     if (error) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'invalid_arguments',
+            message: error,
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  `routes update ${shellQuoteRouteIdentifierForSuggestion(identifier)} ...`
+                ),
+                when: 'fix options per message; see routes update --help',
+              },
+            ],
+          },
+          2
+        );
+      }
       output.error(error);
-      return 1;
+      return 2;
     }
   } else {
     // --- Interactive mode ---
-    if (!client.stdin.isTTY) {
+    if (!client.stdin.isTTY || client.nonInteractive) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: 'error',
+            reason: 'missing_arguments',
+            message:
+              'No update options provided. In non-interactive mode pass options such as --name, --src, --dest, --action, header options, or --ai <description> --yes.',
+            next: [
+              {
+                command: withGlobalFlags(
+                  client,
+                  `routes update ${shellQuoteRouteIdentifierForSuggestion(identifier)} --dest <dest> --yes`
+                ),
+                when: 'example: set destination; see routes update --help',
+              },
+            ],
+            hint: 'Run vercel routes update --help for all options.',
+          },
+          2
+        );
+      }
       output.error(
-        `No edit flags provided. When running non-interactively, use flags like --name, --dest, --src, etc. Run ${getCommandName('routes edit --help')} for all options.`
+        `No update options provided. When running non-interactively, use options like --name, --dest, --src, etc. Run ${withGlobalFlags(client, 'routes update --help')} for all options.`
       );
-      return 1;
+      return 2;
     }
 
     output.log(`\nEditing route "${originalRoute.name}"`);
@@ -232,7 +361,7 @@ export default async function edit(client: Client, argv: string[]) {
 
     // Offer AI or manual editing
     const editMode = await client.input.select({
-      message: 'How would you like to edit this route?',
+      message: 'How would you like to update this route?',
       choices: [
         { name: 'Describe changes (AI-powered)', value: 'ai' },
         { name: 'Edit manually (field by field)', value: 'manual' },
@@ -256,7 +385,7 @@ export default async function edit(client: Client, argv: string[]) {
   }
 
   // Populate env fields for $VAR references
-  populateRouteEnv(route.route);
+  populateRouteEnv(route.route, route.srcSyntax);
 
   // Check if anything actually changed
   if (JSON.stringify(route) === JSON.stringify(originalRoute)) {
@@ -406,7 +535,7 @@ async function handleAIEdit(
 
   if (!client.stdin.isTTY) {
     output.error(
-      `Cannot interactively confirm route changes in a non-TTY environment. Use ${getCommandName('routes edit <name-or-id> --ai "..." --yes')} to skip confirmation.`
+      `Cannot interactively confirm route changes in a non-TTY environment. Use ${withGlobalFlags(client, 'routes update <name-or-id> --ai "..." --yes')} to skip confirmation.`
     );
     return 1;
   }
@@ -494,7 +623,7 @@ async function handleAIEdit(
       manualRoute.route = routeInput.route;
 
       await runInteractiveEditLoop(client, manualRoute);
-      populateRouteEnv(manualRoute.route);
+      populateRouteEnv(manualRoute.route, manualRoute.srcSyntax);
 
       const editStamp = stamp();
       output.spinner(`Updating route "${manualRoute.name}"`);
@@ -551,7 +680,7 @@ async function applyAIEdit(
   skipConfirmation: boolean | undefined
 ): Promise<number> {
   const routeInput = generatedRouteToAddInput(generated);
-  populateRouteEnv(routeInput.route);
+  populateRouteEnv(routeInput.route, routeInput.srcSyntax);
 
   const editStamp = stamp();
   output.spinner(`Updating route "${routeInput.name}"`);

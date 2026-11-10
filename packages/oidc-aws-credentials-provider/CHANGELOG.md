@@ -1,5 +1,207 @@
 # @vercel/oidc
 
+## 3.3.16
+
+### Patch Changes
+
+- @vercel/oidc@4.0.4
+
+## 3.3.15
+
+### Patch Changes
+
+- @vercel/oidc@4.0.3
+
+## 3.3.14
+
+### Patch Changes
+
+- @vercel/oidc@4.0.2
+
+## 3.3.13
+
+### Patch Changes
+
+- Updated dependencies [d032cfb]
+  - @vercel/oidc@4.0.1
+
+## 3.3.12
+
+### Patch Changes
+
+- Updated dependencies [baad6f5]
+  - @vercel/oidc@5.0.0
+
+## 3.3.11
+
+### Patch Changes
+
+- Updated dependencies [ec76b68]
+  - @vercel/oidc@4.0.0
+
+## 3.3.10
+
+### Patch Changes
+
+- @vercel/oidc@3.8.10
+
+## 3.3.9
+
+### Patch Changes
+
+- @vercel/oidc@3.8.9
+
+## 3.3.8
+
+### Patch Changes
+
+- @vercel/oidc@3.8.8
+
+## 3.3.7
+
+### Patch Changes
+
+- @vercel/oidc@3.8.7
+
+## 3.3.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.6
+
+## 3.3.5
+
+### Patch Changes
+
+- @vercel/oidc@3.8.5
+
+## 3.3.4
+
+### Patch Changes
+
+- Updated dependencies [2da7809]
+  - @vercel/oidc@3.8.4
+
+## 3.3.3
+
+### Patch Changes
+
+- @vercel/oidc@3.8.3
+
+## 3.3.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/oidc@3.8.2
+
+## 3.3.1
+
+### Patch Changes
+
+- @vercel/oidc@3.8.1
+
+## 3.3.0
+
+### Minor Changes
+
+- d29a8f9: Cache exchanged OIDC tokens in memory, keyed by a hash of the source token, audience, and jti, so repeated exchanges reuse the result instead of calling the token-exchange endpoint every time. Cached tokens are evicted when the API-provided expiry passes, and the cache is bounded with least-recently-used eviction to avoid unbounded growth. Add a `skipCache` option (surfaced as `skipTokenCache` on `awsCredentialsProvider`) to bypass the cache. `jti` and the cache-skip flags are now only accepted alongside an `audience`, since they only take effect during a token exchange.
+
+### Patch Changes
+
+- Updated dependencies [d29a8f9]
+  - @vercel/oidc@3.8.0
+
+## 3.2.1
+
+### Patch Changes
+
+- Updated dependencies [fb93ff6]
+  - @vercel/oidc@3.7.1
+
+## 3.2.0
+
+### Minor Changes
+
+- 415fde0: Add optional `audience` and `jti` parameters to exchange Vercel OIDC tokens for use with AWS STS and other providers.
+
+### Patch Changes
+
+- Updated dependencies [415fde0]
+  - @vercel/oidc@3.7.0
+
+## 3.1.5
+
+### Patch Changes
+
+- @vercel/oidc@3.6.2
+
+## 3.1.4
+
+### Patch Changes
+
+- Updated dependencies [01cf6c2]
+  - @vercel/oidc@3.6.1
+
+## 3.1.3
+
+### Patch Changes
+
+- Updated dependencies [fddeb55]
+  - @vercel/oidc@3.6.0
+
+## 3.1.2
+
+### Patch Changes
+
+- Updated dependencies [5a700dc]
+  - @vercel/oidc@3.5.0
+
+## 3.1.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+- Updated dependencies [ae20217]
+  - @vercel/oidc@3.4.1
+
+## 3.1.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/oidc@3.4.0
+
+## 3.0.10
+
+### Patch Changes
+
+- Updated dependencies [bf07448]
+  - @vercel/oidc@3.3.1
+
+## 3.0.9
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+- Updated dependencies [24686d0]
+- Updated dependencies [56c9f89]
+  - @vercel/oidc@3.3.0
+
+## 3.0.8
+
+### Patch Changes
+
+- Pin `typedoc-plugin-markdown` to `3.15.2` and `typedoc-plugin-mdn-links` to `3.0.3` to match the version used by `@vercel/edge`. The previous `4.1.2` version requires `typedoc@0.26.x` as a peer dependency but was paired with `typedoc@0.24.6`, which caused CI failures whenever pnpm hoisted the 4.x plugin (the plugin calls `app.internationalization.addTranslations`, which does not exist in typedoc 0.24). The choice of which plugin version got hoisted was non-deterministic, which is why the failure appeared as flaky `Build @vercel/<pkg>` steps in CI. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
+- Updated dependencies [[`2aa78415831fe89d1b21dd89704706bd1ad5e78d`](https://github.com/vercel/vercel/commit/2aa78415831fe89d1b21dd89704706bd1ad5e78d)]:
+  - @vercel/oidc@3.2.1
+
 ## 3.0.7
 
 ### Patch Changes

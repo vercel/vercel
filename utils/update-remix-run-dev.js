@@ -4,7 +4,7 @@ const fs = require('fs');
 
 module.exports = async ({ github, context }, newVersion) => {
   execSync('git config --global user.email infra+release@vercel.com');
-  execSync('git config --global user.name vercel-release-bot');
+  execSync('git config --global user.name vercel-cli-release-bot');
   execSync('git checkout main');
 
   const repoRootPath = path.join(__dirname, '..');

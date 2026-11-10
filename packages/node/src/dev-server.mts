@@ -15,7 +15,12 @@ import {
   createServerlessEventHandler,
   HTTP_METHODS,
 } from './serverless-functions/serverless-handler.mjs';
-import { isEdgeRuntime, logError, validateConfiguredRuntime } from './utils.js';
+import {
+  isEdgeRuntime,
+  logError,
+  resolveMiddlewareRuntime,
+  validateConfiguredRuntime,
+} from './utils.js';
 import { init, parse as parseEsm } from 'es-module-lexer';
 import { parse as parseCjs } from 'cjs-module-lexer';
 import { getConfig } from '@vercel/static-config';
@@ -29,7 +34,10 @@ const parseConfig = (entryPointPath: string) =>
 async function createEventHandler(
   entrypoint: string,
   config: Config,
-  options: { shouldAddHelpers: boolean }
+  options: {
+    shouldAddHelpers: boolean;
+    buildEnv: Record<string, string | undefined>;
+  }
 ): Promise<{
   handler: (request: IncomingMessage) => Promise<VercelProxyResponse>;
   onExit: (() => Promise<void>) | undefined;
@@ -40,15 +48,29 @@ async function createEventHandler(
   const runtime = staticConfig?.runtime;
   validateConfiguredRuntime(runtime, entrypoint);
 
-  const { maxDuration } = await getLambdaOptionsFromFunction({
-    sourceFile: entrypoint,
-    config,
-  });
+  const { maxDuration: configMaxDuration } = await getLambdaOptionsFromFunction(
+    {
+      sourceFile: entrypoint,
+      config,
+    }
+  );
+
+  // In the dev server, 'max' can't be resolved to the plan's actual limit,
+  // so fall back to undefined to let the downstream default (WAIT_UNTIL_TIMEOUT) apply.
+  const maxDuration =
+    typeof configMaxDuration === 'number' ? configMaxDuration : undefined;
 
   const isMiddleware = config.middleware === true;
 
-  // middleware is edge by default, otherwise respect the runtime
-  const useEdgeRuntime = (isMiddleware && !runtime) || isEdgeRuntime(runtime);
+  const useEdgeRuntime = isMiddleware
+    ? resolveMiddlewareRuntime({
+        configuredRuntime: runtime,
+        middlewareRuntime: config.middlewareRuntime,
+        projectCreatedAt: config.projectSettings?.createdAt,
+        isDev: true,
+        env: { ...process.env, ...options.buildEnv },
+      }).runtime === 'edge'
+    : isEdgeRuntime(runtime);
 
   if (useEdgeRuntime) {
     return createEdgeEventHandler(
@@ -104,11 +126,13 @@ async function main() {
   );
 
   const proxyServer = createServer(onDevRequest);
-  await listen(proxyServer, { host: '127.0.0.1', port: 0 });
+  const requestedPort = Number(process.env.VERCEL_DEV_PORT) || 0;
+  await listen(proxyServer, { host: '127.0.0.1', port: requestedPort });
 
   try {
     const result = await createEventHandler(entrypoint!, config, {
       shouldAddHelpers,
+      buildEnv,
     });
     handleEvent = result.handler;
     onExit = result.onExit;

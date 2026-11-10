@@ -1,25 +1,31 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { deleteSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   resolveRoutes,
   offerAutoPromote,
+  withGlobalFlags,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import deleteRoutes from '../../util/routes/delete-routes';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 import { getRouteTypeLabel } from '../../util/routes/types';
 
 export default async function deleteRoute(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, deleteSubcommand);
+  const parsed = await parseSubcommandArgs(argv, deleteSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -28,10 +34,30 @@ export default async function deleteRoute(client: Client, argv: string[]) {
   const skipConfirmation = flags['--yes'] as boolean | undefined;
 
   if (args.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message: 'At least one route name or ID is required.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'routes remove <name-or-id> --yes'
+              ),
+              when: 'pass one or more ids/names and --yes to skip confirm',
+            },
+          ],
+        },
+        2
+      );
+    }
     output.error(
-      `At least one route name or ID is required. Usage: ${getCommandName('routes delete <name-or-id> [...]')}`
+      `At least one route name or ID is required. Usage: ${withGlobalFlags(client, 'routes remove <name-or-id> [...]')}`
     );
-    return 1;
+    return 2;
   }
 
   // Check for existing staging version (for auto-promote logic)
@@ -44,6 +70,17 @@ export default async function deleteRoute(client: Client, argv: string[]) {
   output.stopSpinner();
 
   if (routes.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_FOUND,
+          message: 'No routes found in this project.',
+        },
+        1
+      );
+    }
     output.error('No routes found in this project.');
     return 1;
   }
@@ -52,10 +89,10 @@ export default async function deleteRoute(client: Client, argv: string[]) {
   const resolved = await resolveRoutes(client, routes, args);
   if (!resolved) return 1;
 
-  // Show what will be deleted
+  // Show what will be removed
   output.print('\n');
   output.log(
-    `The following ${resolved.length === 1 ? 'route' : `${resolved.length} routes`} will be deleted:`
+    `The following ${resolved.length === 1 ? 'route' : `${resolved.length} routes`} will be removed:`
   );
   for (const route of resolved) {
     const typeLabels = getRouteTypeLabel(route);
@@ -67,8 +104,29 @@ export default async function deleteRoute(client: Client, argv: string[]) {
 
   // Confirm
   if (!skipConfirmation) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+          message:
+            'Removing routes requires confirmation. Pass --yes to skip the prompt in non-interactive mode.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                `routes remove ${args.join(' ')} --yes`
+              ),
+              when: 're-run with --yes to confirm without prompt',
+            },
+          ],
+        },
+        1
+      );
+    }
     const confirmed = await client.input.confirm(
-      `Delete ${resolved.length === 1 ? 'this route' : `these ${resolved.length} routes`}?`,
+      `Remove ${resolved.length === 1 ? 'this route' : `these ${resolved.length} routes`}?`,
       false
     );
     if (!confirmed) {
@@ -77,10 +135,10 @@ export default async function deleteRoute(client: Client, argv: string[]) {
     }
   }
 
-  // Delete
+  // Remove
   const deleteStamp = stamp();
   output.spinner(
-    `Deleting ${resolved.length === 1 ? 'route' : `${resolved.length} routes`}`
+    `Removing ${resolved.length === 1 ? 'route' : `${resolved.length} routes`}`
   );
 
   try {
@@ -92,7 +150,7 @@ export default async function deleteRoute(client: Client, argv: string[]) {
     );
 
     output.log(
-      `${chalk.cyan('Deleted')} ${deletedCount} ${deletedCount === 1 ? 'route' : 'routes'} ${chalk.gray(deleteStamp())}`
+      `${chalk.cyan('Removed')} ${deletedCount} ${deletedCount === 1 ? 'route' : 'routes'} ${chalk.gray(deleteStamp())}`
     );
 
     // Auto-promote offer
@@ -107,7 +165,22 @@ export default async function deleteRoute(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    output.error(error.message || 'Failed to delete routes');
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.API_ERROR,
+          message:
+            'Failed to remove routes for this project. See hint for error details.',
+          hint:
+            error.message ||
+            'Retry with the same command once transient issues are resolved.',
+        },
+        1
+      );
+    }
+    output.error(error.message || 'Failed to remove routes');
     return 1;
   }
 }

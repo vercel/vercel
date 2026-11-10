@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`action-headers should add action name meta routes 1`] = `
+exports[`action-headers > should add action name meta routes 1`] = `
 [
   "app/actions.js#increment",
   "app/rsc/dynamic/page.js#anonymous_fn",

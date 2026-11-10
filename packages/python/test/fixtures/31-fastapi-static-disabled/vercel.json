@@ -1,0 +1,7 @@
+{
+  "build": {
+    "env": {
+      "VERCEL_FASTAPI_STATIC_CDN": "1"
+    }
+  }
+}

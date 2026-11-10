@@ -1,0 +1,9 @@
+[project]
+name = "dependency-groups-duplicate"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+"vercel.proxy" = ["vercel-proxy"]
+vercel_proxy = ["httpx"]

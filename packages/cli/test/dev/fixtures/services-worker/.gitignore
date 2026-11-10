@@ -1,0 +1,4 @@
+.vercel/
+.venv/
+__pycache__/
+.results/

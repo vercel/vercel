@@ -1,5 +1,35 @@
 # @vercel/edge
 
+## 1.3.3
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 1.3.2
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
+## 1.3.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+
+## 1.3.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 1.2.3
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+
 ## 1.2.2
 
 ### Patch Changes

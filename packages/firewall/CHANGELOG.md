@@ -1,5 +1,59 @@
 # @vercel/firewall
 
+## 1.2.6
+
+### Patch Changes
+
+- 85bbc70: Add an optional `timeout` in milliseconds to `checkRateLimit` and `unstable_checkRateLimit` to abort the rate limit fetch. The default remains no timeout.
+
+## 1.2.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+
+## 1.2.4
+
+### Patch Changes
+
+- b4b3dd2: Run Firewall end-to-end tests on the default Node.js version.
+
+## 1.2.3
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+
+## 1.2.2
+
+### Patch Changes
+
+- 20ae4d3: Clarify rate limit key documentation and remove `x-real-ip` implementation detail from error message.
+
+## 1.2.1
+
+### Patch Changes
+
+- ae20217: Upgrade to TypeScript 5.9
+
+## 1.2.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+## 1.1.4
+
+### Patch Changes
+
+- 56c9f89: add missing prettier dev dependency
+
+## 1.1.3
+
+### Patch Changes
+
+- Pin `typedoc-plugin-markdown` to `3.15.2` and `typedoc-plugin-mdn-links` to `3.0.3` to match the version used by `@vercel/edge`. The previous `4.1.2` version requires `typedoc@0.26.x` as a peer dependency but was paired with `typedoc@0.24.6`, which caused CI failures whenever pnpm hoisted the 4.x plugin (the plugin calls `app.internationalization.addTranslations`, which does not exist in typedoc 0.24). The choice of which plugin version got hoisted was non-deterministic, which is why the failure appeared as flaky `Build @vercel/<pkg>` steps in CI. ([#16072](https://github.com/vercel/vercel/pull/16072))
+
 ## 1.1.2
 
 ### Patch Changes

@@ -1,0 +1,23 @@
+import fs from 'fs';
+import { join } from 'path';
+
+import {
+  testDeployment,
+  // @ts-ignore
+} from '../../../test/lib/deployment/test-deployment';
+
+vi.setConfig({ testTimeout: 10 * 60 * 1000, hookTimeout: 10 * 60 * 1000 });
+
+const fixturesPath = join(__dirname, 'fixtures', 'e2e');
+const e2eFixtures = fs
+  .readdirSync(fixturesPath)
+  .filter(name => fs.statSync(join(fixturesPath, name)).isDirectory())
+  .sort();
+const runFixtureTest = it.concurrent;
+
+for (const fixture of e2eFixtures) {
+  runFixtureTest(`Test e2e fixture "${fixture}"`, async () => {
+    const deployment = await testDeployment(join(fixturesPath, fixture));
+    expect(deployment).toBeDefined();
+  });
+}

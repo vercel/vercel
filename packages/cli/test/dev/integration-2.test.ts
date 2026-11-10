@@ -1,6 +1,9 @@
 import assert from 'assert';
+import fs from 'fs-extra';
 import { isIP } from 'net';
-import { exec, fixture, testFixture, testFixtureStdio } from './utils';
+import { join } from 'path';
+import nodeFetch from '../../src/util/fetch';
+import { exec, fixture, sleep, testFixture, testFixtureStdio } from './utils';
 
 test('[vercel dev] validate redirects', async () => {
   const directory = fixture('invalid-redirects');
@@ -84,6 +87,43 @@ test(
         Location: vcRobots,
       });
     }
+  )
+);
+
+test(
+  '[vercel dev] bulkRedirectsPath applies before other routing',
+  testFixtureStdio(
+    'test-bulk-redirects',
+    async (testPath: any) => {
+      await testPath(200, '/', 'Hello World');
+      await testPath(308, '/old-blog', 'Redirecting...', {
+        Location: '/blog',
+      });
+      await testPath(308, '/OLD-BLOG', 'Redirecting...', {
+        Location: '/blog',
+      });
+      await testPath(307, '/old-about', 'Redirecting...', {
+        Location: '/about',
+      });
+      await testPath(301, '/old-contact', 'Redirecting...', {
+        Location: '/contact',
+      });
+      await testPath(307, '/drop-query?foo=1', 'Redirecting...', {
+        Location: '/dropped',
+      });
+      await testPath(307, '/keep-query?foo=1', 'Redirecting...', {
+        Location: '/kept?foo=1',
+      });
+      await testPath(307, '/conflict', 'Redirecting...', {
+        Location: '/from-bulk',
+      });
+      await testPath(308, '/only-json', 'Redirecting...', {
+        Location: '/from-vercel-json-only',
+      });
+    },
+    // New fixture projects get Deployment Protection, so the helper's
+    // production fetch 302s to vercel.com/sso-api before local assertions.
+    { skipDeploy: true }
   )
 );
 
@@ -184,6 +224,82 @@ test(
 );
 
 test(
+  '[vercel dev] Should support Go standalone server mode',
+  testFixtureStdio('go-standalone', async (testPath: any) => {
+    await testPath(200, `/`, 'Standalone Go: /');
+    await testPath(
+      200,
+      `/some/nested/path`,
+      'Standalone Go: /some/nested/path'
+    );
+  })
+);
+
+test(
+  '[vercel dev] Should persist and reload Node standalone servers without package.json',
+  testFixtureStdio('node-standalone', async (_: unknown, port: number) => {
+    interface NodeStandaloneResponse {
+      instanceId: string;
+      marker: string;
+      pid: number;
+      requestCount: number;
+      url: string;
+    }
+
+    const requestDev = async (path: string) => {
+      const response = await nodeFetch(`http://localhost:${port}${path}`);
+      expect(response.status).toBe(200);
+      return (await response.json()) as NodeStandaloneResponse;
+    };
+
+    const devInstance = await requestDev('/');
+    expect(devInstance.url).toBe('/');
+    expect(devInstance.marker).toBe('initial');
+
+    const secondResponse = await requestDev('/some/nested/path');
+    expect(secondResponse.url).toBe('/some/nested/path');
+    expect(secondResponse.marker).toBe('initial');
+    expect(secondResponse.instanceId).toBe(devInstance.instanceId);
+    expect(secondResponse.pid).toBe(devInstance.pid);
+    expect(secondResponse.requestCount).toBe(devInstance.requestCount + 1);
+
+    const serverPath = join(fixture('node-standalone'), 'server.ts');
+    const originalSource = await fs.readFile(serverPath, 'utf8');
+
+    try {
+      await fs.writeFile(
+        serverPath,
+        originalSource.replace(
+          "const marker = 'initial';",
+          "const marker = 'updated';"
+        )
+      );
+
+      const deadline = Date.now() + 15_000;
+      let updatedResponse: NodeStandaloneResponse | undefined;
+      while (Date.now() < deadline) {
+        try {
+          const response = await requestDev('/reloaded');
+          if (response.marker === 'updated') {
+            updatedResponse = response;
+            break;
+          }
+        } catch {
+          // The previous server may be shutting down between polling requests.
+        }
+        await sleep(100);
+      }
+
+      expect(updatedResponse?.url).toBe('/reloaded');
+      expect(updatedResponse?.instanceId).not.toBe(devInstance.instanceId);
+      expect(updatedResponse?.requestCount).toBe(1);
+    } finally {
+      await fs.writeFile(serverPath, originalSource);
+    }
+  })
+);
+
+test(
   '[vercel dev] Should support `*.go` API serverless functions with external modules',
   testFixtureStdio('go-external-module', async (testPath: any) => {
     await testPath(200, `/api`, 'hello from go!');
@@ -195,12 +311,13 @@ test(
 test(
   '[vercel dev] Should support `*.go` API serverless functions with `go.work` and lib',
   testFixtureStdio('go-work-with-shared', async (testPath: any) => {
-    await testPath(200, `/api`, 'hello:go1.20.14');
+    // `vercel dev` builds with the newest supported toolchain, not the `go`
+    // directive, so assert the shared lib is linked without pinning a version.
+    await testPath(200, `/api`, /^hello:go1\.\d+(\.\d+)?\s*$/);
   })
 );
 
 // Skipping because it doesn't run yet on Node 22
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] Should set the `ts-node` "target" to match Node.js version',
   testFixtureStdio('node-ts-node-target', async (testPath: any) => {

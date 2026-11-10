@@ -1,5 +1,1332 @@
 # @vercel/fs-detectors
 
+## 7.11.1
+
+### Patch Changes
+
+- Updated dependencies [5f55ccc]
+- Updated dependencies [d0629bd]
+  - @vercel/build-utils@15.1.0
+
+## 7.11.0
+
+### Minor Changes
+
+- c424ce6: Resolve the proxy entrypoint and root-level middleware in one place.
+
+### Patch Changes
+
+- 2f0edaf: Report the runtime preset for services without a framework.
+- Updated dependencies [2f0edaf]
+  - @vercel/build-utils@15.0.2
+
+## 7.10.2
+
+### Patch Changes
+
+- Updated dependencies [1a379a3]
+  - @vercel/build-utils@15.0.1
+
+## 7.10.1
+
+### Patch Changes
+
+- 9e445b9: Load `@vercel/python-analysis` only when checking a Python entrypoint, not when the package loads.
+- Updated dependencies [9b1b587]
+- Updated dependencies [fec2df1]
+- Updated dependencies [d123652]
+  - @vercel/build-utils@15.0.0
+
+## 7.10.0
+
+### Minor Changes
+
+- 787f498: Report proxy runtime mismatch before framework conflict.
+
+### Patch Changes
+
+- Updated dependencies [7fea9e0]
+- Updated dependencies [9abaa6d]
+- Updated dependencies [179d4ab]
+- Updated dependencies [d39dd61]
+- Updated dependencies [5aa1b58]
+  - @vercel/python-analysis@0.15.2
+  - @vercel/build-utils@14.23.0
+
+## 7.9.12
+
+### Patch Changes
+
+- Updated dependencies [bdb4ecb]
+  - @vercel/python-analysis@0.15.1
+
+## 7.9.11
+
+### Patch Changes
+
+- a2e9f5d: Add `functions[glob].installCommand`. For matching `@vercel/node` functions, an empty string skips the dependency install and a non-empty value runs instead of the default install. Builds warn when the property matches functions of other runtimes, which ignore it.
+- Updated dependencies [a19979c]
+- Updated dependencies [a2e9f5d]
+  - @vercel/build-utils@14.22.0
+
+## 7.9.10
+
+### Patch Changes
+
+- Updated dependencies [bb42e81]
+  - @vercel/build-utils@14.21.3
+
+## 7.9.9
+
+### Patch Changes
+
+- Updated dependencies [cd68435]
+  - @vercel/build-utils@14.21.2
+
+## 7.9.8
+
+### Patch Changes
+
+- Updated dependencies [3d616ad]
+- Updated dependencies [1336097]
+  - @vercel/python-analysis@0.15.0
+  - @vercel/build-utils@14.21.1
+
+## 7.9.7
+
+### Patch Changes
+
+- da51924: Add `detectDaemons`, which reads the daemons (name and entrypoint) in `vercel.json` or `vercel.toml`.
+- 8845006: Accept Dockerfile and Containerfile names anywhere in the basename of explicit service and daemon entrypoints, such as `worker_Dockerfile`.
+- Updated dependencies [24a7e04]
+- Updated dependencies [7e396f7]
+  - @vercel/build-utils@14.21.0
+
+## 7.9.6
+
+### Patch Changes
+
+- 0d62534: Accept suffixed Dockerfile and Containerfile names in explicit service and daemon entrypoints.
+- Updated dependencies [42cc083]
+  - @vercel/build-utils@14.20.1
+
+## 7.9.5
+
+### Patch Changes
+
+- Updated dependencies [e041037]
+  - @vercel/build-utils@14.20.0
+
+## 7.9.4
+
+### Patch Changes
+
+- Updated dependencies [e58b37a]
+  - @vercel/build-utils@14.19.0
+
+## 7.9.3
+
+### Patch Changes
+
+- 8ac5320: Add an experimental workspace-scoped install path for Node builds to avoid installing unrelated monorepo workspaces.
+- Updated dependencies [94f6cea]
+- Updated dependencies [3eeaad5]
+- Updated dependencies [8ac5320]
+  - @vercel/build-utils@14.18.0
+
+## 7.9.2
+
+### Patch Changes
+
+- Updated dependencies [28a7ab7]
+- Updated dependencies [28a7ab7]
+  - @vercel/build-utils@14.17.0
+
+## 7.9.1
+
+### Patch Changes
+
+- Updated dependencies [20c5940]
+  - @vercel/build-utils@14.16.0
+
+## 7.9.0
+
+### Minor Changes
+
+- b0c985b: Build standalone Go servers with the Vercel Go buildpack and the container
+  runtime when `VERCEL_EXPERIMENTAL_BUILDPACK_GO=1`, instead of running them
+  behind the IPC proxy on Lambda. This applies to zero-config Go projects and
+  Go services with a `go.mod` at their root, including `package main` and
+  directory service entrypoints. `api/**/*.go` functions and Go handler
+  entrypoints keep using `@vercel/go`.
+
+  The build image is `golang:<version>-bookworm`, selected from the newer of
+  the go.mod `toolchain` and `go` directives. The buildpack defaults to
+  `GOTOOLCHAIN=local`, so the image's Go builds the module. It compiles the
+  package a service entrypoint names, or else the one `@vercel/go` would
+  build, passed as `VERCEL_GO_TARGET`, and the binary runs on distroless
+  Debian 12.
+
+- 5772e9e: Build Rust HTTP servers with a root `Cargo.toml` using the container builder when `VERCEL_EXPERIMENTAL_BUILDPACK_RUST=1`, selecting the build image from `rust-toolchain` or `rust-toolchain.toml` and serving `public/` from the root path. API functions and services with explicit file entrypoints continue using `@vercel/rust`.
+
+### Patch Changes
+
+- 1f558d0: `vercel dev` runs schedules that target an `entrypoint`. It plans them into the same functions `vercel build` does, such as `_vercel/schedules/default`, registers each one with the local scheduler, and builds it with the entrypoint's builder. Schedule functions are only invoked by the scheduler, never by a public URL. Projects with services still reject schedule entrypoints in `vercel dev`.
+- Updated dependencies [a7ef28c]
+  - @vercel/build-utils@14.15.0
+
+## 7.8.1
+
+### Patch Changes
+
+- Updated dependencies [deb48cd]
+  - @vercel/build-utils@14.14.0
+
+## 7.8.0
+
+### Minor Changes
+
+- 3520d5c: Detect Dockerfile and Containerfile projects with the Container framework preset while keeping plain filenames lower priority than other framework matches.
+
+### Patch Changes
+
+- Updated dependencies [3520d5c]
+- Updated dependencies [ff3d2f7]
+  - @vercel/frameworks@3.35.0
+  - @vercel/build-utils@14.13.2
+
+## 7.7.3
+
+### Patch Changes
+
+- 5082546: Build Python schedule entrypoints. A `.py` entrypoint such as `jobs/nightly.py` runs as a script once per firing in a private function under `_vercel/schedules/`. Entrypoints with the same `functions` config share one function, which runs the script for the dispatched schedule name, so the project's dependencies are bundled once per distinct config instead of once per script. Entrypoints without `functions` config share `_vercel/schedules/default`; the others' function is named after the `functions` patterns their config came from, such as `_vercel/schedules/jobs/report`. Schedule names must be unique within a shared function.
+
+  Declared schedule entrypoints are not served as static files, but other files follow the normal static rules. When a project with Python schedule entrypoints publishes other `.py` files from its root, through the zero-config static fallback or `outputDirectory: "."`, `vercel build` now warns and lists them.
+
+  Add `findMatchingFunction` to `@vercel/build-utils`, which returns the `functions` entry that applies to a function.
+
+- Updated dependencies [5082546]
+  - @vercel/build-utils@14.13.1
+
+## 7.7.2
+
+### Patch Changes
+
+- Updated dependencies [34b2c8e]
+  - @vercel/build-utils@14.13.0
+
+## 7.7.1
+
+### Patch Changes
+
+- Updated dependencies [6e68e60]
+  - @vercel/build-utils@14.12.0
+
+## 7.7.0
+
+### Minor Changes
+
+- 2a134f6: Accept Python module:attr proxy entrypoints.
+
+### Patch Changes
+
+- 0d38103: Use Ruby buildpacks for services with an explicit root config.ru entrypoint when buildpacks are enabled and a Gemfile exists at the service root. Preserve the Ruby runtime for function handlers and custom Rack entrypoints.
+- 7eb63c0: Accept runtime-specific schedule entrypoints and provide build plumbing for lowering dedicated entrypoints to function targets. All schedule entrypoints must use one runtime, including for static frameworks and `framework: null`. Entrypoints must also match the runtime of frameworks that own one (Next.js, FastAPI, Express). The builder contract still supports multiple entrypoints per function for future runtimes.
+- Updated dependencies [888f59e]
+- Updated dependencies [7eb63c0]
+  - @vercel/build-utils@14.11.0
+
+## 7.6.2
+
+### Patch Changes
+
+- a20c274: Bundle internal runtime helpers into the published package.
+
+## 7.6.1
+
+### Patch Changes
+
+- Updated dependencies [53a6086]
+  - @vercel/build-utils@14.10.2
+
+## 7.6.0
+
+### Minor Changes
+
+- 360ffab: Re-add @vercel-internals/runtimes as a dev dep to fs-detectors.
+
+## 7.5.0
+
+### Minor Changes
+
+- e22e20f: Add a migration assistant for `experimentalServices` which converts a legacy `experimentalServices` config into `services` with top-level service rewrites. Available under `vercel dev`, `vercel link` and `vercel deploy`.
+
+## 7.4.0
+
+### Minor Changes
+
+- d41b887: Reject proxy entrypoints with mismatched runtime.
+
+## 7.3.0
+
+### Minor Changes
+
+- a88afa0: Route Ruby services and zero-config Ruby projects (Rails and Rack) to the
+  experimental Ruby buildpack container builder behind
+  `VERCEL_EXPERIMENTAL_BUILDPACK_RUBY=1`. The buildpack is selected only when a
+  `Gemfile` sits at the build root and no file `entrypoint` narrows the build;
+  services with an explicit `.rb`/`.ru` entrypoint keep building with
+  `@vercel/ruby`. `vercel dev` reports that Ruby projects and services are not
+  supported yet.
+
+## 7.2.5
+
+### Patch Changes
+
+- Updated dependencies [f9d0e90]
+- Updated dependencies [8a277e4]
+- Updated dependencies [f8eb285]
+- Updated dependencies [66e443e]
+- Updated dependencies [08b0be2]
+  - @vercel/build-utils@14.10.1
+  - @vercel/routing-utils@6.6.0
+  - @vercel/frameworks@3.34.0
+
+## 7.2.4
+
+### Patch Changes
+
+- Updated dependencies [2a57243]
+- Updated dependencies [54a6d73]
+- Updated dependencies [3d16792]
+  - @vercel/build-utils@14.10.0
+
+## 7.2.3
+
+### Patch Changes
+
+- Updated dependencies [55e8d1e]
+  - @vercel/build-utils@14.9.3
+
+## 7.2.2
+
+### Patch Changes
+
+- b174f14: Raise the client-side `maxDuration` validation limit to 3600 seconds.
+- Updated dependencies [b174f14]
+  - @vercel/build-utils@14.9.2
+
+## 7.2.1
+
+### Patch Changes
+
+- Updated dependencies [1817491]
+  - @vercel/build-utils@14.9.1
+
+## 7.2.0
+
+### Minor Changes
+
+- 07e0218: Restored service topology detection (`detectServices` and related types) on the public `@vercel/fs-detectors` API.
+
+## 7.1.7
+
+### Patch Changes
+
+- Updated dependencies [f2c588f]
+- Updated dependencies [392c759]
+  - @vercel/frameworks@3.34.0
+  - @vercel/build-utils@14.9.0
+
+## 7.1.6
+
+### Patch Changes
+
+- Updated dependencies [a652a99]
+  - @vercel/build-utils@14.8.0
+
+## 7.1.5
+
+### Patch Changes
+
+- Updated dependencies [26b891e]
+- Updated dependencies [37ff9da]
+  - @vercel/build-utils@14.7.0
+
+## 7.1.4
+
+### Patch Changes
+
+- aad9541: Run on-disk JavaScript workers with a lazily resolved system Node.js executable in native CLI installations, and install the matching Build Utils preview tarball for dynamically installed Builders.
+- Updated dependencies [aad9541]
+  - @vercel/build-utils@14.6.1
+
+## 7.1.3
+
+### Patch Changes
+
+- Updated dependencies [e82de48]
+  - @vercel/build-utils@14.6.0
+
+## 7.1.2
+
+### Patch Changes
+
+- Updated dependencies [a443e57]
+  - @vercel/build-utils@14.5.1
+
+## 7.1.1
+
+### Patch Changes
+
+- Updated dependencies [90afd71]
+  - @vercel/build-utils@14.5.0
+
+## 7.1.0
+
+### Minor Changes
+
+- 359a57c: Mark the Rust framework as stable. Detection stays keyed on `src/main.rs` so `api/**/*.rs` function projects (which declare a `[[bin]]` per handler) remain framework-less and build zero-config; `[[bin]]`-only servers and cargo workspaces are supported by setting the Rust preset manually. Projects with an explicit output directory (e.g. wasm frontends built with Trunk) keep the static-build path instead of the Rust runtime, while preserving `api/**/*.rs` functions, and committed prebuilt output is served directly when no build command is configured.
+
+### Patch Changes
+
+- 5ba8c6c: Run e2e services tests against vc dev also
+- Updated dependencies [359a57c]
+- Updated dependencies [e5b0363]
+  - @vercel/frameworks@3.33.0
+  - @vercel/build-utils@14.4.1
+
+## 7.0.1
+
+### Patch Changes
+
+- Updated dependencies [f8add0a]
+  - @vercel/build-utils@14.4.0
+
+## 7.0.0
+
+### Major Changes
+
+- 19c9259: Moved service topology detection to a private internal package. Service APIs previously exported by `@vercel/fs-detectors` are no longer available.
+- b923215: Moved service-aware builder coordination to the internal CLI builder integration package.
+
+### Patch Changes
+
+- 0b08df6: Canonicalized internal service contract ownership.
+- Updated dependencies [0b08df6]
+- Updated dependencies [cd6b038]
+- Updated dependencies [96444ba]
+  - @vercel/build-utils@14.3.0
+
+## 6.15.10
+
+### Patch Changes
+
+- Updated dependencies [e340c58]
+  - @vercel/build-utils@14.2.0
+
+## 6.15.9
+
+### Patch Changes
+
+- Updated dependencies [ac3120d]
+- Updated dependencies [bd5f1a7]
+  - @vercel/python-analysis@0.14.0
+  - @vercel/frameworks@3.32.0
+
+## 6.15.8
+
+### Patch Changes
+
+- Updated dependencies [b4f09c1]
+  - @vercel/build-utils@14.1.1
+
+## 6.15.7
+
+### Patch Changes
+
+- Updated dependencies [852e1a0]
+  - @vercel/routing-utils@6.5.0
+  - @vercel/build-utils@14.1.0
+  - @vercel/frameworks@3.31.0
+
+## 6.15.6
+
+### Patch Changes
+
+- Updated dependencies [a7fc7e8]
+  - @vercel/frameworks@3.31.0
+
+## 6.15.5
+
+### Patch Changes
+
+- 2da7809: Remove redundant and ineffective package tests.
+- Updated dependencies [2da7809]
+  - @vercel/build-utils@14.0.5
+
+## 6.15.4
+
+### Patch Changes
+
+- Updated dependencies [13f81ac]
+  - @vercel/build-utils@14.0.4
+
+## 6.15.3
+
+### Patch Changes
+
+- Updated dependencies [d72826e]
+  - @vercel/build-utils@14.0.3
+
+## 6.15.2
+
+### Patch Changes
+
+- Updated dependencies [b82e2a8]
+- Updated dependencies [b7ec19b]
+  - @vercel/frameworks@3.30.9
+  - @vercel/build-utils@14.0.2
+
+## 6.15.1
+
+### Patch Changes
+
+- 6d7fbfa: Bump all workspace packages to trigger a full publish from vercel-internal.
+- Updated dependencies [6d7fbfa]
+  - @vercel/build-utils@14.0.1
+  - @vercel/error-utils@2.2.1
+  - @vercel/frameworks@3.30.8
+  - @vercel/routing-utils@6.4.1
+
+## 6.15.0
+
+### Minor Changes
+
+- 5619873: Fix api dir builds receiving incorrect framework or runtime.
+
+### Patch Changes
+
+- Updated dependencies [b747ab4]
+- Updated dependencies [5c33351]
+- Updated dependencies [5619873]
+  - @vercel/build-utils@14.0.0
+
+## 6.14.3
+
+### Patch Changes
+
+- Updated dependencies [a69c714]
+- Updated dependencies [654e898]
+  - @vercel/build-utils@13.36.3
+
+## 6.14.2
+
+### Patch Changes
+
+- Updated dependencies [2c75803]
+  - @vercel/build-utils@13.36.2
+
+## 6.14.1
+
+### Patch Changes
+
+- Updated dependencies [17ee736]
+  - @vercel/build-utils@13.36.1
+
+## 6.14.0
+
+### Minor Changes
+
+- 4502520: Support Node.js Routing Middleware entrypoints through `proxy.entrypoint`, with optional path matching through `proxy.matcher`. The matcher may be configured in the entrypoint source or `vercel.json`, but not both.
+- 506487b: Removed the `VERCEL_TOML_CONFIG_ENABLED` feature flag. `vercel.toml` configuration file support is now always enabled.
+
+### Patch Changes
+
+- Updated dependencies [4502520]
+  - @vercel/build-utils@13.36.0
+
+## 6.13.3
+
+### Patch Changes
+
+- Updated dependencies [7dd4301]
+  - @vercel/build-utils@13.35.0
+
+## 6.13.2
+
+### Patch Changes
+
+- a55e7df: Replace user-facing `experimentalServices` references with `services` in error/warning messages and rename error codes (`NO_EXPERIMENTAL_SERVICES_CONFIGURED` → `NO_SERVICES_CONFIGURED`, `MISSING_EXPERIMENTAL_SERVICES` → `MISSING_SERVICES`). The deprecated v1 config key should no longer appear in guidance shown to users.
+- Updated dependencies [238543c]
+  - @vercel/build-utils@13.34.0
+
+## 6.13.1
+
+### Patch Changes
+
+- Updated dependencies [def07fc]
+- Updated dependencies [fa14ee9]
+  - @vercel/build-utils@13.33.1
+  - @vercel/frameworks@3.30.7
+
+## 6.13.0
+
+### Minor Changes
+
+- 7bbfd48: Support `"entrypoint": "pyproject.toml"` for services. A service may now set `entrypoint: "pyproject.toml"` to build exactly what that file declares: the web app from `tool.vercel.entrypoint` (when present) and queue subscribers from `[[tool.vercel.subscribers]]`. Filename-based entrypoint auto-detection never runs in this mode, and subscribers-only services (no web function) are supported.
+
+### Patch Changes
+
+- Updated dependencies [607f0ef]
+  - @vercel/build-utils@13.33.0
+
+## 6.12.1
+
+### Patch Changes
+
+- Updated dependencies [7bc4db0]
+- Updated dependencies [7b30856]
+  - @vercel/frameworks@3.30.6
+  - @vercel/build-utils@13.32.3
+
+## 6.12.0
+
+### Minor Changes
+
+- 3992812: Fix service framework detection when entrypoint is in a subdir of service root.
+
+## 6.11.6
+
+### Patch Changes
+
+- Updated dependencies [85c897e]
+  - @vercel/frameworks@3.30.5
+
+## 6.11.5
+
+### Patch Changes
+
+- Updated dependencies [d19dbc5]
+  - @vercel/frameworks@3.30.4
+
+## 6.11.4
+
+### Patch Changes
+
+- Updated dependencies [02d8bab]
+  - @vercel/frameworks@3.30.3
+
+## 6.11.3
+
+### Patch Changes
+
+- 9e3f9cd: [services] service name validation
+- 9e3f9cd: Align `services` and `experimentalServicesV2` service-name validation with the platform schema.
+- Updated dependencies [acddddf]
+  - @vercel/frameworks@3.30.2
+
+## 6.11.2
+
+### Patch Changes
+
+- 1a1c745: [services] fix bare static service builds, allow services with only 'root' to resolve at @vercel/static
+
+## 6.11.1
+
+### Patch Changes
+
+- Updated dependencies [6b49a17]
+  - @vercel/build-utils@13.32.2
+
+## 6.11.0
+
+### Minor Changes
+
+- 4f8b5b1: - Migrate service auto-detection to V2 format.
+  - Layout auto-detect now resolves via the V2 resolver and generates top-level service-targeted rewrites and per-service path transform routes.
+  - CLI build and dev server merge auto-detected rewrites into the route table.
+
+### Patch Changes
+
+- 66be3e0: [services] Refine container detection for `services` / `experimentalServicesV2`.
+
+  - A supplied `entrypoint` infers `runtime: "container"` when it names one of the
+    blessed Dockerfile names: `Dockerfile`, `Containerfile`, `Dockerfile.vercel`,
+    or `Containerfile.vercel`. A suffixed name like `Dockerfile.prod` is not a
+    container entrypoint.
+  - `runtime: "container"` without an `entrypoint` auto-detects one of those same
+    four blessed names in the service root, probing `Dockerfile.vercel`,
+    `Containerfile.vercel`, `Dockerfile`, `Containerfile` (in that order, so a
+    `.vercel` opt-in marker takes precedence over a plain `Dockerfile`).
+  - Removed the prebuilt OCI image reference entrypoint: an `entrypoint` must now
+    name a Dockerfile/Containerfile, otherwise the service errors.
+  - `@vercel/container` recognizes the same blessed set (via a shared
+    `isDockerfileRef`), keeping the builder and the services resolver in sync so
+    the configured Dockerfile entrypoint is honored instead of being ignored in
+    favor of a default `Dockerfile` or treated as a prebuilt image reference.
+  - The `container` framework preset is no longer experimental: a project with a
+    `Dockerfile.vercel` / `Containerfile.vercel` marker is detected as a
+    container without `VERCEL_USE_EXPERIMENTAL_FRAMEWORKS`.
+
+- Updated dependencies [66be3e0]
+  - @vercel/frameworks@3.30.1
+
+## 6.10.3
+
+### Patch Changes
+
+- 34b2c4c: Apply `functions` config to Python framework builds using the resolved Python entrypoint.
+
+## 6.10.2
+
+### Patch Changes
+
+- Updated dependencies [7cecf55]
+  - @vercel/routing-utils@6.4.0
+  - @vercel/build-utils@13.32.1
+  - @vercel/frameworks@3.30.0
+
+## 6.10.1
+
+### Patch Changes
+
+- Updated dependencies [09743c6]
+- Updated dependencies [8dc4702]
+  - @vercel/frameworks@3.30.0
+  - @vercel/build-utils@13.32.1
+
+## 6.10.0
+
+### Minor Changes
+
+- 9fb2976: Add `services` as the canonical multi-service project configuration and keep `experimentalServicesV2` as a deprecated backwards-compatible alias.
+
+### Patch Changes
+
+- 186014d: Add an experimental container service runtime. A service with
+  `runtime: "container"` either builds its `Dockerfile`/`Containerfile` and pushes
+  the resulting OCI image to the Vercel Container Registry (VCR), or passes a
+  prebuilt image reference through as build output.
+
+  - **`@vercel/container`** (new builder): authenticates to VCR with the project's
+    `VERCEL_OIDC_TOKEN`, ensures the repository exists, builds and pushes the
+    image, and emits a digest-pinned reference in `handler` (container functions
+    are `type: "Lambda"` with `runtime: "container"`; the platform surfaces
+    `handler` as the image downstream). Uses `docker` on developer machines and
+    `buildah` (daemonless) in the Vercel build container behind a shared
+    `ContainerEngine` interface. Supports `vc dev` via `startDevServer` (local
+    build/run, env parity, log forwarding) and `prepareCache` for buildah layer
+    reuse between builds. Build flow is instrumented with tracing spans
+    (non-secret diagnostics) and debug logging gated on `BUILDER_DEBUG`.
+  - **`@vercel/build-utils`**: add the `ContainerImage` build-output type.
+  - **`@vercel/fs-detectors`**: resolve container services from `vercel.json`
+    (the `services` config and its deprecated `experimentalServices` /
+    `experimentalServicesV2` aliases). A `Dockerfile`, `Containerfile`, or
+    `*.dockerfile` entrypoint triggers a build; any other entrypoint is treated as
+    a prebuilt OCI image reference.
+  - **`vercel`**: wire container output into `vercel build` result writing and
+    config validation.
+
+  Buildah specifics in the build container: host networking for `RUN` steps,
+  native `overlay` storage on the XFS `/vercel` volume (deferring to the image's
+  `storage.conf`), zstd push compression, and registry credentials read from the
+  provisioned auth file when present. Several knobs are available for debugging:
+  `VERCEL_CONTAINER_ENGINE`, `VERCEL_VCR_STRICT_STORAGE`,
+  `VERCEL_VCR_DISABLE_LAYER_CACHE`, and `VERCEL_VCR_FORCE_LOGIN`.
+
+- Updated dependencies [9fb2976]
+- Updated dependencies [186014d]
+- Updated dependencies [cb0988f]
+  - @vercel/build-utils@13.32.0
+
+## 6.9.3
+
+### Patch Changes
+
+- Updated dependencies [2158ab6]
+  - @vercel/build-utils@13.31.1
+
+## 6.9.2
+
+### Patch Changes
+
+- edb5429: Strip trailing slashes from `experimentalServicesV2` service `root` so a config like `"root": "frontend/"` no longer double-prefixes builder paths (e.g. `frontend/frontend/package.json`)
+- Updated dependencies [8dec9ea]
+- Updated dependencies [c4afec8]
+- Updated dependencies [3afdb18]
+- Updated dependencies [04f830c]
+  - @vercel/build-utils@13.31.0
+  - @vercel/routing-utils@6.3.1
+  - @vercel/frameworks@3.29.1
+
+## 6.9.1
+
+### Patch Changes
+
+- Updated dependencies [3b273ff]
+  - @vercel/frameworks@3.29.1
+
+## 6.9.0
+
+### Minor Changes
+
+- 3d8df16: Add bun preset.
+
+### Patch Changes
+
+- Updated dependencies [2fd14e0]
+- Updated dependencies [68c2fd7]
+- Updated dependencies [3d8df16]
+  - @vercel/frameworks@3.29.0
+
+## 6.8.5
+
+### Patch Changes
+
+- Updated dependencies [4421ad9]
+  - @vercel/frameworks@3.28.1
+
+## 6.8.4
+
+### Patch Changes
+
+- Updated dependencies [01e18e8]
+  - @vercel/build-utils@13.30.0
+
+## 6.8.3
+
+### Patch Changes
+
+- 32a730e: Elevate maximum maxDuration to 1800s
+- Updated dependencies [32a730e]
+  - @vercel/build-utils@13.29.1
+
+## 6.8.2
+
+### Patch Changes
+
+- Updated dependencies [8d8e871]
+- Updated dependencies [90a7cc1]
+  - @vercel/build-utils@13.29.0
+  - @vercel/routing-utils@6.3.0
+  - @vercel/frameworks@3.28.0
+
+## 6.8.1
+
+### Patch Changes
+
+- Updated dependencies [4e849dd]
+  - @vercel/build-utils@13.28.0
+
+## 6.8.0
+
+### Minor Changes
+
+- 1a9558b: Add warning when api/ dir is ignored by experimental services.
+
+### Patch Changes
+
+- c5eeb30: Gate the client-side 900-second `maxDuration` upper bound behind the `VERCEL_CLI_SKIP_MAX_DURATION_LIMIT` environment variable. The limit is now owned by a single helper in `@vercel/build-utils` instead of being hardcoded in multiple validators. When the variable is set to `1`, the client-side maximum is skipped and validation defers to the server. Default behavior is unchanged — the maximum, the lower bound, and the integer check are all still enforced when the variable is unset.
+- 9f9eed3: Nest Build Output API files for `experimentalServicesV2` under `.vercel/output/services/<name>`.
+- Updated dependencies [4bd58f2]
+- Updated dependencies [c5eeb30]
+- Updated dependencies [b98053e]
+- Updated dependencies [09c39af]
+  - @vercel/frameworks@3.28.0
+  - @vercel/build-utils@13.27.2
+
+## 6.7.8
+
+### Patch Changes
+
+- 0a170fd: [services] wire `experimentalServicesV2` into `fs-detectors`.
+- Updated dependencies [0a170fd]
+  - @vercel/build-utils@13.27.1
+
+## 6.7.7
+
+### Patch Changes
+
+- Updated dependencies [338cc35]
+  - @vercel/build-utils@13.27.0
+
+## 6.7.6
+
+### Patch Changes
+
+- 3019788: [services] Remove the `services` field from `vercel.json` and the `VERCEL_USE_SERVICES` gate.
+- Updated dependencies [3019788]
+- Updated dependencies [fe893ec]
+- Updated dependencies [fddeb55]
+- Updated dependencies [c0f1229]
+  - @vercel/build-utils@13.26.6
+  - @vercel/error-utils@2.2.0
+  - @vercel/frameworks@3.27.0
+
+## 6.7.5
+
+### Patch Changes
+
+- Updated dependencies [1180675]
+  - @vercel/build-utils@13.26.5
+
+## 6.7.4
+
+### Patch Changes
+
+- 1444502: Support discovering `experimentalServices` from Build Output API config during `vercel build`.
+
+## 6.7.3
+
+### Patch Changes
+
+- 6495585: [services] drop top-level `env` support for the new `service-ref` shape for services.
+- Updated dependencies [6495585]
+  - @vercel/build-utils@13.26.4
+
+## 6.7.2
+
+### Patch Changes
+
+- Updated dependencies [b66bd3e]
+  - @vercel/build-utils@13.26.3
+
+## 6.7.1
+
+### Patch Changes
+
+- Updated dependencies [647c1e8]
+  - @vercel/build-utils@13.26.2
+
+## 6.7.0
+
+### Minor Changes
+
+- feb8bed: Detect entrypoint file from render yaml.
+
+### Patch Changes
+
+- Updated dependencies [fa25cb7]
+- Updated dependencies [972cc84]
+  - @vercel/build-utils@13.26.1
+
+## 6.6.0
+
+### Minor Changes
+
+- 20247d6: Use builder entrypoint detection in service auto-detection.
+
+## 6.5.0
+
+### Minor Changes
+
+- 0c762a7: [services] detect services from Render
+- e1f4dd5: [services] detect services from Procfile
+
+### Patch Changes
+
+- Updated dependencies [bb61428]
+- Updated dependencies [137e5d1]
+  - @vercel/build-utils@13.26.0
+
+## 6.4.0
+
+### Minor Changes
+
+- 4fc110b: [services] add preDeployCommand for experimentalServices
+
+### Patch Changes
+
+- Updated dependencies [0dbb8e5]
+- Updated dependencies [fb0cb8d]
+- Updated dependencies [4fc110b]
+  - @vercel/frameworks@3.26.1
+  - @vercel/build-utils@13.25.0
+
+## 6.3.0
+
+### Minor Changes
+
+- d874af6: Add support for env vars injection that reference other services in `services` with an explicit `env` configuration.
+
+### Patch Changes
+
+- Updated dependencies [d874af6]
+  - @vercel/build-utils@13.24.0
+
+## 6.2.2
+
+### Patch Changes
+
+- 979d70a: [services] `services` schema support
+- Updated dependencies [51785a6]
+- Updated dependencies [22f77b9]
+- Updated dependencies [979d70a]
+  - @vercel/frameworks@3.26.0
+  - @vercel/build-utils@13.23.0
+
+## 6.2.1
+
+### Patch Changes
+
+- Updated dependencies [f0d7d32]
+  - @vercel/build-utils@13.22.1
+
+## 6.2.0
+
+### Minor Changes
+
+- b4ada64: Implement scheduled jobs for JS/TS.
+
+### Patch Changes
+
+- 1e08c83: [services] error on framework = "services" but no services configured
+- Updated dependencies [e53dd86]
+- Updated dependencies [c95a7ca]
+  - @vercel/build-utils@13.22.0
+  - @vercel/frameworks@3.25.1
+
+## 6.1.1
+
+### Patch Changes
+
+- 8a5aa6a: Ensure synthetic SPA fallbacks are merged after builder-produced routes.
+
+## 6.1.0
+
+### Minor Changes
+
+- c56f851: Upgrade to TypeScript 5.9
+
+### Patch Changes
+
+- Updated dependencies [c56f851]
+  - @vercel/routing-utils@6.2.0
+  - @vercel/build-utils@13.21.0
+  - @vercel/error-utils@2.1.0
+  - @vercel/frameworks@3.25.0
+
+## 6.0.1
+
+### Patch Changes
+
+- Updated dependencies [09d9000]
+  - @vercel/frameworks@3.24.2
+
+## 6.0.0
+
+### Major Changes
+
+- fix!: exclude configuration files from static deployments ([#16056](https://github.com/vercel/vercel/pull/16056))
+
+### Patch Changes
+
+- Updated dependencies [[`2aa78415831fe89d1b21dd89704706bd1ad5e78d`](https://github.com/vercel/vercel/commit/2aa78415831fe89d1b21dd89704706bd1ad5e78d), [`2aa78415831fe89d1b21dd89704706bd1ad5e78d`](https://github.com/vercel/vercel/commit/2aa78415831fe89d1b21dd89704706bd1ad5e78d)]:
+  - @vercel/build-utils@13.20.0
+
+## 5.19.1
+
+### Patch Changes
+
+- Updated dependencies [[`c1866cf1add2107f91cae8292e38e4854bfe0aca`](https://github.com/vercel/vercel/commit/c1866cf1add2107f91cae8292e38e4854bfe0aca)]:
+  - @vercel/build-utils@13.19.1
+
+## 5.19.0
+
+### Minor Changes
+
+- [services] move Python workers to v2beta triggers with private routing ([#15920](https://github.com/vercel/vercel/pull/15920))
+
+### Patch Changes
+
+- Updated dependencies [[`93be6d188176cdd4451a6c62155f3ccd7dfa89e1`](https://github.com/vercel/vercel/commit/93be6d188176cdd4451a6c62155f3ccd7dfa89e1), [`0793b7d31e4ff21dd12ff727f2906be2fd63fe3e`](https://github.com/vercel/vercel/commit/0793b7d31e4ff21dd12ff727f2906be2fd63fe3e)]:
+  - @vercel/build-utils@13.19.0
+
+## 5.18.3
+
+### Patch Changes
+
+- Updated dependencies [[`055f6239a4fe763b9f3b33cfbb5baa2e0e214767`](https://github.com/vercel/vercel/commit/055f6239a4fe763b9f3b33cfbb5baa2e0e214767)]:
+  - @vercel/build-utils@13.18.0
+
+## 5.18.2
+
+### Patch Changes
+
+- [experimental-services] add new job service type support ([#15944](https://github.com/vercel/vercel/pull/15944))
+
+- Updated dependencies [[`2a6344e205910dafc05cb74a80f98165d95322d7`](https://github.com/vercel/vercel/commit/2a6344e205910dafc05cb74a80f98165d95322d7)]:
+  - @vercel/build-utils@13.17.2
+
+## 5.18.1
+
+### Patch Changes
+
+- Updated dependencies [[`5219572d21a2ba4b49cc1c27d244c1ff5d76c591`](https://github.com/vercel/vercel/commit/5219572d21a2ba4b49cc1c27d244c1ff5d76c591)]:
+  - @vercel/build-utils@13.17.1
+
+## 5.18.0
+
+### Minor Changes
+
+- Support dynamically specifying crons from a python service ([#15930](https://github.com/vercel/vercel/pull/15930))
+
+### Patch Changes
+
+- Updated dependencies [[`44897297d569742e93725d71ca481803c9b0b9cc`](https://github.com/vercel/vercel/commit/44897297d569742e93725d71ca481803c9b0b9cc)]:
+  - @vercel/build-utils@13.17.0
+
+## 5.17.0
+
+### Minor Changes
+
+- Add root to experimentalServices to set a service's working directory. ([#15929](https://github.com/vercel/vercel/pull/15929))
+
+### Patch Changes
+
+- fix(node): scope entrypoint filter to `api/` directory only ([#15954](https://github.com/vercel/vercel/pull/15954))
+
+- Add actix framework preset ([#15752](https://github.com/vercel/vercel/pull/15752))
+
+- Updated dependencies [[`86d1f5b3cbd520af2632d4a3d6a1f24557448c0e`](https://github.com/vercel/vercel/commit/86d1f5b3cbd520af2632d4a3d6a1f24557448c0e), [`1056be976b6ba9b42cc1e2ffe895d255ab6c9850`](https://github.com/vercel/vercel/commit/1056be976b6ba9b42cc1e2ffe895d255ab6c9850), [`620c42ffa6d335c9a6e3e57a1e81c522696b7c2c`](https://github.com/vercel/vercel/commit/620c42ffa6d335c9a6e3e57a1e81c522696b7c2c), [`c27eedaa1b0e3f6e3770b578f62e5463d82f06e0`](https://github.com/vercel/vercel/commit/c27eedaa1b0e3f6e3770b578f62e5463d82f06e0)]:
+  - @vercel/build-utils@13.16.0
+  - @vercel/frameworks@3.24.1
+
+## 5.16.0
+
+### Minor Changes
+
+- Parse python module:variable entrypoint notation in experimentalServices for all service types. ([#15844](https://github.com/vercel/vercel/pull/15844))
+
+### Patch Changes
+
+- Updated dependencies [[`4e62f6c2204dd148643f86f140f0ae7995778017`](https://github.com/vercel/vercel/commit/4e62f6c2204dd148643f86f140f0ae7995778017), [`42a70e1e6318615bd420933f9cc978bed3a43936`](https://github.com/vercel/vercel/commit/42a70e1e6318615bd420933f9cc978bed3a43936)]:
+  - @vercel/build-utils@13.15.0
+
+## 5.15.2
+
+### Patch Changes
+
+- Add `mount` support for experimental services across config validation and service resolution. ([#15882](https://github.com/vercel/vercel/pull/15882))
+
+- Updated dependencies [[`9b3ea340f23c1faad6d56c2a54d75bb2e77b0162`](https://github.com/vercel/vercel/commit/9b3ea340f23c1faad6d56c2a54d75bb2e77b0162)]:
+  - @vercel/build-utils@13.14.2
+
+## 5.15.1
+
+### Patch Changes
+
+- feat(node): filter non-entrypoint Node.js files in `/api` directory ([#15873](https://github.com/vercel/vercel/pull/15873))
+
+- Updated dependencies [[`2e15ee828f14de4a849a462429ca03feab161174`](https://github.com/vercel/vercel/commit/2e15ee828f14de4a849a462429ca03feab161174), [`a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57`](https://github.com/vercel/vercel/commit/a31c84d1bda56a60da6d7bc6d611b0b18ba3bf57)]:
+  - @vercel/build-utils@13.14.1
+
+## 5.15.0
+
+### Minor Changes
+
+- Support configuration via vercel.toml ([#15750](https://github.com/vercel/vercel/pull/15750))
+
+### Patch Changes
+
+- remove experimental flag on node preset ([#15628](https://github.com/vercel/vercel/pull/15628))
+
+- Updated dependencies [[`aea2272ac976a2e13591e402b2a41173cf51f740`](https://github.com/vercel/vercel/commit/aea2272ac976a2e13591e402b2a41173cf51f740), [`42b6ff3113eb7ba5302b8469f8dd10070ecec6f0`](https://github.com/vercel/vercel/commit/42b6ff3113eb7ba5302b8469f8dd10070ecec6f0)]:
+  - @vercel/frameworks@3.24.0
+  - @vercel/build-utils@13.14.0
+
+## 5.14.3
+
+### Patch Changes
+
+- Updated dependencies [[`a80217a9ed60d7b7f3e98537b0468cc5488078c1`](https://github.com/vercel/vercel/commit/a80217a9ed60d7b7f3e98537b0468cc5488078c1)]:
+  - @vercel/build-utils@13.13.0
+
+## 5.14.2
+
+### Patch Changes
+
+- Fall back to `--scope` flag for Turborepo versions 1.1 and below when generating default build commands. ([#15835](https://github.com/vercel/vercel/pull/15835))
+
+## 5.14.1
+
+### Patch Changes
+
+- Updated dependencies [[`d034d90dcf78316ddacdcce8fd51329fb7eefe82`](https://github.com/vercel/vercel/commit/d034d90dcf78316ddacdcce8fd51329fb7eefe82)]:
+  - @vercel/frameworks@3.23.0
+
+## 5.14.0
+
+### Minor Changes
+
+- [services] infer services from Railway configs ([#15787](https://github.com/vercel/vercel/pull/15787))
+
+## 5.13.1
+
+### Patch Changes
+
+- Updated dependencies [[`c98a02d87276f41b1580b78d37f9f671fd9d1f12`](https://github.com/vercel/vercel/commit/c98a02d87276f41b1580b78d37f9f671fd9d1f12)]:
+  - @vercel/build-utils@13.12.2
+
+## 5.13.0
+
+### Minor Changes
+
+- Simplify and streamline python builder logic ([#15696](https://github.com/vercel/vercel/pull/15696))
+
+### Patch Changes
+
+- Updated dependencies [[`f912eef614731a75ecdca3bee159cc59abd4c58e`](https://github.com/vercel/vercel/commit/f912eef614731a75ecdca3bee159cc59abd4c58e), [`6cb5c6e1216d7a0dbaa6f740875a36f1b7166900`](https://github.com/vercel/vercel/commit/6cb5c6e1216d7a0dbaa6f740875a36f1b7166900)]:
+  - @vercel/frameworks@3.22.0
+  - @vercel/build-utils@13.12.1
+
+## 5.12.2
+
+### Patch Changes
+
+- Updated dependencies [[`3427149c3751192b54bb4fad9d3b50f171a28666`](https://github.com/vercel/vercel/commit/3427149c3751192b54bb4fad9d3b50f171a28666)]:
+  - @vercel/build-utils@13.12.0
+
+## 5.12.1
+
+### Patch Changes
+
+- Updated dependencies [[`a54b8f246ac6b43ac8f1674093402e3fe145fd64`](https://github.com/vercel/vercel/commit/a54b8f246ac6b43ac8f1674093402e3fe145fd64)]:
+  - @vercel/build-utils@13.11.0
+
+## 5.12.0
+
+### Minor Changes
+
+- [services] support multiple topics for a single worker service ([#15615](https://github.com/vercel/vercel/pull/15615))
+
+- [services] support for specifying an env prefix for each service ([#15641](https://github.com/vercel/vercel/pull/15641))
+
+### Patch Changes
+
+- Updated dependencies [[`4839214ae9cbcc95d448429bf93133e58284e03f`](https://github.com/vercel/vercel/commit/4839214ae9cbcc95d448429bf93133e58284e03f), [`13f719da050ba4b73b95b51e8edf7141c967b9a2`](https://github.com/vercel/vercel/commit/13f719da050ba4b73b95b51e8edf7141c967b9a2), [`ece813e0a9a75e3ad262817f00050c62f5ad67eb`](https://github.com/vercel/vercel/commit/ece813e0a9a75e3ad262817f00050c62f5ad67eb), [`d7107d025500d6be305895dfd5cd89d87e6eb9f0`](https://github.com/vercel/vercel/commit/d7107d025500d6be305895dfd5cd89d87e6eb9f0), [`25a6a2daa46baba6e8d7dec90eb49213b8150b8c`](https://github.com/vercel/vercel/commit/25a6a2daa46baba6e8d7dec90eb49213b8150b8c)]:
+  - @vercel/build-utils@13.10.0
+  - @vercel/routing-utils@6.1.1
+  - @vercel/frameworks@3.21.1
+
+## 5.11.5
+
+### Patch Changes
+
+- Updated dependencies [[`e5564b684ee40dd60f745327ef206bbe58a5191a`](https://github.com/vercel/vercel/commit/e5564b684ee40dd60f745327ef206bbe58a5191a)]:
+  - @vercel/build-utils@13.9.0
+
+## 5.11.4
+
+### Patch Changes
+
+- Updated dependencies [[`62b9c34a92fe6d60d73f81a1674c2e483f12fc8f`](https://github.com/vercel/vercel/commit/62b9c34a92fe6d60d73f81a1674c2e483f12fc8f)]:
+  - @vercel/routing-utils@6.1.0
+  - @vercel/build-utils@13.8.2
+  - @vercel/frameworks@3.21.1
+
+## 5.11.3
+
+### Patch Changes
+
+- adds build utils to fs-detectors dependencies ([#15642](https://github.com/vercel/vercel/pull/15642))
+
+## 5.11.2
+
+### Patch Changes
+
+- [python] update celery worker services declaration to support broker_url="vercel://" instead of having to import from vercel.workers.celery ([#15454](https://github.com/vercel/vercel/pull/15454))
+
+- [services] prompt to auto-configure `experimentalServices` in `vercel.json` from layout during project link ([#15590](https://github.com/vercel/vercel/pull/15590))
+
+## 5.11.1
+
+### Patch Changes
+
+- Switch "node" framework preset to use @vercel/backends ([#15248](https://github.com/vercel/vercel/pull/15248))
+
+  Fix services-mode internal function output aliasing to use slashless `_svc/*` output keys so Node service routes can resolve their Lambda targets.
+
+- Improve services auto-detection so a single detected frontend at the project root, ([#15571](https://github.com/vercel/vercel/pull/15571))
+  `frontend/`, or `apps/<name>/` is mounted at `/` even without backend services.
+
+## 5.11.0
+
+### Minor Changes
+
+- [services] add support for background workers to vc dev ([#15434](https://github.com/vercel/vercel/pull/15434))
+
+### Patch Changes
+
+- [services] exclude service route prefixes on subdomain rewrites ([#15508](https://github.com/vercel/vercel/pull/15508))
+
+## 5.10.3
+
+### Patch Changes
+
+- Updated dependencies [[`04433cfd686bf27e3f63bc895c15f7e75918b0d7`](https://github.com/vercel/vercel/commit/04433cfd686bf27e3f63bc895c15f7e75918b0d7)]:
+  - @vercel/frameworks@3.21.1
+
+## 5.10.2
+
+### Patch Changes
+
+- [experimental-services] build using `experimentalServices` regardless of framework setting ([#15451](https://github.com/vercel/vercel/pull/15451))
+
+## 5.10.1
+
+### Patch Changes
+
+- Updated dependencies [[`9660ee0aee6113e9674918bbeb2b94db63d36702`](https://github.com/vercel/vercel/commit/9660ee0aee6113e9674918bbeb2b94db63d36702)]:
+  - @vercel/frameworks@3.21.0
+
+## 5.10.0
+
+### Minor Changes
+
+- Support `maxDuration: 'max'` to allow the backend to resolve the maximum duration based on account plan type ([#15217](https://github.com/vercel/vercel/pull/15217))
+
+## 5.9.1
+
+### Patch Changes
+
+- [services] adds support for subdomai configuration in experimentalServices ([#15401](https://github.com/vercel/vercel/pull/15401))
+
+## 5.9.0
+
+### Minor Changes
+
+- [python] add support for module-based entrypoints for cron jobs ([#15393](https://github.com/vercel/vercel/pull/15393))
+
+### Patch Changes
+
+- [python] add support for Python worker services with Django tasks ([#15396](https://github.com/vercel/vercel/pull/15396))
+
+## 5.8.18
+
+### Patch Changes
+
+- [services] adds support for python cron worker services ([#15175](https://github.com/vercel/vercel/pull/15175))
+
+## 5.8.17
+
+### Patch Changes
+
+- [fs-detectors] skip auto-detection for root-only projects ([#15364](https://github.com/vercel/vercel/pull/15364))
+
+- Add background worker service support for Python (Dramatiq/Celery) and propagate vercel headers context to worker handlers. ([#15361](https://github.com/vercel/vercel/pull/15361))
+
+## 5.8.16
+
+### Patch Changes
+
+- [services] run framework detection with file entrypoints ([#15358](https://github.com/vercel/vercel/pull/15358))
+
+- Updated dependencies [[`91e367532050b0c1f17c49df701017f85f4dc85a`](https://github.com/vercel/vercel/commit/91e367532050b0c1f17c49df701017f85f4dc85a), [`e6c736fb74bedb975caad76d4c1f1e589a1c6cc9`](https://github.com/vercel/vercel/commit/e6c736fb74bedb975caad76d4c1f1e589a1c6cc9), [`fac0a516914491cf662068e37cd00f50400e3b58`](https://github.com/vercel/vercel/commit/fac0a516914491cf662068e37cd00f50400e3b58)]:
+  - @vercel/frameworks@3.20.0
+  - @vercel/routing-utils@6.0.2
+
 ## 5.8.15
 
 ### Patch Changes

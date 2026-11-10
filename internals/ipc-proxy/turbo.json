@@ -1,0 +1,25 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["$TURBO_EXTENDS$", "//#generate:cache-keys"],
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        {
+          "mode": "dependencyOutputs",
+          "globs": ["turbo-native-cache-key.json"],
+          "from": ["//#generate:cache-keys"]
+        }
+      ],
+      "outputLogs": "new-only",
+      "outputs": ["dist/**", "bin/**"]
+    },
+    "test": {
+      "dependsOn": ["build", "//#generate:cache-keys"]
+    },
+    "test-unit": {
+      "dependsOn": ["build", "//#generate:cache-keys"]
+    }
+  }
+}

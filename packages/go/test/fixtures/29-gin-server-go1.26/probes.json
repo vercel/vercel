@@ -1,0 +1,39 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "framework:gin version:go1.26.",
+      "responseHeaders": {
+        "content-type": "/text\\/html/"
+      }
+    },
+    {
+      "path": "/",
+      "mustContain": "randomness:RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/static/info.txt",
+      "status": 200,
+      "mustContain": "framework=gin RANDOMNESS_PLACEHOLDER"
+    },
+    {
+      "path": "/api/data",
+      "status": 200,
+      "mustContain": "\"framework\":\"gin\",\"version\":\"go1.26.",
+      "responseHeaders": {
+        "content-type": "/application\\/json/"
+      }
+    },
+    {
+      "path": "/api/items/42",
+      "status": 200,
+      "mustContain": "\"name\":\"Sample Item 42\""
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "not found:gin"
+    }
+  ]
+}

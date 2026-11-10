@@ -3,6 +3,10 @@ import type {
   RouteWithHandle as Handler,
   RouteWithSrc as Source,
 } from '@vercel/routing-utils';
+import minimatch from 'minimatch';
+import { extname, join } from 'path';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 import type { PackageJson } from '@vercel/build-utils';
 import {
   detectBuilders,
@@ -11,6 +15,7 @@ import {
   detectApiExtensions,
 } from '../src';
 import { REGEX_NON_VERCEL_PLATFORM_FILES } from '../src/detect-builders';
+import { inferBuilderRuntimeFromFramework } from '@vercel-internals/runtimes/framework';
 import type { Options } from '../src/detect-builders';
 
 /**
@@ -503,6 +508,779 @@ describe('Test `detectBuilders`', () => {
     });
   });
 
+  it('passes entrypoint functions config through to Python framework builders', async () => {
+    const functions = {
+      'app/main.py': {
+        memory: 512,
+        maxDuration: 30,
+      },
+    };
+
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['pyproject.toml', 'app/main.py'],
+      null,
+      {
+        functions,
+        projectSettings: { framework: 'fastapi' },
+      }
+    );
+
+    expect(builders).toContainEqual({
+      src: '<detect>',
+      use: '@vercel/python',
+      config: {
+        zeroConfig: true,
+        framework: 'fastapi',
+        functions,
+      },
+    });
+  });
+
+  it('builds `api/**/*.rs` functions zero-config without a framework', async () => {
+    const files = ['Cargo.toml', 'api/hello.rs'];
+
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      projectSettings: { framework: null },
+    });
+
+    expect(builders).toContainEqual({
+      src: 'api/hello.rs',
+      use: '@vercel/rust',
+      config: {
+        zeroConfig: true,
+      },
+    });
+    expect(builders).not.toContainEqual(
+      expect.objectContaining({ src: 'src/main.rs' })
+    );
+  });
+
+  it('uses the Rust runtime preset for the rust framework', async () => {
+    const files = ['Cargo.toml', 'src/main.rs', 'api/handler.rs'];
+
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      projectSettings: { framework: 'rust' },
+    });
+
+    expect(builders).toEqual([
+      {
+        src: 'src/main.rs',
+        use: '@vercel/rust',
+        config: {
+          zeroConfig: true,
+          framework: 'rust',
+        },
+      },
+    ]);
+  });
+
+  it('keeps the Rust runtime preset when a custom build command is set', async () => {
+    const files = ['Cargo.toml', 'src/main.rs'];
+
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      projectSettings: {
+        framework: 'rust',
+        buildCommand: './scripts/codegen.sh',
+      },
+    });
+
+    expect(builders).toEqual([
+      {
+        src: 'src/main.rs',
+        use: '@vercel/rust',
+        config: {
+          zeroConfig: true,
+          framework: 'rust',
+          buildCommand: './scripts/codegen.sh',
+        },
+      },
+    ]);
+  });
+
+  it('uses static-build for the rust framework with an explicit output directory', async () => {
+    // e.g. a wasm frontend built with Trunk.
+    const files = ['Cargo.toml', 'index.html', 'src/main.rs'];
+
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      projectSettings: {
+        framework: 'rust',
+        buildCommand: 'trunk build',
+        outputDirectory: 'dist',
+      },
+    });
+
+    expect(builders).toHaveLength(1);
+    expect(builders[0]).toEqual({
+      src: 'Cargo.toml',
+      use: '@vercel/static-build',
+      config: {
+        zeroConfig: true,
+        framework: 'rust',
+        buildCommand: 'trunk build',
+        outputDirectory: 'dist',
+      },
+    });
+  });
+
+  it('keeps Rust api builders on the static-output path', async () => {
+    const functions = {
+      'api/handler.rs': {
+        memory: 512,
+      },
+    };
+    const files = ['Cargo.toml', 'api/handler.rs', 'index.html', 'src/main.rs'];
+
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      functions,
+      projectSettings: {
+        framework: 'rust',
+        buildCommand: 'trunk build',
+        outputDirectory: 'dist',
+      },
+    });
+
+    expect(builders).toContainEqual({
+      src: 'api/handler.rs',
+      use: '@vercel/rust',
+      config: {
+        zeroConfig: true,
+        functions,
+      },
+    });
+    expect(builders).toContainEqual(
+      expect.objectContaining({
+        src: 'Cargo.toml',
+        use: '@vercel/static-build',
+      })
+    );
+  });
+
+  it('serves prebuilt Rust static output without a build command', async () => {
+    const files = ['Cargo.toml', 'dist/index.html', 'src/main.rs'];
+
+    const { builders, defaultRoutes } = await invokeDetectBuildersAndThrow(
+      files,
+      null,
+      {
+        projectSettings: {
+          framework: 'rust',
+          outputDirectory: 'dist',
+        },
+      }
+    );
+
+    expect(builders).toEqual([
+      {
+        src: 'dist/**/*',
+        use: '@vercel/static',
+        config: {
+          zeroConfig: true,
+          outputDirectory: 'dist',
+        },
+      },
+    ]);
+    expect(defaultRoutes).toEqual([{ src: '/(.*)', dest: '/dist/$1' }]);
+  });
+
+  describe('Rust buildpack builders', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    const publicBuilder = {
+      src: 'public/**/*',
+      use: '@vercel/static',
+      config: { zeroConfig: true, outputDirectory: 'public' },
+    };
+
+    const buildpackBuilder = {
+      src: '<detect>',
+      use: '@vercel/container',
+      config: {
+        zeroConfig: true,
+        framework: 'rust',
+        buildpack: 'rust',
+      },
+    };
+
+    it('routes the rust framework through the container buildpack builder when enabled', async () => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUST', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Cargo.toml', 'Cargo.lock', 'src/main.rs'],
+        null,
+        {
+          projectSettings: { framework: 'rust' },
+        }
+      );
+
+      expect(builders).toEqual([publicBuilder, buildpackBuilder]);
+    });
+
+    it('routes a [[bin]]-only project without src/main.rs to the buildpack', async () => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUST', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Cargo.toml', 'Cargo.lock', 'src/bin/server.rs'],
+        null,
+        {
+          projectSettings: { framework: 'rust' },
+        }
+      );
+
+      expect(builders).toEqual([publicBuilder, buildpackBuilder]);
+    });
+
+    it.each([
+      ['no Cargo.toml at all', ['src/main.rs']],
+      [
+        'a Cargo.toml only below the root',
+        ['src/main.rs', 'server/Cargo.toml'],
+      ],
+      ['a Cargo.lock but no Cargo.toml', ['src/main.rs', 'Cargo.lock']],
+    ])('keeps the legacy Rust builder when the flag is on but the project has %s', async (_, files) => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUST', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+        projectSettings: { framework: 'rust' },
+      });
+
+      expect(builders).toEqual([
+        {
+          src: 'src/main.rs',
+          use: '@vercel/rust',
+          config: {
+            zeroConfig: true,
+            framework: 'rust',
+          },
+        },
+      ]);
+    });
+
+    it.each([
+      undefined,
+      '0',
+      'true',
+    ])('keeps src/main.rs on the legacy Rust builder when the flag is %s', async flag => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUST', flag);
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Cargo.toml', 'src/main.rs'],
+        null,
+        {
+          projectSettings: { framework: 'rust' },
+        }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: 'src/main.rs',
+          use: '@vercel/rust',
+          config: {
+            zeroConfig: true,
+            framework: 'rust',
+          },
+        },
+      ]);
+    });
+
+    it.each([
+      undefined,
+      '0',
+      '1',
+    ])('keeps framework-null api Rust functions on the legacy builder when the flag is %s', async flag => {
+      // `api/**/*.rs` handlers are `vercel_runtime` functions, never HTTP
+      // servers: they stay on `@vercel/rust` regardless of the flag.
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUST', flag);
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Cargo.toml', 'api/hello.rs', 'api/users/[id].rs'],
+        null,
+        {
+          projectSettings: { framework: null },
+        }
+      );
+
+      expect(builders).toContainEqual({
+        src: 'api/hello.rs',
+        use: '@vercel/rust',
+        config: { zeroConfig: true },
+      });
+      expect(builders).toContainEqual({
+        src: 'api/users/[id].rs',
+        use: '@vercel/rust',
+        config: { zeroConfig: true },
+      });
+      expect(
+        builders.some(builder => builder.use === '@vercel/container')
+      ).toBe(false);
+    });
+
+    it('folds api Rust files into the buildpack build and keeps other api runtimes as functions', async () => {
+      // The `rust` preset opts out of the `@vercel/rust` api runtime
+      // (`ignoreRuntimes`): with the buildpack enabled, Rust files under
+      // `api/` belong to the server image, as they did to the preset's
+      // whole-app build before. Other languages still build as functions.
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUST', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Cargo.toml', 'src/main.rs', 'api/handler.rs', 'api/hello.py'],
+        null,
+        {
+          projectSettings: { framework: 'rust' },
+        }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: 'api/hello.py',
+          use: '@vercel/python',
+          config: { zeroConfig: true },
+        },
+        publicBuilder,
+        buildpackBuilder,
+      ]);
+    });
+
+    it('keeps Rust static output on static-build when the flag is on', async () => {
+      // A Trunk/wasm frontend deploys files, not a server: the buildpack
+      // must not claim it even though Cargo.toml sits at the root.
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUST', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Cargo.toml', 'index.html', 'src/main.rs', 'api/handler.rs'],
+        null,
+        {
+          projectSettings: {
+            framework: 'rust',
+            buildCommand: 'trunk build',
+            outputDirectory: 'dist',
+          },
+        }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: 'api/handler.rs',
+          use: '@vercel/rust',
+          config: { zeroConfig: true },
+        },
+        {
+          src: 'Cargo.toml',
+          use: '@vercel/static-build',
+          config: {
+            zeroConfig: true,
+            framework: 'rust',
+            buildCommand: 'trunk build',
+            outputDirectory: 'dist',
+          },
+        },
+      ]);
+    });
+
+    it('does not add a public/ static build for the legacy Rust builder', async () => {
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Cargo.toml', 'src/main.rs', 'public/logo.svg'],
+        null,
+        {
+          projectSettings: { framework: 'rust' },
+        }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: 'src/main.rs',
+          use: '@vercel/rust',
+          config: {
+            zeroConfig: true,
+            framework: 'rust',
+          },
+        },
+      ]);
+    });
+
+    it('does not route Rust to the buildpack on the Ruby flag', async () => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Cargo.toml', 'src/main.rs'],
+        null,
+        {
+          projectSettings: { framework: 'rust' },
+        }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: 'src/main.rs',
+          use: '@vercel/rust',
+          config: {
+            zeroConfig: true,
+            framework: 'rust',
+          },
+        },
+      ]);
+    });
+  });
+
+  describe('Ruby framework builders', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('routes a Gemfile alone through the container buildpack builder when enabled', async () => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Gemfile'],
+        null,
+        {
+          projectSettings: { framework: 'ruby' },
+        }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: '<detect>',
+          use: '@vercel/container',
+          config: {
+            zeroConfig: true,
+            framework: 'ruby',
+            buildpack: 'ruby',
+          },
+        },
+      ]);
+    });
+
+    it.each([
+      ['no Gemfile at all', ['config.ru', 'api/date.rb']],
+      ['a Gemfile only below the root', ['config.ru', 'api/Gemfile']],
+      ['a Gemfile.lock but no Gemfile', ['config.ru', 'Gemfile.lock']],
+    ])('keeps the legacy Ruby builder when the flag is on but the project has %s', async (_, files) => {
+      // The buildpack needs its project marker at the root; without one
+      // the legacy runtime keeps building exactly as before the flag.
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+        projectSettings: { framework: 'ruby' },
+      });
+
+      expect(builders).toEqual([
+        {
+          src: 'config.ru',
+          use: '@vercel/ruby',
+          config: {
+            zeroConfig: true,
+            framework: 'ruby',
+          },
+        },
+      ]);
+    });
+
+    it.each([
+      undefined,
+      '0',
+      'true',
+    ])('keeps config.ru on the legacy Ruby builder when the flag is %s', async flag => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', flag);
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Gemfile', 'config.ru'],
+        null,
+        {
+          projectSettings: { framework: 'ruby' },
+        }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: 'config.ru',
+          use: '@vercel/ruby',
+          config: {
+            zeroConfig: true,
+            framework: 'ruby',
+          },
+        },
+      ]);
+    });
+
+    it.each([
+      undefined,
+      '0',
+      '1',
+    ])('keeps framework-null api Ruby files on the legacy builder when the flag is %s', async flag => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', flag);
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Gemfile', 'api/date.rb'],
+        null,
+        {
+          projectSettings: { framework: null },
+        }
+      );
+
+      expect(builders).toContainEqual({
+        src: 'api/date.rb',
+        use: '@vercel/ruby',
+        config: { zeroConfig: true },
+      });
+      expect(
+        builders.some(builder => builder.use === '@vercel/container')
+      ).toBe(false);
+    });
+
+    it('folds api Ruby files into the buildpack build and keeps other api runtimes as functions', async () => {
+      // The `ruby` preset opts out of the `@vercel/ruby` api runtime
+      // (`ignoreRuntimes`): with the buildpack enabled, Ruby files under
+      // `api/` belong to the Rack application image. Other languages under
+      // `api/` still build as functions next to the container.
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['Gemfile', 'config.ru', 'api/date.rb', 'api/hello.py'],
+        null,
+        {
+          projectSettings: { framework: 'ruby' },
+        }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: 'api/hello.py',
+          use: '@vercel/python',
+          config: { zeroConfig: true },
+        },
+        {
+          src: '<detect>',
+          use: '@vercel/container',
+          config: {
+            zeroConfig: true,
+            framework: 'ruby',
+            buildpack: 'ruby',
+          },
+        },
+      ]);
+    });
+  });
+
+  describe('Go framework builders', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    // `public/` is served as static files in front of the Go server, with
+    // `@vercel/go` and with the Go buildpack alike.
+    const publicBuilder = {
+      src: 'public/**/*',
+      use: '@vercel/static',
+      config: { zeroConfig: true, outputDirectory: 'public' },
+    };
+
+    const goBuilder = (config: Record<string, unknown> = {}) => ({
+      src: 'index.go',
+      use: '@vercel/go',
+      config: { zeroConfig: true, framework: 'go', ...config },
+    });
+
+    const buildpackBuilder = {
+      src: '<detect>',
+      use: '@vercel/container',
+      config: { zeroConfig: true, framework: 'go', buildpack: 'go' },
+    };
+
+    it.each([
+      ['a root main.go', ['go.mod', 'main.go', 'public/logo.svg']],
+      [
+        'several cmd packages',
+        ['go.mod', 'go.sum', 'cmd/api/main.go', 'cmd/worker/main.go'],
+      ],
+      [
+        'a cmd/server package',
+        ['go.mod', 'cmd/server/main.go', 'internal/server/server.go'],
+      ],
+    ])('routes a standalone Go server with %s through the container buildpack builder when enabled', async (_, files) => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+        projectSettings: { framework: 'go' },
+      });
+
+      expect(builders).toEqual([publicBuilder, buildpackBuilder]);
+    });
+
+    it.each([
+      undefined,
+      '0',
+      'true',
+    ])('keeps a standalone Go server on @vercel/go when the flag is %s', async flag => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', flag);
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['go.mod', 'main.go'],
+        null,
+        { projectSettings: { framework: 'go' } }
+      );
+
+      expect(builders).toEqual([publicBuilder, goBuilder()]);
+    });
+
+    it.each([
+      ['no go.mod at all', ['main.go']],
+      ['a go.mod only below the root', ['main.go', 'backend/go.mod']],
+      ['a go.work but no go.mod', ['main.go', 'go.work']],
+    ])('keeps @vercel/go when the flag is on but the project has %s', async (_, files) => {
+      // The buildpack needs its project marker at the root; without one
+      // `@vercel/go` keeps building exactly as before the flag.
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+        projectSettings: { framework: 'go' },
+      });
+
+      expect(builders).toEqual([publicBuilder, goBuilder()]);
+    });
+
+    it('routes a project with a custom build command to the buildpack', async () => {
+      // The container builder warns that the buildpack ignores the command.
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', '1');
+      const buildCommand = 'go build -tags netgo -o server .';
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['go.mod', 'main.go'],
+        null,
+        { projectSettings: { framework: 'go', buildCommand } }
+      );
+
+      expect(builders).toEqual([
+        publicBuilder,
+        {
+          ...buildpackBuilder,
+          config: { ...buildpackBuilder.config, buildCommand },
+        },
+      ]);
+    });
+
+    it.each([
+      undefined,
+      '0',
+      '1',
+    ])('keeps framework-null api Go functions on @vercel/go when the flag is %s', async flag => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', flag);
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['go.mod', 'go.sum', 'api/date.go', 'api/date_test.go'],
+        null,
+        { projectSettings: { framework: null } }
+      );
+
+      expect(builders).toContainEqual({
+        src: 'api/date.go',
+        use: '@vercel/go',
+        config: { zeroConfig: true },
+      });
+      expect(
+        builders.some(builder => builder.use === '@vercel/container')
+      ).toBe(false);
+    });
+
+    it('folds api Go files into the buildpack build and keeps other api runtimes as functions', async () => {
+      // The `go` preset opts out of the `@vercel/go` api runtime
+      // (`ignoreRuntimes`), with or without the buildpack: Go files under
+      // `api/` belong to the server's module. Other languages under `api/`
+      // still build as functions next to the container.
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['go.mod', 'main.go', 'api/date.go', 'api/hello.py'],
+        null,
+        { projectSettings: { framework: 'go' } }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: 'api/hello.py',
+          use: '@vercel/python',
+          config: { zeroConfig: true },
+        },
+        publicBuilder,
+        buildpackBuilder,
+      ]);
+    });
+
+    it('is enabled by its own flag, not the Ruby buildpack flag', async () => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['go.mod', 'main.go'],
+        null,
+        { projectSettings: { framework: 'go' } }
+      );
+
+      expect(builders).toEqual([publicBuilder, goBuilder()]);
+    });
+
+    it('evaluates the Go flag per call and routes only 1 to the buildpack', async () => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_RUBY', '1');
+      for (const flag of [undefined, '0', 'true', '1', '0', undefined]) {
+        vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', flag);
+        const { builders } = await invokeDetectBuildersAndThrow(
+          ['go.mod', 'cmd/custom/main.go', 'public/index.html'],
+          null,
+          { projectSettings: { framework: 'go' } }
+        );
+
+        // `public/` is served by the static builder in front of the Go
+        // server either way; the buildpack does not require the legacy
+        // preset's index.go entrypoint.
+        expect(builders).toEqual([
+          publicBuilder,
+          flag === '1' ? buildpackBuilder : goBuilder(),
+        ]);
+      }
+    });
+
+    it.each([
+      ['no module', []],
+      ['a nested module', ['backend/go.mod']],
+      ['only go.sum', ['go.sum']],
+    ])('requires a root go.mod, not %s', async (_, markers) => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['index.go', ...markers],
+        null,
+        { projectSettings: { framework: 'go' } }
+      );
+
+      expect(builders).toEqual([publicBuilder, goBuilder()]);
+    });
+
+    it.each([
+      undefined,
+      '0',
+      '1',
+    ])('preserves framework-null Go API functions and static siblings with flag %s', async flag => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', flag);
+      const { builders } = await invokeDetectBuildersAndThrow(
+        [
+          'go.mod',
+          'api/hello.go',
+          'api/users/[id].go',
+          'api/hello_test.go',
+          'public/index.html',
+        ],
+        null,
+        { projectSettings: { framework: null } }
+      );
+
+      expect(builders).toHaveLength(3);
+      for (const src of ['api/hello.go', 'api/users/[id].go']) {
+        expect(builders).toContainEqual({
+          src,
+          use: '@vercel/go',
+          config: { zeroConfig: true },
+        });
+      }
+      expect(builders).toContainEqual(publicBuilder);
+    });
+
+    it('keeps a Hugo site with a Go module on static-build', async () => {
+      vi.stubEnv('VERCEL_EXPERIMENTAL_BUILDPACK_GO', '1');
+      const { builders } = await invokeDetectBuildersAndThrow(
+        ['go.mod', 'config.toml', 'content/index.md'],
+        null,
+        { projectSettings: { framework: 'hugo' } }
+      );
+
+      expect(builders).toEqual([
+        {
+          src: 'config.toml',
+          use: '@vercel/static-build',
+          config: { zeroConfig: true, framework: 'hugo' },
+        },
+      ]);
+    });
+  });
+
   it('extend with functions', async () => {
     const pkg = {
       scripts: { build: 'next build' },
@@ -584,6 +1362,88 @@ describe('Test `detectBuilders`', () => {
     expect(builders).toHaveLength(0);
     expect(errors.length).toBe(1);
     expect(errors[0].code).toBe('invalid_function_duration');
+  });
+
+  it('valid function maxDuration set to "max"', async () => {
+    const pkg = {
+      scripts: { build: 'next build' },
+      dependencies: { next: '9.0.0' },
+    };
+    const functions = {
+      'pages/api/teams/**': { maxDuration: 'max' as const },
+    };
+    const files = [
+      'package.json',
+      'pages/index.js',
+      'pages/api/teams/members.ts',
+    ];
+    const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+      functions,
+    });
+
+    expect(errors).toHaveLength(0);
+    expect(builders.length).toBe(1);
+  });
+
+  it('rejects maxDuration above the default 3600s limit', async () => {
+    const functions = { 'pages/index.ts': { maxDuration: 3700 } };
+    const files = ['pages/index.ts'];
+    const { builders, errors } = await invokeDetectBuilders(files, null, {
+      functions,
+    });
+
+    expect(builders).toHaveLength(0);
+    expect(errors.length).toBe(1);
+    expect(errors[0].code).toBe('invalid_function_duration');
+  });
+
+  describe('with VERCEL_CLI_SKIP_MAX_DURATION_LIMIT=1', () => {
+    beforeEach(() => {
+      process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_CLI_SKIP_MAX_DURATION_LIMIT;
+    });
+
+    it('allows maxDuration above 3600s, deferring to server-side validation', async () => {
+      const pkg = {
+        scripts: { build: 'next build' },
+        dependencies: { next: '9.0.0' },
+      };
+      const functions = { 'pages/api/long.ts': { maxDuration: 3700 } };
+      const files = ['package.json', 'pages/index.js', 'pages/api/long.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, pkg, {
+        functions,
+      });
+
+      expect(errors).toHaveLength(0);
+      expect(builders.length).toBe(1);
+    });
+
+    it('still rejects a non-integer maxDuration', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 1.5 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
+
+    it('still rejects a maxDuration below 1', async () => {
+      const functions = { 'pages/index.ts': { maxDuration: 0 } };
+      const files = ['pages/index.ts'];
+      const { builders, errors } = await invokeDetectBuilders(files, null, {
+        functions,
+      });
+
+      expect(builders).toHaveLength(0);
+      expect(errors.length).toBe(1);
+      expect(errors[0].code).toBe('invalid_function_duration');
+    });
   });
 
   it('invalid function memory', async () => {
@@ -772,6 +1632,77 @@ describe('Test `detectBuilders`', () => {
     expect(errors[0].code).toBe('invalid_function_property');
   });
 
+  it('Must fail for installCommand config property', async () => {
+    const functions = {
+      'api/test.js': { installCommand: false },
+    };
+    const files = ['api/test.js'];
+
+    const { errors } = await invokeDetectBuilders(files, null, {
+      // @ts-ignore - allow bad type to be passed in
+      functions,
+    });
+
+    expect(errors).not.toBe(null);
+    expect(errors[0].code).toBe('invalid_function_property');
+  });
+
+  it('passes installCommand to api and middleware builders', async () => {
+    const functions = {
+      'api/**': { installCommand: '' },
+      'middleware.ts': { installCommand: '' },
+    };
+    const files = ['api/test.js', 'middleware.ts'];
+
+    const { builders, errors } = await invokeDetectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors).toEqual([]);
+    expect(
+      builders.map(builder => [builder.src, builder.config?.functions])
+    ).toEqual(
+      expect.arrayContaining([
+        ['api/test.js', { 'api/**': { installCommand: '' } }],
+        ['middleware.ts', { 'middleware.ts': { installCommand: '' } }],
+      ])
+    );
+  });
+
+  it('warns when installCommand matches non-Node functions', async () => {
+    const functions = {
+      'api/*.py': { installCommand: '' },
+      'api/*.go': { installCommand: 'make deps' },
+      'api/*.ts': { installCommand: '' },
+    };
+    const files = ['api/a.py', 'api/b.py', 'api/c.go', 'api/d.ts'];
+
+    const { errors, warnings } = await invokeDetectBuilders(files, null, {
+      functions,
+    });
+
+    expect(errors).toEqual([]);
+    expect(warnings.map(warning => warning.code)).toEqual([
+      'unsupported_function_install_command',
+      'unsupported_function_install_command',
+    ]);
+    expect(warnings.map(warning => warning.message)).toEqual([
+      expect.stringContaining('functions["api/*.py"]'),
+      expect.stringContaining('functions["api/*.go"]'),
+    ]);
+  });
+
+  it('does not warn when installCommand only matches Node functions', async () => {
+    const functions = { 'api/**': { installCommand: '' } };
+    const files = ['api/a.ts', 'api/b.js'];
+
+    const { warnings } = await invokeDetectBuilders(files, null, {
+      functions,
+    });
+
+    expect(warnings).toEqual([]);
+  });
+
   it('Must fail when function patterns start with a slash', async () => {
     const functions = {
       '/api/test.js': { memory: 128 },
@@ -921,6 +1852,97 @@ describe('Test `detectBuilders`', () => {
         link: 'https://vercel.link/unmatched-function-pattern',
       },
     ]);
+  });
+
+  it('reserves runtime-owned function files from implicit API detection', async () => {
+    const { builders, errors } = await invokeDetectBuilders(
+      ['api/nightly.py', 'index.html'],
+      null,
+      { reservedFunctionFiles: ['api/nightly.py'] }
+    );
+
+    expect(errors).toEqual([]);
+    expect(builders?.some(builder => builder.use === '@vercel/python')).toBe(
+      false
+    );
+  });
+
+  it('excludes runtime-owned function files from implicit static output', async () => {
+    const { builders, errors } = await invokeDetectBuilders(
+      ['jobs/nightly.ts', 'index.html'],
+      null,
+      {
+        functions: { 'jobs/*.ts': { maxDuration: 120 } },
+        reservedFunctionFiles: ['jobs/nightly.ts'],
+      }
+    );
+
+    expect(errors).toEqual([]);
+    const staticPattern = builders?.find(
+      builder => builder.use === '@vercel/static'
+    )?.src;
+    expect(typeof staticPattern).toBe('string');
+    expect(minimatch('index.html', staticPattern as string)).toBe(true);
+    expect(minimatch('jobs/nightly.ts', staticPattern as string)).toBe(false);
+  });
+
+  it.each([
+    'jobs/nightly.py',
+    'jobs/*.py',
+  ])('counts `functions` pattern %s matching a runtime-owned file as used', async pattern => {
+    const { errors } = await invokeDetectBuilders(
+      ['jobs/nightly.py', 'index.html'],
+      null,
+      {
+        functions: { [pattern]: { maxDuration: 120 } },
+        reservedFunctionFiles: ['jobs/nightly.py'],
+      }
+    );
+
+    expect(errors).toEqual([]);
+  });
+
+  it.each<[string, Options]>([
+    ['proxy.ts', { proxy: { entrypoint: 'proxy.ts' } }],
+    ['jobs/nightly.ts', { reservedFunctionFiles: ['jobs/nightly.ts'] }],
+    ['jobs/nightly.py', { reservedFunctionFiles: ['jobs/nightly.py'] }],
+  ])('reports a `functions` pattern without the extension of %s', async (file, options) => {
+    const { errors } = await invokeDetectBuilders([file, 'index.html'], null, {
+      ...options,
+      functions: {
+        [file.slice(0, -extname(file).length)]: { maxDuration: 120 },
+      },
+    });
+
+    expect(errors).toEqual([
+      expect.objectContaining({ code: 'unused_function' }),
+    ]);
+  });
+
+  it('still reports `functions` patterns that match no runtime-owned file', async () => {
+    const { errors } = await invokeDetectBuilders(
+      ['jobs/nightly.ts', 'index.html'],
+      null,
+      {
+        functions: { 'jobs/weekly.ts': { maxDuration: 120 } },
+        reservedFunctionFiles: ['jobs/nightly.ts'],
+      }
+    );
+
+    expect(errors).toEqual([
+      expect.objectContaining({ code: 'unused_function' }),
+    ]);
+  });
+
+  it('does not require a build script when only runtime-owned functions exist', async () => {
+    const { builders, errors } = await invokeDetectBuilders(
+      ['jobs/nightly.ts', 'package.json'],
+      { name: 'schedules-only' },
+      { reservedFunctionFiles: ['jobs/nightly.ts'] }
+    );
+
+    expect(errors).toEqual([]);
+    expect(builders).toEqual([]);
   });
 
   it('Works with fallback last', async () => {
@@ -2604,6 +3626,285 @@ describe('Test `detectBuilders` with `featHandleMiss=true`', () => {
     expect(builders.length).toBe(2);
   });
 
+  it('builds the configured proxy instead of root middleware', async () => {
+    const files = ['proxy.ts', 'middleware.ts', 'index.html'];
+    const { builders, rewriteRoutes } = await invokeDetectBuildersAndThrow(
+      files,
+      null,
+      {
+        featHandleMiss,
+        proxy: { entrypoint: 'proxy.ts', matcher: '/api/:func*' },
+      }
+    );
+
+    expect(rewriteRoutes).toHaveLength(0);
+    expect(builders).toEqual([
+      {
+        src: 'proxy.ts',
+        use: '@vercel/node',
+        config: {
+          middleware: true,
+          middlewareRuntime: 'nodejs',
+          middlewareMatcher: '/api/:func*',
+          zeroConfig: true,
+        },
+      },
+      {
+        src: REGEX_NON_VERCEL_PLATFORM_FILES.replace('}', ',proxy.ts}'),
+        use: '@vercel/static',
+        config: {
+          zeroConfig: true,
+        },
+      },
+    ]);
+  });
+
+  it('builds a nested JavaScript proxy entrypoint', async () => {
+    const files = ['routing/proxy.js', 'index.html'];
+    const { builders } = await invokeDetectBuildersAndThrow(files, null, {
+      featHandleMiss,
+      proxy: { entrypoint: 'routing/proxy.js' },
+    });
+
+    expect(builders[0]).toEqual({
+      src: 'routing/proxy.js',
+      use: '@vercel/node',
+      config: {
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+        zeroConfig: true,
+      },
+    });
+    expect(builders[1].src).toBe(
+      REGEX_NON_VERCEL_PLATFORM_FILES.replace('}', ',routing/proxy.js}')
+    );
+  });
+
+  it('applies functions config targeting the proxy entrypoint', async () => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['proxy.ts'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        functions: {
+          'proxy.ts': {
+            maxDuration: 10,
+            memory: 1024,
+          },
+        },
+      }
+    );
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.ts',
+      use: '@vercel/node',
+      config: {
+        functions: {
+          'proxy.ts': {
+            maxDuration: 10,
+            memory: 1024,
+          },
+        },
+        middleware: true,
+        middlewareRuntime: 'nodejs',
+        zeroConfig: true,
+      },
+    });
+  });
+
+  it.each([
+    'proxy.ts',
+    '**/*.ts',
+  ])('uses a functions runtime targeting the proxy through %s', async pattern => {
+    const { builders } = await invokeDetectBuildersAndThrow(
+      ['proxy.ts'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        functions: {
+          [pattern]: {
+            runtime: 'some-runtime@1.0.0',
+          },
+        },
+      }
+    );
+
+    expect(builders[0]).toEqual({
+      src: 'proxy.ts',
+      use: 'some-runtime@1.0.0',
+      config: {
+        functions: {
+          [pattern]: {
+            runtime: 'some-runtime@1.0.0',
+          },
+        },
+        middleware: true,
+        zeroConfig: true,
+      },
+    });
+  });
+
+  it('rejects unsupported proxy entrypoint extensions', async () => {
+    const { errors } = await detectBuilders(['proxy.mjs'], null, {
+      proxy: { entrypoint: 'proxy.mjs' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'invalid_proxy_entrypoint',
+        message:
+          'The `proxy.entrypoint` must be a `.js` or `.ts` file path, or a Python `module:attr`.',
+      },
+    ]);
+  });
+
+  it('rejects an invalid proxy matcher', async () => {
+    const { errors } = await detectBuilders(['proxy.ts'], null, {
+      proxy: { entrypoint: 'proxy.ts', matcher: 'api/:func*' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'invalid_proxy_matcher',
+        message:
+          'The `proxy.matcher` value must be a path matcher starting with `/`, or an array of path matchers starting with `/`.',
+      },
+    ]);
+  });
+
+  it('rejects a proxy entrypoint that does not exist', async () => {
+    const { errors } = await detectBuilders(['index.html'], null, {
+      proxy: { entrypoint: 'proxy.ts' },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'proxy_entrypoint_not_found',
+        message: 'The proxy entrypoint `proxy.ts` does not exist.',
+      },
+    ]);
+  });
+
+  it('rejects proxy configuration for framework-owned middleware', async () => {
+    const { errors } = await detectBuilders(
+      ['proxy.ts', 'package.json'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        projectSettings: { framework: 'nextjs' },
+      }
+    );
+
+    expect(errors).toEqual([
+      {
+        code: 'proxy_framework_conflict',
+        message:
+          'The `proxy` property cannot be used with Next.js because the framework builds its own routing middleware.',
+      },
+    ]);
+  });
+
+  it.each([
+    'fastapi',
+    'flask',
+    'django',
+    'python',
+    'go',
+    'hugo',
+    'ruby',
+    'jekyll',
+    'middleman',
+    'rust',
+    'actix-web',
+    'axum',
+    'zola',
+  ])('rejects a node proxy entrypoint for a %s app', async framework => {
+    const appRuntime = inferBuilderRuntimeFromFramework(framework);
+    const { errors } = await detectBuilders(['proxy.ts'], null, {
+      proxy: { entrypoint: 'proxy.ts' },
+      projectSettings: { framework },
+    });
+
+    expect(errors).toEqual([
+      {
+        code: 'proxy_runtime_mismatch',
+        message:
+          `The proxy entrypoint \`proxy.ts\` uses the node runtime, ` +
+          `but the app uses the ${appRuntime} runtime. ` +
+          `The proxy and app must use the same runtime.`,
+      },
+    ]);
+  });
+
+  it.each([
+    'node',
+    'bun',
+    'express',
+    'hono',
+    'vue',
+    'gatsby',
+    'create-react-app',
+  ])('allows a node proxy entrypoint for a node app (framework: %s)', async framework => {
+    const { errors } = await detectBuilders(['proxy.ts'], null, {
+      proxy: { entrypoint: 'proxy.ts' },
+      projectSettings: { framework },
+    });
+
+    expect(errors).toBeNull();
+  });
+
+  it.each([
+    'services',
+    'container',
+    undefined,
+  ])('waives proxy runtime validation for framework: %s', async framework => {
+    const { errors } = await detectBuilders(
+      ['proxy.ts', 'package.json'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        projectSettings: framework ? { framework } : {},
+      }
+    );
+
+    expect(errors).toBeNull();
+  });
+
+  it('raises proxy_framework_conflict for a matching-runtime proxy with nextjs', async () => {
+    const { errors } = await detectBuilders(
+      ['proxy.ts', 'package.json'],
+      null,
+      {
+        proxy: { entrypoint: 'proxy.ts' },
+        projectSettings: { framework: 'nextjs' },
+      }
+    );
+
+    expect(errors).toEqual([
+      { code: 'proxy_framework_conflict', message: expect.any(String) },
+    ]);
+  });
+
+  it('raises a runtime mismatch before proxy_framework_conflict for nextjs', async () => {
+    process.env.VERCEL_PYTHON_PROXY = '1';
+    try {
+      const { errors } = await detectBuilders(
+        ['proxy.py', 'package.json'],
+        null,
+        {
+          proxy: { entrypoint: 'proxy:app' },
+          projectSettings: { framework: 'nextjs' },
+        }
+      );
+
+      expect(errors).toEqual([
+        { code: 'proxy_runtime_mismatch', message: expect.any(String) },
+      ]);
+    } finally {
+      delete process.env.VERCEL_PYTHON_PROXY;
+    }
+  });
+
   it('should not add middleware builder when "nextjs" framework is selected', async () => {
     const files = ['package.json', 'pages/index.ts', 'middleware.ts'];
     const projectSettings = {
@@ -3623,7 +4924,6 @@ describe('Test `detectRoutes` with `featHandleMiss=true`, `cleanUrls=true`, `tra
     expect(getLocation('/api-index')).toBe(null);
     expect(getLocation('/apiuser.index')).toBe(null);
     expect(getLocation('/apiuser-index')).toBe(null);
-    expect(getLocation('/apiuser-index')).toBe(null);
   });
 
   it('works with file and directory placeholder of same name', async () => {
@@ -3976,5 +5276,206 @@ describe('Test `detectApiExtensions`', () => {
     expect(result.has('.go')).toBe(true);
     expect(result.has('.rb')).toBe(true);
     expect(result.has('.rs')).toBe(true);
+  });
+
+  describe('Python entrypoint detection with workPath', () => {
+    let workPath: string;
+
+    beforeEach(() => {
+      workPath = mkdtempSync(join(tmpdir(), 'vc-python-entrypoints-'));
+      mkdirSync(join(workPath, 'api'));
+    });
+
+    afterEach(() => {
+      rmSync(workPath, { recursive: true, force: true });
+    });
+
+    it('creates builders only for supported Python entrypoints', async () => {
+      writeFileSync(
+        join(workPath, 'api', 'app.py'),
+        'from fastapi import FastAPI\napp = FastAPI()\n'
+      );
+      writeFileSync(
+        join(workPath, 'api', 'django.py'),
+        'from django.core.wsgi import get_wsgi_application\napplication = get_wsgi_application()\n'
+      );
+      writeFileSync(
+        join(workPath, 'api', 'handler.py'),
+        'from http.server import BaseHTTPRequestHandler\nclass handler(BaseHTTPRequestHandler):\n    pass\n'
+      );
+      writeFileSync(
+        join(workPath, 'api', 'helper.py'),
+        'def helper():\n    return True\n'
+      );
+
+      const { builders } = await detectBuilders(
+        ['api/app.py', 'api/django.py', 'api/handler.py', 'api/helper.py'],
+        null,
+        { workPath }
+      );
+      const pythonSources = (builders || [])
+        .filter(builder => builder.use === '@vercel/python')
+        .map(builder => builder.src);
+
+      expect(pythonSources).toEqual([
+        'api/app.py',
+        'api/django.py',
+        'api/handler.py',
+      ]);
+    });
+
+    it('omits unreadable Python files without throwing', async () => {
+      const { builders } = await detectBuilders(['api/missing.py'], null, {
+        workPath,
+      });
+
+      expect(builders).toBeNull();
+    });
+
+    it('preserves unfiltered detection without workPath', async () => {
+      const { builders } = await detectBuilders(['api/helper.py'], null);
+
+      expect(builders).toEqual([
+        expect.objectContaining({
+          src: 'api/helper.py',
+          use: '@vercel/python',
+        }),
+      ]);
+    });
+  });
+
+  describe('Node.js entrypoint detection with workPath', () => {
+    const workPath = join(__dirname, 'fixtures', '70-node-api-dir-files');
+
+    beforeEach(() => {
+      process.env.VERCEL_NODE_FILTER_ENTRYPOINTS = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+    });
+
+    it('should create builders for valid Node.js entrypoints and skip helpers', async () => {
+      const files = [
+        'api/index.ts',
+        'api/helper.ts',
+        'api/get-handler.ts',
+        'api/server.js',
+      ];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      const apiSources = apiBuilders.map(b => b.src);
+
+      // Valid entrypoints should get builders
+      expect(apiSources).toContain('api/index.ts');
+      expect(apiSources).toContain('api/get-handler.ts');
+      expect(apiSources).toContain('api/server.js');
+
+      // Helper file should NOT get a builder
+      expect(apiSources).not.toContain('api/helper.ts');
+    });
+
+    it('should skip helpers but still detect api directory', async () => {
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+    });
+
+    it('should not filter middleware files that export middleware function', async () => {
+      const files = ['api/index.ts', 'middleware.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const middlewareBuilders = (builders || []).filter(
+        b => b.config?.middleware === true
+      );
+
+      // Middleware file should still get a builder even though it doesn't
+      // match standard API handler export patterns
+      expect(middlewareBuilders).toHaveLength(1);
+      expect(middlewareBuilders[0].src).toBe('middleware.ts');
+    });
+
+    it('should not filter entrypoints when env var is not set', async () => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      // Without the env var, all files get builders (existing behavior)
+      expect(apiBuilders).toHaveLength(2);
+    });
+  });
+
+  describe('Node.js entrypoint detection in monorepo', () => {
+    // Simulates a monorepo where workPath points to a nested workspace
+    // (e.g., apps/web). File paths passed to detectBuilders are always
+    // relative to workPath, mirroring how the CLI resolves them.
+    const workPath = join(
+      __dirname,
+      'fixtures',
+      '71-node-monorepo',
+      'apps',
+      'web'
+    );
+
+    beforeEach(() => {
+      process.env.VERCEL_NODE_FILTER_ENTRYPOINTS = '1';
+    });
+
+    afterEach(() => {
+      delete process.env.VERCEL_NODE_FILTER_ENTRYPOINTS;
+    });
+
+    it('should filter helpers and keep entrypoints in monorepo workspace', async () => {
+      const files = ['api/index.ts', 'api/helper.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+    });
+
+    it('should not filter middleware in monorepo workspace', async () => {
+      const files = ['api/index.ts', 'api/helper.ts', 'middleware.ts'];
+
+      const { builders } = await detectBuilders(files, null, { workPath });
+
+      const apiBuilders = (builders || []).filter(
+        b => b.src?.startsWith('api/') && b.use === '@vercel/node'
+      );
+      const middlewareBuilders = (builders || []).filter(
+        b => b.config?.middleware === true
+      );
+
+      // Helper filtered, entrypoint kept
+      expect(apiBuilders).toHaveLength(1);
+      expect(apiBuilders[0].src).toBe('api/index.ts');
+
+      // Middleware preserved
+      expect(middlewareBuilders).toHaveLength(1);
+      expect(middlewareBuilders[0].src).toBe('middleware.ts');
+    });
   });
 });

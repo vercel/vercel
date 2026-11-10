@@ -1,0 +1,50 @@
+name: Bootstrap @vercel/aws placeholder
+
+# One-off workflow to claim the @vercel/aws name on npm so Trusted Publishing
+# can be configured against it. Delete this file once the real package has
+# been published via the standard release workflow.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-placeholder:
+    name: Publish @vercel/aws@0.0.0 placeholder
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Prepare placeholder package
+        run: |
+          mkdir -p /tmp/vercel-aws-placeholder
+          cd /tmp/vercel-aws-placeholder
+          cat > package.json <<'EOF'
+          {
+            "name": "@vercel/aws",
+            "version": "0.0.0",
+            "description": "Placeholder for @vercel/aws — real package coming soon. See https://github.com/vercel/vercel/tree/main/packages/aws",
+            "license": "Apache-2.0",
+            "repository": {
+              "type": "git",
+              "url": "git+https://github.com/vercel/vercel.git",
+              "directory": "packages/aws"
+            },
+            "publishConfig": {
+              "access": "public"
+            }
+          }
+          EOF
+          printf 'Placeholder for @vercel/aws.\n\nThe real package will be published from https://github.com/vercel/vercel/tree/main/packages/aws.\n' > README.md
+
+      - name: Publish to npm
+        working-directory: /tmp/vercel-aws-placeholder
+        run: npm publish --access public # zizmor: ignore[use-trusted-publishing] - bootstrapping the package name so Trusted Publishing can be configured against it
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../../src/util/fetch';
 import { listen } from 'async-listen';
 import type { IncomingMessage, Server, ServerResponse } from 'http';
 import { createServer } from 'http';
@@ -19,7 +19,6 @@ const send = (res: ServerResponse, statusCode: number, body: JSONValue) => {
 describe('responseError()', () => {
   let url: string;
   let server: Server;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let handler = (_req: IncomingMessage, _res: ServerResponse) => {};
 
   beforeAll(async () => {
@@ -27,9 +26,12 @@ describe('responseError()', () => {
     url = (await listen(server)).toString();
   });
 
-  afterAll(() => {
-    server.close();
-  });
+  afterAll(
+    () =>
+      new Promise<void>(resolve => {
+        server.close(() => resolve());
+      })
+  );
 
   it('should parse 4xx response error with fallback message', async () => {
     handler = (_req: IncomingMessage, res: ServerResponse) => {
@@ -232,5 +234,75 @@ describe('toEnumerableError()', () => {
     expect(JSON.stringify(enumerable)).toEqual(
       '{"name":"Error","message":"An error","custom":"value","userError":true}'
     );
+  });
+
+  it('serializes a cause with circular class instances without throwing', () => {
+    // Shape of vlt's "Integrity check failure": the cause carries the useful
+    // fields plus objects (like a path-scurry PathPosix) with circular refs.
+    class PathPosix {
+      root: PathPosix;
+      constructor() {
+        this.root = this;
+      }
+    }
+    const err = new Error('Integrity check failure', {
+      cause: {
+        code: 'EINTEGRITY',
+        url: 'https://example.vercel.sh/tarballs/vercel-static-build.tgz',
+        wanted: 'sha512-wanted',
+        found: 'sha512-found',
+        response: { path: new PathPosix(), statusCode: 200 },
+      },
+    });
+    const selfReferencing = { name: 'self' } as Record<string, unknown>;
+    selfReferencing.self = selfReferencing;
+    Object.defineProperty(err, 'extra', { value: selfReferencing });
+
+    const enumerable = toEnumerableError(err);
+    delete enumerable.stack;
+    const json = JSON.parse(JSON.stringify(enumerable));
+
+    expect(json.message).toBe('Integrity check failure');
+    expect(json.cause).toMatchObject({
+      code: 'EINTEGRITY',
+      url: 'https://example.vercel.sh/tarballs/vercel-static-build.tgz',
+      wanted: 'sha512-wanted',
+      found: 'sha512-found',
+      response: { path: '[PathPosix]', statusCode: 200 },
+    });
+    expect(json.extra).toEqual({ name: 'self', self: '[Circular]' });
+  });
+
+  it.each([
+    ['a string', 'boom', 'boom'],
+    ['a number', 42, '42'],
+    ['null', null, 'null'],
+    ['undefined', undefined, 'undefined'],
+  ])('serializes %s thrown value without throwing', (_label, thrown, message) => {
+    const enumerable = toEnumerableError(thrown as unknown as Partial<Error>);
+
+    expect(JSON.parse(JSON.stringify(enumerable))).toEqual({
+      name: 'Error',
+      message,
+    });
+  });
+
+  it('serializes a non-Error thrown object', () => {
+    const json = JSON.parse(
+      JSON.stringify(
+        toEnumerableError({ message: 'plain object', code: 'E_PLAIN' })
+      )
+    );
+
+    expect(json).toMatchObject({ message: 'plain object', code: 'E_PLAIN' });
+  });
+
+  it('serializes nested Error causes recursively', () => {
+    const err = new Error('outer', { cause: new Error('inner') });
+
+    const json = JSON.parse(JSON.stringify(toEnumerableError(err)));
+
+    expect(json.cause).toMatchObject({ name: 'Error', message: 'inner' });
+    expect(typeof json.cause.stack).toBe('string');
   });
 });

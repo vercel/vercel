@@ -2,7 +2,7 @@ import { TelemetryClient } from '../..';
 import type { TelemetryMethods } from '../../types';
 import type { deployCommand } from '../../../../commands/deploy/command';
 import { deprecatedArchiveSplitTgz } from '../../../../commands/deploy/command';
-import { VALID_ARCHIVE_FORMATS } from '@vercel/client';
+import { VALID_ARCHIVE_FORMATS } from '@vercel/client/dist/types';
 
 export class DeployTelemetryClient
   extends TelemetryClient
@@ -30,6 +30,11 @@ export class DeployTelemetryClient
       });
     }
   }
+  trackCliFlagTurbo(turbo: boolean | undefined) {
+    if (turbo) {
+      this.trackCliFlag('turbo');
+    }
+  }
   trackCliOptionBuildEnv(buildEnv: string[] | undefined) {
     if (buildEnv && buildEnv.length > 0) {
       this.trackCliOption({
@@ -50,6 +55,22 @@ export class DeployTelemetryClient
     if (meta && meta.length > 0) {
       this.trackCliOption({
         option: 'meta',
+        value: this.redactedValue,
+      });
+    }
+  }
+  trackCliOptionDeployment(deployment: string | undefined) {
+    if (deployment) {
+      this.trackCliOption({
+        option: 'deployment',
+        value: this.redactedValue,
+      });
+    }
+  }
+  trackCliOptionId(id: string | undefined) {
+    if (id) {
+      this.trackCliOption({
+        option: 'id',
         value: this.redactedValue,
       });
     }
@@ -76,6 +97,14 @@ export class DeployTelemetryClient
       this.trackCliOption({
         option: 'target',
         value: this.redactedTargetName(target),
+      });
+    }
+  }
+  trackCliOptionEnvironment(environment: string | undefined) {
+    if (environment) {
+      this.trackCliOption({
+        option: 'environment',
+        value: this.redactedTargetName(environment),
       });
     }
   }
@@ -114,6 +143,21 @@ export class DeployTelemetryClient
       this.trackCliFlag('no-wait');
     }
   }
+  trackCliFlagDry(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('dry');
+    }
+  }
+  trackCliFlagCreateIfMissing(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('create-if-missing');
+    }
+  }
+  trackCliFlagVerify(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('verify');
+    }
+  }
   trackCliFlagPrebuilt(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prebuilt');
@@ -131,11 +175,29 @@ export class DeployTelemetryClient
       value: actual,
     });
   }
+  trackCliSubcommandDescribe(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'describe',
+      value: actual,
+    });
+  }
   trackCliFlagProd(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('prod');
     }
   }
+  trackCliFlagTemporary(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('temporary');
+    }
+  }
+
+  trackTargetEnvironment(target: string | undefined) {
+    super.trackTargetEnvironment(
+      target === 'production' ? 'production' : 'preview'
+    );
+  }
+
   trackCliFlagPublic(flag: boolean | undefined) {
     if (flag) {
       this.trackCliFlag('public');
@@ -156,6 +218,19 @@ export class DeployTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+  trackCliFlagJson(flag: boolean | undefined) {
+    if (flag) {
+      this.trackCliFlag('json');
+    }
+  }
+  trackCliOptionFormat(format: string | undefined) {
+    if (format) {
+      this.trackCliOption({
+        option: 'format',
+        value: format,
+      });
+    }
+  }
 
   trackDeploymentId(id: string | undefined) {
     if (id) {
@@ -164,5 +239,12 @@ export class DeployTelemetryClient
         value: id,
       });
     }
+  }
+
+  trackPrebuiltFilePathMapWouldFailClosed() {
+    this.trackCommandOutput({
+      key: 'prebuilt-filepathmap-would-fail-closed',
+      value: 'TRUE',
+    });
   }
 }

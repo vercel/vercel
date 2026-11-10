@@ -3,14 +3,14 @@
     "handle": "filesystem"
   },
   {
-    "src": "^(?:\\/health)(?:\\/$)?$",
-    "dest": "/health",
-    "methods": [
-      "GET"
-    ]
-  },
-  {
     "src": "/(.*)",
-    "dest": "/"
+    "dest": "/",
+    "transforms": [
+      {
+        "type": "request.path",
+        "op": "set",
+        "args": "/$1"
+      }
+    ]
   }
 ]

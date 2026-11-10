@@ -1,5 +1,20 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption, formatOption, jsonOption } from '../../util/arg-common';
+import {
+  yesOption,
+  formatOption,
+  jsonOption,
+  projectOption,
+} from '../../util/arg-common';
+import {
+  CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT,
+  CUSTOM_ENVIRONMENTS_PER_PACK,
+  customEnvironmentPackEnvironments,
+} from '../../util/buy/custom-environment-addon';
+import { buySubcommand as domainsBuySubcommand } from '../domains/command';
+
+const EXAMPLE_CUSTOM_ENVIRONMENT_COUNT = customEnvironmentPackEnvironments(
+  CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT
+);
 
 export const SUPPORTED_CREDIT_TYPES = ['v0', 'gateway', 'agent'] as const;
 export type CreditType = (typeof SUPPORTED_CREDIT_TYPES)[number];
@@ -48,19 +63,15 @@ export const creditsSubcommand = {
   ],
 } as const;
 
-// TODO(mingchungx): Add other addons
-export const SUPPORTED_ADDON_ALIASES = ['siem'] as const;
-export type AddonAlias = (typeof SUPPORTED_ADDON_ALIASES)[number];
-
-// TODO(mingchungx): Add other labels
-export const ADDON_LABELS: Record<AddonAlias, string> = {
-  siem: 'SIEM',
-};
+export const SUPPORTED_ADDON_NAMES = [
+  'custom-environment',
+  'observability-plus',
+] as const;
 
 export const addonSubcommand = {
   name: 'addon',
-  aliases: ['addons'],
-  description: 'Purchase a Vercel addon for your team',
+  aliases: ['addons', 'add-on'],
+  description: `Purchase a Vercel addon for your team. Supported addons: ${SUPPORTED_ADDON_NAMES.join(', ')}. Observability Plus does not accept a quantity. Custom environment purchases are per project and use packs (each pack adds ${CUSTOM_ENVIRONMENTS_PER_PACK} environments).`,
   arguments: [
     {
       name: 'addon-name',
@@ -68,7 +79,7 @@ export const addonSubcommand = {
     },
     {
       name: 'quantity',
-      required: true,
+      required: false,
     },
   ],
   options: [
@@ -76,13 +87,21 @@ export const addonSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt',
     },
-    formatOption,
     jsonOption,
+    projectOption,
   ],
   examples: [
     {
-      name: 'Purchase 1 unit of the SIEM addon',
-      value: `${packageName} buy addon siem 1`,
+      name: 'Purchase Observability Plus',
+      value: `${packageName} buy addon observability-plus`,
+    },
+    {
+      name: `Purchase ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} custom environment packs (${EXAMPLE_CUSTOM_ENVIRONMENT_COUNT} environments) for a project`,
+      value: `${packageName} buy addon custom-environment ${CUSTOM_ENVIRONMENT_EXAMPLE_PACK_COUNT} --project my-app`,
+    },
+    {
+      name: 'Remove purchased custom environment capacity',
+      value: `${packageName} buy addon custom-environment 0 --project my-app --yes`,
     },
   ],
 } as const;
@@ -112,20 +131,6 @@ export const proSubcommand = {
   ],
 } as const;
 
-export const v0Subcommand = {
-  name: 'v0',
-  aliases: [],
-  description: 'Purchase a v0 subscription for your team',
-  arguments: [],
-  options: [],
-  examples: [
-    {
-      name: 'Purchase v0 for your team',
-      value: `${packageName} buy v0`,
-    },
-  ],
-} as const;
-
 export const domainSubcommand = {
   name: 'domain',
   aliases: [],
@@ -136,11 +141,16 @@ export const domainSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  // `buy domain` runs `domains buy`, so it takes the same options.
+  options: domainsBuySubcommand.options,
   examples: [
     {
       name: 'Purchase a domain',
       value: `${packageName} buy domain example.com`,
+    },
+    {
+      name: 'From an agent or script: buy at the price a person approved, with the billing info for the address',
+      value: `${packageName} buy domain example.com --scope my-team --amount 20.00 --use-billing-details --first-name Jane --last-name Doe --phone +11122233344 --no-auto-renew`,
     },
   ],
 } as const;
@@ -154,7 +164,6 @@ export const buyCommand = {
     creditsSubcommand,
     addonSubcommand,
     proSubcommand,
-    v0Subcommand,
     domainSubcommand,
   ],
   options: [],
@@ -164,16 +173,12 @@ export const buyCommand = {
       value: `${packageName} buy credits v0 100`,
     },
     {
-      name: 'Purchase the SIEM addon',
-      value: `${packageName} buy addon siem 1`,
+      name: 'Purchase Observability Plus',
+      value: `${packageName} buy addon observability-plus`,
     },
     {
       name: 'Upgrade to Pro',
       value: `${packageName} buy pro`,
-    },
-    {
-      name: 'Purchase v0',
-      value: `${packageName} buy v0`,
     },
     {
       name: 'Purchase a domain',

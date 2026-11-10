@@ -1,4 +1,5 @@
 import assert from 'assert';
+import { validateMaxConcurrency } from './max-concurrency';
 import Sema from 'async-sema';
 import { ZipFile } from 'yazl';
 import minimatch from 'minimatch';
@@ -6,10 +7,12 @@ import { readlink } from 'fs-extra';
 import { isSymbolicLink, isDirectory } from './fs/download';
 import streamToBuffer from './fs/stream-to-buffer';
 import type {
+  BuilderFunctions,
   Config,
   Env,
   Files,
   FunctionFramework,
+  MaxDuration,
   TriggerEvent,
   TriggerEventInput,
 } from './types';
@@ -55,6 +58,9 @@ export type LambdaOptions = LambdaOptionsWithFiles | LambdaOptionsWithZipBuffer;
 
 export type LambdaExecutableRuntimeLanguages = 'rust' | 'go';
 export type LambdaArchitecture = 'x86_64' | 'arm64';
+export interface LambdaAffinity {
+  mode: 'strict';
+}
 
 export interface LambdaOptionsBase {
   handler: string;
@@ -62,7 +68,9 @@ export interface LambdaOptionsBase {
   runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture?: LambdaArchitecture;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
+  affinity?: LambdaAffinity;
+  maxConcurrency?: number;
   environment?: Env;
   allowQuery?: string[];
   regions?: string[];
@@ -121,7 +129,8 @@ export interface LambdaOptionsWithZipBuffer extends LambdaOptionsBase {
 
 interface GetLambdaOptionsFromFunctionOptions {
   sourceFile: string;
-  config?: Pick<Config, 'functions'>;
+  config?: Pick<Config, 'functions' | 'serviceName'>;
+  isScheduleEntrypoint?: boolean;
 }
 
 function getDefaultLambdaArchitecture(
@@ -160,7 +169,10 @@ export class Lambda {
   runtimeLanguage?: LambdaExecutableRuntimeLanguages;
   architecture: LambdaArchitecture;
   memory?: number;
-  maxDuration?: number;
+  maxDuration?: MaxDuration;
+  affinity?: LambdaAffinity;
+  /** Maximum number of requests that one function instance can process concurrently. */
+  maxConcurrency?: number;
   environment: Env;
   allowQuery?: string[];
   regions?: string[];
@@ -207,6 +219,8 @@ export class Lambda {
       runtime,
       runtimeLanguage,
       maxDuration,
+      affinity,
+      maxConcurrency,
       architecture,
       memory,
       environment = {},
@@ -262,8 +276,23 @@ export class Lambda {
     }
 
     if (maxDuration !== undefined) {
-      assert(typeof maxDuration === 'number', '"maxDuration" is not a number');
+      assert(
+        typeof maxDuration === 'number' || maxDuration === 'max',
+        '"maxDuration" is not a number or "max"'
+      );
     }
+
+    if (affinity !== undefined) {
+      assert(
+        typeof affinity === 'object' &&
+          affinity !== null &&
+          affinity.mode === 'strict' &&
+          Object.keys(affinity).length === 1,
+        '"affinity" must be an object with only `mode: "strict"`'
+      );
+    }
+
+    validateMaxConcurrency(maxConcurrency);
 
     if (allowQuery !== undefined) {
       assert(Array.isArray(allowQuery), '"allowQuery" is not an Array');
@@ -337,80 +366,79 @@ export class Lambda {
 
         // Validate required type
         assert(
-          trigger.type === 'queue/v1beta' || trigger.type === 'queue/v2beta',
-          `${prefix}.type must be "queue/v1beta" or "queue/v2beta"`
+          trigger.type === 'queue/v1beta' ||
+            trigger.type === 'queue/v2beta' ||
+            trigger.type === 'schedule/v1beta',
+          `${prefix}.type must be "queue/v1beta", "queue/v2beta", or "schedule/v1beta"`
         );
 
-        // Validate required queue fields
-        assert(
-          typeof trigger.topic === 'string',
-          `${prefix}.topic is required and must be a string`
-        );
-        assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
+        if (
+          trigger.type === 'queue/v1beta' ||
+          trigger.type === 'queue/v2beta'
+        ) {
+          // Validate required queue fields
+          assert(
+            typeof trigger.topic === 'string',
+            `${prefix}.topic is required and must be a string`
+          );
+          assert(trigger.topic.length > 0, `${prefix}.topic cannot be empty`);
 
-        // Consumer is always required (populated by getLambdaOptionsFromFunction for v2beta)
-        assert(
-          typeof trigger.consumer === 'string',
-          `${prefix}.consumer is required and must be a string`
-        );
-        assert(
-          trigger.consumer.length > 0,
-          `${prefix}.consumer cannot be empty`
-        );
+          // Consumer is always required (populated by getLambdaOptionsFromFunction for v2beta)
+          assert(
+            typeof trigger.consumer === 'string',
+            `${prefix}.consumer is required and must be a string`
+          );
+          assert(
+            trigger.consumer.length > 0,
+            `${prefix}.consumer cannot be empty`
+          );
 
-        // v2beta allows only one trigger per function
-        if (trigger.type === 'queue/v2beta') {
-          assert(
-            experimentalTriggers.length === 1,
-            '"experimentalTriggers" can only have one item for queue/v2beta'
-          );
-        }
+          // Validate optional queue configuration
+          if (trigger.maxDeliveries !== undefined) {
+            assert(
+              typeof trigger.maxDeliveries === 'number',
+              `${prefix}.maxDeliveries must be a number`
+            );
+            assert(
+              Number.isInteger(trigger.maxDeliveries) &&
+                trigger.maxDeliveries >= 1,
+              `${prefix}.maxDeliveries must be at least 1`
+            );
+          }
 
-        // Validate optional queue configuration
-        if (trigger.maxDeliveries !== undefined) {
-          assert(
-            typeof trigger.maxDeliveries === 'number',
-            `${prefix}.maxDeliveries must be a number`
-          );
-          assert(
-            Number.isInteger(trigger.maxDeliveries) &&
-              trigger.maxDeliveries >= 1,
-            `${prefix}.maxDeliveries must be at least 1`
-          );
-        }
+          if (trigger.retryAfterSeconds !== undefined) {
+            assert(
+              typeof trigger.retryAfterSeconds === 'number',
+              `${prefix}.retryAfterSeconds must be a number`
+            );
+            assert(
+              trigger.retryAfterSeconds > 0,
+              `${prefix}.retryAfterSeconds must be a positive number`
+            );
+          }
 
-        if (trigger.retryAfterSeconds !== undefined) {
-          assert(
-            typeof trigger.retryAfterSeconds === 'number',
-            `${prefix}.retryAfterSeconds must be a number`
-          );
-          assert(
-            trigger.retryAfterSeconds > 0,
-            `${prefix}.retryAfterSeconds must be a positive number`
-          );
-        }
+          if (trigger.initialDelaySeconds !== undefined) {
+            assert(
+              typeof trigger.initialDelaySeconds === 'number',
+              `${prefix}.initialDelaySeconds must be a number`
+            );
+            assert(
+              trigger.initialDelaySeconds >= 0,
+              `${prefix}.initialDelaySeconds must be a non-negative number`
+            );
+          }
 
-        if (trigger.initialDelaySeconds !== undefined) {
-          assert(
-            typeof trigger.initialDelaySeconds === 'number',
-            `${prefix}.initialDelaySeconds must be a number`
-          );
-          assert(
-            trigger.initialDelaySeconds >= 0,
-            `${prefix}.initialDelaySeconds must be a non-negative number`
-          );
-        }
-
-        if (trigger.maxConcurrency !== undefined) {
-          assert(
-            typeof trigger.maxConcurrency === 'number',
-            `${prefix}.maxConcurrency must be a number`
-          );
-          assert(
-            Number.isInteger(trigger.maxConcurrency) &&
-              trigger.maxConcurrency >= 1,
-            `${prefix}.maxConcurrency must be at least 1`
-          );
+          if (trigger.maxConcurrency !== undefined) {
+            assert(
+              typeof trigger.maxConcurrency === 'number',
+              `${prefix}.maxConcurrency must be a number`
+            );
+            assert(
+              Number.isInteger(trigger.maxConcurrency) &&
+                trigger.maxConcurrency >= 1,
+              `${prefix}.maxConcurrency must be at least 1`
+            );
+          }
         }
       }
     }
@@ -431,6 +459,8 @@ export class Lambda {
     this.architecture = getDefaultLambdaArchitecture(architecture);
     this.memory = memory;
     this.maxDuration = maxDuration;
+    this.affinity = affinity;
+    this.maxConcurrency = maxConcurrency;
     this.environment = environment;
     this.allowQuery = allowQuery;
     this.regions = regions;
@@ -529,49 +559,115 @@ export async function createZip(files: Files): Promise<Buffer> {
   return zipBuffer;
 }
 
+/**
+ * Find the `functions` entry that applies to a function. Candidates are tried
+ * in order, and for each candidate the first matching pattern wins.
+ */
+export function findMatchingFunction(
+  functions: BuilderFunctions | undefined,
+  candidates: readonly string[]
+):
+  | {
+      sourceFile: string;
+      pattern: string;
+      functionConfig: BuilderFunctions[string];
+    }
+  | undefined {
+  if (!functions) return undefined;
+  for (const sourceFile of candidates) {
+    for (const [pattern, functionConfig] of Object.entries(functions)) {
+      if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
+        return { sourceFile, pattern, functionConfig };
+      }
+    }
+  }
+  return undefined;
+}
+
 export async function getLambdaOptionsFromFunction({
   sourceFile,
   config,
+  isScheduleEntrypoint = false,
 }: GetLambdaOptionsFromFunctionOptions): Promise<
   Pick<
     LambdaOptions,
     | 'architecture'
     | 'memory'
     | 'maxDuration'
+    | 'affinity'
+    | 'maxConcurrency'
     | 'regions'
     | 'functionFailoverRegions'
     | 'experimentalTriggers'
     | 'supportsCancellation'
   >
 > {
-  if (config?.functions) {
-    for (const [pattern, fn] of Object.entries(config.functions)) {
-      if (sourceFile === pattern || minimatch(sourceFile, pattern)) {
-        const experimentalTriggers: TriggerEvent[] | undefined =
-          fn.experimentalTriggers?.map(
-            (trigger: TriggerEventInput): TriggerEvent => {
-              if (trigger.type === 'queue/v2beta') {
-                return {
-                  ...trigger,
-                  consumer: sanitizeConsumerName(pattern),
-                };
-              }
-              return trigger;
-            }
-          );
+  const match = findMatchingFunction(config?.functions, [sourceFile]);
+  if (match) {
+    const { pattern, functionConfig: fn } = match;
+    // `pattern` is service-root-relative, so two services sharing a function
+    // path would derive the same consumer; scope it by service name.
+    const serviceName =
+      typeof config?.serviceName === 'string' && config.serviceName !== ''
+        ? config.serviceName
+        : undefined;
+    const consumer = sanitizeConsumerName(
+      serviceName ? `${serviceName}~${pattern}` : pattern
+    );
+    const experimentalTriggers: TriggerEvent[] | undefined =
+      fn.experimentalTriggers?.map(
+        (trigger: TriggerEventInput): TriggerEvent => {
+          if (trigger.type === 'queue/v2beta') {
+            return {
+              ...trigger,
+              consumer,
+            };
+          }
+          return trigger;
+        }
+      );
 
-        return {
-          architecture: fn.architecture,
-          memory: fn.memory,
-          maxDuration: fn.maxDuration,
-          regions: fn.regions,
-          functionFailoverRegions: fn.functionFailoverRegions,
-          experimentalTriggers,
-          supportsCancellation: fn.supportsCancellation,
-        };
-      }
+    // User-configured functions can only have one v2beta trigger.
+    // Services may attach multiple triggers programmatically.
+    if (
+      experimentalTriggers &&
+      experimentalTriggers.length > 1 &&
+      experimentalTriggers.some(t => t.type === 'queue/v2beta')
+    ) {
+      throw new Error(
+        `functions["${pattern}"].experimentalTriggers can only have one item for queue/v2beta`
+      );
     }
+
+    if (
+      isScheduleEntrypoint &&
+      experimentalTriggers !== undefined &&
+      !(
+        experimentalTriggers.length === 1 &&
+        experimentalTriggers[0]?.type === 'schedule/v1beta'
+      )
+    ) {
+      throw new Error(
+        `functions["${pattern}"].experimentalTriggers conflicts with the schedule entrypoint trigger`
+      );
+    }
+
+    return {
+      architecture: fn.architecture,
+      memory: fn.memory,
+      maxDuration: fn.maxDuration,
+      affinity: fn.affinity,
+      maxConcurrency: fn.maxConcurrency,
+      regions: fn.regions,
+      functionFailoverRegions: fn.functionFailoverRegions,
+      experimentalTriggers: isScheduleEntrypoint
+        ? [{ type: 'schedule/v1beta' }]
+        : experimentalTriggers,
+      supportsCancellation: fn.supportsCancellation,
+    };
   }
 
-  return {};
+  return isScheduleEntrypoint
+    ? { experimentalTriggers: [{ type: 'schedule/v1beta' }] }
+    : {};
 }

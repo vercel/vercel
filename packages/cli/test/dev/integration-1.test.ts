@@ -12,7 +12,7 @@ import {
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
-import nodeFetch from 'node-fetch';
+import nodeFetch from '../../src/util/fetch';
 
 test('[verdel dev] should support serverless functions', async () => {
   const dir = fixture('serverless-function');
@@ -393,7 +393,7 @@ test('[vercel dev] should support request body', async () => {
     const body = { hello: 'world' };
 
     // Test that `req.body` works in dev
-    let res = await nodeFetch(`http://localhost:${port}/api/req-body`, {
+    const res = await nodeFetch(`http://localhost:${port}/api/req-body`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -404,13 +404,18 @@ test('[vercel dev] should support request body', async () => {
     expect(await res.json()).toMatchObject({ body, readBody: body });
 
     // Test that `req` "data" events work in dev
-    res = await nodeFetch(`http://localhost:${port}/api/data-events`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
+    const dataEventsRes = await nodeFetch(
+      `http://localhost:${port}/api/data-events`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    validateResponseHeaders(dataEventsRes);
+    expect(await dataEventsRes.json()).toMatchObject(body);
   } finally {
     await dev.kill();
   }
@@ -533,7 +538,7 @@ test('[vercel dev] should send `etag` header for static files', async () => {
 });
 
 // https://linear.app/vercel/issue/ZERO-3240/unskip-random-test-failures
-// eslint-disable-next-line jest/no-disabled-tests
+// biome-ignore lint/suspicious/noSkippedTests: temporarily disabled
 test.skip('[vercel dev] should frontend dev server and routes', async () => {
   const dir = fixture('dev-server-and-routes');
   const { dev, port, readyResolver } = await testFixture(dir);
@@ -930,7 +935,6 @@ test(
 );
 
 // This looks like a cdn or proxy issue we're experiencing right now
-// eslint-disable-next-line jest/no-disabled-tests
 test.skip(
   '[vercel dev] validate routes that use custom 404 page',
   testFixtureStdio('routes-custom-404', async (testPath: any) => {
@@ -983,7 +987,6 @@ test(
   testFixtureStdio('handle-miss-querystring', async (testPath: any) => {
     await testPath(200, '/', 'Index Page');
     if (process.env.CI && process.platform === 'darwin') {
-      // eslint-disable-next-line no-console
       console.log('Skipping since GH Actions hangs for some reason');
     } else {
       await testPath(200, '/echo/first/second', 'a=first,b=second');

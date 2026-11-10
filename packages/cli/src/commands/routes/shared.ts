@@ -1,58 +1,144 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
-import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getLinkedProject } from '../../util/projects/link';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
 import output from '../../output-manager';
+import {
+  outputAgentError,
+  buildCommandWithYes,
+  withGlobalFlags as withClientGlobalFlags,
+} from '../../util/agent-output';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import type { Command } from '../help';
 import {
+  parseSubcommandArguments,
+  type ParsedSubcommandArguments,
+} from '../../util/command-arguments';
+import {
   getRouteTypeLabel,
+  isTargetTransform,
   type RoutingRule,
   type RoutePosition,
   type RouteVersion,
+  type Transform,
 } from '../../util/routes/types';
 
-export interface ParsedSubcommand {
-  args: string[];
-  flags: { [key: string]: any };
+/**
+ * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
+ */
+export function withGlobalFlags(
+  client: Client,
+  commandTemplate: string
+): string {
+  return withClientGlobalFlags(client, commandTemplate, {
+    preserveProject: true,
+  });
+}
+
+/**
+ * Shell-escape route identifier for suggested `next` commands. Uses single
+ * quotes when the name contains spaces so the suggested command is valid in the shell.
+ * Falls back to double quotes only if the identifier contains a single quote.
+ */
+export function shellQuoteRouteIdentifierForSuggestion(
+  identifier: string
+): string {
+  if (!identifier.includes(' ')) {
+    return identifier;
+  }
+  if (!identifier.includes("'")) {
+    return `'${identifier}'`;
+  }
+  if (!identifier.includes('"')) {
+    return `"${identifier}"`;
+  }
+  return `"${identifier.replace(/"/g, '\\"')}"`;
 }
 
 export async function parseSubcommandArgs(
   argv: string[],
-  command: Command
-): Promise<ParsedSubcommand | number> {
+  command: Command,
+  client?: Client
+): Promise<ParsedSubcommandArguments | number> {
   let parsedArgs;
-  const flagsSpecification = getFlagsSpecification(command.options);
 
   try {
-    // @ts-expect-error - TypeScript complains about the flags specification type
-    parsedArgs = parseArguments(argv, flagsSpecification);
+    parsedArgs = parseSubcommandArguments(argv, command);
   } catch (err) {
+    if (client?.nonInteractive) {
+      const rawMessage = err instanceof Error ? err.message : String(err);
+      const flags = getGlobalFlagsFromArgs(client.argv.slice(2), {
+        preserveProject: true,
+      });
+      let message = rawMessage;
+      let next: Array<{ command: string; when?: string }> = [
+        {
+          command: getCommandNamePlain(
+            `routes ${command.name} ${flags.join(' ')}`.trim()
+          ),
+          when: 'fix options and retry',
+        },
+      ];
+
+      // --ai is a string flag; `arg` errors with "option requires argument: --ai"
+      // when the user passes `--ai` with no description. Give a concrete fix.
+      const aiIdx = argv.indexOf('--ai');
+      const aiMissingValue =
+        aiIdx !== -1 &&
+        (aiIdx === argv.length - 1 ||
+          (argv[aiIdx + 1] !== undefined && argv[aiIdx + 1].startsWith('-')));
+      const isAiArgError =
+        aiMissingValue ||
+        /option requires argument.*--ai|--ai.*requires argument/i.test(
+          rawMessage
+        );
+
+      if (
+        isAiArgError &&
+        (command.name === 'add' || command.name === 'update')
+      ) {
+        message =
+          command.name === 'add'
+            ? '--ai requires a description. Example: routes add --ai <description> --yes --non-interactive. Replace <description> with your text; use shell quotes if it contains spaces (e.g. --ai "Redirect /old to /new").'
+            : '--ai requires a description. Example: routes update <name-or-id> --ai <description> --yes --non-interactive. Replace placeholders; use shell quotes for <description> if it contains spaces.';
+        next = [
+          {
+            command: withGlobalFlags(
+              client,
+              command.name === 'add'
+                ? `routes add --ai <description> --yes`
+                : `routes update <name-or-id> --ai <description> --yes`
+            ),
+            when: 'replace <description> with your text (quote it in the shell if it contains spaces), then run',
+          },
+          {
+            command: getCommandNamePlain(
+              `routes ${command.name} --help ${flags.join(' ')}`.trim()
+            ),
+            when: 'see all options',
+          },
+        ];
+      }
+
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message,
+          next,
+        },
+        2
+      );
+      // Avoid printError if process.exit was mocked (tests).
+      return 2;
+    }
     printError(err);
-    return 1;
+    return 2;
   }
 
   return parsedArgs;
-}
-
-export async function ensureProjectLink(client: Client) {
-  const link = await getLinkedProject(client);
-
-  if (link.status === 'error') {
-    return link.exitCode;
-  } else if (link.status === 'not_linked') {
-    output.error(
-      `Your codebase isn't linked to a project on Vercel. Run ${getCommandName('link')} to begin.`
-    );
-    return 1;
-  }
-
-  client.config.currentTeam =
-    link.org.type === 'team' ? link.org.id : undefined;
-
-  return link;
 }
 
 export async function confirmAction(
@@ -63,23 +149,28 @@ export async function confirmAction(
 ): Promise<boolean> {
   if (skipConfirmation) return true;
 
+  if (client.nonInteractive) {
+    outputAgentError(client, {
+      status: AGENT_STATUS.ERROR,
+      reason: AGENT_REASON.CONFIRMATION_REQUIRED,
+      message: `${message} Re-run with --yes to confirm.`,
+      next: [
+        {
+          command: buildCommandWithYes(client.argv),
+          when: 're-run with --yes to confirm',
+        },
+      ],
+    });
+    process.exit(1);
+    // If process.exit is mocked (tests), avoid falling through to confirm().
+    return false;
+  }
+
   if (details) {
     output.print(`  ${details}\n`);
   }
 
   return await client.input.confirm(message, false);
-}
-
-export function validateRequiredArgs(
-  args: string[],
-  required: string[]
-): string | null {
-  for (let i = 0; i < required.length; i++) {
-    if (!args[i]) {
-      return `Missing required argument: ${required[i]}`;
-    }
-  }
-  return null;
 }
 
 /**
@@ -115,6 +206,7 @@ export const TRANSFORM_TYPE_LABELS: Record<string, string> = {
   'request.headers': 'Request Header',
   'request.query': 'Request Query',
   'response.headers': 'Response Header',
+  'request.path': 'Request Path',
 };
 
 /**
@@ -132,20 +224,16 @@ const TRANSFORM_OP_LABELS: Record<string, string> = {
  * When includeType is false:          set X-Custom = "value"
  */
 export function formatTransform(
-  transform: {
-    type: string;
-    op: string;
-    target: { key: string | Record<string, unknown> };
-    args?: string | string[];
-  },
+  transform: Transform,
   includeType = true
 ): string {
   const opLabel = TRANSFORM_OP_LABELS[transform.op] ?? transform.op;
 
-  const key =
-    typeof transform.target.key === 'string'
+  const key = isTargetTransform(transform)
+    ? typeof transform.target.key === 'string'
       ? transform.target.key
-      : JSON.stringify(transform.target.key);
+      : JSON.stringify(transform.target.key)
+    : 'path';
 
   const parts: string[] = [];
   if (includeType) {
@@ -212,7 +300,7 @@ export async function offerAutoPromote(
 
   // Always inform the user that changes are staged
   output.print(
-    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(getCommandName('routes publish'))} to make it live, or ${chalk.cyan(getCommandName('routes discard-staging'))} to undo.`)}\n`
+    `\n  ${chalk.gray(`This change is staged. Run ${chalk.cyan(withGlobalFlags(client, 'routes publish'))} to make it live, or ${chalk.cyan(withGlobalFlags(client, 'routes discard-staging'))} to undo.`)}\n`
   );
 
   if (!hadExistingStagingVersion && !opts.skipPrompts) {
@@ -243,7 +331,7 @@ export async function offerAutoPromote(
     }
   } else if (hadExistingStagingVersion) {
     output.warn(
-      `There are other staged changes. Review with ${chalk.cyan(getCommandName('routes list --staging'))} before promoting.`
+      `There are other staged changes. Review with ${chalk.cyan(withGlobalFlags(client, 'routes list --diff'))} before promoting.`
     );
   }
 }
@@ -327,6 +415,26 @@ export async function resolveRoute(
     return matches[0];
   }
 
+  // Multiple matches — non-interactive cannot prompt
+  if (client.nonInteractive) {
+    outputAgentError(
+      client,
+      {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.AMBIGUOUS_ROUTE,
+        message: `Multiple routes match "${identifier}" (${matches.length} matches). Pass an exact route name or ID.`,
+        next: [
+          {
+            command: withGlobalFlags(client, 'routes list'),
+            when: 'list routes to get exact id',
+          },
+        ],
+      },
+      1
+    );
+    return null;
+  }
+
   // Multiple matches — interactive disambiguation
   const selectedId = await client.input.select({
     message: `Multiple routes match "${identifier}". Select one:`,
@@ -354,10 +462,26 @@ export async function resolveRoutes(
   for (const identifier of identifiers) {
     const route = await resolveRoute(client, routes, identifier);
     if (!route) {
+      if (client.nonInteractive) {
+        outputAgentError(
+          client,
+          {
+            status: AGENT_STATUS.ERROR,
+            reason: AGENT_REASON.NOT_FOUND,
+            message: `No route found matching "${identifier}".`,
+            next: [
+              {
+                command: withGlobalFlags(client, 'routes list'),
+                when: 'list routes',
+              },
+            ],
+          },
+          1
+        );
+        return null;
+      }
       output.error(
-        `No route found matching "${identifier}". Run ${chalk.cyan(
-          getCommandName('routes list')
-        )} to see all routes.`
+        `No route found matching "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'routes list'))} to see all routes.`
       );
       return null;
     }
@@ -371,6 +495,7 @@ export async function resolveRoutes(
  * Find a version by ID, supporting partial ID matching.
  */
 export function findVersionById(
+  client: Client,
   versions: RouteVersion[],
   identifier: string
 ):
@@ -381,7 +506,7 @@ export function findVersionById(
   if (matchingVersions.length === 0) {
     return {
       error: `Version "${identifier}" not found. Run ${chalk.cyan(
-        getCommandName('routes list-versions')
+        withGlobalFlags(client, 'routes list-versions')
       )} to see available versions.`,
     };
   }

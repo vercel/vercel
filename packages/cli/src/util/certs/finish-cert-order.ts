@@ -9,7 +9,7 @@ import output from '../../output-manager';
 export default async function startCertOrder(
   client: Client,
   cns: string[],
-  context: string // eslint-disable-line
+  context: string
 ) {
   output.spinner(`Issuing a certificate for ${chalk.bold(cns.join(', '))}`);
   try {

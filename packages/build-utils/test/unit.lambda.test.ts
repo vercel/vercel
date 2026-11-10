@@ -6,6 +6,7 @@ import {
   Lambda,
   TriggerEvent,
   sanitizeConsumerName,
+  getLambdaOptionsFromFunction,
 } from '../src/lambda';
 import type { Files } from '../src/types';
 import { FileBlob, glob, spawnAsync } from '../src';
@@ -102,6 +103,112 @@ describe('Lambda', () => {
     }
   });
 
+  describe('maxDuration', () => {
+    const files: Files = {};
+
+    it('should accept a numeric maxDuration', () => {
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        maxDuration: 60,
+      });
+
+      expect(lambda.maxDuration).toBe(60);
+    });
+
+    it('should accept maxDuration: "max"', () => {
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        maxDuration: 'max',
+      });
+
+      expect(lambda.maxDuration).toBe('max');
+    });
+
+    it('should throw error for invalid string maxDuration', () => {
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs22.x',
+            maxDuration: 'invalid' as any,
+          })
+      ).toThrow('"maxDuration" is not a number or "max"');
+    });
+  });
+
+  describe('maxConcurrency', () => {
+    const files: Files = {};
+
+    it.each([1, 8, 8192])('accepts supported integer %s', maxConcurrency => {
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        maxConcurrency,
+      });
+
+      expect(lambda.maxConcurrency).toBe(maxConcurrency);
+    });
+
+    it.each([
+      0,
+      -1,
+      1.5,
+      8193,
+      1e20,
+      1e30,
+      NaN,
+      Infinity,
+    ])('rejects %s', maxConcurrency => {
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs22.x',
+            maxConcurrency,
+          })
+      ).toThrow('"maxConcurrency" must be an integer from 1 to 8192');
+    });
+  });
+
+  describe('affinity', () => {
+    const files: Files = {};
+
+    it('accepts strict affinity', () => {
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        affinity: { mode: 'strict' },
+      });
+
+      expect(lambda.affinity).toEqual({ mode: 'strict' });
+    });
+
+    it.each([
+      null,
+      {},
+      { mode: 'loose' },
+      { mode: 'strict', extra: true },
+    ])('rejects invalid affinity %o', affinity => {
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs22.x',
+            affinity: affinity as any,
+          })
+      ).toThrow('"affinity" must be an object with only `mode: "strict"`');
+    });
+  });
+
   describe('TriggerEvent', () => {
     const files: Files = {};
 
@@ -184,6 +291,34 @@ describe('Lambda', () => {
       expect(lambda.experimentalTriggers![1].maxDeliveries).toBe(5);
     });
 
+    it('should create Lambda with schedule trigger', () => {
+      const trigger: TriggerEvent = {
+        type: 'schedule/v1beta',
+      };
+
+      const lambda = new Lambda({
+        files,
+        handler: 'index.handler',
+        runtime: 'nodejs22.x',
+        experimentalTriggers: [trigger],
+      });
+
+      expect(lambda.experimentalTriggers).toEqual([trigger]);
+      expect(lambda.experimentalTriggers![0].type).toBe('schedule/v1beta');
+    });
+
+    it('should not require queue fields for schedule triggers', () => {
+      expect(
+        () =>
+          new Lambda({
+            files,
+            handler: 'index.handler',
+            runtime: 'nodejs22.x',
+            experimentalTriggers: [{ type: 'schedule/v1beta' } as any],
+          })
+      ).not.toThrow();
+    });
+
     describe('v2beta', () => {
       it('should create Lambda with minimal v2beta queue trigger', () => {
         const trigger: TriggerEvent = {
@@ -232,28 +367,50 @@ describe('Lambda', () => {
         expect(lambda.experimentalTriggers![0].maxConcurrency).toBe(5);
       });
 
-      it('should throw error when v2beta has multiple triggers', () => {
-        expect(
-          () =>
-            new Lambda({
-              files,
-              handler: 'index.handler',
-              runtime: 'nodejs22.x',
-              experimentalTriggers: [
-                {
-                  type: 'queue/v2beta',
-                  topic: 'test-topic-1',
-                  consumer: 'consumer-1',
+      it('should allow when v2beta has multiple triggers', () => {
+        const lambda = new Lambda({
+          files,
+          handler: 'index.handler',
+          runtime: 'nodejs22.x',
+          experimentalTriggers: [
+            {
+              type: 'queue/v2beta',
+              topic: 'test-topic-1',
+              consumer: 'consumer-1',
+            },
+            {
+              type: 'queue/v2beta',
+              topic: 'test-topic-2',
+              consumer: 'consumer-2',
+            },
+          ],
+        });
+
+        expect(lambda.experimentalTriggers![0].type).toBe('queue/v2beta');
+        expect(lambda.experimentalTriggers![0].topic).toBe('test-topic-1');
+        expect(lambda.experimentalTriggers![0].consumer).toBe('consumer-1');
+        expect(lambda.experimentalTriggers![1].type).toBe('queue/v2beta');
+        expect(lambda.experimentalTriggers![1].topic).toBe('test-topic-2');
+        expect(lambda.experimentalTriggers![1].consumer).toBe('consumer-2');
+      });
+
+      it('should reject multiple v2beta triggers from functions config', async () => {
+        await expect(
+          getLambdaOptionsFromFunction({
+            sourceFile: 'api/handler.js',
+            config: {
+              functions: {
+                'api/handler.js': {
+                  experimentalTriggers: [
+                    { type: 'queue/v2beta', topic: 'topic-1' },
+                    { type: 'queue/v2beta', topic: 'topic-2' },
+                  ],
                 },
-                {
-                  type: 'queue/v2beta',
-                  topic: 'test-topic-2',
-                  consumer: 'consumer-2',
-                },
-              ],
-            })
-        ).toThrow(
-          '"experimentalTriggers" can only have one item for queue/v2beta'
+              },
+            },
+          })
+        ).rejects.toThrow(
+          'functions["api/handler.js"].experimentalTriggers can only have one item for queue/v2beta'
         );
       });
     });
@@ -275,7 +432,7 @@ describe('Lambda', () => {
               ],
             })
         ).toThrow(
-          '"experimentalTriggers[0]".type must be "queue/v1beta" or "queue/v2beta"'
+          '"experimentalTriggers[0]".type must be "queue/v1beta", "queue/v2beta", or "schedule/v1beta"'
         );
       });
 
@@ -470,7 +627,7 @@ describe('Lambda', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
-        runtime: 'provided.al2',
+        runtime: 'provided.al2023',
         runtimeLanguage: 'rust',
       });
 
@@ -482,7 +639,7 @@ describe('Lambda', () => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
-        runtime: 'provided.al2',
+        runtime: 'provided.al2023',
         runtimeLanguage: 'go',
       });
 
@@ -507,7 +664,7 @@ describe('Lambda', () => {
           new Lambda({
             files,
             handler: 'index.handler',
-            runtime: 'provided.al2',
+            runtime: 'provided.al2023',
             runtimeLanguage: 'python' as any,
           })
       ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
@@ -520,7 +677,7 @@ describe('Lambda', () => {
           new Lambda({
             files,
             handler: 'index.handler',
-            runtime: 'provided.al2',
+            runtime: 'provided.al2023',
             runtimeLanguage: 123 as any,
           })
       ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');
@@ -533,7 +690,7 @@ describe('Lambda', () => {
           new Lambda({
             files,
             handler: 'index.handler',
-            runtime: 'provided.al2',
+            runtime: 'provided.al2023',
             runtimeLanguage: '' as any,
           })
       ).toThrow('"runtimeLanguage" is invalid. Valid options: "rust", "go"');

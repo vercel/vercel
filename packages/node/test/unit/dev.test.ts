@@ -68,7 +68,7 @@ async function withDevServer(
       if (child.pid) {
         try {
           process.kill(child.pid, 'SIGTERM');
-        } catch (err) {
+        } catch (_err) {
           // Process might have already exited
         }
       }

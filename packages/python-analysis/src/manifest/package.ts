@@ -7,13 +7,17 @@ import { PythonAnalysisError } from '../util/error';
 import type { AbsPath, RelPath } from '../util/fs';
 import { isSubpath, normalizePath, readFileTextIfExists } from '../util/fs';
 import { parsePep440Constraint } from './pep440';
+import { normalizePackageName } from './pep508';
 import type { PipfileLike, PipfileLockLike } from './pipfile/types';
 import { PipfileLikeSchema, PipfileLockLikeSchema } from './pipfile/schema';
 import {
   convertPipfileLockToPyprojectToml,
   convertPipfileToPyprojectToml,
 } from './pipfile-parser';
-import type { PyProjectToml } from './pyproject/types';
+import type {
+  PyProjectDependencyGroups,
+  PyProjectToml,
+} from './pyproject/types';
 import { PyProjectTomlSchema } from './pyproject/schema';
 import type { PythonConstraint, PythonRequest } from './python-specifiers';
 import { convertRequirementsToPyprojectToml } from './requirements-txt-parser';
@@ -127,6 +131,8 @@ export interface PythonVersionConfig {
   path: RelPath;
   /** Parsed Python version requests from the file. */
   data: PythonRequest[];
+  /** Raw version string from the file (e.g. "3.12", ">=3.12,<3.13"). */
+  specifier: string;
 }
 
 /**
@@ -265,9 +271,12 @@ export async function discoverPythonPackage({
   let workspaceLockFile: PythonLockFile | undefined;
 
   if (manifests.length === 0) {
-    // No Python manifests detected in the repo
+    // No Python manifests detected in the repo, but .python-version
+    // may still specify a version constraint.
+    const requiresPython = computeRequiresPython(undefined, undefined, configs);
     return {
       configs,
+      requiresPython,
     };
   } else {
     entrypointManifest = manifests[0];
@@ -315,41 +324,53 @@ function computeRequiresPython(
 ): PythonConstraint[] {
   const constraints: PythonConstraint[] = [];
 
-  // Check for `.python-version` between manifest and workspace
+  // Check for `.python-version` between manifest and workspace.
+  // When present, it takes priority over `requires-python`.
+  let hasPythonVersionFile = false;
   for (const configSet of configs) {
     const pythonVersionConfig = configSet[PythonConfigKind.PythonVersion];
     if (pythonVersionConfig !== undefined) {
       constraints.push({
         request: pythonVersionConfig.data,
-        source: `${pythonVersionConfig.path}`,
+        source: pythonVersionConfig.path,
+        prettySource: pythonVersionConfig.path,
+        specifier: pythonVersionConfig.specifier,
       });
+      hasPythonVersionFile = true;
       break;
     }
   }
 
-  // Check `requires-python` from nearest package pyproject.toml
-  const manifestRequiresPython = manifest?.data.project?.['requires-python'];
-  if (manifestRequiresPython) {
-    const parsed = parsePep440Constraint(manifestRequiresPython);
-    if (parsed?.length) {
-      const request = pythonRequestFromConstraint(parsed);
-      constraints.push({
-        request: [request],
-        source: `"requires-python" key in ${manifest.path}`,
-      });
-    }
-  } else {
-    // Check `requires-python` from workspace pyproject.toml
-    const workspaceRequiresPython =
-      workspaceManifest?.data.project?.['requires-python'];
-    if (workspaceRequiresPython) {
-      const parsed = parsePep440Constraint(workspaceRequiresPython);
+  // Check `requires-python` from nearest package pyproject.toml,
+  // but only if no `.python-version` file was found (it takes priority).
+  if (!hasPythonVersionFile) {
+    const manifestRequiresPython = manifest?.data.project?.['requires-python'];
+    if (manifestRequiresPython) {
+      const parsed = parsePep440Constraint(manifestRequiresPython);
       if (parsed?.length) {
         const request = pythonRequestFromConstraint(parsed);
         constraints.push({
           request: [request],
-          source: `"requires-python" key in ${workspaceManifest.path}`,
+          source: manifest.path,
+          prettySource: `"requires-python" key in ${manifest.path}`,
+          specifier: manifestRequiresPython,
         });
+      }
+    } else {
+      // Check `requires-python` from workspace pyproject.toml
+      const workspaceRequiresPython =
+        workspaceManifest?.data.project?.['requires-python'];
+      if (workspaceRequiresPython) {
+        const parsed = parsePep440Constraint(workspaceRequiresPython);
+        if (parsed?.length) {
+          const request = pythonRequestFromConstraint(parsed);
+          constraints.push({
+            request: [request],
+            source: workspaceManifest.path,
+            prettySource: `"requires-python" key in ${workspaceManifest.path}`,
+            specifier: workspaceRequiresPython,
+          });
+        }
       }
     }
   }
@@ -447,7 +468,45 @@ async function loadPythonManifest(
     }
   }
 
+  if (manifest != null) {
+    normalizeDependencyGroups(manifest);
+  }
+
   return manifest;
+}
+
+/**
+ * Normalize [dependency-groups] names in place.
+ *
+ * Group names use the same normalization as package names:
+ * https://packaging.python.org/en/latest/specifications/dependency-groups/
+ */
+function normalizeDependencyGroups(manifest: PythonManifest): void {
+  const groups = manifest.data['dependency-groups'];
+  if (groups == null) {
+    return;
+  }
+
+  const normalized: PyProjectDependencyGroups = {};
+  for (const [name, entries] of Object.entries(groups)) {
+    const key = normalizePackageName(name);
+    if (Object.prototype.hasOwnProperty.call(normalized, key)) {
+      throw new PythonAnalysisError({
+        message: `duplicate dependency group "${key}": group names must be unique after normalization`,
+        code: 'PYTHON_DUPLICATE_DEPENDENCY_GROUP',
+        path: manifest.path,
+      });
+    }
+    normalized[key] = entries.map(entry =>
+      typeof entry === 'string'
+        ? entry
+        : {
+            ...entry,
+            'include-group': normalizePackageName(entry['include-group']),
+          }
+    );
+  }
+  manifest.data['dependency-groups'] = normalized;
 }
 
 /**
@@ -635,7 +694,13 @@ async function maybeLoadRequirementsTxt(
   }
 
   try {
-    const pyproject = convertRequirementsToPyprojectToml(requirementsContent);
+    const pyproject = await convertRequirementsToPyprojectToml(
+      requirementsContent,
+      {
+        workingDir: path.join(root, subdir),
+        packageRoot: root,
+      }
+    );
 
     return {
       path: requirementsTxtRelPath,
@@ -706,5 +771,6 @@ async function maybeLoadPythonRequest(
     kind: PythonConfigKind.PythonVersion,
     path: dotPythonVersionRelPath,
     data: pyreq,
+    specifier: data.trim(),
   };
 }

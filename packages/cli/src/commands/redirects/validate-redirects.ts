@@ -1,4 +1,5 @@
 import { statSync } from 'fs';
+import { isValidUrl } from './shared';
 
 interface ValidationOptions {
   maxFileSize?: number;
@@ -68,8 +69,11 @@ export function validateRedirect(redirect: {
     return { valid: false, error: 'Source URL is too long' };
   }
 
-  if (!redirect.source.startsWith('/')) {
-    return { valid: false, error: 'Source must be a relative path' };
+  if (!isValidUrl(redirect.source)) {
+    return {
+      valid: false,
+      error: 'Source must be a relative path or a valid URL',
+    };
   }
 
   if (!redirect.destination) {

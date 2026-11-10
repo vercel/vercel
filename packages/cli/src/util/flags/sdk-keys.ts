@@ -1,6 +1,11 @@
 import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../client';
-import type { SdkKey, SdkKeysListResponse, CreateSdkKeyRequest } from './types';
+import type {
+  SdkKey,
+  SdkKeysListResponse,
+  CreateSdkKeyRequest,
+  CreatedSdkKey,
+} from './types';
 import output from '../../output-manager';
 
 export async function getSdkKeys(
@@ -19,11 +24,11 @@ export async function createSdkKey(
   client: Client,
   projectId: string,
   request: CreateSdkKeyRequest
-): Promise<SdkKey> {
+): Promise<CreatedSdkKey> {
   output.debug(`Creating SDK key for project ${projectId}`);
 
   const url = `/v1/projects/${encodeURIComponent(projectId)}/feature-flags/sdk-keys`;
-  const response = await client.fetch<SdkKey>(url, {
+  const response = await client.fetch<CreatedSdkKey>(url, {
     method: 'PUT',
     body: request as unknown as JSONObject,
   });

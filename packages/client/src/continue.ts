@@ -1,14 +1,20 @@
 import { join } from 'path';
 import fs from 'fs-extra';
+import { isRetryableNetworkError } from './utils/network-error';
 
-import type { Agent } from 'http';
-import type { Deployment, DeploymentEventType } from './types';
+import type {
+  ArchiveFormat,
+  Deployment,
+  DeploymentEventType,
+  FetchDispatcher,
+} from './types';
 import { checkDeploymentStatus } from './check-deployment-status';
 import { fetchApi, buildFileTree, createDebug, prepareFiles } from './utils';
 import { hashes, mapToObject, FilesMap } from './utils/hashes';
 import { isReady, isAliasAssigned } from './utils/ready-state';
 import { uploadFiles, UploadProgress } from './upload';
 import { DeploymentError } from './errors';
+import { createTgzFiles } from './utils/archive';
 
 /**
  * Continues a manual deployment by uploading build outputs and calling the
@@ -16,7 +22,7 @@ import { DeploymentError } from './errors';
  * events early.
  */
 export async function* continueDeployment(options: {
-  agent?: Agent;
+  dispatcher?: FetchDispatcher;
   apiUrl?: string;
   debug?: boolean;
   deploymentId: string;
@@ -25,7 +31,12 @@ export async function* continueDeployment(options: {
   token: string;
   userAgent?: string;
   vercelOutputDir?: string;
-}): AsyncIterableIterator<{ type: DeploymentEventType; payload: any }> {
+  archive?: ArchiveFormat;
+}): AsyncIterableIterator<{
+  type: DeploymentEventType;
+  payload: any;
+  code?: string;
+}> {
   const debug = createDebug(options.debug);
   debug(`Continuing deployment: ${options.deploymentId}`);
   const outputDir =
@@ -46,13 +57,41 @@ export async function* continueDeployment(options: {
     };
   }
 
-  const { fileList } = await buildFileTree(
+  const { fileList, warning } = await buildFileTree(
     options.path,
     { isDirectory: true, prebuilt: true, vercelOutputDir: outputDir },
     debug
   );
 
-  const files = await hashes(fileList);
+  if (warning) {
+    debug('Yielding a prebuilt filePathMap ignore warning');
+    yield {
+      type: 'warning',
+      payload: warning,
+      code: 'PREBUILT_FILEPATHMAP_IGNORED',
+    };
+  }
+
+  /**
+   * Files that must be sent individually (outside the tar archive) so the
+   * API can inspect them before the build starts.
+   */
+  const provisionJsonPath = join(outputDir, 'provision.json');
+  const unbundledFiles = fileList.filter(f => f === provisionJsonPath);
+
+  let files: FilesMap;
+  if (options.archive === 'tgz') {
+    files = await createTgzFiles(options.path, fileList, debug, unbundledFiles);
+    // Hash excluded files individually and merge them into the FilesMap
+    if (unbundledFiles.length > 0) {
+      const individualFiles = await hashes(unbundledFiles);
+      for (const [sha, entry] of individualFiles) {
+        files.set(sha, entry);
+      }
+    }
+  } else {
+    files = await hashes(fileList);
+  }
   debug(`Calculated ${files.size} unique hashes`);
   yield { type: 'hashes-calculated', payload: mapToObject(files) };
 
@@ -66,7 +105,7 @@ export async function* continueDeployment(options: {
     teamId: options.teamId,
     apiUrl: options.apiUrl,
     userAgent: options.userAgent,
-    agent: options.agent,
+    dispatcher: options.dispatcher,
     debug: options.debug,
   });
 
@@ -83,7 +122,7 @@ export async function* continueDeployment(options: {
     };
 
     for await (const event of uploadFiles({
-      agent: options.agent,
+      dispatcher: options.dispatcher,
       apiUrl: options.apiUrl,
       debug: options.debug,
       teamId: options.teamId,
@@ -110,7 +149,7 @@ export async function* continueDeployment(options: {
       teamId: options.teamId,
       apiUrl: options.apiUrl,
       userAgent: options.userAgent,
-      agent: options.agent,
+      dispatcher: options.dispatcher,
       debug: options.debug,
     });
 
@@ -151,7 +190,7 @@ export async function* continueDeployment(options: {
   }
 
   yield* checkDeploymentStatus(deployment, {
-    agent: options.agent,
+    dispatcher: options.dispatcher,
     apiUrl: options.apiUrl,
     debug: options.debug,
     path: options.path,
@@ -161,8 +200,24 @@ export async function* continueDeployment(options: {
   });
 }
 
-async function postContinue(options: {
-  agent?: Agent;
+async function postContinue(options: Parameters<typeof postContinueOnce>[0]) {
+  try {
+    return await postContinueOnce(options);
+  } catch (error) {
+    if (!isRetryableNetworkError(error)) throw error;
+    // A lost response does not mean the server stopped processing the request.
+    throw Object.assign(
+      new DeploymentError({
+        code: 'deployment_continue_unavailable',
+        message: `Could not confirm whether deployment ${options.deploymentId} was resumed. Run 'vercel inspect ${options.deploymentId}' to check its status before retrying.`,
+      }),
+      { cause: error }
+    );
+  }
+}
+
+async function postContinueOnce(options: {
+  dispatcher?: FetchDispatcher;
   apiUrl?: string;
   debug?: boolean;
   deploymentId: string;
@@ -200,14 +255,16 @@ async function postContinue(options: {
       }),
       apiUrl: options.apiUrl,
       userAgent: options.userAgent,
-      agent: options.agent,
-    }
+      dispatcher: options.dispatcher,
+    },
+    options.debug
   );
 
   let result;
   try {
     result = await response.json();
-  } catch {
+  } catch (error) {
+    if (isRetryableNetworkError(error)) throw error;
     return {
       type: 'error',
       error: new Error('Invalid JSON response from continue endpoint'),

@@ -1,0 +1,510 @@
+import chalk from 'chalk';
+import type Client from '../../../util/client';
+import output from '../../../output-manager';
+import { rulesAddSubcommand } from '../command';
+import {
+  withGlobalFlags,
+  parseSubcommandArgs,
+  confirmAction,
+  detectExistingDraft,
+  offerAutoPublish,
+  printActionImpactWarning,
+  resolveFirewallScope,
+  refuseManagedBotMutation,
+  failPriorityProjectGate,
+  mapFirewallApiError,
+  getRulePayload,
+} from '../shared';
+import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
+import { parseConditionFlags } from '../../../util/firewall/parse-conditions';
+import {
+  VALID_ACTIONS,
+  type FirewallActionType,
+} from '../../../util/firewall/condition-types';
+import { buildActionFromFlags } from '../../../util/firewall/build-action';
+import { formatRuleExpanded } from '../../../util/firewall/format';
+import type {
+  FirewallRule,
+  FirewallConditionGroup,
+} from '../../../util/firewall/types';
+import stamp from '../../../util/output/stamp';
+import { outputAgentError } from '../../../util/agent-output';
+import { warnDeprecatedInput } from '../../../util/warn-deprecated-subcommand';
+import { handleAIAdd } from './add-ai';
+import { addInteractive } from './add-interactive';
+
+export default async function add(client: Client, argv: string[]) {
+  const parsed = await parseSubcommandArgs(
+    argv,
+    rulesAddSubcommand,
+    client,
+    'rules add'
+  );
+  if (typeof parsed === 'number') return parsed;
+
+  const aiPrompt = parsed.flags['--ai'] as string | undefined;
+  const jsonInput = getRulePayload(parsed.flags);
+  if (typeof jsonInput === 'number') return jsonInput;
+  const conditionFlags = parsed.flags['--condition'] as string[] | undefined;
+
+  // Mutual exclusivity check
+  const modeCount = [aiPrompt, jsonInput, conditionFlags].filter(
+    Boolean
+  ).length;
+  if (modeCount > 1) {
+    output.error(
+      'Cannot use --ai, --data, and --condition together. Use only one mode.'
+    );
+    return 1;
+  }
+
+  // Mode dispatch
+  if (aiPrompt) {
+    // AI generation is project-only (its endpoint requires a project)
+    if (parsed.flags['--team-level']) {
+      output.error(
+        'AI mode is not available with --team-level. Use --data or --condition options instead.'
+      );
+      return 1;
+    }
+
+    // AI mode — blocked for agents/non-interactive (AI output requires human review)
+    if (client.nonInteractive || !client.stdin.isTTY) {
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'ai_not_available',
+          message:
+            'AI mode is not available in non-interactive mode. AI-generated rules require human review before staging. Use --data or --condition options instead.',
+          next: [
+            {
+              command: withGlobalFlags(
+                client,
+                'firewall rules add "Name" --condition \'{"type":"path","op":"pre","value":"/api"}\' --action deny --yes'
+              ),
+              when: 'create with options',
+            },
+            {
+              command: withGlobalFlags(
+                client,
+                'firewall rules add --data \'{"name":"...","conditionGroup":[...],"action":{...}}\' --yes'
+              ),
+              when: 'create with JSON',
+            },
+          ],
+        });
+      }
+      output.error(
+        'AI mode is not available in non-interactive mode. Use --data or --condition options instead.'
+      );
+      return 1;
+    }
+
+    // AI mode
+    const scope = await resolveFirewallScope(client, parsed.flags);
+    if (typeof scope === 'number') return scope;
+    if (scope.type === 'team') {
+      output.error(
+        'AI mode is not available with --team-level. Use --data or --condition options instead.'
+      );
+      return 1;
+    }
+    return handleAIAdd(
+      client,
+      { id: scope.projectId, name: scope.displayName },
+      scope.teamId,
+      {
+        prompt: aiPrompt,
+        name: parsed.args[0],
+        skipPrompts: !!parsed.flags['--yes'],
+        teamSlug: scope.teamSlug,
+      }
+    );
+  }
+
+  if (jsonInput) {
+    // JSON mode
+    return handleJsonAdd(client, parsed, jsonInput);
+  }
+
+  if (conditionFlags) {
+    // Flag mode
+    return handleFlagAdd(client, parsed, conditionFlags);
+  }
+
+  // No mode specified — interactive or error
+  if (client.stdin.isTTY && !client.nonInteractive) {
+    const scope = await resolveFirewallScope(client, parsed.flags);
+    if (typeof scope === 'number') return scope;
+
+    // Interactive mode: offer AI vs manual choice (AI is project-only)
+    const mode = await client.input.select({
+      message: 'How would you like to create the rule?',
+      choices: [
+        ...(scope.type === 'project'
+          ? [
+              {
+                value: 'ai',
+                name: 'Describe what you want (AI-powered)',
+              },
+            ]
+          : []),
+        {
+          value: 'manual',
+          name: 'Build manually (step by step)',
+        },
+        {
+          value: 'json',
+          name: 'Paste JSON',
+        },
+      ],
+    });
+
+    if (mode === 'ai' && scope.type === 'project') {
+      return handleAIAdd(
+        client,
+        { id: scope.projectId, name: scope.displayName },
+        scope.teamId,
+        {
+          skipPrompts: false,
+          teamSlug: scope.teamSlug,
+        }
+      );
+    }
+
+    if (mode === 'json') {
+      const jsonStr = await client.input.text({
+        message: 'Paste the JSON rule definition:',
+      });
+      return handleJsonAdd(client, parsed, jsonStr);
+    }
+
+    // Manual interactive mode
+    return addInteractive(client, scope, {
+      skipPrompts: !!parsed.flags['--yes'],
+    });
+  }
+
+  // Non-interactive with no flags — error with guidance
+  if (client.nonInteractive) {
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'missing_flags',
+      message:
+        'No rule definition provided. Use --data or --condition options.',
+      next: [
+        {
+          command: withGlobalFlags(
+            client,
+            'firewall rules add "Name" --condition \'{"type":"path","op":"pre","value":"/api"}\' --action deny --yes'
+          ),
+          when: 'create with options',
+        },
+        {
+          command: withGlobalFlags(
+            client,
+            'firewall rules add --data \'{"name":"Name","conditionGroup":[...],"action":{"mitigate":{"action":"deny"}}}\' --yes'
+          ),
+          when: 'create with JSON',
+        },
+      ],
+    });
+  }
+  output.error(
+    'Interactive mode is not available. Use --ai, --data, or --condition options to create a rule.'
+  );
+  return 2;
+}
+
+// --- JSON mode ---
+
+async function handleJsonAdd(
+  client: Client,
+  parsed: { args: string[]; flags: Record<string, unknown> },
+  jsonStr: string
+): Promise<number> {
+  let ruleData: Record<string, unknown>;
+  try {
+    ruleData = JSON.parse(jsonStr);
+  } catch {
+    output.error('Invalid JSON. Please provide a valid JSON object.');
+    return 2;
+  }
+
+  // Validate required fields
+  if (!ruleData.name || typeof ruleData.name !== 'string') {
+    output.error('JSON must include a "name" field (string).');
+    return 1;
+  }
+  if (!ruleData.conditionGroup || !Array.isArray(ruleData.conditionGroup)) {
+    output.error('JSON must include a "conditionGroup" field (array).');
+    return 1;
+  }
+  // Validate each condition group has a conditions array
+  for (let i = 0; i < (ruleData.conditionGroup as unknown[]).length; i++) {
+    const group = (ruleData.conditionGroup as Record<string, unknown>[])[i];
+    if (!group.conditions || !Array.isArray(group.conditions)) {
+      output.error(`conditionGroup[${i}] must have a "conditions" array.`);
+      return 1;
+    }
+    for (let j = 0; j < (group.conditions as unknown[]).length; j++) {
+      const cond = (group.conditions as Record<string, unknown>[])[j];
+      if (!cond.type || typeof cond.type !== 'string') {
+        output.error(
+          `conditionGroup[${i}].conditions[${j}] must have a "type" field.`
+        );
+        return 1;
+      }
+      if (!cond.op || typeof cond.op !== 'string') {
+        output.error(
+          `conditionGroup[${i}].conditions[${j}] must have an "op" field.`
+        );
+        return 1;
+      }
+    }
+  }
+  if (!ruleData.action || typeof ruleData.action !== 'object') {
+    output.error('JSON must include an "action" field (object).');
+    return 1;
+  }
+  // Validate action structure
+  const actionObj = ruleData.action as Record<string, unknown>;
+  if (!actionObj.mitigate || typeof actionObj.mitigate !== 'object') {
+    output.error(
+      'action must have a "mitigate" field. Example: { "mitigate": { "action": "deny" } }'
+    );
+    return 1;
+  }
+  const mitigateObj = actionObj.mitigate as Record<string, unknown>;
+  if (!mitigateObj.action || typeof mitigateObj.action !== 'string') {
+    output.error(
+      'action.mitigate must have an "action" field (string). Valid: deny, challenge, rate_limit, log, redirect.'
+    );
+    return 1;
+  }
+
+  // Validate limits
+  if ((ruleData.name as string).length > 160) {
+    output.error('Rule name must be 160 characters or less.');
+    return 1;
+  }
+  if (ruleData.description && (ruleData.description as string).length > 256) {
+    output.error('Rule description must be 256 characters or less.');
+    return 1;
+  }
+  if ((ruleData.conditionGroup as unknown[]).length > 25) {
+    output.error('Maximum 25 condition groups allowed.');
+    return 1;
+  }
+
+  const rule = {
+    name: ruleData.name,
+    description: ruleData.description,
+    active: ruleData.active !== false,
+    conditionGroup: ruleData.conditionGroup,
+    action: ruleData.action,
+  };
+
+  return createRule(
+    client,
+    parsed,
+    rule as unknown as Omit<FirewallRule, 'id'>
+  );
+}
+
+// --- Flag mode ---
+
+async function handleFlagAdd(
+  client: Client,
+  parsed: { args: string[]; flags: Record<string, unknown> },
+  conditionFlags: string[]
+): Promise<number> {
+  // Parse name
+  const name = parsed.args[0] as string | undefined;
+  if (!name) {
+    output.error(
+      `Missing rule name. Provide as the first argument: ${chalk.cyan(withGlobalFlags(client, 'firewall rules add "Rule name" --condition ...'))}`
+    );
+    return 1;
+  }
+  if (name.length > 160) {
+    output.error('Rule name must be 160 characters or less.');
+    return 1;
+  }
+
+  // Parse conditions (with --or support)
+  // We need to reconstruct the interleaved --condition and --or flags
+  // from the raw argv to preserve ordering
+  const rawArgs = parsed.flags['--condition'] as string[] | undefined;
+  if (!rawArgs || rawArgs.length === 0) {
+    output.error('At least one --condition is required.');
+    return 2;
+  }
+
+  // Build the interleaved flag list by scanning the original argv
+  // The parsed flags give us --condition values and --or as boolean
+  // But we need the ordering. For simplicity, treat all conditions as one AND group
+  // unless --or is set, in which case we use the raw flag order.
+  const hasOr = parsed.flags['--or'] as boolean | undefined;
+  let conditionGroups: FirewallConditionGroup[];
+
+  if (hasOr) {
+    // Reconstruct interleaved order from argv
+    const interleaved: string[] = [];
+    const condValues = [...rawArgs];
+    let condIdx = 0;
+
+    // Walk through the original command argv to find --condition and --or ordering
+    for (const arg of client.argv) {
+      if (arg === '--or') {
+        interleaved.push('--or');
+      } else if (arg === '--condition' || arg.startsWith('--condition=')) {
+        // The next value in condValues corresponds to this --condition
+        if (condIdx < condValues.length) {
+          interleaved.push(condValues[condIdx]);
+          condIdx++;
+        }
+      }
+    }
+
+    const result = parseConditionFlags(interleaved);
+    if (typeof result === 'string') {
+      output.error(result);
+      return 1;
+    }
+    conditionGroups = result.groups;
+  } else {
+    // Simple case: all conditions in one AND group
+    const result = parseConditionFlags(rawArgs);
+    if (typeof result === 'string') {
+      output.error(result);
+      return 1;
+    }
+    conditionGroups = result.groups;
+  }
+
+  // Parse action
+  const actionType = parsed.flags['--action'] as string | undefined;
+  if (!actionType) {
+    output.error(
+      `Missing --action. Valid actions: ${VALID_ACTIONS.join(', ')}`
+    );
+    return 1;
+  }
+  if (!VALID_ACTIONS.includes(actionType as FirewallActionType)) {
+    output.error(
+      `Invalid action "${actionType}". Valid actions: ${VALID_ACTIONS.join(', ')}`
+    );
+    return 1;
+  }
+
+  // Build action object
+  const action = buildActionFromFlags(parsed.flags, actionType);
+  if (typeof action === 'string') {
+    output.error(action);
+    return 1;
+  }
+
+  const description = parsed.flags['--description'] as string | undefined;
+  if (description && description.length > 256) {
+    output.error('Rule description must be 256 characters or less.');
+    return 1;
+  }
+
+  if (parsed.flags['--disabled']) {
+    warnDeprecatedInput(client, '--disabled', '--no-enable');
+  }
+  const active = !(parsed.flags['--no-enable'] || parsed.flags['--disabled']);
+
+  const rule = {
+    name,
+    description,
+    active,
+    conditionGroup: conditionGroups,
+    action,
+  };
+
+  return createRule(client, parsed, rule);
+}
+
+// --- Shared create logic ---
+
+async function createRule(
+  client: Client,
+  parsed: { args: string[]; flags: Record<string, unknown> },
+  rule: Omit<FirewallRule, 'id'>
+): Promise<number> {
+  const scope = await resolveFirewallScope(
+    client,
+    parsed.flags as { '--project'?: string; '--team-level'?: boolean }
+  );
+  if (typeof scope === 'number') return scope;
+
+  // Checked on the rule rather than on argv, so the name reaching the API is
+  // the one tested — `--data` and `--ai` carry their own.
+  const reserved = refuseManagedBotMutation(
+    client,
+    scope,
+    rule.name,
+    'add a custom rule named'
+  );
+  if (reserved !== null) return reserved;
+
+  // Show preview and confirm
+  const previewRule = { ...rule, id: '(new)' } as FirewallRule;
+  output.print(`\n${formatRuleExpanded(previewRule)}\n\n`);
+
+  const confirmed = await confirmAction(
+    client,
+    parsed.flags['--yes'] as boolean,
+    `Create this rule?`
+  );
+
+  if (!confirmed) {
+    output.log('Canceled');
+    return 0;
+  }
+
+  const createStamp = stamp();
+  output.spinner('Staging rule');
+
+  try {
+    const hadExistingDraft = await detectExistingDraft(client, scope);
+
+    await patchFirewallDraft(client, scope, {
+      action: 'rules.insert',
+      id: null,
+      value: rule,
+    });
+
+    output.log(
+      `${chalk.cyan('Success!')} Rule "${chalk.bold(rule.name)}" staged ${chalk.gray(createStamp())}`
+    );
+    printActionImpactWarning(rule.action);
+
+    await offerAutoPublish(client, scope, hadExistingDraft, {
+      skipPrompts: parsed.flags['--yes'] as boolean,
+    });
+
+    return 0;
+  } catch (e: unknown) {
+    const priority = failPriorityProjectGate(client, e, scope);
+    if (priority !== null) return priority;
+    const msg = mapFirewallApiError(e, scope, 'Failed to stage rule');
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'api_error',
+        message: msg,
+        next: [
+          {
+            command: withGlobalFlags(client, 'firewall rules add --yes', scope),
+          },
+        ],
+      });
+      return 1;
+    }
+    output.error(msg);
+    return 1;
+  }
+}

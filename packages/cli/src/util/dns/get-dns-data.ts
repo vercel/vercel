@@ -81,7 +81,7 @@ export default async function getDNSData(
           value,
         }
       : null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

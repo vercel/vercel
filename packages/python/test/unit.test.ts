@@ -15,6 +15,14 @@ const tmpPythonDir = path.join(
   tmpdir(),
   `vc-test-python-${Math.floor(Math.random() * 1e6)}`
 );
+const pythonEntrypointDocsUrl =
+  'https://vercel.com/docs/functions/runtimes/python#python-entrypoints';
+const fastapiEntrypointDocsUrl =
+  'https://vercel.com/docs/frameworks/backend/fastapi#exporting-the-fastapi-application';
+const flaskEntrypointDocsUrl =
+  'https://vercel.com/docs/frameworks/backend/flask#exporting-the-flask-application';
+const djangoEntrypointDocsUrl =
+  'https://vercel.com/docs/frameworks/full-stack/django#configure-the-django-entrypoint';
 
 // For tests that exercise the build pipeline, we don't care about the actual
 // vendored dependencies, only that the build completes and the handler exists.
@@ -37,18 +45,1077 @@ vi.mock('../src/install', async () => {
   };
 });
 
+vi.mock('../src/django', () => ({
+  getDjangoSettings: vi.fn(async () => null),
+  runDjangoCollectStatic: vi.fn(async () => null),
+}));
+
+vi.mock('../src/fastapi', async () => {
+  const real =
+    await vi.importActual<typeof import('../src/fastapi')>('../src/fastapi');
+  return {
+    ...real,
+    runFastAPICollectStatic: vi.fn(async () => null),
+  };
+});
+
+vi.mock('execa', () => ({
+  default: vi.fn(),
+}));
+
+// Pass-through wrapper so tests can assert whether the import closure ran.
+vi.mock('@vercel/python-analysis', async () => {
+  const real = await vi.importActual<typeof import('@vercel/python-analysis')>(
+    '@vercel/python-analysis'
+  );
+  return {
+    ...real,
+    collectImportClosure: vi.fn(real.collectImportClosure),
+  };
+});
+
 // Imports after mocks are set up (vitest hoists vi.mock calls)
 import {
-  getSupportedPythonVersion,
-  DEFAULT_PYTHON_VERSION,
+  resolvePythonVersion,
+  DEFAULT_PYTHON_VERSION_STRING,
   resetInstalledPythonsCache,
+  getInstalledPythonsFromFilesystem,
 } from '../src/version';
-import { build } from '../src/index';
+import type { PythonConstraint, PythonPackage } from '@vercel/python-analysis';
+import { collectImportClosure } from '@vercel/python-analysis';
+import { build, getDevSidecars, prepareCache } from '../src/index';
+import type { BuildResultV3, BuildResultV2 } from '@vercel/build-utils';
 import { createVenvEnv, getVenvBinDir } from '../src/utils';
-import { UV_PYTHON_DOWNLOADS_MODE, getProtectedUvEnv } from '../src/uv';
+import {
+  UV_VERSION,
+  UV_PYTHON_DOWNLOADS_MODE,
+  getProtectedUvEnv,
+  getUvCacheDir,
+  findUvOnBuildImage,
+} from '../src/uv';
+import {
+  getQueueAdapterBootstrap,
+  QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN,
+  type QueueAdapterInjectedPackage,
+  type QueueIntegration,
+} from '../src/conditional-vendoring';
+import {
+  getInstalledDistributionVersions,
+  getLocalSdkSourcePaths,
+  isLegacyWorkersProject,
+  resolveWorkflowServingMode,
+} from '../src/sdk-detection';
 import { createPyprojectToml } from '../src/install';
-import { detectDjangoPythonEntrypoint } from '../src/entrypoint';
-import { FileBlob } from '@vercel/build-utils';
+import { getDjangoSettings, runDjangoCollectStatic } from '../src/django';
+import { runFastAPICollectStatic } from '../src/fastapi';
+import {
+  createQueueHandlerModule,
+  filterQueueSubscriptions,
+  generatedPythonPathToModule,
+  getApschedulerPreviewConfig,
+  getGeneratedQueueHandlerPath,
+  getSubscriberOutputPath,
+  queueTopicPatternsOverlap,
+  type SubscriberDeclaration,
+  type SubscriberSubscription,
+} from '../src/subscribers';
+import { getWorkflowOutputPath } from '../src/workflows';
+import { parseBareModuleEntrypoint } from '../src/module-entrypoint';
+import {
+  FileBlob,
+  FileFsRef,
+  Span,
+  download,
+  sanitizeConsumerName,
+} from '@vercel/build-utils';
+import { derivePycPath } from '../src/compileall';
+import { getServiceCrons } from '../src/crons';
+import { getGeneratedScheduleHandlerPath } from '../src/schedules';
+import {
+  entrypointToModule,
+  detectPythonEntrypoint,
+  detectEntrypoint,
+} from '../src/entrypoint';
+import execa from 'execa';
+
+function getBuildOutputV2(result: Awaited<ReturnType<typeof build>>) {
+  expect(result.resultVersion).toBe(2);
+  return (result as any).result as BuildResultV2;
+}
+
+function getBuildOutputV2Lambda(result: Awaited<ReturnType<typeof build>>) {
+  const v2 = getBuildOutputV2(result) as any;
+  const lambdas = Object.values(v2.output).filter((o: any) => 'handler' in o);
+  expect(lambdas).toHaveLength(1);
+  return lambdas[0] as BuildResultV3['output'];
+}
+
+function getBuildOutputV3(result: Awaited<ReturnType<typeof build>>) {
+  expect(result.resultVersion).toBe(3);
+  return (result as any).result.output as BuildResultV3['output'];
+}
+
+function mockQueueIntrospection(
+  subscriptions: unknown[] | Record<string, unknown[]>,
+  opts: {
+    sdkVersion?: string;
+    workflowSdkVersion?: string;
+    owners?: string[];
+  } = {}
+) {
+  vi.mocked(execa).mockImplementation(async (_cmd, args, execaOpts) => {
+    if (
+      Array.isArray(args) &&
+      args[0] === 'run' &&
+      typeof args[args.length - 1] === 'string'
+    ) {
+      const script = args[args.length - 1] as string;
+      if (script.includes('get_subscriptions')) {
+        // Introspection must run with the deployed-function marker so
+        // import-time registration (e.g. vercel-celery's auto transport)
+        // behaves as it will at runtime.
+        expect(
+          (execaOpts as { env?: Record<string, string> } | undefined)?.env
+            ?.VERCEL
+        ).toBe('1');
+        // A map keys per-declaration results by the module the
+        // introspection script imports.
+        const result = Array.isArray(subscriptions)
+          ? subscriptions
+          : (Object.entries(subscriptions).find(([moduleName]) =>
+              script.includes(
+                `importlib.import_module(${JSON.stringify(moduleName)})`
+              )
+            )?.[1] ?? []);
+        return {
+          stdout: JSON.stringify({
+            subscriptions: result,
+            owners: opts.owners ?? [],
+          }),
+        } as any;
+      }
+      if (script.includes('importlib.metadata')) {
+        // Mirrors VERSION_QUERY_SCRIPT: the first installed workflow SDK
+        // distribution wins, and it prints "<distribution> <version>".
+        // Empty output means "undeterminable" → legacy workers path.
+        const installed = opts.workflowSdkVersion
+          ? `vercel-workflow ${opts.workflowSdkVersion}`
+          : opts.sdkVersion
+            ? `vercel ${opts.sdkVersion}`
+            : '';
+        return { stdout: installed } as any;
+      }
+    }
+    return { stdout: '' } as any;
+  });
+}
+
+/**
+ * Build a PythonConstraint from a PEP 440 version specifier string.
+ * Handles exact versions ("3.9"), specifiers (">=3.10,<3.12"), and
+ * compatible releases ("~=3.10.0").
+ */
+function makeConstraint(version: string, source: string): PythonConstraint {
+  const specs = version
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+  const constraint = specs.map(spec => {
+    const match = spec.match(/^(<=|>=|==|!=|~=|===|<|>)?\s*(.+)$/);
+    return {
+      operator: match?.[1] || '==',
+      version: match?.[2] || spec,
+      prefix: '',
+    };
+  });
+  return {
+    request: [
+      {
+        implementation: 'cpython' as const,
+        version: {
+          constraint,
+          variant: 'default' as const,
+        },
+      },
+    ],
+    source,
+    prettySource: source,
+  };
+}
+
+function makePackage(constraints?: PythonConstraint[]): PythonPackage {
+  return { requiresPython: constraints };
+}
+
+function makePackageWithDependencies(dependencies: string[]): PythonPackage {
+  return {
+    requiresPython: [],
+    manifest: {
+      path: 'pyproject.toml',
+      data: {
+        project: {
+          name: 'test-app',
+          version: '0.0.1',
+          dependencies,
+        },
+      },
+    },
+  } as PythonPackage;
+}
+
+function selectVersion(opts: {
+  constraints?: PythonConstraint[];
+  isDev?: boolean;
+}) {
+  return resolvePythonVersion({
+    isDev: opts.isDev,
+    pythonPackage: makePackage(opts.constraints),
+    rootDir: '/tmp',
+  });
+}
+
+// Per-output views over getQueueAdapterBootstrap: each assertion targets
+// either activation or injection.
+function getQueueIntegrations({
+  pythonPackage,
+  hasDeclaredSubscribers,
+  legacyWorkersProject = false,
+}: {
+  pythonPackage: PythonPackage | undefined;
+  hasDeclaredSubscribers: boolean;
+  legacyWorkersProject?: boolean;
+}): Promise<QueueIntegration[]> {
+  return getQueueAdapterBootstrap({
+    pythonPackage,
+    env: {},
+    legacyWorkersProject,
+    hasDeclaredSubscribers,
+  }).then(bootstrap => bootstrap.integrations);
+}
+
+function getQueueAdapterInjectedPackages({
+  pythonPackage,
+  env,
+  hasDeclaredSubscribers,
+  legacyWorkersProject = false,
+}: {
+  pythonPackage: PythonPackage | undefined;
+  env: NodeJS.ProcessEnv;
+  hasDeclaredSubscribers: boolean;
+  legacyWorkersProject?: boolean;
+}): Promise<QueueAdapterInjectedPackage[]> {
+  return getQueueAdapterBootstrap({
+    pythonPackage,
+    env,
+    legacyWorkersProject,
+    hasDeclaredSubscribers,
+  }).then(bootstrap => bootstrap.injectedPackages);
+}
+
+describe('queue adapter integration activation', () => {
+  it('bootstraps nothing for legacy vercel-workers projects', async () => {
+    await expect(
+      getQueueAdapterBootstrap({
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-workers',
+        ]),
+        env: {},
+        legacyWorkersProject: true,
+        hasDeclaredSubscribers: true,
+      })
+    ).resolves.toEqual({ integrations: [], injectedPackages: [] });
+  });
+
+  it('activates nothing without declared subscribers', async () => {
+    await expect(
+      getQueueIntegrations({
+        hasDeclaredSubscribers: false,
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'dramatiq>=1.17',
+          'APScheduler>=3.10.4,<4',
+        ]),
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('activates integrations for declared upstream dependencies', async () => {
+    await expect(
+      getQueueIntegrations({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['celery>=5.3', 'fastapi']),
+      })
+    ).resolves.toEqual([
+      {
+        module: 'vercel.integrations.celery',
+        installer: 'install_vercel_celery_integration',
+      },
+    ]);
+    await expect(
+      getQueueIntegrations({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['fastapi']),
+      })
+    ).resolves.toEqual([]);
+    await expect(
+      getQueueIntegrations({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['APScheduler>=3.10.4,<4']),
+      })
+    ).resolves.toEqual([
+      {
+        module: 'vercel.integrations.apscheduler',
+        installer: 'install_vercel_apscheduler_integration',
+        installBeforeImport: true,
+        subscriberProbe: 'is_scheduler_subscriber',
+      },
+    ]);
+  });
+
+  it('generated handler modules activate integrations after the import', () => {
+    const declaration = {
+      name: 'worker_app',
+      entrypoint: 'worker.py',
+      moduleName: 'worker',
+      variableName: 'app',
+    } as SubscriberDeclaration;
+    const withCelery = createQueueHandlerModule(declaration, [
+      {
+        module: 'vercel.integrations.celery',
+        installer: 'install_vercel_celery_integration',
+      },
+    ]);
+    // Activation is a hard import (no try/except) and runs after the
+    // subscriber module import so installers can retroactively register
+    // apps the import created.
+    expect(withCelery).toContain(
+      'from vercel.integrations.celery import install_vercel_celery_integration'
+    );
+    expect(withCelery.indexOf('importlib.import_module')).toBeLessThan(
+      withCelery.indexOf('install_vercel_celery_integration')
+    );
+    expect(withCelery).toContain(
+      'from vercel_runtime.workers import create_queue_service_app'
+    );
+    expect(withCelery).toContain('app = create_queue_service_app()');
+    expect(withCelery).not.toContain('vercel.queue.asgi_app');
+    expect(withCelery).not.toContain('except');
+
+    const withoutIntegrations = createQueueHandlerModule(declaration, []);
+    expect(withoutIntegrations).not.toContain('vercel.integrations');
+
+    const withAPScheduler = createQueueHandlerModule(declaration, [
+      {
+        module: 'vercel.integrations.apscheduler',
+        installer: 'install_vercel_apscheduler_integration',
+        installBeforeImport: true,
+      },
+    ]);
+    expect(withAPScheduler).toContain(
+      'os.environ["VERCEL_PYTHON_SUBSCRIBER_ID"] = "worker_app"'
+    );
+    expect(
+      withAPScheduler.indexOf('install_vercel_apscheduler_integration')
+    ).toBeLessThan(withAPScheduler.indexOf('importlib.import_module'));
+  });
+});
+
+describe('conditional Python adapter vendoring', () => {
+  it('injects nothing without declared subscribers', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: false,
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'dramatiq>=1.17',
+          'APScheduler>=3.10.4,<4',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('selects vercel-apscheduler-bundle when APScheduler is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['APScheduler>=3.10.4,<4']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-apscheduler-bundle' }),
+    ]);
+  });
+
+  it('selects vercel-apscheduler when vercel-queue is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
+          'vercel-queue',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-apscheduler' }),
+    ]);
+  });
+
+  it('does not inject when an APScheduler adapter is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
+          'vercel-apscheduler',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
+          'vercel-apscheduler-bundle',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('selects vercel-celery-bundle when celery is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['celery>=5.3']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-celery-bundle' }),
+    ]);
+  });
+
+  it('selects vercel-celery when vercel-queue is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-queue',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([expect.objectContaining({ name: 'vercel-celery' })]);
+  });
+
+  it('does not select vercel-celery for unrelated packages', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['celery>=5.3', 'fastapi']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-celery-bundle' }),
+    ]);
+  });
+
+  it('does not inject when celery is absent', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['fastapi']),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('does not inject when only vercel-queue is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['vercel-queue']),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('keeps injecting other adapters when one is declared directly', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'dramatiq>=1.17',
+          'vercel-celery',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-dramatiq-bundle' }),
+    ]);
+  });
+
+  it('does not inject when vercel-celery is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-celery',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('does not inject when vercel-celery-bundle is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-celery-bundle',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('handles extras, specifiers, and markers through PEP 508 parsing', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'Celery[redis]>=5.3; python_version >= "3.11"',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-celery-bundle' }),
+    ]);
+  });
+
+  it('returns the unpinned injected package request', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['celery>=5.3']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'vercel-celery-bundle',
+        requirement: 'vercel-celery-bundle',
+        extraRequirements: [QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN],
+        allowLocalSource: false,
+      }),
+    ]);
+  });
+
+  it('returns the unbundled injected package request when its upstream is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'celery>=5.3',
+          'vercel-queue',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'vercel-celery',
+        requirement: 'vercel-celery',
+        extraRequirements: [],
+        allowLocalSource: false,
+      }),
+    ]);
+  });
+
+  it('selects vercel-dramatiq-bundle when dramatiq is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies(['dramatiq>=1.17']),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'vercel-dramatiq-bundle',
+        requirement: 'vercel-dramatiq-bundle',
+        extraRequirements: [QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN],
+        allowLocalSource: false,
+      }),
+    ]);
+  });
+
+  it('selects vercel-dramatiq when dramatiq and vercel-queue are declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'dramatiq>=1.17',
+          'vercel-queue',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({
+        name: 'vercel-dramatiq',
+        requirement: 'vercel-dramatiq',
+        extraRequirements: [],
+        allowLocalSource: false,
+      }),
+    ]);
+  });
+
+  it('does not inject when vercel-dramatiq is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'dramatiq>=1.17',
+          'vercel-dramatiq',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('does not inject when vercel-dramatiq-bundle is declared', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'dramatiq>=1.17',
+          'vercel-dramatiq-bundle',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([]);
+  });
+
+  it('returns all matching adapter requests', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
+          'celery>=5.3',
+          'dramatiq>=1.17',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-apscheduler-bundle' }),
+      expect.objectContaining({ name: 'vercel-celery-bundle' }),
+      expect.objectContaining({ name: 'vercel-dramatiq-bundle' }),
+    ]);
+  });
+
+  it('only suppresses the adapter that the project already declares', async () => {
+    await expect(
+      getQueueAdapterInjectedPackages({
+        hasDeclaredSubscribers: true,
+        pythonPackage: makePackageWithDependencies([
+          'APScheduler>=3.10.4,<4',
+          'celery>=5.3',
+          'vercel-celery',
+        ]),
+        env: {},
+      })
+    ).resolves.toEqual([
+      expect.objectContaining({ name: 'vercel-apscheduler-bundle' }),
+    ]);
+  });
+});
+
+describe('Python SDK generation detection', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(
+      tmpdir(),
+      `python-sdk-detection-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  function writePyproject(dependencies: string[]) {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        `dependencies = [${dependencies.map(d => JSON.stringify(d)).join(', ')}]`,
+        '',
+      ].join('\n')
+    );
+  }
+
+  function makeUvRunner(versionOutput: string | Error) {
+    const scripts: string[] = [];
+    const uv = {
+      scripts,
+      async run({ args }: { args?: string[] } = {}) {
+        if (args?.[0] === 'python' && args[1] === '-c') {
+          scripts.push(args[2]);
+        }
+        if (versionOutput instanceof Error) {
+          throw versionOutput;
+        }
+        return { stdout: versionOutput, stderr: '' };
+      },
+    };
+    return uv as any;
+  }
+
+  it('detects a direct vercel-workers dependency', async () => {
+    writePyproject([
+      'fastapi',
+      'vercel-workers>=0.0.16 ; python_version >= "3.12"',
+    ]);
+    await expect(isLegacyWorkersProject(mockWorkPath)).resolves.toBe(true);
+  });
+
+  it('does not flag projects without vercel-workers', async () => {
+    writePyproject(['fastapi', 'vercel']);
+    await expect(isLegacyWorkersProject(mockWorkPath)).resolves.toBe(false);
+  });
+
+  it('does not flag projects without a pyproject.toml', async () => {
+    await expect(isLegacyWorkersProject(mockWorkPath)).resolves.toBe(false);
+  });
+
+  function writeUvLock(packages: { name: string; version: string }[]) {
+    const uvLockPath = path.join(mockWorkPath, 'uv.lock');
+    fs.writeFileSync(
+      uvLockPath,
+      [
+        'version = 1',
+        'requires-python = ">=3.12"',
+        '',
+        ...packages.flatMap(pkg => [
+          '[[package]]',
+          `name = "${pkg.name}"`,
+          `version = "${pkg.version}"`,
+          'source = { registry = "https://pypi.org/simple" }',
+          '',
+        ]),
+      ].join('\n')
+    );
+    return uvLockPath;
+  }
+
+  describe('getInstalledDistributionVersions', () => {
+    it('resolves a single distribution from the venv', async () => {
+      const uv = makeUvRunner('vercel 0.8.3');
+      await expect(
+        getInstalledDistributionVersions({
+          uv,
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: null,
+          distributions: ['vercel'] as const,
+        })
+      ).resolves.toEqual(new Map([['vercel', '0.8.3']]));
+      // A one-element tuple needs the trailing comma, or the generated
+      // `for name in ("vercel")` would iterate the string's characters.
+      expect(uv.scripts[0]).toContain('for name in ("vercel",):');
+    });
+
+    it('reports every requested distribution, not just the first', async () => {
+      await expect(
+        getInstalledDistributionVersions({
+          uv: makeUvRunner('vercel 0.10.1\nvercel-queue 0.4.2\n'),
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: null,
+          distributions: ['vercel', 'vercel-queue'] as const,
+        })
+      ).resolves.toEqual(
+        new Map([
+          ['vercel', '0.10.1'],
+          ['vercel-queue', '0.4.2'],
+        ])
+      );
+    });
+
+    it('resolves a single distribution from uv.lock', async () => {
+      await expect(
+        getInstalledDistributionVersions({
+          uv: makeUvRunner(new Error('boom')),
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: writeUvLock([{ name: 'anyio', version: '4.6.0' }]),
+          distributions: ['anyio'] as const,
+        })
+      ).resolves.toEqual(new Map([['anyio', '4.6.0']]));
+    });
+
+    it('fills only the distributions the venv could not answer from uv.lock', async () => {
+      await expect(
+        getInstalledDistributionVersions({
+          uv: makeUvRunner('vercel 0.10.1'),
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: writeUvLock([
+            { name: 'vercel', version: '0.9.0' },
+            { name: 'vercel-queue', version: '0.4.2' },
+          ]),
+          distributions: ['vercel', 'vercel-queue'] as const,
+        })
+      ).resolves.toEqual(
+        new Map([
+          // The venv wins over the lock for what it did answer.
+          ['vercel', '0.10.1'],
+          ['vercel-queue', '0.4.2'],
+        ])
+      );
+    });
+
+    it('omits distributions that are neither installed nor locked', async () => {
+      await expect(
+        getInstalledDistributionVersions({
+          uv: makeUvRunner('vercel-workflow 0.9.0'),
+          venvPath: mockWorkPath,
+          projectDir: mockWorkPath,
+          uvLockPath: null,
+          distributions: ['vercel'] as const,
+        })
+      ).resolves.toEqual(new Map());
+    });
+  });
+
+  it('serves workflows via vercel-workers without an explicit workflow SDK dependency', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['fastapi']),
+        uv: makeUvRunner('vercel-workflow 0.9.0'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+
+  it('serves workflows via vercel-queue for vercel >= 0.8.0', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel']),
+        uv: makeUvRunner('vercel 0.8.0'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('serves workflows via vercel-workers for vercel < 0.8.0', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel>=0.7']),
+        uv: makeUvRunner('vercel 0.7.9'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+
+  it('serves workflows via vercel-queue for vercel-workflow >= 0.9.0', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel-workflow']),
+        uv: makeUvRunner('vercel-workflow 0.9.0'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('serves workflows via vercel-workers for vercel-workflow < 0.9.0', async () => {
+    // The floor is per-distribution: 0.8.5 clears `vercel`'s 0.8.0 but is
+    // below anything `vercel-workflow` has ever released.
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel-workflow']),
+        uv: makeUvRunner('vercel-workflow 0.8.5'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+
+  it('falls back to uv.lock when the venv query fails', async () => {
+    const uvLockPath = writeUvLock([{ name: 'vercel', version: '0.8.1' }]);
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel']),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('falls back to uv.lock for vercel-workflow-only projects', async () => {
+    const uvLockPath = writeUvLock([
+      { name: 'vercel-workflow', version: '0.9.0' },
+    ]);
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel-workflow']),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('prefers the vercel-workflow runtime over the umbrella vercel version', async () => {
+    // Both installed, umbrella on the old line: the runtime is what serves,
+    // so its version decides. Pinned by test rather than by reading order.
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies([
+          'vercel',
+          'vercel-workflow',
+        ]),
+        uv: makeUvRunner('vercel-workflow 0.9.0\nvercel 0.7.9\n'),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('prefers the vercel-workflow runtime in the uv.lock fallback too', async () => {
+    const uvLockPath = writeUvLock([
+      { name: 'vercel', version: '0.7.9' },
+      { name: 'vercel-workflow', version: '0.9.0' },
+    ]);
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies([
+          'vercel',
+          'vercel-workflow',
+        ]),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath,
+      })
+    ).resolves.toBe('queue');
+  });
+
+  it('serves workflows via vercel-workers when the version is undeterminable', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel']),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+
+  it('serves workflows via vercel-workers when the vercel-workflow version is undeterminable', async () => {
+    await expect(
+      resolveWorkflowServingMode({
+        pythonPackage: makePackageWithDependencies(['vercel-workflow']),
+        uv: makeUvRunner(new Error('boom')),
+        venvPath: mockWorkPath,
+        projectDir: mockWorkPath,
+        uvLockPath: null,
+      })
+    ).resolves.toBe('workers');
+  });
+
+  describe('local SDK source override (VERCEL_SDK_PYTHON)', () => {
+    let sdkRoot: string;
+
+    beforeEach(() => {
+      sdkRoot = path.join(mockWorkPath, 'vercel-py');
+      for (const name of [
+        'vercel',
+        'vercel-cache',
+        'vercel-oidc',
+        'vercel-queue',
+        'other',
+      ]) {
+        fs.mkdirSync(path.join(sdkRoot, 'src', name), { recursive: true });
+      }
+    });
+
+    it('is inert when the env override is unset', async () => {
+      await expect(
+        getLocalSdkSourcePaths({
+          pythonPackage: makePackageWithDependencies(['vercel']),
+          env: {},
+        })
+      ).resolves.toEqual([]);
+    });
+
+    it('installs vercel and every vercel-* source package for vercel projects', async () => {
+      await expect(
+        getLocalSdkSourcePaths({
+          pythonPackage: makePackageWithDependencies(['fastapi', 'vercel']),
+          env: { VERCEL_SDK_PYTHON: sdkRoot },
+        })
+      ).resolves.toEqual([
+        path.join(sdkRoot, 'src', 'vercel'),
+        path.join(sdkRoot, 'src', 'vercel-cache'),
+        path.join(sdkRoot, 'src', 'vercel-oidc'),
+        path.join(sdkRoot, 'src', 'vercel-queue'),
+      ]);
+    });
+
+    it('installs every declared vercel-* package', async () => {
+      await expect(
+        getLocalSdkSourcePaths({
+          pythonPackage: makePackageWithDependencies([
+            'fastapi',
+            'vercel-queue>=0.7',
+            'Vercel_Cache',
+            'vercel-oidc[dev]',
+          ]),
+          env: { VERCEL_SDK_PYTHON: sdkRoot },
+        })
+      ).resolves.toEqual([
+        path.join(sdkRoot, 'src', 'vercel-cache'),
+        path.join(sdkRoot, 'src', 'vercel-oidc'),
+        path.join(sdkRoot, 'src', 'vercel-queue'),
+      ]);
+    });
+
+    it('is inert for projects that use neither SDK package', async () => {
+      await expect(
+        getLocalSdkSourcePaths({
+          pythonPackage: makePackageWithDependencies(['fastapi']),
+          env: { VERCEL_SDK_PYTHON: sdkRoot },
+        })
+      ).resolves.toEqual([]);
+    });
+  });
+});
+
 let warningMessages: string[];
 const originalConsoleWarn = console.warn;
 const realDateNow = Date.now.bind(global.Date);
@@ -59,23 +1126,30 @@ let mockInstalledVersions: string[] = [];
 
 /** Creates a mock UvRunner class for tests */
 function createMockUvRunner(options?: {
-  onSync?: () => void;
-  onPip?: () => void;
-  onLock?: () => void;
+  onSync?: (options: any) => void;
+  onPip?: (options: any) => void;
+  onLock?: (options: any) => void;
+  onRun?: (options: any) => { stdout: string; stderr?: string } | undefined;
 }) {
   return class MockUvRunner {
-    constructor() {}
+    uvPath: string;
+    constructor(uvPath = '/mock/uv') {
+      this.uvPath = uvPath;
+    }
     getPath() {
-      return '/mock/uv';
+      return this.uvPath;
     }
-    async sync() {
-      options?.onSync?.();
+    async sync(syncOptions: any) {
+      options?.onSync?.(syncOptions);
     }
-    async pip() {
-      options?.onPip?.();
+    async pip(pipOptions: any) {
+      options?.onPip?.(pipOptions);
     }
-    async lock() {
-      options?.onLock?.();
+    async lock(lockOptions: any) {
+      options?.onLock?.(lockOptions);
+    }
+    async run(runOptions: any) {
+      return options?.onRun?.(runOptions) ?? { stdout: '', stderr: '' };
     }
   };
 }
@@ -104,33 +1178,184 @@ afterEach(() => {
   }
 });
 
+describe('prepareCache()', () => {
+  const origPrepareCacheEnv = process.env.VERCEL_PYTHON_PREPARE_CACHE;
+
+  afterEach(() => {
+    if (origPrepareCacheEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    } else {
+      process.env.VERCEL_PYTHON_PREPARE_CACHE = origPrepareCacheEnv;
+    }
+  });
+
+  it('caches uv cache and the venv by default', async () => {
+    delete process.env.VERCEL_PYTHON_PREPARE_CACHE;
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      expect(files['.vercel/python/cache/uv/wheels/example.whl']).toBeDefined();
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+
+  it('caches uv cache and the venv, excludes bytecode and user source', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+
+    // Create a fake uv cache with some files
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.tar.gz'),
+      ''
+    );
+    // Create a .pyc file that should be excluded
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/archive/foo.pyc'),
+      ''
+    );
+    // Create venv files that should be included
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/pyvenv.cfg'),
+      'home = /usr/bin\n'
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/lib/site-packages/pkg/mod.py'),
+      ''
+    );
+    // Create a user source file that should NOT be included
+    await fs.outputFile(path.join(workPath, 'app.py'), 'print("hello")\n');
+
+    try {
+      const files = await prepareCache({
+        files: {},
+        entrypoint: 'app.py',
+        config: {},
+        workPath,
+        repoRootPath: workPath,
+      });
+
+      // uv cache files should be present (minus .pyc)
+      expect(files['.vercel/python/cache/uv/wheels/example.whl']).toBeDefined();
+      expect(files['.vercel/python/cache/uv/archive/foo.tar.gz']).toBeDefined();
+
+      // .pyc in uv cache should be excluded
+      expect(files['.vercel/python/cache/uv/archive/foo.pyc']).toBeUndefined();
+
+      // venv files should be cached (uv sync prunes stale packages)
+      expect(files['.vercel/python/.venv/pyvenv.cfg']).toBeDefined();
+      expect(
+        files['.vercel/python/.venv/lib/site-packages/pkg/mod.py']
+      ).toBeDefined();
+
+      // user source files should NOT be cached
+      expect(files['app.py']).toBeUndefined();
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
+});
+
+describe('build cache trace tags', () => {
+  it('reports restored Python cache state on the install span', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `vc-python-span-cache-${Math.floor(Math.random() * 1e6)}`
+    );
+    const events: any[] = [];
+    const span = new Span({
+      name: 'vc.builder',
+      reporter: {
+        report: event => events.push(event),
+      },
+    });
+
+    makeMockPython('3.11');
+
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/.venv/pyvenv.cfg'),
+      'version = 3.11.0\n'
+    );
+    await fs.outputFile(
+      path.join(workPath, '.vercel/python/cache/uv/wheels/example.whl'),
+      ''
+    );
+
+    try {
+      await build({
+        workPath,
+        files: {
+          'handler.py': new FileBlob({
+            data: 'def app(environ, start_response): pass',
+          }),
+        },
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {},
+        repoRootPath: workPath,
+        span,
+      });
+    } finally {
+      await fs.remove(workPath);
+    }
+
+    const installSpan = events.find(
+      event => event.name === 'vc.builder.install'
+    );
+    expect(installSpan?.tags).toMatchObject({
+      runtime: 'python',
+      'python.cache.restored': 'both',
+    });
+  });
+});
+
 it('should only match supported versions, otherwise throw an error', () => {
   makeMockPython('3.9');
-  const result = getSupportedPythonVersion({
-    declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+  const { pythonVersion: result } = selectVersion({
+    constraints: [makeConstraint('3.9', 'Pipfile.lock')],
   });
   expect(result).toHaveProperty('runtime', 'python3.9');
 });
 
-it('should ignore minor version in vercel dev', () => {
-  expect(
-    getSupportedPythonVersion({
-      declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+it('defers to system python3 in vercel dev, regardless of declared version', () => {
+  for (const constraint of ['3.9', '3.6', '999']) {
+    const { pythonVersion } = selectVersion({
+      constraints: [makeConstraint(constraint, 'Pipfile.lock')],
       isDev: true,
-    })
-  ).toHaveProperty('runtime', 'python3');
-  expect(
-    getSupportedPythonVersion({
-      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
-      isDev: true,
-    })
-  ).toHaveProperty('runtime', 'python3');
-  expect(
-    getSupportedPythonVersion({
-      declaredPythonVersion: { version: '999', source: 'Pipfile.lock' },
-      isDev: true,
-    })
-  ).toHaveProperty('runtime', 'python3');
+    });
+    expect(pythonVersion).toMatchObject({
+      runtime: 'python3',
+      pythonPath: 'python3',
+      pipPath: 'pip3',
+    });
+    // Dev mode must leave `major` and `minor` undefined so every
+    // downstream `!= null` guard (ensureVenv, ensureUvProject, cached-
+    // venv invalidation) correctly skips version-sensitive logic.
+    expect(pythonVersion.major).toBeUndefined();
+    expect(pythonVersion.minor).toBeUndefined();
+  }
   expect(warningMessages).toStrictEqual([]);
 });
 
@@ -138,11 +1363,8 @@ describe('requires-python range parsing', () => {
   it('selects latest installed within range ">=3.10,<3.12"', () => {
     makeMockPython('3.10');
     makeMockPython('3.11');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.10,<3.12',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.10,<3.12', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.11');
   });
@@ -150,23 +1372,17 @@ describe('requires-python range parsing', () => {
   it('selects highest allowed when upper bound inclusive (>=3.10,<=3.12)', () => {
     makeMockPython('3.11');
     makeMockPython('3.12');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.10,<=3.12',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.10,<=3.12', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.12');
   });
 
-  it('respects compatible release "~=3.10" (>=3.10,<3.11)', () => {
+  it('respects compatible release "~=3.10.0" (>=3.10.0,<3.11.0)', () => {
     makeMockPython('3.10');
     makeMockPython('3.11');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '~=3.10',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('~=3.10.0', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.10');
   });
@@ -176,11 +1392,8 @@ describe('Python 3.13 and 3.14 support', () => {
   it('selects Python 3.13 when specified in requires-python', () => {
     makeMockPython('3.12');
     makeMockPython('3.13');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.13',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.13', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.13');
   });
@@ -188,26 +1401,20 @@ describe('Python 3.13 and 3.14 support', () => {
   it('selects Python 3.14 when specified in requires-python', () => {
     makeMockPython('3.13');
     makeMockPython('3.14');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.14',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.14', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.14');
   });
 
-  it('prefers DEFAULT_PYTHON_VERSION (3.12) when range allows it', () => {
+  it('prefers DEFAULT_PYTHON_VERSION_STRING (3.12) when range allows it', () => {
     // Even though 3.13 and 3.14 are installed and match >=3.12,
     // we prefer 3.12 to make 3.13+ opt-in only
     makeMockPython('3.12');
     makeMockPython('3.13');
     makeMockPython('3.14');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.12',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.12', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.12');
   });
@@ -217,35 +1424,26 @@ describe('Python 3.13 and 3.14 support', () => {
     makeMockPython('3.12');
     makeMockPython('3.13');
     makeMockPython('3.14');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.12,<3.14',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.12,<3.14', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.12');
   });
 
-  it('respects compatible release "~=3.13" (>=3.13,<3.14)', () => {
+  it('respects compatible release "~=3.13.0" (>=3.13.0,<3.14.0)', () => {
     makeMockPython('3.13');
     makeMockPython('3.14');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '~=3.13',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('~=3.13.0', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.13');
   });
 
-  it('respects compatible release "~=3.14" (>=3.14,<3.15)', () => {
+  it('respects compatible release "~=3.14.0" (>=3.14.0,<3.15.0)', () => {
     makeMockPython('3.13');
     makeMockPython('3.14');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '~=3.14',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('~=3.14.0', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.14');
   });
@@ -257,11 +1455,8 @@ describe('Python 3.13 and 3.14 support', () => {
     makeMockPython('3.11');
     makeMockPython('3.12');
     makeMockPython('3.13');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.9',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.9', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.12');
   });
@@ -271,11 +1466,8 @@ describe('Python 3.13 and 3.14 support', () => {
     makeMockPython('3.11');
     makeMockPython('3.12');
     makeMockPython('3.13');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.11,<=3.13',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.11,<=3.13', 'pyproject.toml')],
     });
     expect(result).toHaveProperty('runtime', 'python3.12');
   });
@@ -285,11 +1477,8 @@ describe('Python 3.13 and 3.14 support', () => {
     makeMockPython('3.13');
     makeMockPython('3.14');
     // Note: NOT installing 3.12
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.12',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.12', 'pyproject.toml')],
     });
     // Should fall back to 3.14 (latest installed that matches)
     expect(result).toHaveProperty('runtime', 'python3.14');
@@ -300,11 +1489,8 @@ describe('.python-version file support', () => {
   it('selects Python version from .python-version source', () => {
     makeMockPython('3.11');
     makeMockPython('3.12');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '3.11',
-        source: '.python-version',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('3.11', '.python-version')],
     });
     expect(result).toHaveProperty('runtime', 'python3.11');
   });
@@ -313,11 +1499,8 @@ describe('.python-version file support', () => {
     makeMockPython('3.10');
     makeMockPython('3.11');
     makeMockPython('3.12');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '3.10',
-        source: '.python-version',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('3.10', '.python-version')],
     });
     // Should match exactly 3.10, not pick the latest
     expect(result).toHaveProperty('runtime', 'python3.10');
@@ -327,24 +1510,18 @@ describe('.python-version file support', () => {
     makeMockPython('3.12');
     makeMockPython('3.13');
     // Request 3.9 which is not installed
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '3.9',
-        source: '.python-version',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('3.9', '.python-version')],
     });
     // Should fall back to default
     expect(result).toHaveProperty('runtime', 'python3.12');
     expect(warningMessages[0]).toContain('not installed and will be ignored');
   });
 
-  it('warns and falls back when .python-version specifies invalid version', () => {
+  it('warns and falls back when .python-version specifies unrecognized version', () => {
     makeMockPython('3.12');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: 'invalid',
-        source: '.python-version',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('999', '.python-version')],
     });
     // Should fall back to default
     expect(result).toHaveProperty('runtime', 'python3.12');
@@ -356,11 +1533,8 @@ describe('.python-version file support', () => {
     // Spy on console.log to verify the message
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
-      getSupportedPythonVersion({
-        declaredPythonVersion: {
-          version: '3.11',
-          source: '.python-version',
-        },
+      selectVersion({
+        constraints: [makeConstraint('3.11', '.python-version')],
       });
       expect(logSpy).toHaveBeenCalledWith(
         expect.stringContaining('Using Python 3.11 from .python-version')
@@ -372,59 +1546,150 @@ describe('.python-version file support', () => {
 });
 
 describe('default Python version behavior', () => {
-  it('uses DEFAULT_PYTHON_VERSION when no version specified and default is installed', () => {
+  it('uses DEFAULT_PYTHON_VERSION_STRING when no version specified and default is installed', () => {
     makeMockPython('3.13');
     makeMockPython('3.14');
-    makeMockPython(DEFAULT_PYTHON_VERSION);
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: undefined,
+    makeMockPython(DEFAULT_PYTHON_VERSION_STRING);
+    const { pythonVersion: result } = selectVersion({
+      constraints: undefined,
     });
-    expect(result).toHaveProperty('runtime', `python${DEFAULT_PYTHON_VERSION}`);
+    expect(result).toHaveProperty(
+      'runtime',
+      `python${DEFAULT_PYTHON_VERSION_STRING}`
+    );
   });
 
   it('falls back to latest installed when default is not installed', () => {
     makeMockPython('3.13');
     makeMockPython('3.14');
-    // Note: NOT installing DEFAULT_PYTHON_VERSION (3.12)
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: undefined,
+    // Note: NOT installing DEFAULT_PYTHON_VERSION_STRING (3.12)
+    const { pythonVersion: result } = selectVersion({
+      constraints: undefined,
     });
     // Should pick 3.14 as the latest installed
     expect(result).toHaveProperty('runtime', 'python3.14');
   });
 
   it('respects explicit version even when default is installed', () => {
-    makeMockPython(DEFAULT_PYTHON_VERSION);
+    makeMockPython(DEFAULT_PYTHON_VERSION_STRING);
     makeMockPython('3.13');
     makeMockPython('3.14');
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: {
-        version: '>=3.14',
-        source: 'pyproject.toml',
-      },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('>=3.14', 'pyproject.toml')],
     });
     // Should pick 3.14 because it was explicitly requested
     expect(result).toHaveProperty('runtime', 'python3.14');
   });
 
-  it('DEFAULT_PYTHON_VERSION constant is exported and has expected value', () => {
-    expect(DEFAULT_PYTHON_VERSION).toBe('3.12');
+  it('DEFAULT_PYTHON_VERSION_STRING constant is exported and has expected value', () => {
+    expect(DEFAULT_PYTHON_VERSION_STRING).toBe('3.12');
+  });
+});
+
+describe('getInstalledPythonsFromFilesystem', () => {
+  it('detects installed Pythons from filesystem bin directory', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.13'), '');
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set(['3.12', '3.13']));
+  });
+
+  it('returns empty set when no Pythons are installed', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-empty');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set());
+  });
+
+  it('ignores Python versions not in allOptions', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-extra');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    // 3.99 does not exist in allOptions
+    fs.writeFileSync(path.join(binDir, 'python3.99'), '');
+
+    const result = getInstalledPythonsFromFilesystem(basePath);
+    expect(result).toEqual(new Set(['3.12']));
+  });
+
+  it('uses filesystem fast path when VERCEL_BUILD_IMAGE is set', () => {
+    const basePath = path.join(tmpPythonDir, 'uv-python-integration');
+    const binDir = path.join(basePath, 'bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(path.join(binDir, 'python3.12'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.13'), '');
+    fs.writeFileSync(path.join(binDir, 'python3.14'), '');
+
+    const origBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    try {
+      resetInstalledPythonsCache();
+      const result = getInstalledPythonsFromFilesystem(basePath);
+      expect(result).toEqual(new Set(['3.12', '3.13', '3.14']));
+    } finally {
+      if (origBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = origBuildImage;
+      }
+    }
+  });
+});
+
+describe('findUvOnBuildImage', () => {
+  const origBuildImage = process.env.VERCEL_BUILD_IMAGE;
+
+  afterEach(() => {
+    if (origBuildImage === undefined) {
+      delete process.env.VERCEL_BUILD_IMAGE;
+    } else {
+      process.env.VERCEL_BUILD_IMAGE = origBuildImage;
+    }
+  });
+
+  it('returns null when VERCEL_BUILD_IMAGE is not set', () => {
+    delete process.env.VERCEL_BUILD_IMAGE;
+    expect(findUvOnBuildImage()).toBeNull();
+  });
+
+  it('returns the known path when VERCEL_BUILD_IMAGE is set and file exists', () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    const mockUvPath = path.join(tmpPythonDir, 'mock-uv');
+    fs.mkdirSync(tmpPythonDir, { recursive: true });
+    fs.writeFileSync(mockUvPath, '');
+
+    expect(findUvOnBuildImage(mockUvPath)).toBe(mockUvPath);
+  });
+
+  it('returns null when VERCEL_BUILD_IMAGE is set but file does not exist', () => {
+    process.env.VERCEL_BUILD_IMAGE = '1';
+    expect(findUvOnBuildImage('/nonexistent/path/uv')).toBeNull();
   });
 });
 
 describe('fallback behavior when requested version is not installed', () => {
-  it('falls back to DEFAULT_PYTHON_VERSION when Pipfile.lock requests unavailable version', () => {
+  it('falls back to DEFAULT_PYTHON_VERSION_STRING when Pipfile.lock requests unavailable version', () => {
     // Setup: 3.14, 3.13, 3.12 are installed, but NOT 3.9
     makeMockPython('3.14');
     makeMockPython('3.13');
-    makeMockPython(DEFAULT_PYTHON_VERSION); // 3.12
+    makeMockPython(DEFAULT_PYTHON_VERSION_STRING); // 3.12
 
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('3.9', 'Pipfile.lock')],
     });
 
     // Should fall back to 3.12 (the default), NOT 3.14 (the latest)
-    expect(result).toHaveProperty('runtime', `python${DEFAULT_PYTHON_VERSION}`);
+    expect(result).toHaveProperty(
+      'runtime',
+      `python${DEFAULT_PYTHON_VERSION_STRING}`
+    );
     expect(warningMessages[0]).toContain('not installed and will be ignored');
   });
 
@@ -434,8 +1699,8 @@ describe('fallback behavior when requested version is not installed', () => {
     makeMockPython('3.13');
     // Note: NOT installing 3.12 (default) or 3.9 (requested)
 
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: { version: '3.9', source: 'Pipfile.lock' },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('3.9', 'Pipfile.lock')],
     });
 
     // Should fall back to 3.14 (latest installed) since 3.12 is also unavailable
@@ -443,24 +1708,27 @@ describe('fallback behavior when requested version is not installed', () => {
     expect(warningMessages[0]).toContain('not installed and will be ignored');
   });
 
-  it('falls back to DEFAULT_PYTHON_VERSION when pyproject.toml requests unavailable version', () => {
+  it('falls back to DEFAULT_PYTHON_VERSION_STRING when pyproject.toml requests unavailable version', () => {
     // Setup: 3.14, 3.13, 3.12 are installed, but NOT 3.9
     makeMockPython('3.14');
     makeMockPython('3.13');
-    makeMockPython(DEFAULT_PYTHON_VERSION); // 3.12
+    makeMockPython(DEFAULT_PYTHON_VERSION_STRING); // 3.12
 
-    const result = getSupportedPythonVersion({
-      declaredPythonVersion: { version: '==3.9', source: 'pyproject.toml' },
+    const { pythonVersion: result } = selectVersion({
+      constraints: [makeConstraint('==3.9', 'pyproject.toml')],
     });
 
     // Should fall back to 3.12 (the default), NOT 3.14 (the latest)
-    expect(result).toHaveProperty('runtime', `python${DEFAULT_PYTHON_VERSION}`);
+    expect(result).toHaveProperty(
+      'runtime',
+      `python${DEFAULT_PYTHON_VERSION_STRING}`
+    );
     expect(warningMessages[0]).toContain('not installed and will be ignored');
   });
 });
 
 describe('createPyprojectToml', () => {
-  it('sets requires-python to compatible release of DEFAULT_PYTHON_VERSION when no pythonVersion provided', async () => {
+  it('sets requires-python to compatible release of DEFAULT_PYTHON_VERSION_STRING when no pythonVersion provided', async () => {
     const tempDir = path.join(tmpdir(), `pyproject-test-${Date.now()}`);
     fs.mkdirSync(tempDir, { recursive: true });
     const pyprojectPath = path.join(tempDir, 'pyproject.toml');
@@ -474,7 +1742,7 @@ describe('createPyprojectToml', () => {
 
       const content = fs.readFileSync(pyprojectPath, 'utf8');
       expect(content).toContain(
-        `requires-python = "~=${DEFAULT_PYTHON_VERSION}.0"`
+        `requires-python = "~=${DEFAULT_PYTHON_VERSION_STRING}.0"`
       );
     } finally {
       if (fs.existsSync(tempDir)) {
@@ -508,8 +1776,8 @@ describe('createPyprojectToml', () => {
 
 it('should select default or latest installed version when no Piplock detected', () => {
   makeMockPython('3.10');
-  const result = getSupportedPythonVersion({
-    declaredPythonVersion: undefined,
+  const { pythonVersion: result } = selectVersion({
+    constraints: undefined,
   });
   expect(result).toHaveProperty('runtime');
   // When default version isn't installed, falls back to latest available
@@ -519,8 +1787,8 @@ it('should select default or latest installed version when no Piplock detected',
 
 it('should select latest supported installed version and warn when invalid Piplock detected', () => {
   makeMockPython('3.10');
-  const result = getSupportedPythonVersion({
-    declaredPythonVersion: { version: '999', source: 'Pipfile.lock' },
+  const { pythonVersion: result } = selectVersion({
+    constraints: [makeConstraint('999', 'Pipfile.lock')],
   });
   expect(result).toHaveProperty('runtime');
   expect(result.runtime).toMatch(/^python3\.\d+$/);
@@ -531,8 +1799,8 @@ it('should select latest supported installed version and warn when invalid Piplo
 
 it('should throw if uv not found', () => {
   expect(() =>
-    getSupportedPythonVersion({
-      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
+    selectVersion({
+      constraints: [makeConstraint('3.6', 'Pipfile.lock')],
     })
   ).toThrow('uv is required but was not found in PATH.');
   expect(warningMessages).toStrictEqual([]);
@@ -552,8 +1820,8 @@ it('should throw if no python versions installed', () => {
   process.env.PATH = `${tmpPythonDir}${path.delimiter}${process.env.PATH}`;
 
   expect(() =>
-    getSupportedPythonVersion({
-      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
+    selectVersion({
+      constraints: [makeConstraint('3.6', 'Pipfile.lock')],
     })
   ).toThrow('Unable to find any supported Python versions.');
   expect(warningMessages).toStrictEqual([]);
@@ -564,8 +1832,8 @@ it('should throw for discontinued versions', () => {
   makeMockPython('3.6');
 
   expect(() =>
-    getSupportedPythonVersion({
-      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
+    selectVersion({
+      constraints: [makeConstraint('3.6', 'Pipfile.lock')],
     })
   ).toThrow(
     'Python version "3.6" detected in Pipfile.lock is discontinued and must be upgraded.'
@@ -578,9 +1846,9 @@ it('should warn for deprecated versions, soon to be discontinued', () => {
   makeMockPython('3.6');
 
   expect(
-    getSupportedPythonVersion({
-      declaredPythonVersion: { version: '3.6', source: 'Pipfile.lock' },
-    })
+    selectVersion({
+      constraints: [makeConstraint('3.6', 'Pipfile.lock')],
+    }).pythonVersion
   ).toHaveProperty('runtime', 'python3.6');
   expect(warningMessages).toStrictEqual([
     'Error: Python version "3.6" detected in Pipfile.lock has reached End-of-Life. Deployments created on or after 2022-07-18 will fail to build. https://vercel.link/python-version',
@@ -662,6 +1930,10 @@ function makeMockPython(version: string) {
     const uvWinScript = [
       '@echo off',
       'rem mock uv binary',
+      'if "%1"=="--version" (',
+      `  echo uv ${UV_VERSION} ^(mock 2026-01-01^)`,
+      '  exit /b 0',
+      ')',
       'if "%1"=="python" if "%2"=="list" (',
       `  type "${uvPythonListFile}"`,
       '  exit /b 0',
@@ -675,6 +1947,10 @@ function makeMockPython(version: string) {
     const uvPosixScript = [
       '#!/bin/sh',
       '# mock uv binary',
+      'if [ "$1" = "--version" ]; then',
+      `  echo "uv ${UV_VERSION} (mock 2026-01-01)"`,
+      '  exit 0',
+      'fi',
       'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
       `  /bin/cat "${uvPythonListFile}"`,
       '  exit 0',
@@ -709,7 +1985,9 @@ describe('file exclusions', () => {
     // Test with one excluded directory
     const excludedDir = '.pnpm-store';
     const testFiles = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'package.json': new FileBlob({ data: 'package.json' }),
       'pnpm-lock.yaml': new FileBlob({ data: 'pnpm-lock.yaml' }),
       'yarn.lock': new FileBlob({ data: 'yarn.lock' }),
@@ -747,7 +2025,7 @@ describe('file exclusions', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const outputFiles = Object.keys(result.output.files || {});
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
     const excludedLockFiles = [
       'pnpm-lock.yaml',
       'yarn.lock',
@@ -766,16 +2044,13 @@ describe('file exclusions', () => {
 
   it('should add config.excludeFiles to predefined exclusions', async () => {
     const testFiles = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'secret.txt': new FileBlob({ data: 'secret data' }),
       'config.ini': new FileBlob({ data: '[settings]' }),
       'public.txt': new FileBlob({ data: 'public data' }),
     };
-
-    // Create the files in workPath
-    fs.writeFileSync(path.join(mockWorkPath, 'secret.txt'), 'secret data');
-    fs.writeFileSync(path.join(mockWorkPath, 'config.ini'), '[settings]');
-    fs.writeFileSync(path.join(mockWorkPath, 'public.txt'), 'public data');
 
     // Should still exclude predefined files (test with .git if it exists)
     const gitDir = path.join(mockWorkPath, '.git');
@@ -791,7 +2066,7 @@ describe('file exclusions', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const outputFiles = Object.keys(result.output.files || {});
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
 
     // Should not include the user-excluded file
     expect(outputFiles.some(f => f.includes('secret.txt'))).toBe(false);
@@ -801,6 +2076,379 @@ describe('file exclusions', () => {
     expect(outputFiles.some(f => f.includes('config.ini'))).toBe(true);
 
     expect(outputFiles.some(f => f.includes('.git'))).toBe(false);
+  });
+
+  it.each([
+    'handler.py',
+    '*.py',
+    'handler',
+  ])('applies excludeFiles from the matching functions entry %s', async functionPattern => {
+    const result = await build({
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+        'secret.txt': new FileBlob({ data: 'secret data' }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: {
+        functions: {
+          [functionPattern]: { excludeFiles: 'secret.txt' },
+        },
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
+    expect(outputFiles.some(file => file.includes('secret.txt'))).toBe(false);
+  });
+
+  it('ignores file selection from functions entries that do not match the entrypoint', async () => {
+    const result = await build({
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+        'other.py': new FileBlob({ data: 'def app(): pass' }),
+        'secret.txt': new FileBlob({ data: 'secret data' }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: {
+        functions: {
+          'other.py': { excludeFiles: 'secret.txt' },
+        },
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
+    expect(outputFiles.some(file => file.includes('secret.txt'))).toBe(true);
+  });
+
+  it('merges top-level and per-function file selection', async () => {
+    const result = await build({
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+        'top-level-secret.txt': new FileBlob({ data: 'secret data' }),
+        'function-secret.txt': new FileBlob({ data: 'secret data' }),
+        'public/included.txt': new FileBlob({ data: 'included data' }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: {
+        excludeFiles: 'top-level-secret.txt',
+        functions: {
+          'handler.py': {
+            includeFiles: 'public/included.txt',
+            excludeFiles: 'function-secret.txt',
+          },
+        },
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
+    expect(
+      outputFiles.some(file => file.includes('top-level-secret.txt'))
+    ).toBe(false);
+    expect(outputFiles.some(file => file.includes('function-secret.txt'))).toBe(
+      false
+    );
+    expect(outputFiles.some(file => file.includes('public/included.txt'))).toBe(
+      true
+    );
+  });
+
+  it('prefers includeFiles when a file also matches excludeFiles', async () => {
+    const result = await build({
+      workPath: mockWorkPath,
+      files: {
+        'handler.py': new FileBlob({
+          data: 'def app(environ, start_response): pass',
+        }),
+        'secrets/runtime.txt': new FileBlob({
+          data: 'required at runtime',
+        }),
+      },
+      entrypoint: 'handler.py',
+      meta: { isDev: true },
+      config: {
+        functions: {
+          'handler.py': {
+            includeFiles: 'secrets/**',
+            excludeFiles: 'secrets/**',
+          },
+        },
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const outputFiles = Object.keys(getBuildOutputV3(result).files || {});
+    expect(outputFiles.some(file => file.includes('secrets/runtime.txt'))).toBe(
+      true
+    );
+  });
+
+  it('compiles only Python sources included by the app glob', async () => {
+    const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+    const mockedExeca = vi.mocked(execa);
+    let compiledSources: string[] = [];
+    let compileAllCalls = 0;
+
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+    mockedExeca.mockImplementation(((_file, args: string[]) => {
+      if (args[0]?.endsWith('vc_compileall.py')) {
+        compileAllCalls++;
+        compiledSources = JSON.parse(fs.readFileSync(args[1], 'utf8'));
+      }
+      return Promise.resolve({ stdout: '', stderr: '' });
+    }) as any);
+
+    try {
+      await build({
+        workPath: mockWorkPath,
+        files: {
+          'handler.py': new FileBlob({
+            data: 'def app(environ, start_response): pass',
+          }),
+          'included.py': new FileBlob({ data: 'INCLUDED = True' }),
+          'excluded.py': new FileBlob({ data: 'EXCLUDED = True' }),
+          'public/ignored.py': new FileBlob({ data: 'IGNORED = True' }),
+        },
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: { excludeFiles: 'excluded.py' },
+        repoRootPath: mockWorkPath,
+      });
+
+      expect(compiledSources).toContain(path.join(mockWorkPath, 'handler.py'));
+      expect(compiledSources).toContain(path.join(mockWorkPath, 'included.py'));
+      expect(compiledSources).not.toContain(
+        path.join(mockWorkPath, 'excluded.py')
+      );
+      expect(compiledSources).not.toContain(
+        path.join(mockWorkPath, 'public', 'ignored.py')
+      );
+      expect(compileAllCalls).toBe(1);
+    } finally {
+      mockedExeca.mockReset();
+      if (originalCompileAllEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_COMPILEALL;
+      } else {
+        process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+      }
+    }
+  });
+});
+
+describe('bundle optimization telemetry', () => {
+  const originalCompileAllEnv = process.env.VERCEL_PYTHON_COMPILEALL;
+  const originalDisableAnalysisEnv =
+    process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS;
+  const MB = 1024 * 1024;
+
+  afterEach(() => {
+    vi.mocked(execa).mockReset();
+    vi.mocked(collectImportClosure).mockClear();
+    if (originalCompileAllEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_COMPILEALL;
+    } else {
+      process.env.VERCEL_PYTHON_COMPILEALL = originalCompileAllEnv;
+    }
+    if (originalDisableAnalysisEnv === undefined) {
+      delete process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS;
+    } else {
+      process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS =
+        originalDisableAnalysisEnv;
+    }
+  });
+
+  async function buildWithBytecode({
+    payloadSize,
+    pycSize,
+  }: {
+    payloadSize: number;
+    pycSize: number;
+  }) {
+    const workPath = path.join(
+      tmpdir(),
+      `python-bundle-optimize-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const handlerPath = path.join(workPath, 'handler.py');
+    const secondaryPath = path.join(workPath, 'secondary.py');
+    const payloadPath = path.join(workPath, 'payload.bin');
+    fs.writeFileSync(handlerPath, 'def app(environ, start_response): pass\n');
+    fs.writeFileSync(secondaryPath, 'SECONDARY = True\n');
+    const payloadFd = fs.openSync(payloadPath, 'w');
+    fs.ftruncateSync(payloadFd, payloadSize);
+    fs.closeSync(payloadFd);
+
+    const events: any[] = [];
+    const span = new Span({
+      name: 'vc.builder',
+      reporter: { report: event => events.push(event) },
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    makeMockPython('3.9');
+    process.env.VERCEL_PYTHON_COMPILEALL = '1';
+    vi.mocked(execa).mockImplementation((async (_file, args: string[]) => {
+      if (args[0]?.endsWith('vc_compileall.py')) {
+        const sourceFiles = JSON.parse(
+          fs.readFileSync(args[1], 'utf8')
+        ) as string[];
+        for (const sourceFile of sourceFiles) {
+          const sourceRelPath = path
+            .relative(workPath, sourceFile)
+            .split(path.sep)
+            .join('/');
+          const pycRelPath = derivePycPath(sourceRelPath, 3, 9);
+          if (!pycRelPath) continue;
+          const pycPath = path.join(workPath, pycRelPath);
+          fs.mkdirSync(path.dirname(pycPath), { recursive: true });
+          const pycFd = fs.openSync(pycPath, 'w');
+          fs.ftruncateSync(pycFd, pycSize);
+          fs.closeSync(pycFd);
+        }
+        fs.writeFileSync(
+          args[2],
+          JSON.stringify(
+            Object.fromEntries(sourceFiles.map(sourceFile => [sourceFile, 0.1]))
+          )
+        );
+      }
+      return { stdout: '', stderr: '' } as any;
+    }) as any);
+
+    try {
+      await build({
+        workPath,
+        files: {
+          'handler.py': new FileFsRef({ fsPath: handlerPath }),
+          'secondary.py': new FileFsRef({ fsPath: secondaryPath }),
+          'payload.bin': new FileFsRef({ fsPath: payloadPath }),
+        },
+        entrypoint: 'handler.py',
+        meta: { isDev: false, skipDownload: true },
+        config: {},
+        repoRootPath: workPath,
+        span,
+      });
+      return { events, logSpy };
+    } catch (error) {
+      logSpy.mockRestore();
+      throw error;
+    } finally {
+      fs.removeSync(workPath);
+    }
+  }
+
+  it('reports bytecode coverage on overflow', async () => {
+    const { events, logSpy } = await buildWithBytecode({
+      payloadSize: 218.5 * MB,
+      pycSize: MB,
+    });
+
+    try {
+      expect(logSpy).toHaveBeenCalledWith('Optimizing Python bundle...');
+      expect(
+        logSpy.mock.calls.filter(
+          ([message]) => message === 'Optimizing Python bundle...'
+        )
+      ).toHaveLength(1);
+
+      const optimizeSpans = events.filter(
+        event => event.name === 'vc.builder.python.bundle.optimize'
+      );
+      expect(optimizeSpans).toHaveLength(1);
+      const bundleSpan = events.find(
+        event => event.name === 'vc.builder.python.bundle'
+      );
+      expect(optimizeSpans[0].parentId).toBe(bundleSpan.id);
+      expect(optimizeSpans[0].tags).toEqual({
+        'python.bundle.optimize.bytecodeCoveragePercent': '50.00',
+      });
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('reports the function footprint separately from the shipped zip size', async () => {
+    const { events, logSpy } = await buildWithBytecode({
+      payloadSize: 218.5 * MB,
+      pycSize: MB,
+    });
+
+    try {
+      const bundleSpan = events.find(
+        event => event.name === 'vc.builder.python.bundle'
+      );
+      const total = Number(bundleSpan.tags['python.bundle.totalSizeBytes']);
+      const shipped = Number(bundleSpan.tags['python.bundle.shippedSizeBytes']);
+      // The footprint excludes bytecode fill padding.
+      expect(total).toBeGreaterThanOrEqual(218.5 * MB);
+      expect(total).toBeLessThan(219 * MB);
+      // The shipped size includes the single 1 MB .pyc that fit.
+      expect(shipped).toBe(total + MB);
+      expect(bundleSpan.tags['python.bundle.packingMode']).toBe('standard');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('does not report or trace optimization when bytecode fits', async () => {
+    const { events, logSpy } = await buildWithBytecode({
+      payloadSize: 0,
+      pycSize: MB,
+    });
+
+    try {
+      expect(logSpy).not.toHaveBeenCalledWith('Optimizing Python bundle...');
+      expect(
+        events.some(event => event.name === 'vc.builder.python.bundle.optimize')
+      ).toBe(false);
+      expect(collectImportClosure).not.toHaveBeenCalled();
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it('runs the import closure on overflow by default', async () => {
+    const { logSpy } = await buildWithBytecode({
+      payloadSize: 218.5 * MB,
+      pycSize: MB,
+    });
+    logSpy.mockRestore();
+
+    expect(collectImportClosure).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips the import closure when VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS is set', async () => {
+    process.env.VERCEL_PYTHON_DISABLE_BYTECODE_ANALYSIS = '1';
+    const { events, logSpy } = await buildWithBytecode({
+      payloadSize: 218.5 * MB,
+      pycSize: MB,
+    });
+    logSpy.mockRestore();
+
+    expect(collectImportClosure).not.toHaveBeenCalled();
+    // Bytecode still ships, selected by size only.
+    const optimizeSpans = events.filter(
+      event => event.name === 'vc.builder.python.bundle.optimize'
+    );
+    expect(optimizeSpans).toHaveLength(1);
+    expect(optimizeSpans[0].tags).toEqual({
+      'python.bundle.optimize.bytecodeCoveragePercent': '50.00',
+    });
   });
 });
 
@@ -822,7 +2470,9 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
 
   it('uses python version from uv.lock when present (build succeeds)', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'uv.lock': new FileBlob({ data: '[project]\npython = "3.11"\n' }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "x"\nversion = "0.0.1"\n',
@@ -838,13 +2488,50 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
+    expect(getBuildOutputV3(result).architecture).toBe('x86_64');
+  });
+
+  it('stamps the cold start baseline before any bootstrap work', async () => {
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const trampoline = handler.data.toString();
+    expect(trampoline).toContain(
+      '"__VC_PY_BOOT_START_MS": str(_vc_boot_start_ms)'
+    );
+    // Monotonic: the runtime subtracts this from a monotonic clock.
+    expect(trampoline).toContain(
+      '_vc_boot_start_ms = int(time.monotonic() * 1000)'
+    );
+    // The stamp is only useful if nothing expensive precedes it.
+    expect(trampoline.indexOf('_vc_boot_start_ms = int(')).toBeLessThan(
+      trampoline.indexOf('site.addsitedir')
+    );
   });
 
   it('falls back to pyproject.toml requires-python when no uv.lock (build succeeds)', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.10,<3.12"\n',
       }),
@@ -859,13 +2546,15 @@ describe('python version selection from uv.lock and pyproject.toml', () => {
       repoRootPath: mockWorkPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
   });
 
   it('throws when pyproject.toml requires discontinued python version', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.6,<3.7"\n',
       }),
@@ -921,6 +2610,10 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       const uvWinScript = [
         '@echo off',
         'rem mock uv binary (workspace)',
+        'if "%1"=="--version" (',
+        `  echo uv ${UV_VERSION} ^(mock 2026-01-01^)`,
+        '  exit /b 0',
+        ')',
         'if "%1"=="python" if "%2"=="list" (',
         `  type "${uvPythonListFile}"`,
         '  exit /b 0',
@@ -933,6 +2626,10 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       const uvPosixScript = [
         '#!/bin/sh',
         '# mock uv binary (workspace)',
+        'if [ "$1" = "--version" ]; then',
+        `  echo "uv ${UV_VERSION} (mock 2026-01-01)"`,
+        '  exit 0',
+        'fi',
         'if [ "$1" = "python" ] && [ "$2" = "list" ]; then',
         `  /bin/cat "${uvPythonListFile}"`,
         '  exit 0',
@@ -972,7 +2669,8 @@ describe('uv workspace lockfile resolution (workspace root above workPath)', () 
       repoRootPath: repoRoot,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     expect(handler).toBeDefined();
 
     fs.removeSync(repoRoot);
@@ -998,7 +2696,7 @@ describe('fastapi entrypoint discovery', () => {
       build({
         workPath: mockWorkPath,
         files,
-        entrypoint: 'main.py',
+        entrypoint: '<detect>',
         meta: { isDev: true },
         config: { framework: 'fastapi' },
         repoRootPath: mockWorkPath,
@@ -1025,22 +2723,64 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'from fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
     const content = handler.data.toString();
     expect(content.includes('os.path.join(_here, "app.py")')).toBe(true);
+
+    fs.removeSync(workPath);
+  });
+
+  it('applies functions config to the resolved FastAPI entrypoint', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-functions-config-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'app/main.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: {
+        framework: 'fastapi',
+        functions: {
+          'app/main.py': {
+            memory: 512,
+            maxDuration: 30,
+          },
+        },
+      },
+      repoRootPath: workPath,
+    });
+
+    const lambda = getBuildOutputV2Lambda(result) as any;
+    expect(lambda.memory).toBe(512);
+    expect(lambda.maxDuration).toBe(30);
 
     fs.removeSync(workPath);
   });
@@ -1058,17 +2798,20 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'import fastapi\n\napp = fastapi.FastAPI()',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1092,17 +2835,20 @@ describe('fastapi entrypoint discovery - positive cases', () => {
         data: 'import fastapi\nfrom fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'server.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1113,50 +2859,191 @@ describe('fastapi entrypoint discovery - positive cases', () => {
   });
 });
 
-describe('Django entrypoint discovery', () => {
-  async function writeFiles(
-    workPath: string,
-    files: Record<string, string>
-  ): Promise<void> {
-    for (const [rel, content] of Object.entries(files)) {
-      const full = path.join(workPath, rel);
-      fs.mkdirSync(path.dirname(full), { recursive: true });
-      fs.writeFileSync(full, content);
-    }
-  }
-
-  it('uses configured entrypoint when it exists and is valid', async () => {
-    const workPath = path.join(
-      tmpdir(),
-      `python-django-configured-${Date.now()}`
-    );
-    fs.mkdirSync(workPath, { recursive: true });
-
-    await writeFiles(workPath, {
-      'hello/world.py': `application = lambda env, start: None`,
-    });
-
-    const result = await detectDjangoPythonEntrypoint(
-      workPath,
-      'hello/world.py'
-    );
-    expect(result).toBe('hello/world.py');
-
-    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+describe('FastAPI CDN static exclusion', () => {
+  beforeEach(() => {
+    process.env.VERCEL_FASTAPI_STATIC_CDN = '1';
   });
 
-  it('resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
-    const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
-    fs.mkdirSync(workPath, { recursive: true });
+  afterEach(() => {
+    delete process.env.VERCEL_FASTAPI_STATIC_CDN;
+  });
 
-    await writeFiles(workPath, {
-      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
-      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
-      'hello/wsgi.py': `application = lambda env, start: None`,
+  it('excludes CDN-collected static directories from the Lambda bundle', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-cdn-exclude-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const staticDir = path.join(workPath, 'my_files');
+    fs.mkdirSync(staticDir, { recursive: true });
+    fs.writeFileSync(path.join(staticDir, 'style.css'), 'body {}');
+
+    const files = {
+      'main.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "app"',
+          'version = "0.1.0"',
+          '[tool.vercel.fastapi.static]',
+          'exclude = true',
+        ].join('\n'),
+      }),
+      'my_files/style.css': new FileBlob({ data: 'body {}' }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    vi.mocked(runFastAPICollectStatic).mockResolvedValueOnce({
+      discovery: {
+        mounts: [
+          {
+            urlPath: '/static',
+            directory: staticDir,
+            fallback: null,
+            frontend: false,
+            html: false,
+          },
+        ],
+        shadowRoutes: [],
+        excludedFiles: [],
+      },
+      copiedMounts: [],
+      outputStaticDir: path.join(workPath, '.vercel', 'output', 'static'),
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('hello/wsgi.py');
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' as const },
+      repoRootPath: workPath,
+    });
+
+    const lambdaFiles = getBuildOutputV2Lambda(result).files ?? {};
+    expect(
+      Object.keys(lambdaFiles).some(f => f.includes('my_files/style.css'))
+    ).toBe(false);
+    expect(
+      Object.keys(lambdaFiles).some(f =>
+        f.includes('my_files/.static-placeholder')
+      )
+    ).toBe(true);
+
+    fs.removeSync(workPath);
+  });
+
+  it('keeps static files in the Lambda bundle when exclude is false', async () => {
+    const workPath = path.join(
+      tmpdir(),
+      `python-fastapi-cdn-keep-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const staticDir = path.join(workPath, 'my_files');
+    fs.mkdirSync(staticDir, { recursive: true });
+    fs.writeFileSync(path.join(staticDir, 'style.css'), 'body {}');
+
+    const files = {
+      'main.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "app"',
+          'version = "0.1.0"',
+          '[tool.vercel.fastapi.static]',
+          'exclude = false',
+        ].join('\n'),
+      }),
+      'my_files/style.css': new FileBlob({ data: 'body {}' }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    vi.mocked(runFastAPICollectStatic).mockResolvedValueOnce({
+      discovery: {
+        mounts: [
+          {
+            urlPath: '/static',
+            directory: staticDir,
+            fallback: null,
+            frontend: false,
+            html: false,
+          },
+        ],
+        shadowRoutes: [],
+        excludedFiles: [],
+      },
+      copiedMounts: [],
+      outputStaticDir: path.join(workPath, '.vercel', 'output', 'static'),
+    });
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' as const },
+      repoRootPath: workPath,
+    });
+
+    const lambdaFiles = getBuildOutputV2Lambda(result).files ?? {};
+    expect(
+      Object.keys(lambdaFiles).some(f => f.includes('my_files/style.css'))
+    ).toBe(true);
+
+    fs.removeSync(workPath);
+  });
+});
+
+describe('Django entrypoint discovery', () => {
+  it('build() resolves Django entrypoint from WSGI_APPLICATION (hello.wsgi.application -> hello/wsgi.py)', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'hello.settings',
+      djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
+      djangoVersion: [5, 1, 0],
+    });
+    const workPath = path.join(tmpdir(), `python-django-wsgi-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')\n",
+      }),
+      'hello/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'hello.wsgi.application'\n",
+      }),
+      'hello/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
+    });
+
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "hello/wsgi.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1167,58 +3054,137 @@ describe('Django entrypoint discovery', () => {
       `python-django-fallback-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
-    await writeFiles(workPath, {
-      'src/app.py': `application = lambda env, start: None`,
+    const files = {
+      'src/app.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('src/app.py');
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "src/app.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
-  it('falls back to candidate when WSGI path is not on filesystem', async () => {
+  it('build() returns settings module even when WSGI path is not in files', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'hello.settings',
+      djangoSettings: { WSGI_APPLICATION: 'hello.wsgi.application' },
+      djangoVersion: [5, 1, 0],
+    });
     const workPath = path.join(
       tmpdir(),
       `python-django-wsgi-missing-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
-    await writeFiles(workPath, {
-      'manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')`,
-      'hello/settings.py': `WSGI_APPLICATION = 'hello.wsgi.application'`,
-      'src/app.py': `application = lambda env, start: None`,
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hello.settings')\n",
+      }),
+      'hello/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'hello.wsgi.application'\n",
+      }),
+    } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
-    // WSGI_APPLICATION value does not refer to a valid file
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('src/app.py');
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "hello/wsgi.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
-  it('resolves Django entrypoint from a subdirectory', async () => {
+  it('build() resolves Django entrypoint from a subdirectory', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'config.settings',
+      djangoSettings: { WSGI_APPLICATION: 'config.wsgi.application' },
+      djangoVersion: [5, 1, 0],
+    });
     const workPath = path.join(
       tmpdir(),
       `python-django-root-dir-${Date.now()}`
     );
     fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
 
     // Django app lives under root dir "mysite"; no manage.py at workPath root
-    await writeFiles(workPath, {
-      'mysite/manage.py': `os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')`,
-      'mysite/config/settings.py': `WSGI_APPLICATION = 'config.wsgi.application'`,
-      'mysite/config/wsgi.py': `application = lambda env, start: None`,
+    const files = {
+      'mysite/manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')\n",
+      }),
+      'mysite/config/settings.py': new FileBlob({
+        data: "WSGI_APPLICATION = 'config.wsgi.application'\n",
+      }),
+      'mysite/config/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
     });
 
-    const result = await detectDjangoPythonEntrypoint(workPath, 'missing.py');
-    expect(result).toBe('mysite/config/wsgi.py');
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      'os.path.join(_here, "mysite/config/wsgi.py")'
+    );
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
 
   it('build() discovers Django entrypoint from WSGI_APPLICATION when configured entrypoint is missing', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'hello.settings',
+      djangoSettings: { WSGI_APPLICATION: 'hello.world.application' },
+      djangoVersion: [5, 1, 0],
+    });
     const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
     fs.mkdirSync(workPath, { recursive: true });
     makeMockPython('3.9');
@@ -1234,22 +3200,100 @@ describe('Django entrypoint discovery', () => {
         data: 'application = lambda env, start: None\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await build({
       workPath,
       files,
-      entrypoint: 'index.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'django' },
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
     const content = handler.data.toString();
     expect(content).toContain('os.path.join(_here, "hello/world.py")');
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('returns a v2 result with static files in output and filesystem route', async () => {
+    vi.mocked(getDjangoSettings).mockResolvedValueOnce({
+      settingsModule: 'myapp.settings',
+      djangoSettings: {
+        WSGI_APPLICATION: 'myapp.wsgi.application',
+        STATIC_URL: '/static/',
+        STATIC_ROOT: 'staticfiles',
+      },
+      djangoVersion: [5, 1, 0],
+    });
+    // Simulate collectstatic succeeding
+    vi.mocked(runDjangoCollectStatic).mockImplementationOnce(
+      async (_venvPath, _workPath, _djangoPath, _env, outputStaticDir) => {
+        fs.mkdirSync(path.join(outputStaticDir, 'static'), { recursive: true });
+        fs.writeFileSync(
+          path.join(outputStaticDir, 'static', 'app.css'),
+          'body {}'
+        );
+        return {
+          staticSourceDirs: [path.join(_workPath, 'static')],
+          staticRoot: null,
+          cdnOutputDir: outputStaticDir,
+          manifestRelPath: null,
+        };
+      }
+    );
+
+    const workPath = path.join(tmpdir(), `python-django-build-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+
+    const files = {
+      'manage.py': new FileBlob({
+        data: "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'myapp.settings')\n",
+      }),
+      'myapp/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+      'static/app.css': new FileBlob({ data: 'body {}' }),
+    } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
+
+    const result = await build({
+      workPath: workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: false },
+      config: { framework: 'django', zeroConfig: true },
+      repoRootPath: workPath,
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.routes).toContainEqual({ handle: 'filesystem' });
+    expect(v2result.routes).toContainEqual(
+      expect.objectContaining({
+        src: '/(.*)',
+        dest: '/django',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      })
+    );
+    const lambda = v2result.output.django;
+    expect(lambda).toBeDefined();
+    expect((lambda as any).files?.['static/app.css']).toBeDefined(); // Included in Lambda bundle
+    expect(v2result.output['static/app.css']).toBeDefined(); // Static file from collectstatic
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
   });
@@ -1289,17 +3333,20 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from fastapi import FastAPI\napp = FastAPI()\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'fastapi' },
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1333,17 +3380,20 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from flask import Flask\napp = Flask(__name__)\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'flask' },
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1374,17 +3424,20 @@ describe('pyproject.toml entrypoint detection', () => {
         data: 'from flask import Flask\napp = Flask(__name__)\n',
       }),
     } as Record<string, FileBlob>;
+    // isDev mode assumes files are already present
+    await download(files, workPath);
 
     const result = await buildWithMocks({
       workPath,
       files,
-      entrypoint: 'missing.py',
+      entrypoint: '<detect>',
       meta: { isDev: true },
       config: { framework: 'flask' },
       repoRootPath: workPath,
     });
 
-    const handler = result.output.files?.['vc__handler__python.py'];
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
     if (!handler || !('data' in handler)) {
       throw new Error('handler bootstrap not found');
     }
@@ -1392,6 +3445,2789 @@ describe('pyproject.toml entrypoint detection', () => {
     expect(content.includes('backend/server/__init__.py')).toBe(true);
 
     if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('prefers [tool.vercel] entrypoint over [project.scripts] app', async () => {
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner(),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-pyproject-tool-vercel-${Date.now()}`
+    );
+    fs.mkdirSync(path.join(workPath, 'backend', 'api'), { recursive: true });
+    fs.mkdirSync(path.join(workPath, 'other'), { recursive: true });
+
+    const files = {
+      'pyproject.toml': new FileBlob({
+        data:
+          '[project]\nname = "x"\nversion = "0.0.1"\n\n' +
+          '[project.scripts]\napp = "other.server:main"\n\n' +
+          '[tool.vercel]\nentrypoint = "backend.api.server:app"\n',
+      }),
+      'backend/api/server.py': new FileBlob({
+        data: 'from fastapi import FastAPI\napp = FastAPI()\n',
+      }),
+      'other/server.py': new FileBlob({
+        data: 'from fastapi import FastAPI\nmain = FastAPI()\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    const result = await buildWithMocks({
+      workPath,
+      files,
+      entrypoint: '<detect>',
+      meta: { isDev: true },
+      config: { framework: 'fastapi' },
+      repoRootPath: workPath,
+    });
+
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content.includes('backend/api/server.py')).toBe(true);
+    expect(content.includes('other/server.py')).toBe(false);
+
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+});
+
+describe('tool.vercel.entrypoint validation', () => {
+  let workPath: string;
+
+  beforeEach(() => {
+    workPath = path.join(
+      tmpdir(),
+      `python-tool-vercel-validation-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('hard-errors when the declared module does not exist', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+    // A detectable candidate exists, but the broken declaration must not
+    // silently fall back to it — that could build the wrong app.
+    fs.writeFileSync(path.join(workPath, 'main.py'), 'app = object()\n');
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /"tool\.vercel\.entrypoint" in "pyproject\.toml" is "backend\.api:app" but no matching module file was found/
+    );
+  });
+
+  it('names the broken pyproject.toml relative to the repo root', async () => {
+    // Monorepos can contain several pyproject.toml files (one per service);
+    // the error must identify which one is broken.
+    const serviceRoot = path.join(workPath, 'backend');
+    fs.mkdirSync(serviceRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(serviceRoot, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "api:app"\n'
+    );
+
+    await expect(
+      detectPythonEntrypoint(
+        'fastapi',
+        serviceRoot,
+        undefined,
+        undefined,
+        workPath
+      )
+    ).rejects.toThrow(
+      /"tool\.vercel\.entrypoint" in "backend[/\\]pyproject\.toml"/
+    );
+  });
+
+  it('hard-errors when the declared value is not module:object format', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "main.py"\n'
+    );
+    fs.writeFileSync(path.join(workPath, 'main.py'), 'app = object()\n');
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /no matching module file was found/
+    );
+  });
+
+  it('hard-errors when the declared value is not a string', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = 42\n'
+    );
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).rejects.toThrow(
+      /must be a string in "module:object" format/
+    );
+  });
+
+  it('still resolves a valid declared entrypoint', async () => {
+    fs.mkdirSync(path.join(workPath, 'backend'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+    fs.writeFileSync(
+      path.join(workPath, 'backend', 'api.py'),
+      'app = object()\n'
+    );
+
+    await expect(detectPythonEntrypoint('fastapi', workPath)).resolves.toEqual({
+      entrypoint: { entrypoint: 'backend/api.py', variableName: 'app' },
+    });
+  });
+
+  it('detectEntrypoint returns null instead of throwing for speculative detection', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[tool.vercel]\nentrypoint = "backend.api:app"\n'
+    );
+
+    await expect(
+      detectEntrypoint({ workPath, framework: 'fastapi' })
+    ).resolves.toBeNull();
+  });
+});
+
+describe('entrypointToModule', () => {
+  it('converts file paths to Python module notation', () => {
+    expect(entrypointToModule('app.py')).toBe('app');
+    expect(entrypointToModule('backend/api/server.py')).toBe(
+      'backend.api.server'
+    );
+    expect(entrypointToModule('src/main.py')).toBe('src.main');
+    expect(entrypointToModule('workers/celery/__init__.py')).toBe(
+      'workers.celery'
+    );
+  });
+
+  it('handles backslashes on Windows-style paths', () => {
+    expect(entrypointToModule('backend\\server.py')).toBe('backend.server');
+  });
+});
+
+describe('entrypoint detection error messages', () => {
+  let workPath: string;
+
+  beforeEach(() => {
+    workPath = path.join(tmpdir(), `python-error-msg-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+  it('suggests tool.vercel.entrypoint when app is found outside default locations', async () => {
+    fs.mkdirSync(path.join(workPath, 'mypackage', 'core'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'mypackage', 'core', 'web.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    const msg = result!.error!.message;
+    expect(msg).toContain('but found potential entrypoints');
+    expect(msg).toContain('mypackage/core/web.py');
+    expect(msg).toContain('[tool.vercel]');
+    expect(msg).toContain('entrypoint = "mypackage.core.web:app"');
+  });
+
+  it('falls back to generic message when no app is found anywhere', async () => {
+    fs.writeFileSync(path.join(workPath, 'utils.py'), 'def helper(): pass\n');
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    const msg = result!.error!.message;
+    expect(msg).toContain('FastAPI entrypoint');
+    expect(msg).toContain('tool.vercel.entrypoint');
+    expect(msg).not.toContain('but found potential entrypoints');
+  });
+  it('skips hidden directories and __pycache__ during broad scan', async () => {
+    fs.mkdirSync(path.join(workPath, '.venv', 'lib'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, '.venv', 'lib', 'app.py'),
+      'from flask import Flask\napp = Flask(__name__)\n'
+    );
+    fs.mkdirSync(path.join(workPath, '__pycache__'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, '__pycache__', 'app.cpython-39.py'),
+      'app = None\n'
+    );
+
+    const result = await detectPythonEntrypoint('flask', workPath);
+    expect(result?.error).toBeDefined();
+    const msg = result!.error!.message;
+    expect(msg).not.toContain('.venv');
+    expect(msg).not.toContain('__pycache__');
+  });
+
+  it('Django error references WSGI_APPLICATION and ASGI_APPLICATION', async () => {
+    fs.writeFileSync(
+      path.join(workPath, 'manage.py'),
+      'import os\nos.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")\n'
+    );
+    const result = await detectPythonEntrypoint('django', workPath);
+    expect(result?.error).toBeDefined();
+    const msg = result!.error!.message;
+    expect(msg).toContain('manage.py');
+    expect(msg).toContain('WSGI_APPLICATION');
+    expect(msg).toContain('ASGI_APPLICATION');
+  });
+});
+
+describe('vercel.json entrypoint configuration', () => {
+  let workPath: string;
+
+  beforeEach(() => {
+    workPath = path.join(
+      tmpdir(),
+      `python-vercel-json-entrypoint-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+    makeMockPython('3.9');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(workPath)) fs.removeSync(workPath);
+  });
+
+  it('errors when the configured entrypoint file does not exist', async () => {
+    await expect(
+      build({
+        workPath,
+        files: {},
+        entrypoint: 'nonexistent.py',
+        meta: { isDev: true },
+        config: { framework: 'fastapi' },
+        repoRootPath: workPath,
+      })
+    ).rejects.toMatchObject({
+      message: 'Configured Python entrypoint "nonexistent.py" was not found.',
+      link: pythonEntrypointDocsUrl,
+    });
+  });
+
+  it('detects the variable automatically when no variable is specified', async () => {
+    const files = {
+      'app/wsgi.py': new FileBlob({
+        data: 'application = lambda env, start: None\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    const result = await build({
+      workPath,
+      files,
+      entrypoint: 'app/wsgi.py',
+      meta: { isDev: true },
+      config: { framework: 'django' },
+      repoRootPath: workPath,
+    });
+
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) throw new Error('handler not found');
+    const content = handler.data.toString();
+    expect(content).toContain('"__VC_HANDLER_VARIABLE_NAME": "application"');
+  });
+
+  it('errors when no standard callable is found in the configured entrypoint', async () => {
+    const files = {
+      'myapp.py': new FileBlob({ data: 'print("hello")\n' }),
+    } as Record<string, FileBlob>;
+    await download(files, workPath);
+
+    await expect(
+      build({
+        workPath,
+        files,
+        entrypoint: 'myapp.py',
+        meta: { isDev: true },
+        config: { framework: 'fastapi' },
+        repoRootPath: workPath,
+      })
+    ).rejects.toMatchObject({
+      message: expect.stringMatching(
+        /Could not find a top-level "app", "application", or "handler" in "myapp\.py"/
+      ),
+      link: pythonEntrypointDocsUrl,
+    });
+  });
+});
+
+describe('handlerFunction validation', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-handler-func-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    vi.mocked(execa).mockReset();
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('builds successfully when handlerFunction exists as a top-level function', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'job', trigger: 'schedule' },
+    });
+
+    expect(result).toBeDefined();
+  });
+
+  it('builds successfully when handlerFunction exists as an async function', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'async def async_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'async_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'job', trigger: 'schedule' },
+    });
+
+    expect(result).toBeDefined();
+  });
+
+  it('builds schedule scripts into one function that dispatches by name', async () => {
+    const files = {
+      'jobs/nightly.py': new FileBlob({
+        data: 'import os\nprint(os.environ["VERCEL_SCHEDULE_NAME"])\n',
+      }),
+      'jobs/hourly.py': new FileBlob({ data: 'print("hourly")\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    const outputPath = '_vercel/schedules/default';
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/nightly.py',
+      meta: { isDev: false },
+      config: {
+        scheduleFunction: {
+          outputPath,
+          entrypoints: [
+            {
+              entrypoint: 'jobs/nightly.py',
+              sourceFile: 'jobs/nightly.py',
+              scheduleNames: ['nightly', 'nightly-retry'],
+            },
+            {
+              entrypoint: 'jobs/hourly.py',
+              sourceFile: 'jobs/hourly.py',
+              scheduleNames: ['hourly'],
+            },
+          ],
+        },
+        functions: { 'jobs/**': { memory: 512 } },
+        zeroConfig: true,
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const v2 = getBuildOutputV2(result);
+    expect(Object.keys(v2.output)).toEqual([outputPath]);
+    const output = v2.output[outputPath] as BuildResultV3['output'];
+    expect(output.experimentalTriggers).toEqual([{ type: 'schedule/v1beta' }]);
+    expect(output.memory).toBe(512);
+
+    const generatedPath = getGeneratedScheduleHandlerPath(outputPath);
+    const generated = output.files?.[generatedPath] as FileBlob;
+    expect(generated.data.toString()).toContain(
+      [
+        'app = create_schedule_scripts_app({',
+        '    "nightly": os.path.join(_root, "jobs/nightly.py"),',
+        '    "nightly-retry": os.path.join(_root, "jobs/nightly.py"),',
+        '    "hourly": os.path.join(_root, "jobs/hourly.py"),',
+        '})',
+      ].join('\n')
+    );
+    const trampoline = output.files?.['vc__handler__python.py'] as FileBlob;
+    expect(trampoline.data.toString()).toContain(
+      `"__VC_HANDLER_MODULE_NAME": "${generatedPythonPathToModule(generatedPath)}"`
+    );
+  });
+
+  it('matches schedule script functions config by the full path', async () => {
+    const files = {
+      'jobs/nightly.py': new FileBlob({ data: 'print("nightly")\n' }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    const outputPath = '_vercel/schedules/default';
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/nightly.py',
+      meta: { isDev: false },
+      config: {
+        scheduleFunction: {
+          outputPath,
+          entrypoints: [
+            {
+              entrypoint: 'jobs/nightly.py',
+              sourceFile: 'jobs/nightly.py',
+              scheduleNames: ['nightly'],
+            },
+          ],
+        },
+        // Other Python builds also accept the key without `.py`; schedule
+        // scripts match `functions` keys like every other runtime.
+        functions: { 'jobs/nightly': { memory: 512 } },
+        zeroConfig: true,
+      },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output[
+      outputPath
+    ] as BuildResultV3['output'];
+    expect(output.memory).toBeUndefined();
+    expect(output.experimentalTriggers).toEqual([{ type: 'schedule/v1beta' }]);
+  });
+
+  it('throws PYTHON_HANDLER_NOT_FOUND when handlerFunction does not exist', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def other_func():\n    pass\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'jobs/cleanup.py',
+        meta: { isDev: false },
+        config: { handlerFunction: 'nonexistent_handler' },
+        repoRootPath: mockWorkPath,
+        service: { type: 'job', trigger: 'schedule' },
+      })
+    ).rejects.toThrow(/Handler function "nonexistent_handler" not found/);
+  });
+
+  it('throws when handlerFunction is nested inside another function', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def outer():\n    def cleanup():\n        pass\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'jobs/cleanup.py',
+        meta: { isDev: false },
+        config: { handlerFunction: 'cleanup' },
+        repoRootPath: mockWorkPath,
+        service: { type: 'job', trigger: 'schedule' },
+      })
+    ).rejects.toThrow(/Handler function "cleanup" not found/);
+  });
+
+  it('uses handlerFunction as variable name for web services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'flask_app = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: true },
+      config: { handlerFunction: 'flask_app', framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler =
+      getBuildOutputV2Lambda(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).toContain('"__VC_HANDLER_VARIABLE_NAME": "flask_app"');
+  });
+
+  it('errors when handlerFunction variable does not exist for web services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'other_var = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: true },
+        config: { handlerFunction: 'flask_app', framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/Handler function "flask_app" not found in app\.py/);
+  });
+});
+
+describe('pyproject subscribers', () => {
+  let mockWorkPath: string;
+  const mockedExeca = vi.mocked(execa);
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-subscribers-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+    mockedExeca.mockReset();
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('uses POSIX separators for generated queue handler paths', () => {
+    expect(getGeneratedQueueHandlerPath('_py_workflows/flows_workflows')).toBe(
+      '_vc_queue_handlers/_py_workflows_flows_workflows.py'
+    );
+  });
+
+  it('injects APScheduler subscriber identities into runtime Lambdas', async () => {
+    mockQueueIntrospection(
+      [
+        {
+          topic: '__aps_scheduler_scheduler_start',
+          consumer_group: 'apscheduler-scheduler_scheduler',
+        },
+        {
+          topic: '__aps_scheduler_scheduler_wakeup',
+          consumer_group: 'apscheduler-scheduler_scheduler',
+        },
+      ],
+      { owners: ['vercel.integrations.apscheduler'] }
+    );
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'scheduler.py': new FileBlob({
+        data: 'scheduler = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          'dependencies = ["APScheduler>=3.10.4,<4", "vercel-apscheduler", "redis>=5,<7"]',
+          '',
+          '[tool.vercel.apscheduler.previews]',
+          'enabled = true',
+          'idle_timeout = "30m"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "scheduler:scheduler"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+    const output = getBuildOutputV2(result).output as any;
+    const scheduler = output[getSubscriberOutputPath('scheduler_scheduler')];
+
+    for (const lambda of [output.flask, scheduler]) {
+      expect(lambda.environment.VERCEL_APSCHEDULER_SUBSCRIBERS).toBe(
+        '[{"id":"scheduler_scheduler","entrypoint":"scheduler:scheduler"}]'
+      );
+      expect(lambda.environment.VERCEL_QUEUE_INTEGRATIONS).toBe(
+        'vercel.integrations.apscheduler:install_vercel_apscheduler_integration'
+      );
+      expect(
+        lambda.environment.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS
+      ).toBe('1800');
+    }
+    expect(
+      output.flask.environment.VERCEL_PYTHON_SUBSCRIBER_ID
+    ).toBeUndefined();
+    expect(scheduler.environment.VERCEL_PYTHON_SUBSCRIBER_ID).toBe(
+      'scheduler_scheduler'
+    );
+
+    const introspectionScripts = mockedExeca.mock.calls
+      .map(([, args]) => (Array.isArray(args) ? args[args.length - 1] : ''))
+      .filter(
+        script =>
+          typeof script === 'string' && script.includes('get_subscriptions')
+      );
+    expect(introspectionScripts).not.toEqual([]);
+    for (const script of introspectionScripts) {
+      expect(script).not.toContain('VERCEL_APSCHEDULER_SUBSCRIBERS');
+      expect(script).toContain('VERCEL_APSCHEDULER_DISCOVERY');
+    }
+  });
+
+  it('does not enable APScheduler previews by default', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[tool.vercel.apscheduler.previews]',
+        'enabled = false',
+        'idle_timeout = "30m"',
+      ].join('\n')
+    );
+
+    await expect(
+      getApschedulerPreviewConfig(mockWorkPath)
+    ).resolves.toBeUndefined();
+  });
+
+  it('validates APScheduler preview idle_timeout', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[tool.vercel.apscheduler.previews]',
+        'enabled = true',
+        'idle_timeout = "five minutes"',
+      ].join('\n')
+    );
+
+    await expect(getApschedulerPreviewConfig(mockWorkPath)).rejects.toThrow(
+      /positive duration/
+    );
+  });
+
+  it('injects only discovered APScheduler subscriber identities', async () => {
+    mockedExeca.mockImplementation(async (_cmd, args) => {
+      if (
+        Array.isArray(args) &&
+        args[0] === 'run' &&
+        typeof args[args.length - 1] === 'string'
+      ) {
+        const script = args[args.length - 1] as string;
+        if (script.includes('get_subscriptions')) {
+          if (script.includes('importlib.import_module("scheduler")')) {
+            expect(script).toContain('is_scheduler_subscriber');
+            return {
+              stdout: JSON.stringify({
+                subscriptions: [
+                  {
+                    topic: '__aps_scheduler_scheduler_start',
+                    consumer_group: 'apscheduler-scheduler_scheduler',
+                  },
+                  {
+                    topic: '__aps_scheduler_scheduler_wakeup',
+                    consumer_group: 'apscheduler-scheduler_scheduler',
+                  },
+                ],
+                owners: ['vercel.integrations.apscheduler'],
+              }),
+            } as any;
+          }
+          return {
+            stdout: JSON.stringify({
+              subscriptions: [
+                { topic: 'work', consumer_group: 'work-consumer' },
+              ],
+              owners: [],
+            }),
+          } as any;
+        }
+      }
+      return { stdout: '' } as any;
+    });
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'scheduler.py': new FileBlob({
+        data: 'scheduler = object()\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'worker = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          'dependencies = ["APScheduler>=3.10.4,<4", "vercel-apscheduler", "redis>=5,<7"]',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "scheduler:scheduler"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:worker"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+    const output = getBuildOutputV2(result).output as any;
+    const worker = output[getSubscriberOutputPath('worker_worker')];
+
+    expect(worker.environment.VERCEL_APSCHEDULER_SUBSCRIBERS).toBe(
+      '[{"id":"scheduler_scheduler","entrypoint":"scheduler:scheduler"}]'
+    );
+    expect(
+      worker.environment.VERCEL_APSCHEDULER_PREVIEW_IDLE_TIMEOUT_SECONDS
+    ).toBeUndefined();
+  });
+
+  it('returns dev sidecars matching build consumer names', async () => {
+    const workerPackage = path.join(mockWorkPath, 'workers', 'celery');
+    fs.mkdirSync(workerPackage, { recursive: true });
+    fs.writeFileSync(
+      path.join(workerPackage, '__init__.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "workers.celery:app"',
+        'topics = ["celery"]',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).resolves.toEqual([
+      {
+        name: 'workers-celery_app',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(
+          getSubscriberOutputPath('workers-celery_app')
+        ),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'workers/celery/__init__.py',
+          config: {
+            handlerFunction: 'app',
+            pythonQueueSidecar: 'subscriber',
+          },
+        },
+        topics: [{ topic: 'celery' }],
+      },
+    ]);
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: 'pyproject.toml',
+          config: {},
+        },
+      })
+    ).resolves.toHaveLength(1);
+  });
+
+  it('returns legacy dev sidecars when the project depends on vercel-workers', async () => {
+    const workerPackage = path.join(mockWorkPath, 'workers', 'celery');
+    fs.mkdirSync(workerPackage, { recursive: true });
+    fs.writeFileSync(
+      path.join(workerPackage, '__init__.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        'dependencies = ["vercel-workers"]',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "workers.celery:app"',
+        'topics = ["celery"]',
+        'retry_after_seconds = 10',
+        'initial_delay_seconds = 0',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).resolves.toEqual([
+      {
+        name: 'workers-celery_app',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(
+          getSubscriberOutputPath('workers-celery_app')
+        ),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'workers/celery/__init__.py',
+          config: {
+            handlerFunction: 'app',
+            pythonQueueSidecar: 'subscriber',
+          },
+        },
+        topics: [
+          { topic: 'celery', retryAfterSeconds: 10, initialDelaySeconds: 0 },
+        ],
+      },
+    ]);
+  });
+
+  it('maps bare module entrypoints to file paths', () => {
+    expect(parseBareModuleEntrypoint('worker')).toEqual({
+      moduleName: 'worker',
+      filePath: 'worker.py',
+    });
+    expect(parseBareModuleEntrypoint('app.workers.orders')).toEqual({
+      moduleName: 'app.workers.orders',
+      filePath: 'app/workers/orders.py',
+    });
+    // Module path segments must be Python identifiers.
+    expect(parseBareModuleEntrypoint('my-worker')).toBeNull();
+    expect(parseBareModuleEntrypoint('worker/tasks')).toBeNull();
+    expect(parseBareModuleEntrypoint('worker:app')).toBeNull();
+    expect(parseBareModuleEntrypoint('')).toBeNull();
+  });
+
+  it('accepts bare module entrypoints for vercel-queue subscribers', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'worker.py'),
+      'import vercel.queue\n'
+    );
+    fs.mkdirSync(path.join(mockWorkPath, 'tasks'), { recursive: true });
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'tasks', '__init__.py'),
+      'import vercel.queue\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "worker"',
+        'topics = ["orders"]',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "tasks"',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).resolves.toEqual([
+      {
+        name: 'worker',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(getSubscriberOutputPath('worker')),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'worker.py',
+          config: { pythonQueueSidecar: 'subscriber' },
+        },
+        topics: [{ topic: 'orders' }],
+      },
+      {
+        name: 'tasks',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(getSubscriberOutputPath('tasks')),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'tasks/__init__.py',
+          config: { pythonQueueSidecar: 'subscriber' },
+        },
+        topics: [{ topic: '*' }],
+      },
+    ]);
+  });
+
+  it('points file-path entrypoints at the equivalent import path', async () => {
+    for (const [filePath, suggestion] of [
+      ['worker.py', 'worker'],
+      ['tasks/worker.py', 'tasks.worker'],
+      ['pkg/__init__.py', 'pkg'],
+    ] as const) {
+      fs.writeFileSync(
+        path.join(mockWorkPath, 'pyproject.toml'),
+        [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          `entrypoint = "${filePath}"`,
+          '',
+        ].join('\n')
+      );
+
+      await expect(
+        getDevSidecars({
+          workPath: mockWorkPath,
+          build: {
+            use: '@vercel/python',
+            src: '<detect>',
+            config: { framework: 'fastapi' },
+          },
+        })
+      ).rejects.toThrow(
+        `subscriber #1 has invalid entrypoint "${filePath}". ` +
+          `Use an import path, not a file path: "${suggestion}"`
+      );
+    }
+  });
+
+  it('rejects entrypoints that are not import paths', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "my-worker"',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).rejects.toThrow(
+      'subscriber #1 has invalid entrypoint "my-worker". ' +
+        'Use "module:object" or a module path like "pkg.module"'
+    );
+  });
+
+  it('rejects bare module entrypoints under the legacy vercel-workers schema', async () => {
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'worker.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        'dependencies = ["vercel-workers"]',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "worker"',
+        'topics = ["celery"]',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).rejects.toThrow(
+      /subscriber #1 has invalid entrypoint "worker"\. Use "module:object"$/
+    );
+  });
+
+  it('lets pyproject services and standalone frameworks contribute dev sidecars', async () => {
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: { use: '@vercel/python', config: {} },
+      })
+    ).resolves.toEqual([]);
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          config: { framework: 'fastapi', middleware: true },
+        },
+      })
+    ).resolves.toEqual([]);
+
+    const service = {
+      schema: 'experimentalServicesV2' as const,
+      name: 'backend',
+      root: 'backend',
+      framework: 'fastapi',
+      runtime: 'python',
+      entrypoint: 'app.py',
+      builder: {
+        use: '@vercel/python',
+        src: 'backend/app.py',
+        config: { framework: 'fastapi', workspace: 'backend' },
+      },
+    };
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: service.builder,
+        service,
+      })
+    ).resolves.toEqual([]);
+
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'worker.py'),
+      'from celery import Celery\napp = Celery("worker")\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.subscribers]]',
+        'entrypoint = "worker:app"',
+        'topics = ["celery"]',
+        '',
+      ].join('\n')
+    );
+    service.entrypoint = 'pyproject.toml';
+    service.builder.src = 'backend/pyproject.toml';
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: service.builder,
+        service,
+      })
+    ).resolves.toHaveLength(1);
+  });
+
+  it('emits one queue/v2beta Lambda per subscriber from introspected metadata', async () => {
+    mockQueueIntrospection([
+      {
+        topic: 'celery',
+        consumer_group: 'celery-workers',
+        max_attempts: 3,
+        retry_after_seconds: 10,
+        initial_delay_seconds: 0,
+        max_concurrency: 5,
+      },
+      { topic: 'emails', consumer_group: 'email-workers' },
+    ]);
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'from celery import Celery\napp = Celery("worker")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["celery", "emails"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    const workerPath = getSubscriberOutputPath('worker_app');
+
+    expect(output.flask).toBeDefined();
+    expect(output[workerPath]).toBeDefined();
+    expect(output[`${workerPath}/celery`]).toBeUndefined();
+    expect(output[`${workerPath}/emails`]).toBeUndefined();
+
+    const worker = output[workerPath];
+    expect(worker.handler).toBe('vc__handler__python.vc_handler');
+    expect(worker.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'celery',
+        consumer: 'celery-workers',
+        maxDeliveries: 3,
+        retryAfterSeconds: 10,
+        initialDelaySeconds: 0,
+        maxConcurrency: 5,
+      },
+      {
+        type: 'queue/v2beta',
+        topic: 'emails',
+        consumer: 'email-workers',
+      },
+    ]);
+
+    const handler = worker.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('subscriber handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "_vc_queue_handlers._py_subscribers_worker__app"'
+    );
+    expect(
+      worker.files?.['_vc_queue_handlers/_py_subscribers_worker__app.py']
+    ).toBeDefined();
+  });
+
+  it('tolerates null optional fields in introspected subscriptions', async () => {
+    mockQueueIntrospection([
+      {
+        topic: 'celery',
+        consumer_group: 'celery-workers',
+        max_attempts: null,
+        retry_after_seconds: null,
+        initial_delay_seconds: null,
+        max_concurrency: null,
+      },
+    ]);
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    const worker = output[getSubscriberOutputPath('worker_app')];
+    expect(worker.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'celery',
+        consumer: 'celery-workers',
+      },
+    ]);
+  });
+
+  it('builds a queue Lambda from a bare module subscriber entrypoint', async () => {
+    mockQueueIntrospection([
+      { topic: 'orders', consumer_group: 'order-workers' },
+    ]);
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const output = getBuildOutputV2(result).output as any;
+    const worker = output[getSubscriberOutputPath('worker')];
+    expect(worker).toBeDefined();
+    expect(worker.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'orders',
+        consumer: 'order-workers',
+      },
+    ]);
+
+    const handler = worker.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('subscriber handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "_vc_queue_handlers._py_subscribers_worker"'
+    );
+    expect(
+      worker.files?.['_vc_queue_handlers/_py_subscribers_worker.py']
+    ).toBeDefined();
+  });
+
+  it('emits a legacy worker Lambda when the project depends on vercel-workers', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'from celery import Celery\napp = Celery("worker")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          'dependencies = ["vercel-workers"]',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["celery", "emails"]',
+          'max_deliveries = 3',
+          'retry_after_seconds = 10',
+          'initial_delay_seconds = 0',
+          'max_concurrency = 5',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    const output = v2.output;
+    const workerPath = getSubscriberOutputPath('worker_app');
+    const consumer = sanitizeConsumerName(workerPath);
+
+    expect(output.flask).toBeDefined();
+    expect(output[workerPath]).toBeDefined();
+    expect(output[`${workerPath}/celery`]).toBeUndefined();
+    expect(output[`${workerPath}/emails`]).toBeUndefined();
+    expect(output.flask.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+
+    const worker = output[workerPath];
+    expect(worker.handler).toBe('vc__handler__python.vc_handler');
+    expect(worker.environment.VERCEL_SERVICE_TYPE).toBe('worker');
+    expect(worker.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(worker.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: 'celery',
+        consumer,
+        maxDeliveries: 3,
+        retryAfterSeconds: 10,
+        initialDelaySeconds: 0,
+        maxConcurrency: 5,
+      },
+      {
+        type: 'queue/v2beta',
+        topic: 'emails',
+        consumer,
+        maxDeliveries: 3,
+        retryAfterSeconds: 10,
+        initialDelaySeconds: 0,
+        maxConcurrency: 5,
+      },
+    ]);
+
+    // Served through the user's entrypoint directly — no generated
+    // vercel.queue handler module and no runtime introspection.
+    const handler = worker.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('subscriber handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "worker"'
+    );
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_VARIABLE_NAME": "app"'
+    );
+    const generatedFiles = Object.keys(worker.files ?? {}).filter(p =>
+      p.startsWith('_vc_queue_handlers/')
+    );
+    expect(generatedFiles).toEqual([]);
+    expect(
+      mockedExeca.mock.calls.some(
+        ([, args]: any[]) =>
+          Array.isArray(args) &&
+          typeof args[args.length - 1] === 'string' &&
+          args[args.length - 1].includes('get_subscriptions')
+      )
+    ).toBe(false);
+
+    // Legacy worker lambdas are reached via triggers only — no HTTP route.
+    const routes = v2.routes ?? [];
+    expect(routes.some((route: any) => route.src === `/${workerPath}`)).toBe(
+      false
+    );
+  });
+
+  it('rejects legacy trigger fields without a vercel-workers dependency', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["celery"]',
+          'max_deliveries = 3',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/unrecognized field "max_deliveries"/);
+  });
+
+  it('intersects declared topics with introspected queue wildcard semantics', () => {
+    expect(queueTopicPatternsOverlap('events-*', 'events-foo')).toBe(true);
+    expect(queueTopicPatternsOverlap('events-*', 'events-bar-*')).toBe(true);
+    expect(queueTopicPatternsOverlap('events-bar-*', 'events-*')).toBe(true);
+    expect(queueTopicPatternsOverlap('*', 'anything')).toBe(true);
+    expect(queueTopicPatternsOverlap('events-*', 'jobs-foo')).toBe(false);
+
+    const declaration: SubscriberDeclaration = {
+      name: 'worker_app',
+      entrypoint: 'worker.py',
+      moduleName: 'worker',
+      variableName: 'app',
+      topicPatterns: ['events-*'],
+    };
+    const subscriptions: SubscriberSubscription[] = [
+      { topic: 'events-foo', consumer: 'a', triggerDefaults: {} },
+      { topic: 'events-bar-*', consumer: 'b', triggerDefaults: {} },
+      { topic: 'jobs-foo', consumer: 'c', triggerDefaults: {} },
+    ];
+    expect(filterQueueSubscriptions(declaration, subscriptions)).toEqual([
+      subscriptions[0],
+      subscriptions[1],
+    ]);
+  });
+
+  it('fails when declared topics match no introspected subscriptions', async () => {
+    mockQueueIntrospection([{ topic: 'jobs', consumer_group: 'job-workers' }]);
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["events-*"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/no introspected queue subscriptions matched/);
+  });
+
+  it('fails when any declared topic does not match an introspected subscription', async () => {
+    mockQueueIntrospection([
+      { topic: 'jobs', consumer_group: 'job-workers' },
+      { topic: 'events-created', consumer_group: 'event-workers' },
+    ]);
+
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'import vercel.queue\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["jobs", "events-*", "missing"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(
+      /declared topics \[missing\].*introspected topics \[jobs, events-created\]/
+    );
+  });
+
+  it('rejects consumer because subscriber consumers are derived from function paths', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'worker.py': new FileBlob({
+        data: 'app = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.subscribers]]',
+          'entrypoint = "worker:app"',
+          'topics = ["jobs"]',
+          'consumer = "custom"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/unrecognized field "consumer"/);
+  });
+});
+
+describe('pyproject.toml service entrypoint', () => {
+  let mockWorkPath: string;
+  const mockedExeca = vi.mocked(execa);
+
+  beforeEach(() => {
+    mockWorkPath = path.join(
+      tmpdir(),
+      `python-pyproject-service-${Date.now()}`
+    );
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+    mockedExeca.mockReset();
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  const SUBSCRIBER_TOML = [
+    '[[tool.vercel.subscribers]]',
+    'entrypoint = "worker:app"',
+    'topics = ["invoices"]',
+  ];
+  const WORKFLOW_TOML = [
+    '[[tool.vercel.workflows]]',
+    'entrypoint = "flows:workflows"',
+  ];
+  const WORKER_PATH = getSubscriberOutputPath('worker_app');
+  const WORKER_CONSUMER = sanitizeConsumerName(WORKER_PATH);
+  const WORKFLOW_CONSUMER = sanitizeConsumerName(
+    getWorkflowOutputPath('flows_workflows')
+  );
+
+  const WORKER_PY = new FileBlob({ data: 'app = object()\n' });
+  const FLOWS_PY = new FileBlob({
+    data: 'from vercel.workflow import Workflows\nworkflows = Workflows()\n',
+  });
+  const MAIN_PY = new FileBlob({
+    data: 'def app(environ, start_response): pass\n',
+  });
+
+  function pyprojectBlob(lines: string[]): FileBlob {
+    return new FileBlob({
+      data: [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        ...lines,
+        '',
+      ].join('\n'),
+    });
+  }
+
+  function buildService(
+    files: Record<string, FileBlob>,
+    config: Record<string, unknown> = {}
+  ) {
+    return build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'pyproject.toml',
+      meta: { isDev: false },
+      config: { zeroConfig: true, ...config },
+      service: { name: 'backend' },
+      repoRootPath: mockWorkPath,
+    });
+  }
+
+  it('builds the declared web entrypoint plus subscribers', async () => {
+    mockQueueIntrospection([
+      { topic: 'invoices', consumer_group: WORKER_CONSUMER },
+    ]);
+
+    const result = await buildService({
+      'main.py': MAIN_PY,
+      'worker.py': WORKER_PY,
+      'pyproject.toml': pyprojectBlob([
+        '[tool.vercel]',
+        'entrypoint = "main:app"',
+        '',
+        ...SUBSCRIBER_TOML,
+      ]),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    const workerPath = WORKER_PATH;
+
+    expect(v2.output.python).toBeDefined();
+    expect(v2.routes).toEqual([
+      { handle: 'filesystem' },
+      { src: `/${WORKER_PATH}`, dest: `/${WORKER_PATH}` },
+      { handle: 'rewrite' },
+      {
+        src: '/(.*)',
+        dest: '/python',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
+    ]);
+    expect(v2.output[workerPath]).toBeDefined();
+    expect(v2.output[workerPath].experimentalTriggers).toEqual([
+      { type: 'queue/v2beta', topic: 'invoices', consumer: WORKER_CONSUMER },
+    ]);
+  });
+
+  it('applies web entrypoint exclusions to every Lambda in the service', async () => {
+    mockQueueIntrospection([
+      { topic: 'invoices', consumer_group: WORKER_CONSUMER },
+    ]);
+
+    const result = await buildService(
+      {
+        'main.py': MAIN_PY,
+        'worker.py': WORKER_PY,
+        'secret.txt': new FileBlob({ data: 'secret data' }),
+        'pyproject.toml': pyprojectBlob([
+          '[tool.vercel]',
+          'entrypoint = "main:app"',
+          '',
+          ...SUBSCRIBER_TOML,
+        ]),
+      },
+      {
+        functions: {
+          'main.py': { excludeFiles: 'secret.txt' },
+        },
+      }
+    );
+
+    const v2 = getBuildOutputV2(result) as any;
+    expect(v2.output.python.files['secret.txt']).toBeUndefined();
+    expect(v2.output[WORKER_PATH].files['secret.txt']).toBeUndefined();
+  });
+
+  it('builds subscribers only when no tool.vercel.entrypoint is declared', async () => {
+    mockQueueIntrospection([
+      { topic: 'invoices', consumer_group: WORKER_CONSUMER },
+    ]);
+
+    const result = await buildService({
+      'worker.py': WORKER_PY,
+      'pyproject.toml': pyprojectBlob(SUBSCRIBER_TOML),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    const workerPath = WORKER_PATH;
+
+    expect(v2.output.python).toBeUndefined();
+    expect(v2.routes).toEqual([
+      { src: `/${WORKER_PATH}`, dest: `/${WORKER_PATH}` },
+    ]);
+    expect(v2.output[workerPath]).toBeDefined();
+    expect(v2.output[workerPath].experimentalTriggers).toEqual([
+      { type: 'queue/v2beta', topic: 'invoices', consumer: WORKER_CONSUMER },
+    ]);
+  });
+
+  it('builds workflows only when no tool.vercel.entrypoint is declared', async () => {
+    const result = await buildService({
+      'flows.py': FLOWS_PY,
+      'pyproject.toml': pyprojectBlob(WORKFLOW_TOML),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+
+    expect(v2.output.python).toBeUndefined();
+    expect(v2.routes).toBeUndefined();
+    expect(v2.output[workflowPath]).toBeDefined();
+    expect(v2.output[workflowPath].experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_*',
+        consumer: WORKFLOW_CONSUMER,
+      },
+    ]);
+  });
+
+  it('does not auto-detect a web entrypoint in declared-only mode', async () => {
+    mockQueueIntrospection([
+      { topic: 'invoices', consumer_group: WORKER_CONSUMER },
+    ]);
+
+    // main.py would be picked up by filename-based detection, but a
+    // "pyproject.toml" entrypoint builds only what the file declares.
+    const result = await buildService({
+      'main.py': MAIN_PY,
+      'worker.py': WORKER_PY,
+      'pyproject.toml': pyprojectBlob(SUBSCRIBER_TOML),
+    });
+
+    const v2 = getBuildOutputV2(result) as any;
+    expect(v2.output.python).toBeUndefined();
+    expect(v2.output[WORKER_PATH]).toBeDefined();
+  });
+
+  it('fails when pyproject.toml declares nothing to build', async () => {
+    await expect(
+      buildService({
+        'main.py': MAIN_PY,
+        'pyproject.toml': pyprojectBlob([]),
+      })
+    ).rejects.toThrow(/declares nothing to build/);
+  });
+
+  it('fails when tool.vercel.entrypoint cannot be resolved', async () => {
+    await expect(
+      buildService({
+        'worker.py': WORKER_PY,
+        'pyproject.toml': pyprojectBlob([
+          '[tool.vercel]',
+          'entrypoint = "missing:app"',
+          '',
+          ...SUBSCRIBER_TOML,
+        ]),
+      })
+    ).rejects.toThrow(/no matching module file was found/);
+  });
+
+  it('fails for a pyproject.toml entrypoint outside the service root', async () => {
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files: {
+          'backend/pyproject.toml': pyprojectBlob(SUBSCRIBER_TOML),
+          'backend/worker.py': WORKER_PY,
+        },
+        entrypoint: 'backend/pyproject.toml',
+        meta: { isDev: false },
+        config: { zeroConfig: true },
+        service: { name: 'backend' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/must sit at the service root/);
+  });
+});
+
+describe('pyproject workflows', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-workflows-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+    vi.mocked(execa).mockReset();
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('returns dev sidecars subscribed to the workflow topic pattern', async () => {
+    const workflowPackage = path.join(mockWorkPath, 'app');
+    fs.mkdirSync(workflowPackage, { recursive: true });
+    fs.writeFileSync(
+      path.join(workflowPackage, 'flows.py'),
+      'from vercel.workflow import Workflows\nworkflows = Workflows()\n'
+    );
+    fs.writeFileSync(
+      path.join(mockWorkPath, 'pyproject.toml'),
+      [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.workflows]]',
+        'entrypoint = "app.flows:workflows"',
+        '',
+      ].join('\n')
+    );
+
+    await expect(
+      getDevSidecars({
+        workPath: mockWorkPath,
+        build: {
+          use: '@vercel/python',
+          src: '<detect>',
+          config: { framework: 'fastapi' },
+        },
+      })
+    ).resolves.toEqual([
+      {
+        name: 'app-flows_workflows',
+        type: 'subscriber',
+        consumer: sanitizeConsumerName(
+          getWorkflowOutputPath('app-flows_workflows')
+        ),
+        workspace: '.',
+        framework: 'fastapi',
+        runtime: 'python',
+        builder: {
+          use: '@vercel/python',
+          src: 'app/flows.py',
+          config: {
+            handlerFunction: 'workflows',
+            pythonQueueSidecar: 'workflow',
+          },
+        },
+        topics: [{ topic: '__*wkf_*' }],
+      },
+    ]);
+  });
+
+  function workflowBuildFiles(pyprojectExtra: string[] = []) {
+    return {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'flows.py': new FileBlob({
+        data: 'from vercel.workflow import Workflows\nworkflows = Workflows()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          ...pyprojectExtra,
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:workflows"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+  }
+
+  function buildWorkflowProject(files: Record<string, FileBlob>) {
+    return build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: false },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+    });
+  }
+
+  it('emits a legacy worker Lambda when the vercel SDK predates vercel-queue workflows', async () => {
+    const result = await buildWorkflowProject(workflowBuildFiles());
+
+    const output = getBuildOutputV2(result).output as any;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+
+    expect(output.flask).toBeDefined();
+    expect(output.flask.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(output[workflowPath]).toBeDefined();
+
+    const workflow = output[workflowPath];
+    expect(workflow.handler).toBe('vc__handler__python.vc_handler');
+    expect(workflow.environment.VERCEL_SERVICE_TYPE).toBe('worker');
+    expect(workflow.environment.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_*',
+        consumer: sanitizeConsumerName(workflowPath),
+      },
+    ]);
+
+    const handler = workflow.files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('workflow handler bootstrap not found');
+    }
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "flows"'
+    );
+  });
+
+  it('emits a legacy worker Lambda when the vercel SDK version is below 0.8.0', async () => {
+    mockQueueIntrospection([], { sdkVersion: '0.7.4' });
+
+    const result = await buildWorkflowProject(
+      workflowBuildFiles(['dependencies = ["vercel"]'])
+    );
+
+    const output = getBuildOutputV2(result).output as any;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+    const workflow = output[workflowPath];
+    expect(workflow.environment.VERCEL_SERVICE_TYPE).toBe('worker');
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_*',
+        consumer: sanitizeConsumerName(workflowPath),
+      },
+    ]);
+    const handler = workflow.files?.['vc__handler__python.py'];
+    expect(handler.data.toString()).toContain(
+      '"__VC_HANDLER_MODULE_NAME": "flows"'
+    );
+  });
+
+  it('serves workflows through vercel-queue when the SDK is 0.8.0 or newer', async () => {
+    mockQueueIntrospection(
+      [
+        { topic: '__wkf_workflow_*', consumer_group: 'flows-workflows' },
+        { topic: '__wkf_step_*', consumer_group: 'flows-workflows' },
+      ],
+      { sdkVersion: '0.8.0' }
+    );
+
+    const result = await buildWorkflowProject(
+      workflowBuildFiles(['dependencies = ["vercel"]'])
+    );
+
+    const v2 = getBuildOutputV2(result) as any;
+    const output = v2.output;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+
+    expect(output.flask).toBeDefined();
+    expect(output.flask.environment.VERCEL_HAS_WORKER_SERVICES).toBeUndefined();
+    const workflow = output[workflowPath];
+    expect(workflow).toBeDefined();
+    expect(workflow.environment.VERCEL_SERVICE_TYPE).toBeUndefined();
+    expect(workflow.environment.VERCEL_HAS_WORKER_SERVICES).toBeUndefined();
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_workflow_*',
+        consumer: 'flows-workflows',
+      },
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_step_*',
+        consumer: 'flows-workflows',
+      },
+    ]);
+
+    // Served through a generated runtime queue callback handler module.
+    const generatedPath = getGeneratedQueueHandlerPath(workflowPath);
+    const handler = workflow.files?.['vc__handler__python.py'];
+    expect(handler.data.toString()).toContain(
+      `"__VC_HANDLER_MODULE_NAME": "${generatedPythonPathToModule(generatedPath)}"`
+    );
+    const generated = workflow.files?.[generatedPath];
+    expect(generated).toBeDefined();
+
+    // Queue-served workflows are HTTP-routable for push delivery.
+    expect(v2.routes).toEqual(
+      expect.arrayContaining([
+        { src: `/${workflowPath}`, dest: `/${workflowPath}` },
+      ])
+    );
+  });
+
+  it('serves workflows through vercel-queue for a vercel-workflow-only project', async () => {
+    // The workflow runtime split out of the umbrella `vercel` distribution,
+    // so declaring it alone must still reach queue serving.
+    mockQueueIntrospection(
+      [{ topic: '__wkf_workflow_*', consumer_group: 'flows-workflows' }],
+      { workflowSdkVersion: '0.9.0' }
+    );
+
+    const result = await buildWorkflowProject(
+      workflowBuildFiles(['dependencies = ["vercel-workflow"]'])
+    );
+
+    const output = getBuildOutputV2(result).output as any;
+    const workflowPath = getWorkflowOutputPath('flows_workflows');
+    const workflow = output[workflowPath];
+    expect(workflow.environment.VERCEL_SERVICE_TYPE).toBeUndefined();
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_workflow_*',
+        consumer: 'flows-workflows',
+      },
+    ]);
+    const handler = workflow.files?.['vc__handler__python.py'];
+    expect(handler.data.toString()).toContain(
+      `"__VC_HANDLER_MODULE_NAME": "${generatedPythonPathToModule(
+        getGeneratedQueueHandlerPath(workflowPath)
+      )}"`
+    );
+  });
+
+  it('excludes non-workflow subscriptions from the workflow Lambda triggers', async () => {
+    mockQueueIntrospection(
+      [
+        { topic: '__wkf_workflow_*', consumer_group: 'flows-workflows' },
+        { topic: 'orders', consumer_group: 'order-workers' },
+      ],
+      { sdkVersion: '0.8.0' }
+    );
+
+    const result = await buildWorkflowProject(
+      workflowBuildFiles(['dependencies = ["vercel"]'])
+    );
+
+    const output = getBuildOutputV2(result).output as any;
+    const workflow = output[getWorkflowOutputPath('flows_workflows')];
+    expect(workflow.experimentalTriggers).toEqual([
+      {
+        type: 'queue/v2beta',
+        topic: '__wkf_workflow_*',
+        consumer: 'flows-workflows',
+      },
+    ]);
+  });
+
+  it('fails when a vercel-queue workflow entrypoint registers no workflow subscriptions', async () => {
+    mockQueueIntrospection(
+      [{ topic: 'orders', consumer_group: 'order-workers' }],
+      { sdkVersion: '0.8.0' }
+    );
+
+    await expect(
+      buildWorkflowProject(workflowBuildFiles(['dependencies = ["vercel"]']))
+    ).rejects.toThrow(/vercel\.workflow\.Workflows/);
+  });
+
+  function multiWorkflowBuildFiles(pyprojectExtra: string[] = []) {
+    return {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'flows.py': new FileBlob({
+        data: 'from vercel.workflow import Workflows\nworkflows = Workflows()\n',
+      }),
+      'billing.py': new FileBlob({
+        data: 'from vercel.workflow import Workflows\nworkflows = Workflows(namespace="billing")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          ...pyprojectExtra,
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:workflows"',
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "billing:workflows"',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+  }
+
+  it('rejects multiple workflow entrypoints when the SDK predates queue namespaces', async () => {
+    await expect(
+      buildWorkflowProject(multiWorkflowBuildFiles())
+    ).rejects.toThrow(
+      /requires vercel-workflow>=0\.9\.0 or vercel>=0\.8\.0 with a distinct namespace/
+    );
+  });
+
+  it('builds multiple workflow entrypoints with distinct namespaces', async () => {
+    mockQueueIntrospection(
+      {
+        flows: [
+          { topic: '__wkf_workflow_*', consumer_group: 'default' },
+          { topic: '__wkf_step_*', consumer_group: 'default' },
+        ],
+        billing: [
+          { topic: '__billing_wkf_workflow_*', consumer_group: 'default' },
+          { topic: '__billing_wkf_step_*', consumer_group: 'default' },
+        ],
+      },
+      { sdkVersion: '0.8.0' }
+    );
+
+    const result = await buildWorkflowProject(
+      multiWorkflowBuildFiles(['dependencies = ["vercel"]'])
+    );
+
+    const output = getBuildOutputV2(result).output as any;
+    expect(
+      output[getWorkflowOutputPath('flows_workflows')].experimentalTriggers
+    ).toEqual([
+      expect.objectContaining({ topic: '__wkf_workflow_*' }),
+      expect.objectContaining({ topic: '__wkf_step_*' }),
+    ]);
+    expect(
+      output[getWorkflowOutputPath('billing_workflows')].experimentalTriggers
+    ).toEqual([
+      expect.objectContaining({ topic: '__billing_wkf_workflow_*' }),
+      expect.objectContaining({ topic: '__billing_wkf_step_*' }),
+    ]);
+  });
+
+  it('rejects workflow entrypoints whose queue topics overlap', async () => {
+    mockQueueIntrospection(
+      {
+        flows: [
+          { topic: '__wkf_workflow_*', consumer_group: 'default' },
+          { topic: '__wkf_step_*', consumer_group: 'default' },
+        ],
+        billing: [
+          { topic: '__wkf_workflow_*', consumer_group: 'default' },
+          { topic: '__wkf_step_*', consumer_group: 'default' },
+        ],
+      },
+      { sdkVersion: '0.8.0' }
+    );
+
+    await expect(
+      buildWorkflowProject(
+        multiWorkflowBuildFiles(['dependencies = ["vercel"]'])
+      )
+    ).rejects.toThrow(/distinct namespace/);
+  });
+
+  it('rejects a workflow entrypoint declared more than once', async () => {
+    const files = workflowBuildFiles();
+    files['pyproject.toml'] = new FileBlob({
+      data: [
+        '[project]',
+        'name = "x"',
+        'version = "0.0.1"',
+        '',
+        '[[tool.vercel.workflows]]',
+        'entrypoint = "flows:workflows"',
+        '',
+        '[[tool.vercel.workflows]]',
+        'entrypoint = "flows:workflows"',
+        '',
+      ].join('\n'),
+    });
+
+    await expect(buildWorkflowProject(files)).rejects.toThrow(
+      /declared more than once/
+    );
+  });
+
+  it('rejects topics because workflow topics are implicit', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'def app(environ, start_response): pass\n',
+      }),
+      'flows.py': new FileBlob({
+        data: 'workflows = object()\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: [
+          '[project]',
+          'name = "x"',
+          'version = "0.0.1"',
+          '',
+          '[[tool.vercel.workflows]]',
+          'entrypoint = "flows:workflows"',
+          'topics = ["jobs"]',
+          '',
+        ].join('\n'),
+      }),
+    } as Record<string, FileBlob>;
+
+    await expect(
+      build({
+        workPath: mockWorkPath,
+        files,
+        entrypoint: 'app.py',
+        meta: { isDev: false },
+        config: { framework: 'flask' },
+        repoRootPath: mockWorkPath,
+      })
+    ).rejects.toThrow(/unrecognized field "topics"/);
+  });
+});
+
+describe('cron service build result', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-cron-result-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('returns crons with correct path and schedule', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync_handler',
+      },
+    ]);
+  });
+
+  it('does not emit routes (handled by generateServicesRoutes)', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def sync_handler():\n    print("done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { handlerFunction: 'sync_handler' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.routes).toBeUndefined();
+  });
+
+  it('uses default handler name "cron" when no handlerFunction', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'def handler():\n    pass\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'cleanup', schedule: '*/5 * * * *' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/cron',
+        schedule: '*/5 * * * *',
+        resolvedHandler: 'jobs.cleanup',
+      },
+    ]);
+  });
+
+  it('does not return crons for non-cron services', async () => {
+    const files = {
+      'app.py': new FileBlob({
+        data: 'app = lambda environ, start_response: None\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'app.py',
+      meta: { isDev: true },
+      config: { framework: 'flask' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'web', name: 'api' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.crons).toBeUndefined();
+  });
+
+  it('does not set __VC_CRON_ROUTES when not a cron service', async () => {
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'handler.py',
+      meta: { isDev: false },
+      config: {},
+      repoRootPath: mockWorkPath,
+    });
+
+    const handler = getBuildOutputV3(result).files?.['vc__handler__python.py'];
+    if (!handler || !('data' in handler)) {
+      throw new Error('handler bootstrap not found');
+    }
+    const content = handler.data.toString();
+    expect(content).not.toContain('__VC_CRON_ROUTES');
+  });
+});
+
+describe('dynamic cron detection', () => {
+  const mockedExeca = vi.mocked(execa);
+
+  afterEach(() => {
+    mockedExeca.mockReset();
+  });
+
+  it('returns undefined for non-cron services', async () => {
+    const result = await getServiceCrons({
+      service: { type: 'web', name: 'api' },
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+    expect(result).toBeUndefined();
+  });
+
+  it('returns static cron for non-dynamic schedule', async () => {
+    const result = await getServiceCrons({
+      service: { type: 'cron', name: 'cleanup', schedule: '0 0 * * *' },
+      entrypoint: 'jobs/cleanup.py',
+      handlerFunction: 'sync_handler',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+    expect(result).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync_handler',
+      },
+    ]);
+  });
+
+  it('calls python and returns dynamic cron entry', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        entries: [
+          {
+            module_function: 'jobs.cleanup:sync_handler',
+            schedule: '0 0 * * *',
+          },
+        ],
+      }),
+    } as any);
+
+    const result = await getServiceCrons({
+      service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+      entrypoint: 'jobs/cleanup.py',
+      handlerFunction: 'get_crons',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync_handler',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync_handler',
+      },
+    ]);
+
+    // Verify execa was called with the right args
+    expect(mockedExeca).toHaveBeenCalledWith(
+      '/usr/bin/python3',
+      ['-c', expect.any(String), 'jobs.cleanup', 'get_crons'],
+      { env: {}, cwd: '/tmp/test' }
+    );
+  });
+
+  it('throws if dynamic returns 0 entries', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({ entries: [] }),
+    } as any);
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'get_crons',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/returned no entries/);
+  });
+
+  it('returns multiple dynamic cron entries', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        entries: [
+          { module_function: 'jobs.cleanup:sync', schedule: '0 0 * * *' },
+          { module_function: 'jobs.cleanup:daily', schedule: '0 6 * * *' },
+        ],
+      }),
+    } as any);
+
+    const result = await getServiceCrons({
+      service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+      entrypoint: 'jobs/cleanup.py',
+      handlerFunction: 'get_crons',
+      pythonBin: '/usr/bin/python3',
+      env: {},
+      workPath: '/tmp/test',
+    });
+
+    expect(result).toEqual([
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/sync',
+        schedule: '0 0 * * *',
+        resolvedHandler: 'jobs.cleanup:sync',
+      },
+      {
+        path: '/_svc/cleanup/crons/jobs/cleanup/daily',
+        schedule: '0 6 * * *',
+        resolvedHandler: 'jobs.cleanup:daily',
+      },
+    ]);
+  });
+
+  it('throws if handlerFunction is missing for dynamic', async () => {
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/get_crons/);
+  });
+
+  it('throws with structured error when python fails', async () => {
+    mockedExeca.mockRejectedValueOnce({
+      stdout: JSON.stringify({
+        error: "Failed to import module 'jobs.cleanup': No module named 'jobs'",
+      }),
+      stderr: '',
+    });
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'get_crons',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/Failed to import module/);
+  });
+
+  it('throws if module:function lacks colon', async () => {
+    mockedExeca.mockResolvedValueOnce({
+      stdout: JSON.stringify({
+        entries: [{ module_function: 'no_colon_here', schedule: '0 0 * * *' }],
+      }),
+    } as any);
+
+    await expect(
+      getServiceCrons({
+        service: { type: 'cron', name: 'cleanup', schedule: '<dynamic>' },
+        entrypoint: 'jobs/cleanup.py',
+        handlerFunction: 'get_crons',
+        pythonBin: '/usr/bin/python3',
+        env: {},
+        workPath: '/tmp/test',
+      })
+    ).rejects.toThrow(/module:function/);
+  });
+});
+
+describe('non-web V1 services should not generate catch-all routes', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-service-routes-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('cron service returns V2 with no routes', async () => {
+    const files = {
+      'jobs/cleanup.py': new FileBlob({
+        data: 'if __name__ == "__main__":\n    print("cleanup done")\n',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "x"\nversion = "0.0.1"\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'jobs/cleanup.py',
+      meta: { isDev: false },
+      config: { framework: 'python' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'cron', name: 'my-cron' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-cron/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
+  });
+
+  it('worker service returns V2 with no routes', async () => {
+    const files = {
+      'worker/broker.py': new FileBlob({
+        data: ['import dramatiq', 'broker = dramatiq.get_broker()'].join('\n'),
+      }),
+      'worker/tasks.py': new FileBlob({
+        data: [
+          'import dramatiq',
+          '',
+          "@dramatiq.actor(queue_name='jobs')",
+          'def process_job(payload: dict):',
+          "    return {'ok': True, 'payload': payload}",
+        ].join('\n'),
+      }),
+      'worker/run.py': new FileBlob({
+        data: [
+          'from worker.broker import broker',
+          'from worker import tasks',
+          '',
+          "__all__ = ['broker', 'tasks']",
+        ].join('\n'),
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "my-worker"\nversion = "0.0.1"\ndependencies = ["dramatiq"]\n',
+      }),
+    } as Record<string, FileBlob>;
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'worker/run.py',
+      meta: { isDev: false },
+      config: { framework: 'python' },
+      repoRootPath: mockWorkPath,
+      service: { type: 'worker', name: 'my-worker' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output['_svc/my-worker/index']).toBeDefined();
+    expect(v2result.routes).toBeUndefined();
+  });
+});
+
+describe('V2 services should generate catch-all routes', () => {
+  let mockWorkPath: string;
+
+  beforeEach(() => {
+    mockWorkPath = path.join(tmpdir(), `python-service-routes-${Date.now()}`);
+    fs.mkdirSync(mockWorkPath, { recursive: true });
+    makeMockPython('3.11');
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(mockWorkPath)) {
+      fs.removeSync(mockWorkPath);
+    }
+  });
+
+  it('V2 service returns catch-all routes', async () => {
+    const files = {
+      'main.py': new FileBlob({
+        data: 'from fastapi import FastAPI; app = FastAPI()',
+      }),
+      'pyproject.toml': new FileBlob({
+        data: '[project]\nname = "my-backend"\nversion = "0.0.1"\ndependencies = ["fastapi"]\n',
+      }),
+    } as Record<string, FileBlob>;
+    await download(files, mockWorkPath);
+
+    const result = await build({
+      workPath: mockWorkPath,
+      files,
+      entrypoint: 'main.py',
+      meta: { isDev: false },
+      config: { framework: 'fastapi' },
+      repoRootPath: mockWorkPath,
+      service: { name: 'my-backend' },
+    });
+
+    const v2result = getBuildOutputV2(result);
+    expect(v2result.output.fastapi).toBeDefined();
+    expect(v2result.output['_svc/my-backend/index']).toBeUndefined();
+    expect(v2result.routes).toEqual([
+      { handle: 'filesystem' },
+      { handle: 'rewrite' },
+      {
+        src: '/(.*)',
+        dest: '/fastapi',
+        transforms: [
+          {
+            type: 'request.path',
+            op: 'set',
+            args: '/$1',
+          },
+        ],
+      },
+    ]);
   });
 });
 
@@ -1415,7 +6251,9 @@ describe('python version fallback logging', () => {
 
   it('logs when no Python version is specified in pyproject.toml', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "myproject"\nversion = "0.1.0"\n',
       }),
@@ -1443,7 +6281,9 @@ describe('python version fallback logging', () => {
 
   it('logs when Python version is found in pyproject.toml', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.11,<3.13"\n',
       }),
@@ -1465,7 +6305,9 @@ describe('python version fallback logging', () => {
 
   it('logs when Python version is found in .python-version', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       '.python-version': new FileBlob({ data: '3.11\n' }),
     } as Record<string, FileBlob>;
 
@@ -1512,7 +6354,9 @@ describe('.python-version file priority', () => {
 
   it('.python-version takes priority over pyproject.toml', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       '.python-version': new FileBlob({ data: '3.10\n' }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.12"\n',
@@ -1539,7 +6383,9 @@ describe('.python-version file priority', () => {
     // which requires pipfile2req. The important part is that .python-version
     // takes priority over the python_version in Pipfile.lock.
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       '.python-version': new FileBlob({ data: '3.10\n' }),
       'Pipfile.lock': new FileBlob({
         data: JSON.stringify({
@@ -1570,7 +6416,9 @@ describe('.python-version file priority', () => {
 
   it('parses .python-version with patch version (3.11.4 -> 3.11)', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       '.python-version': new FileBlob({ data: '3.11.4\n' }),
     } as Record<string, FileBlob>;
 
@@ -1591,7 +6439,9 @@ describe('.python-version file priority', () => {
 
   it('parses .python-version with comments', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       '.python-version': new FileBlob({
         data: '# This is a comment\n3.11\n',
       }),
@@ -1614,7 +6464,9 @@ describe('.python-version file priority', () => {
 
   it('throws error when .python-version has invalid content', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       '.python-version': new FileBlob({ data: 'invalid-version\n' }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.12"\n',
@@ -1661,7 +6513,9 @@ describe('.python-version file auto-creation', () => {
 
   it('writes .python-version file when pyproject.toml selects version <= 3.12', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.9"\n',
       }),
@@ -1690,7 +6544,9 @@ describe('.python-version file auto-creation', () => {
 
   it('does NOT write .python-version file when one already exists', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       '.python-version': new FileBlob({ data: '3.11\n' }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.9"\n',
@@ -1719,7 +6575,9 @@ describe('.python-version file auto-creation', () => {
 
   it('does NOT write .python-version file when selecting 3.13+', async () => {
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'pyproject.toml': new FileBlob({
         data: '[project]\nname = "x"\nversion = "0.0.1"\nrequires-python = ">=3.13"\n',
       }),
@@ -1748,7 +6606,9 @@ describe('.python-version file auto-creation', () => {
   it('does NOT write .python-version file for Pipfile.lock projects', async () => {
     // Include pyproject.toml to avoid triggering pipfile2req
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'Pipfile.lock': new FileBlob({
         data: JSON.stringify({
           _meta: { requires: { python_version: '3.11' } },
@@ -1887,7 +6747,9 @@ describe('custom install hooks', () => {
     fs.mkdirSync(workPath, { recursive: true });
 
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
     } as Record<string, FileBlob>;
 
     try {
@@ -1914,7 +6776,11 @@ describe('custom install hooks', () => {
       'echo custom-install',
       expect.objectContaining({
         cwd: workPath,
-        env: expect.any(Object),
+        env: expect.objectContaining({
+          VIRTUAL_ENV: expect.any(String),
+          UV_PROJECT_ENVIRONMENT: expect.any(String),
+          UV_NO_DEV: 'true',
+        }),
       })
     );
   });
@@ -1960,7 +6826,9 @@ describe('custom install hooks', () => {
     fs.mkdirSync(workPath, { recursive: true });
 
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
       'pyproject.toml': new FileBlob({
         data: [
           '[project]',
@@ -2050,7 +6918,9 @@ describe('custom install hooks', () => {
     fs.mkdirSync(workPath, { recursive: true });
 
     const files = {
-      'handler.py': new FileBlob({ data: 'def handler(): pass' }),
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
     } as Record<string, FileBlob>;
 
     try {
@@ -2074,6 +6944,763 @@ describe('custom install hooks', () => {
     expect(mockUvSync).toHaveBeenCalled();
     // execCommand should not have been called for install or build
     expect(mockExecCommand).not.toHaveBeenCalled();
+  });
+
+  it('does not force the Lambda Python platform for dev installs', async () => {
+    const mockExecCommand = vi.fn(async () => {});
+    const mockEnsureUvProject = vi.fn(async () => ({
+      projectDir: '/mock/project',
+      pyprojectPath: '/mock/project/pyproject.toml',
+      lockPath: '/mock/project/uv.lock',
+    }));
+    const mockUvSync = vi.fn(async () => {});
+    const mockUvPip = vi.fn(async () => {});
+    const originalBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    delete process.env.VERCEL_BUILD_IMAGE;
+
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: mockExecCommand,
+    }));
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: mockEnsureUvProject,
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner({
+        onSync: mockUvSync,
+        onPip: mockUvPip,
+      }),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(tmpdir(), `python-dev-platform-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: true },
+        config: {
+          framework: 'fastapi',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (originalBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = originalBuildImage;
+      }
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(mockUvSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pythonPlatform: undefined,
+      })
+    );
+    for (const call of mockUvPip.mock.calls) {
+      expect(call[0].args).not.toContain('--python-platform');
+    }
+  });
+
+  it('targets the Lambda Python platform for local non-dev builds', async () => {
+    const mockExecCommand = vi.fn(async () => {});
+    const mockEnsureUvProject = vi.fn(async () => ({
+      projectDir: '/mock/project',
+      pyprojectPath: '/mock/project/pyproject.toml',
+      lockPath: '/mock/project/uv.lock',
+    }));
+    const mockUvSync = vi.fn(async () => {});
+    const mockUvPip = vi.fn(async () => {});
+    const originalBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    delete process.env.VERCEL_BUILD_IMAGE;
+
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: mockExecCommand,
+    }));
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: mockEnsureUvProject,
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner({
+        onSync: mockUvSync,
+        onPip: mockUvPip,
+      }),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-local-build-platform-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'fastapi',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (originalBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = originalBuildImage;
+      }
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(mockUvSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pythonPlatform: 'x86_64-unknown-linux-gnu',
+      })
+    );
+    expect(
+      mockUvPip.mock.calls.some(call =>
+        call[0].args.includes('--python-platform')
+      )
+    ).toBe(true);
+    expect(
+      mockUvPip.mock.calls.some(call =>
+        call[0].args.includes('x86_64-unknown-linux-gnu')
+      )
+    ).toBe(true);
+  });
+
+  it('respects VERCEL_BUILD_ARCH env var override', async () => {
+    const mockUvSync = vi.fn(async () => {});
+    const mockUvPip = vi.fn(async () => {});
+    const originalBuildImage = process.env.VERCEL_BUILD_IMAGE;
+    const originalPythonPlatform = process.env.VERCEL_BUILD_ARCH;
+    delete process.env.VERCEL_BUILD_IMAGE;
+    process.env.VERCEL_BUILD_ARCH = 'aarch64';
+
+    const realBuildUtils = await vi.importActual<
+      typeof import('@vercel/build-utils')
+    >('@vercel/build-utils');
+    vi.doMock('@vercel/build-utils', () => ({
+      ...realBuildUtils,
+      execCommand: vi.fn(async () => {}),
+    }));
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      ensureUvProject: vi.fn(async () => ({
+        projectDir: '/mock/project',
+        pyprojectPath: '/mock/project/pyproject.toml',
+        lockPath: '/mock/project/uv.lock',
+      })),
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      ensureVenv: vi.fn(async () => {}),
+    }));
+
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: createMockUvRunner({
+        onSync: mockUvSync,
+        onPip: mockUvPip,
+      }),
+    }));
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-env-platform-override-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+    } as Record<string, FileBlob>;
+
+    try {
+      await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'fastapi',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (originalBuildImage === undefined) {
+        delete process.env.VERCEL_BUILD_IMAGE;
+      } else {
+        process.env.VERCEL_BUILD_IMAGE = originalBuildImage;
+      }
+      if (originalPythonPlatform === undefined) {
+        delete process.env.VERCEL_BUILD_ARCH;
+      } else {
+        process.env.VERCEL_BUILD_ARCH = originalPythonPlatform;
+      }
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    expect(mockUvSync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pythonPlatform: 'aarch64-unknown-linux-gnu',
+      })
+    );
+    expect(
+      mockUvPip.mock.calls.some(call =>
+        call[0].args.includes('aarch64-unknown-linux-gnu')
+      )
+    ).toBe(true);
+  });
+});
+
+describe('worker services dependency installation', () => {
+  async function buildWithPipSpy(
+    options: {
+      dependencies?: string[];
+      declareSubscriber?: boolean;
+      declareWorkflow?: boolean;
+    } = {}
+  ) {
+    const pipCalls: string[][] = [];
+    const operations: string[] = [];
+
+    const realInstall =
+      await vi.importActual<typeof import('../src/install')>('../src/install');
+    vi.doMock('../src/install', () => ({
+      ...realInstall,
+      // Keep this suite focused on dependency install behavior and avoid
+      // probing a real venv python binary during quirk scanning.
+      getVenvSitePackagesDirs: vi.fn(async () => []),
+    }));
+
+    const realUtils =
+      await vi.importActual<typeof import('../src/utils')>('../src/utils');
+    vi.doMock('../src/utils', () => ({
+      ...realUtils,
+      // Avoid creating a real virtualenv in unit tests.
+      ensureVenv: vi.fn(async () => {}),
+    }));
+    const realUv =
+      await vi.importActual<typeof import('../src/uv')>('../src/uv');
+    vi.doMock('../src/uv', () => ({
+      ...realUv,
+      UvRunner: class {
+        getPath() {
+          return '/mock/uv';
+        }
+        listInstalledPythons() {
+          return new Set(mockInstalledVersions);
+        }
+        async sync() {
+          operations.push('sync');
+        }
+        async lock() {}
+        async pip(options: { args: string[] }) {
+          pipCalls.push(options.args);
+          operations.push(`pip:${options.args[options.args.length - 1]}`);
+        }
+        async run() {
+          return { stdout: '', stderr: '' };
+        }
+      },
+      checkUvBinaryVersion: () => `uv ${UV_VERSION} (mock)`,
+    }));
+
+    // Worker dependency installation happens before dependency externalization.
+    // Mock externalization to keep this test focused on install behavior.
+    vi.doMock('../src/dependency-externalizer', async () => {
+      const actual = await vi.importActual('../src/dependency-externalizer');
+      return {
+        ...actual,
+        PythonDependencyExternalizer: class {
+          async analyze() {
+            return {
+              runtimeInstallEnabled: false,
+              allVendorFiles: {},
+              totalBundleSize: 0,
+            };
+          }
+          async generateBundle() {}
+          async collectBytecodeFiles() {
+            return { files: {}, totalSize: 0, perItemSizes: new Map() };
+          }
+        },
+      };
+    });
+
+    const { build: buildWithMocks } = await import('../src/index');
+
+    const workPath = path.join(
+      tmpdir(),
+      `python-worker-services-install-${Date.now()}`
+    );
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const files = {
+      'handler.py': new FileBlob({
+        data: 'def app(environ, start_response): pass',
+      }),
+      ...(options.dependencies
+        ? {
+            'pyproject.toml': new FileBlob({
+              data: [
+                '[project]',
+                'name = "test-app"',
+                'version = "0.0.1"',
+                `dependencies = [${options.dependencies
+                  .map(dep => JSON.stringify(dep))
+                  .join(', ')}]`,
+                // Declared by default so injection applies. This build does
+                // not compose the declaration, mirroring a web service that
+                // shares the project pyproject.toml.
+                ...(options.declareSubscriber === false
+                  ? []
+                  : [
+                      '[[tool.vercel.subscribers]]',
+                      'entrypoint = "worker:app"',
+                    ]),
+                ...(options.declareWorkflow
+                  ? ['[[tool.vercel.workflows]]', 'entrypoint = "flows:wf"']
+                  : []),
+              ].join('\n'),
+            }),
+          }
+        : {}),
+    } as Record<string, FileBlob>;
+
+    let result;
+    try {
+      result = await buildWithMocks({
+        workPath,
+        files,
+        entrypoint: 'handler.py',
+        meta: { isDev: false },
+        config: {
+          framework: 'services',
+        },
+        repoRootPath: workPath,
+      });
+    } finally {
+      if (fs.existsSync(workPath)) fs.removeSync(workPath);
+    }
+
+    return { operations, pipCalls, result };
+  }
+
+  beforeEach(() => {
+    vi.resetModules();
+    makeMockPython('3.12');
+    delete process.env.VERCEL_PYTHON_APSCHEDULER_DEPENDENCY;
+    delete process.env.VERCEL_PYTHON_CELERY_DEPENDENCY;
+    delete process.env.VERCEL_PYTHON_DRAMATIQ_DEPENDENCY;
+    delete process.env.VERCEL_WORKERS_PYTHON;
+  });
+
+  afterEach(() => {
+    delete process.env.VERCEL_PYTHON_APSCHEDULER_DEPENDENCY;
+    delete process.env.VERCEL_PYTHON_CELERY_DEPENDENCY;
+    delete process.env.VERCEL_PYTHON_DRAMATIQ_DEPENDENCY;
+    delete process.env.VERCEL_WORKERS_PYTHON;
+    vi.doUnmock('../src/dependency-externalizer');
+    vi.doUnmock('../src/install');
+    vi.doUnmock('../src/index');
+    vi.doUnmock('../src/utils');
+    vi.doUnmock('../src/uv');
+  });
+
+  it('uses copy link mode for injected pip installs', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
+    expect(pipCalls).toEqual(
+      expect.arrayContaining([
+        expect.arrayContaining(['install', '--link-mode', 'copy']),
+      ])
+    );
+    for (const args of pipCalls) {
+      expect(args.slice(0, 3)).toEqual(['install', '--link-mode', 'copy']);
+    }
+  });
+
+  it('ignores the user require-hashes setting for injected pip installs', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
+    expect(pipCalls.length).toBeGreaterThan(0);
+    for (const args of pipCalls) {
+      expect(args).toContain('--no-require-hashes');
+    }
+  });
+
+  it('skips adapter injection when no subscribers are declared', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4', 'celery>=5.3', 'dramatiq>=1.17'],
+      declareSubscriber: false,
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.startsWith('vercel-') && arg.includes('bundle'))
+      )
+    ).toBe(false);
+    expect(pipCalls.some(args => args.includes('vercel-celery'))).toBe(false);
+  });
+
+  it('does not treat declared workflows as adapter consumers', async () => {
+    // Workflows serve through the vercel SDK, a declared project
+    // dependency, so [[tool.vercel.workflows]] alone must not trigger
+    // adapter injection.
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4', 'celery>=5.3'],
+      declareSubscriber: false,
+      declareWorkflow: true,
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.startsWith('vercel-') && arg.includes('bundle'))
+      )
+    ).toBe(false);
+  });
+
+  it('installs vercel-apscheduler-bundle after uv sync when APScheduler is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4'],
+    });
+
+    expect(
+      pipCalls.some(args => args.includes('vercel-apscheduler-bundle'))
+    ).toBe(true);
+    expect(
+      pipCalls.some(
+        args =>
+          args.includes('vercel-apscheduler-bundle') &&
+          args.includes(QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN)
+      )
+    ).toBe(true);
+    expect(operations.indexOf('sync')).toBeGreaterThanOrEqual(0);
+    expect(operations.indexOf('pip:vercel-apscheduler-bundle')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('installs vercel-apscheduler when vercel-queue is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4', 'vercel-queue'],
+    });
+
+    expect(
+      pipCalls.some(args => args[args.length - 1] === 'vercel-apscheduler')
+    ).toBe(true);
+    expect(
+      pipCalls.some(args => args.includes('vercel-apscheduler-bundle'))
+    ).toBe(false);
+    expect(operations.indexOf('pip:vercel-apscheduler')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('installs vercel-celery-bundle after uv sync when celery is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3'],
+    });
+
+    expect(pipCalls.some(args => args.includes('vercel-celery-bundle'))).toBe(
+      true
+    );
+    expect(
+      pipCalls.some(
+        args =>
+          args.includes('vercel-celery-bundle') &&
+          args.includes(QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN)
+      )
+    ).toBe(true);
+    expect(operations.indexOf('sync')).toBeGreaterThanOrEqual(0);
+    expect(operations.indexOf('pip:vercel-celery-bundle')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('installs vercel-celery when vercel-queue is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3', 'vercel-queue'],
+    });
+
+    expect(
+      pipCalls.some(args => args[args.length - 1] === 'vercel-celery')
+    ).toBe(true);
+    expect(pipCalls.some(args => args.includes('vercel-celery-bundle'))).toBe(
+      false
+    );
+    expect(
+      pipCalls.some(args =>
+        args.includes(QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN)
+      )
+    ).toBe(false);
+    expect(operations.indexOf('pip:vercel-celery')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('installs vercel-dramatiq-bundle after uv sync when dramatiq is declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['dramatiq>=1.17'],
+    });
+
+    expect(pipCalls.some(args => args.includes('vercel-dramatiq-bundle'))).toBe(
+      true
+    );
+    expect(operations.indexOf('sync')).toBeGreaterThanOrEqual(0);
+    expect(operations.indexOf('pip:vercel-dramatiq-bundle')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('installs vercel-dramatiq when dramatiq and vercel-queue are declared', async () => {
+    const { operations, pipCalls } = await buildWithPipSpy({
+      dependencies: ['dramatiq>=1.17', 'vercel-queue'],
+    });
+
+    expect(
+      pipCalls.some(args => args[args.length - 1] === 'vercel-dramatiq')
+    ).toBe(true);
+    expect(pipCalls.some(args => args.includes('vercel-dramatiq-bundle'))).toBe(
+      false
+    );
+    expect(operations.indexOf('pip:vercel-dramatiq')).toBeGreaterThan(
+      operations.indexOf('sync')
+    );
+  });
+
+  it('skips conditional adapters for legacy vercel-workers projects', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3', 'vercel-queue', 'vercel-workers'],
+    });
+
+    // The legacy integration brings its own celery support through the
+    // vercel-workers runtime; injecting the vercel-queue adapter as well
+    // would install two competing transports.
+    expect(
+      pipCalls.some(args => args[args.length - 1] === 'vercel-celery')
+    ).toBe(false);
+    expect(pipCalls.some(args => args.includes('vercel-celery-bundle'))).toBe(
+      false
+    );
+    expect(pipCalls.some(args => isVercelWorkersInstall(args))).toBe(true);
+  });
+
+  function isVercelWorkersInstall(args: string[]): boolean {
+    // In the monorepo, the build defaults to installing from the in-repo
+    // source directory (path ending in /python/vercel-workers) rather than
+    // from PyPI. Accept either form here.
+    return args.some(
+      arg =>
+        arg.startsWith('vercel-workers==') ||
+        arg.endsWith(`${path.sep}python${path.sep}vercel-workers`)
+    );
+  }
+
+  it('installs vercel-workers when the project depends on it directly', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
+    expect(pipCalls.some(args => isVercelWorkersInstall(args))).toBe(true);
+  });
+
+  it('does not install vercel-workers without a direct dependency on it', async () => {
+    const { pipCalls } = await buildWithPipSpy();
+    expect(pipCalls.some(args => isVercelWorkersInstall(args))).toBe(false);
+  });
+
+  it('uses VERCEL_WORKERS_PYTHON override when provided', async () => {
+    process.env.VERCEL_WORKERS_PYTHON =
+      'vercel-workers @ file:///tmp/vercel-workers.whl';
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
+    expect(
+      pipCalls.some(args =>
+        args.includes('vercel-workers @ file:///tmp/vercel-workers.whl')
+      )
+    ).toBe(true);
+  });
+
+  it('uses VERCEL_PYTHON_APSCHEDULER_DEPENDENCY override for bundled APScheduler', async () => {
+    process.env.VERCEL_PYTHON_APSCHEDULER_DEPENDENCY =
+      'vercel-apscheduler-bundle @ file:///tmp/vercel-apscheduler-bundle.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4'],
+    });
+    expect(
+      pipCalls.some(args =>
+        args.includes(
+          'vercel-apscheduler-bundle @ file:///tmp/vercel-apscheduler-bundle.whl'
+        )
+      )
+    ).toBe(true);
+  });
+
+  it('uses VERCEL_PYTHON_APSCHEDULER_DEPENDENCY override for unbundled APScheduler', async () => {
+    process.env.VERCEL_PYTHON_APSCHEDULER_DEPENDENCY =
+      'vercel-apscheduler @ file:///tmp/vercel-apscheduler.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['APScheduler>=3.10.4,<4', 'vercel-queue'],
+    });
+    expect(
+      pipCalls.some(args =>
+        args.includes('vercel-apscheduler @ file:///tmp/vercel-apscheduler.whl')
+      )
+    ).toBe(true);
+  });
+
+  it('marks python lambdas with internal worker services env for legacy projects', async () => {
+    const { result } = await buildWithPipSpy({
+      dependencies: ['vercel-workers'],
+    });
+    const lambda = getBuildOutputV3(result);
+    expect(lambda.environment?.VERCEL_HAS_WORKER_SERVICES).toBe('1');
+  });
+
+  it('does not mark python lambdas without a direct vercel-workers dependency', async () => {
+    const { result } = await buildWithPipSpy();
+    const lambda = getBuildOutputV3(result);
+    expect(lambda.environment?.VERCEL_HAS_WORKER_SERVICES).toBeUndefined();
+  });
+
+  it('uses VERCEL_PYTHON_CELERY_DEPENDENCY override for bundled celery when provided', async () => {
+    process.env.VERCEL_PYTHON_CELERY_DEPENDENCY =
+      'vercel-celery-bundle @ file:///tmp/vercel-celery-bundle.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3'],
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.includes('vercel-celery-bundle'))
+      )
+    ).toBe(true);
+    expect(
+      pipCalls.some(args =>
+        args.includes(QUEUE_ADAPTER_SHARED_VENDORED_DEPS_PIN)
+      )
+    ).toBe(false);
+  });
+
+  it('uses VERCEL_PYTHON_CELERY_DEPENDENCY override for unbundled celery when provided', async () => {
+    process.env.VERCEL_PYTHON_CELERY_DEPENDENCY =
+      'vercel-celery @ file:///tmp/vercel-celery.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3', 'vercel-queue'],
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.includes('vercel-celery @ file:///tmp/vercel-celery.whl')
+      )
+    ).toBe(true);
+  });
+
+  it('uses VERCEL_PYTHON_DRAMATIQ_DEPENDENCY override when provided', async () => {
+    process.env.VERCEL_PYTHON_DRAMATIQ_DEPENDENCY =
+      'vercel-dramatiq @ file:///tmp/vercel-dramatiq.whl';
+
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['dramatiq>=1.17', 'vercel-queue'],
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.includes('vercel-dramatiq @ file:///tmp/vercel-dramatiq.whl')
+      )
+    ).toBe(true);
+  });
+
+  it('does not install vercel-celery-bundle when vercel-celery is declared', async () => {
+    const { pipCalls } = await buildWithPipSpy({
+      dependencies: ['celery>=5.3', 'vercel-celery'],
+    });
+
+    expect(
+      pipCalls.some(args =>
+        args.some(arg => arg.includes('vercel-celery-bundle'))
+      )
+    ).toBe(false);
   });
 });
 
@@ -2128,19 +7755,244 @@ describe('UV_PYTHON_DOWNLOADS environment variable protection', () => {
       expect(env.HOME).toBe('/home/user');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
     });
+
+    it('sets UV_CACHE_DIR when provided', () => {
+      const cacheDir = '/tmp/project/.vercel/python/cache/uv';
+      const env = getProtectedUvEnv({}, cacheDir);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
+    });
+
+    it('does not set UV_CACHE_DIR when not provided', () => {
+      const env = getProtectedUvEnv({});
+      expect(env.UV_CACHE_DIR).toBeUndefined();
+    });
+  });
+
+  describe('getUvCacheDir', () => {
+    it('returns the correct cache directory path', () => {
+      expect(getUvCacheDir('/repo')).toBe(
+        path.join('/repo', '.vercel', 'python', 'cache', 'uv')
+      );
+    });
   });
 
   describe('createVenvEnv', () => {
-    it('sets VIRTUAL_ENV and PATH correctly while protecting UV_PYTHON_DOWNLOADS', () => {
+    it('sets VIRTUAL_ENV and PATH correctly while protecting uv env', () => {
       process.env.UV_PYTHON_DOWNLOADS = 'manual';
       process.env.PATH = '/usr/bin';
       const venvPath = '/path/to/venv';
-      const env = createVenvEnv(venvPath);
+      const cacheDir = getUvCacheDir('/repo');
+      const env = createVenvEnv(venvPath, process.env, cacheDir);
 
       expect(env.VIRTUAL_ENV).toBe(venvPath);
+      expect(env.UV_PROJECT_ENVIRONMENT).toBe(venvPath);
+      expect(env.UV_NO_DEV).toBe('true');
       expect(env.PATH).toContain(getVenvBinDir(venvPath));
       expect(env.PATH).toContain('/usr/bin');
       expect(env.UV_PYTHON_DOWNLOADS).toBe(UV_PYTHON_DOWNLOADS_MODE);
+      expect(env.UV_CACHE_DIR).toBe(cacheDir);
     });
+  });
+});
+
+describe('ensureVenv uv invocation', () => {
+  // The top-level `vi.mock('../src/utils', ...)` replaces `ensureVenv` with
+  // a no-op for build-pipeline tests.  This suite needs the real
+  // implementation, so it resets modules and unmocks `../src/utils` before
+  // re-importing.
+  let mockExeca: ReturnType<typeof vi.fn>;
+  let ensureVenvReal: typeof import('../src/utils').ensureVenv;
+  let venvDir: string;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    mockExeca = vi.fn(async () => ({ stdout: '' }) as any);
+    vi.doMock('execa', () => ({ default: mockExeca }));
+    vi.doUnmock('../src/utils');
+    ({ ensureVenv: ensureVenvReal } = await import('../src/utils'));
+    venvDir = path.join(
+      tmpdir(),
+      `vc-test-ensure-venv-${Math.floor(Math.random() * 1e6)}`
+    );
+  });
+
+  afterEach(() => {
+    vi.doUnmock('execa');
+    if (fs.existsSync(venvDir)) {
+      fs.removeSync(venvDir);
+    }
+  });
+
+  it('omits --python when major/minor are undefined (vercel dev)', async () => {
+    // Simulates `getDevPythonVersion()` which now leaves major/minor
+    // undefined so uv resolves the interpreter via its own chain
+    // (`.python-version`, managed default, system `python3`).  uv >= 0.10.11
+    // rejects `--python 3.0`, so passing no `--python` here is required.
+    await ensureVenvReal({
+      pythonVersion: { pythonPath: 'python3' },
+      venvPath: venvDir,
+      uvPath: '/mock/uv',
+    });
+
+    expect(mockExeca).toHaveBeenCalledTimes(1);
+    const [cmd, args] = mockExeca.mock.calls[0];
+    expect(cmd).toBe('/mock/uv');
+    expect(args).toEqual(['venv', venvDir, '--allow-existing', '--seed']);
+    expect(args).not.toContain('--python');
+  });
+
+  it('passes --python <major>.<minor> for a pinned production version', async () => {
+    await ensureVenvReal({
+      pythonVersion: {
+        pythonPath: 'python3.12',
+        major: 3,
+        minor: 12,
+      },
+      venvPath: venvDir,
+      uvPath: '/mock/uv',
+    });
+
+    expect(mockExeca).toHaveBeenCalledTimes(1);
+    const [cmd, args] = mockExeca.mock.calls[0];
+    expect(cmd).toBe('/mock/uv');
+    expect(args).toEqual([
+      'venv',
+      venvDir,
+      '--allow-existing',
+      '--seed',
+      '--python',
+      '3.12',
+    ]);
+  });
+});
+
+describe('entrypoint diagnostic error messages', () => {
+  // Uses dynamic import to avoid hoisting issues with vi.mock
+  let detectPythonEntrypoint: typeof import('../src/entrypoint').detectPythonEntrypoint;
+
+  beforeEach(async () => {
+    ({ detectPythonEntrypoint } = await import('../src/entrypoint'));
+  });
+
+  it('reports no Python files when directory is empty', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-empty-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(/No fastapi entrypoint found/i);
+    expect(result!.error!.link).toBe(fastapiEntrypointDocsUrl);
+
+    fs.removeSync(workPath);
+  });
+
+  it('links Django entrypoint errors to the Django guide', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-django-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const result = await detectPythonEntrypoint('django', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(/No django entrypoint found/i);
+    expect(result!.error!.link).toBe(djangoEntrypointDocsUrl);
+
+    fs.removeSync(workPath);
+  });
+
+  it('reports candidate file exists but lacks export', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-noexport-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(path.join(workPath, 'app.py'), 'x = 1\n');
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(
+      /Found app\.py but it does not define/i
+    );
+    expect(result!.error!.link).toBe(fastapiEntrypointDocsUrl);
+
+    fs.removeSync(workPath);
+  });
+
+  it('reports pyproject.toml scripts.app pointing to missing module', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-scripts-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'pyproject.toml'),
+      '[project.scripts]\napp = "mymod:app"\n'
+    );
+
+    const result = await detectPythonEntrypoint('flask', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(
+      /pyproject\.toml.*defines app.*mymod:app.*not found/i
+    );
+    expect(result!.error!.link).toBe(flaskEntrypointDocsUrl);
+
+    fs.removeSync(workPath);
+  });
+
+  it('missing export error takes priority over nearby files', async () => {
+    const workPath = path.join(tmpdir(), `python-diag-priority-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(path.join(workPath, 'app.py'), 'x = 1\n');
+    fs.writeFileSync(path.join(workPath, 'myapi.py'), 'app = 1\n');
+
+    const result = await detectPythonEntrypoint('fastapi', workPath);
+    expect(result?.error).toBeDefined();
+    expect(result!.error!.message).toMatch(
+      /Found app\.py but it does not define/i
+    );
+    expect(result!.error!.message).not.toMatch(/Found Python files/i);
+
+    fs.removeSync(workPath);
+  });
+});
+
+describe('detectEntrypoint (normalized)', () => {
+  let detectEntrypoint: typeof import('../src/entrypoint').detectEntrypoint;
+
+  beforeEach(async () => {
+    ({ detectEntrypoint } = await import('../src/entrypoint'));
+  });
+
+  it('encodes nested src/main.py with dot-notation module path', async () => {
+    const workPath = path.join(tmpdir(), `python-detect-nested-${Date.now()}`);
+    fs.mkdirSync(path.join(workPath, 'src'), { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'src', 'main.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectEntrypoint({ workPath, framework: 'fastapi' });
+    expect(result).toEqual({
+      kind: 'py-module:attr',
+      entrypoint: 'src.main:app',
+    });
+
+    fs.removeSync(workPath);
+  });
+
+  it('returns null when no entrypoint is discoverable', async () => {
+    const workPath = path.join(tmpdir(), `python-detect-empty-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+
+    const result = await detectEntrypoint({ workPath, framework: 'fastapi' });
+    expect(result).toBeNull();
+
+    fs.removeSync(workPath);
+  });
+
+  it('returns null for non-Python frameworks', async () => {
+    const workPath = path.join(tmpdir(), `python-detect-nonpy-${Date.now()}`);
+    fs.mkdirSync(workPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(workPath, 'main.py'),
+      'from fastapi import FastAPI\napp = FastAPI()\n'
+    );
+
+    const result = await detectEntrypoint({ workPath, framework: 'express' });
+    expect(result).toBeNull();
+
+    fs.removeSync(workPath);
   });
 });

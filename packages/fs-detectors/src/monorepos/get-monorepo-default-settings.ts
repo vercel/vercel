@@ -35,6 +35,18 @@ function supportsRootCommand(turboSemVer: string | undefined) {
   return !semver.intersects(turboSemVer, '<1.8.0');
 }
 
+function supportsFilter(turboSemVer: string | undefined) {
+  if (!turboSemVer) {
+    return true;
+  }
+
+  if (!semver.validRange(turboSemVer)) {
+    return true;
+  }
+
+  return !semver.intersects(turboSemVer, '<=1.1.0');
+}
+
 type MonorepoDefaultSettings = {
   buildCommand?: string | null;
   installCommand?: string | null;
@@ -113,9 +125,10 @@ export async function getMonorepoDefaultSettings(
     if (projectPath) {
       if (supportsRootCommand(turboSemVer)) {
         buildCommand = `turbo run build`;
-      } else {
-        // We don't know for sure if the local `turbo` supports inference.
+      } else if (supportsFilter(turboSemVer)) {
         buildCommand = `cd ${relativeToRoot} && turbo run build --filter={${projectPath}}...`;
+      } else {
+        buildCommand = `cd ${relativeToRoot} && turbo run build --scope=${projectName}`;
       }
     }
 

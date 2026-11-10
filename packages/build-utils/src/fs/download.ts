@@ -2,7 +2,14 @@ import path from 'path';
 import debug from '../debug';
 import FileFsRef from '../file-fs-ref';
 import { File, Files, Meta } from '../types';
-import { remove, mkdirp, readlink, symlink, chmod } from 'fs-extra';
+import {
+  remove,
+  mkdirp,
+  readlink,
+  readlinkSync,
+  symlink,
+  chmod,
+} from 'fs-extra';
 import streamToBuffer from './stream-to-buffer';
 
 export interface DownloadedFiles {
@@ -19,6 +26,37 @@ export function isDirectory(mode: number): boolean {
 
 export function isSymbolicLink(mode: number): boolean {
   return (mode & S_IFMT) === S_IFLNK;
+}
+
+export function isExternalSymlinkTarget(target: string): boolean {
+  return (
+    target.startsWith('../') ||
+    target.startsWith('..\\') ||
+    path.isAbsolute(target)
+  );
+}
+
+export function getSymlinkTarget(file: File): string | null {
+  if (!isSymbolicLink(file.mode)) {
+    return null;
+  }
+  if (file.type === 'FileFsRef') {
+    try {
+      return readlinkSync(file.fsPath);
+    } catch {
+      return null;
+    }
+  }
+  if (file.type === 'FileBlob') {
+    const { data } = file;
+    return typeof data === 'string' ? data : data.toString('utf8');
+  }
+  return null;
+}
+
+export function isExternalSymlink(file: File): boolean {
+  const target = getSymlinkTarget(file);
+  return target !== null && isExternalSymlinkTarget(target);
 }
 
 async function prepareSymlinkTarget(
@@ -63,7 +101,23 @@ export async function downloadFile(
   if (isSymbolicLink(mode)) {
     const target = await prepareSymlinkTarget(file, fsPath);
 
-    await symlink(target, fsPath);
+    try {
+      await symlink(target, fsPath);
+    } catch (err: any) {
+      if (err.code === 'EEXIST') {
+        // When using `--standalone` in a monorepo, multiple functions may
+        // try to write the same symlink to the shared output directory.
+        // This is by design, as we want to share the same symlink across all functions.
+        // If the existing symlink points to the same target, skip it.
+        const existingTarget = await readlink(fsPath);
+        if (existingTarget !== target) {
+          await remove(fsPath);
+          await symlink(target, fsPath);
+        }
+      } else {
+        throw err;
+      }
+    }
     return FileFsRef.fromFsPath({ mode, fsPath });
   }
 
@@ -121,7 +175,11 @@ export default async function download(
       for (let i = 1; i < parts.length; i++) {
         const dir = parts.slice(0, i).join('/');
         const parent = files[dir];
-        if (parent && isSymbolicLink(parent.mode)) {
+        if (
+          parent &&
+          isSymbolicLink(parent.mode) &&
+          !isExternalSymlink(parent)
+        ) {
           console.warn(
             `Warning: file "${name}" is within a symlinked directory "${dir}" and will be ignored`
           );

@@ -5,7 +5,10 @@ import {
   download,
   EdgeFunction,
   execCommand,
+  generateProjectManifest,
   getEnvForPackageManager,
+  getNodeVersion,
+  getReportedServiceType,
   getPrefixedEnvVars,
   glob,
   readConfigFile,
@@ -23,6 +26,9 @@ export const build: BuildV2 = async ({
   workPath,
   config,
   meta = {},
+  service,
+  diagnosticsValues,
+  span,
 }) => {
   const { installCommand, buildCommand } = config;
 
@@ -40,10 +46,19 @@ export const build: BuildV2 = async ({
   const mountpoint = dirname(entrypoint);
   const entrypointDir = join(workPath, mountpoint);
 
+  const nodeVersion = await getNodeVersion(
+    entrypointDir,
+    undefined,
+    config,
+    meta
+  );
+
   const {
     cliType,
+    lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointDir, true);
 
@@ -51,6 +66,8 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -73,6 +90,22 @@ export const build: BuildV2 = async ({
       { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
+    );
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath: entrypointDir,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: diagnosticsValues?.framework,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write hydrogen manifest: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 
@@ -144,7 +177,12 @@ export const build: BuildV2 = async ({
     regions: (() => {
       try {
         const project = new Project();
-        const config = getConfig(project, edgeFunctionFiles['index.js'].fsPath);
+        const config = getConfig(
+          project,
+          edgeFunctionFiles['index.js'].fsPath,
+          undefined,
+          span
+        );
         return config?.regions;
       } catch {
         return undefined;

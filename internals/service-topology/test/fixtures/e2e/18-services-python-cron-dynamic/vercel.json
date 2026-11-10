@@ -1,0 +1,18 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "experimentalServices": {
+    "web": {
+      "framework": "fastapi",
+      "entrypoint": "server.py",
+      "routePrefix": "/"
+    },
+    "scheduler": {
+      "type": "cron",
+      "entrypoint": "jobs.registry:crontab",
+      "schedule": "<dynamic>"
+    }
+  }
+}

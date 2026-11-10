@@ -1,0 +1,11 @@
+{
+  "name": "services-service-to-service-web",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "vite": "6.2.0"
+  }
+}

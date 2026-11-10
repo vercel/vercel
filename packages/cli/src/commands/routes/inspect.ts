@@ -1,49 +1,84 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { inspectSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   formatCondition,
   formatTransform,
   TRANSFORM_TYPE_LABELS,
+  withGlobalFlags,
 } from './shared';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
+import { outputAgentError } from '../../util/agent-output';
+import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
+  isTargetTransform,
+  type RouteVersion,
   type RoutingRule,
+  type Transform,
 } from '../../util/routes/types';
 
 export default async function inspect(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, inspectSubcommand);
+  const parsed = await parseSubcommandArgs(argv, inspectSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const { flags, args } = parsed;
   const teamId = org.type === 'team' ? org.id : undefined;
   const showDiff = flags['--diff'] as boolean | undefined;
+  const asJson = Boolean(flags['--json']);
 
   const identifier = args[0] === 'inspect' ? args[1] : args[0];
 
   if (!identifier) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.MISSING_ARGUMENTS,
+          message:
+            'Route name or ID is required. Pass a single route name or ID as the first argument after inspect.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes inspect <name-or-id>'),
+              when: 'replace <name-or-id> with route name or ID from routes list',
+            },
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to list routes and copy an exact name or id',
+            },
+          ],
+        },
+        2
+      );
+      return 2;
+    }
     output.error(
-      `Missing route name or ID. Usage: ${chalk.cyan(getCommandName('routes inspect <name-or-id>'))}`
+      `Missing route name or ID. Usage: ${chalk.cyan(withGlobalFlags(client, 'routes inspect <name-or-id>'))}`
     );
-    return 1;
+    return 2;
   }
 
   const inspectStamp = stamp();
-  output.spinner(
-    `Searching for route "${identifier}" in ${chalk.bold(project.name)}`
-  );
+  if (!asJson) {
+    output.spinner(
+      `Searching for route "${identifier}" in ${chalk.bold(project.name)}`
+    );
+  }
 
   // Fetch current routes (staging if exists, else production)
   const { routes } = await getRoutes(client, project.id, {
@@ -62,16 +97,62 @@ export default async function inspect(client: Client, argv: string[]) {
   if (exactMatch) {
     route = exactMatch;
   } else if (routes.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.NOT_FOUND,
+          message: `No route found matching "${identifier}".`,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to list routes and pick an exact name or id',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
+        withGlobalFlags(client, 'routes list')
       )} to see all routes.`
     );
     return 1;
   } else if (routes.length === 1) {
     route = routes[0];
   } else {
-    // Multiple matches - let user select
+    // Multiple matches - let user select (non-interactive must not prompt)
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: AGENT_STATUS.ERROR,
+          reason: AGENT_REASON.AMBIGUOUS_ROUTE,
+          message: `Multiple routes match "${identifier}" (${routes.length} matches). Pass an exact route name or ID; non-interactive mode cannot prompt for a choice.`,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'to see route names and ids, then inspect with a unique id',
+            },
+            {
+              command: withGlobalFlags(client, 'routes inspect <name-or-id>'),
+              when: 'retry with a single unique name or id',
+            },
+          ],
+        },
+        1
+      );
+      return 1;
+    }
+    if (asJson) {
+      output.error(
+        `Multiple routes match "${identifier}" (${routes.length} matches). Pass an exact route name or ID.`
+      );
+      return 1;
+    }
     output.log(
       `Found ${routes.length} routes matching "${identifier}" ${chalk.gray(inspectStamp())}`
     );
@@ -98,6 +179,17 @@ export default async function inspect(client: Client, argv: string[]) {
     route = selected;
   }
 
+  if (asJson) {
+    const productionRoute = showDiff
+      ? ((await getProductionRoute(client, project.id, teamId, route.id))
+          .route ?? null)
+      : undefined;
+    client.stdout.write(
+      `${JSON.stringify({ route, productionRoute }, null, 2)}\n`
+    );
+    return 0;
+  }
+
   output.log(
     `Route found in ${chalk.bold(project.name)} ${chalk.gray(inspectStamp())}`
   );
@@ -114,29 +206,39 @@ export default async function inspect(client: Client, argv: string[]) {
 // Diff mode
 // ---------------------------------------------------------------------------
 
+/** The live version, and the route with this ID in it, if either exists. */
+async function getProductionRoute(
+  client: Client,
+  projectId: string,
+  teamId: string | undefined,
+  routeId: string
+): Promise<{ version?: RouteVersion; route?: RoutingRule }> {
+  const { versions } = await getRouteVersions(client, projectId, { teamId });
+  const version = versions.find(v => v.isLive);
+  if (!version) {
+    return {};
+  }
+  const { routes } = await getRoutes(client, projectId, {
+    teamId,
+    versionId: version.id,
+  });
+  return { version, route: routes.find(r => r.id === routeId) };
+}
+
 async function showRouteDiff(
   client: Client,
   projectId: string,
   teamId: string | undefined,
   stagingRoute: RoutingRule
 ): Promise<number> {
-  // Find the production version
-  const { versions } = await getRouteVersions(client, projectId, { teamId });
-  const productionVersion = versions.find(v => v.isLive);
+  const { version: productionVersion, route: productionRoute } =
+    await getProductionRoute(client, projectId, teamId, stagingRoute.id);
 
   if (!productionVersion) {
     output.log('No production version found. Showing current route.');
     output.print(formatRouteDetails(stagingRoute));
     return 0;
   }
-
-  // Fetch production routes to find the same route
-  const { routes: productionRoutes } = await getRoutes(client, projectId, {
-    teamId,
-    versionId: productionVersion.id,
-  });
-
-  const productionRoute = productionRoutes.find(r => r.id === stagingRoute.id);
 
   if (!productionRoute) {
     // Route only exists in staging — it's new
@@ -402,15 +504,12 @@ function normalizeForComparison(rule: RoutingRule) {
   };
 }
 
-function transformKey(t: {
-  type: string;
-  op: string;
-  target: { key: unknown };
-}): string {
-  const key =
-    typeof t.target.key === 'string'
+function transformKey(t: Transform): string {
+  const key = isTargetTransform(t)
+    ? typeof t.target.key === 'string'
       ? t.target.key
-      : JSON.stringify(t.target.key);
+      : JSON.stringify(t.target.key)
+    : stringifyArgs(t.args);
   return `${t.type}:${t.op}:${key}`;
 }
 
@@ -424,17 +523,13 @@ function stringifyArgs(args: unknown): string {
 /**
  * Plain-text format for a transform (no chalk colors, for use with strikethrough).
  */
-function formatTransformPlain(transform: {
-  type: string;
-  op: string;
-  target: { key: string | Record<string, unknown> };
-  args?: string | string[];
-}): string {
+function formatTransformPlain(transform: Transform): string {
   const typeLabel = TRANSFORM_TYPE_LABELS[transform.type] ?? transform.type;
-  const key =
-    typeof transform.target.key === 'string'
+  const key = isTargetTransform(transform)
+    ? typeof transform.target.key === 'string'
       ? transform.target.key
-      : JSON.stringify(transform.target.key);
+      : JSON.stringify(transform.target.key)
+    : 'path';
   const parts = [`[${typeLabel}]`, transform.op, key];
   if (transform.args !== undefined && transform.op !== 'delete') {
     const argsStr = Array.isArray(transform.args)
@@ -522,12 +617,7 @@ function formatRouteDetails(rule: RoutingRule): string {
 
   // Group all header/transform operations by type
   const responseHeaderSets = Object.entries(rule.route.headers ?? {});
-  const allTransforms = (rule.route.transforms ?? []) as Array<{
-    type: string;
-    op: string;
-    target: { key: string | Record<string, unknown> };
-    args?: string | string[];
-  }>;
+  const allTransforms = (rule.route.transforms ?? []) as Transform[];
   const responseHeaderTransforms = allTransforms.filter(
     t => t.type === 'response.headers'
   );
@@ -536,6 +626,9 @@ function formatRouteDetails(rule: RoutingRule): string {
   );
   const requestQueryTransforms = allTransforms.filter(
     t => t.type === 'request.query'
+  );
+  const requestPathTransforms = allTransforms.filter(
+    t => t.type === 'request.path'
   );
 
   if (responseHeaderSets.length > 0 || responseHeaderTransforms.length > 0) {
@@ -561,6 +654,14 @@ function formatRouteDetails(rule: RoutingRule): string {
     lines.push('');
     lines.push(chalk.bold('  Request Query'));
     for (const t of requestQueryTransforms) {
+      lines.push(`  ${formatTransform(t, false)}`);
+    }
+  }
+
+  if (requestPathTransforms.length > 0) {
+    lines.push('');
+    lines.push(chalk.bold('  Request Path'));
+    for (const t of requestPathTransforms) {
       lines.push(`  ${formatTransform(t, false)}`);
     }
   }

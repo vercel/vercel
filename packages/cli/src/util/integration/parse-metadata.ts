@@ -6,7 +6,7 @@ import {
 } from './format-schema-help';
 import type { Metadata, MetadataSchema } from './types';
 
-export interface ParseMetadataResult {
+interface ParseMetadataResult {
   metadata: Metadata;
   errors: string[];
 }
@@ -51,7 +51,6 @@ export function parseMetadataFlags(
         errors.push(
           `Metadata "${key}" must be "true" or "false", got: "${value}"`
         );
-        continue;
       }
     } else if (propSchema.type === 'number') {
       if (value === '') {

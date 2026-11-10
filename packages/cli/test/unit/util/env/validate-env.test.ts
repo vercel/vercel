@@ -4,13 +4,23 @@ import {
   getEnvKeyWarnings,
   formatWarnings,
   hasOnlyWhitespaceWarnings,
+  normalizeStdinEnvValue,
+  parseSvelteKitPublicEnvVarPrefix,
   trimValue,
   getPublicPrefix,
+  getFrameworkPublicPrefix,
   removePublicPrefix,
   validateEnvValue,
 } from '../../../../src/util/env/validate-env';
 
 describe('validate-env', () => {
+  it('matches only the linked framework public prefix', () => {
+    expect(getFrameworkPublicPrefix('nuxtjs', 'NUXT_ENV_API_KEY')).toBe(
+      'NUXT_ENV_'
+    );
+    expect(getFrameworkPublicPrefix('nextjs', 'NUXT_ENV_API_KEY')).toBeNull();
+  });
+
   describe('getEnvValueWarnings', () => {
     it('returns no warnings for normal value', () => {
       expect(getEnvValueWarnings('normal-value')).toEqual([]);
@@ -23,23 +33,11 @@ describe('validate-env', () => {
       expect(warnings[0].requiresConfirmation).toBe(false);
     });
 
-    it('warns when value starts with tab', () => {
-      const warnings = getEnvValueWarnings('\tvalue');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe('starts with whitespace');
-    });
-
     it('warns when value ends with whitespace', () => {
       const warnings = getEnvValueWarnings('value ');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe('ends with whitespace');
       expect(warnings[0].requiresConfirmation).toBe(false);
-    });
-
-    it('warns when value ends with tab', () => {
-      const warnings = getEnvValueWarnings('value\t');
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0].message).toBe('ends with whitespace');
     });
 
     it('warns when value contains return character (\\r)', () => {
@@ -136,12 +134,6 @@ describe('validate-env', () => {
         expect(warnings[0].message).toBe('contains newlines');
       });
 
-      it('warns for multiline without trailing newline', () => {
-        const warnings = getEnvValueWarnings('line1\nline2');
-        expect(warnings).toHaveLength(1);
-        expect(warnings[0].message).toBe('contains newlines');
-      });
-
       it('does not treat single newline as empty', () => {
         const warnings = getEnvValueWarnings('\n');
         expect(warnings.map(w => w.message)).not.toContain('is empty');
@@ -158,7 +150,7 @@ describe('validate-env', () => {
       const warnings = getEnvKeyWarnings('NEXT_PUBLIC_API_URL');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
-        'NEXT_PUBLIC_ variables can be seen by anyone visiting your site'
+        '`NEXT_PUBLIC_` exposes this value to anyone visiting your site'
       );
       expect(warnings[0].requiresConfirmation).toBe(false);
     });
@@ -167,7 +159,7 @@ describe('validate-env', () => {
       const warnings = getEnvKeyWarnings('REACT_APP_API_URL');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
-        'REACT_APP_ variables can be seen by anyone visiting your site'
+        '`REACT_APP_` exposes this value to anyone visiting your site'
       );
     });
 
@@ -175,7 +167,7 @@ describe('validate-env', () => {
       const warnings = getEnvKeyWarnings('VITE_API_URL');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
-        'VITE_ variables can be seen by anyone visiting your site'
+        '`VITE_` exposes this value to anyone visiting your site'
       );
     });
 
@@ -183,7 +175,7 @@ describe('validate-env', () => {
       const warnings = getEnvKeyWarnings('VUE_APP_API_URL');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
-        'VUE_APP_ variables can be seen by anyone visiting your site'
+        '`VUE_APP_` exposes this value to anyone visiting your site'
       );
     });
 
@@ -191,7 +183,7 @@ describe('validate-env', () => {
       const warnings = getEnvKeyWarnings('GATSBY_API_URL');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
-        'GATSBY_ variables can be seen by anyone visiting your site'
+        '`GATSBY_` exposes this value to anyone visiting your site'
       );
     });
 
@@ -199,7 +191,7 @@ describe('validate-env', () => {
       const warnings = getEnvKeyWarnings('NUXT_ENV_API_URL');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
-        'NUXT_ENV_ variables can be seen by anyone visiting your site'
+        '`NUXT_ENV_` exposes this value to anyone visiting your site'
       );
     });
 
@@ -207,7 +199,7 @@ describe('validate-env', () => {
       const warnings = getEnvKeyWarnings('PUBLIC_API_URL');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
-        'PUBLIC_ variables can be seen by anyone visiting your site'
+        '`PUBLIC_` exposes this value to anyone visiting your site'
       );
     });
 
@@ -215,7 +207,7 @@ describe('validate-env', () => {
       const warnings = getEnvKeyWarnings('next_public_api_url');
       expect(warnings).toHaveLength(1);
       expect(warnings[0].message).toBe(
-        'NEXT_PUBLIC_ variables can be seen by anyone visiting your site'
+        '`NEXT_PUBLIC_` exposes this value to anyone visiting your site'
       );
     });
 
@@ -225,7 +217,7 @@ describe('validate-env', () => {
         const warnings = getEnvKeyWarnings('NEXT_PUBLIC_API_KEY');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The NEXT_PUBLIC_ prefix will make API_KEY visible to anyone visiting your site'
+          '`NEXT_PUBLIC_` exposes `NEXT_PUBLIC_API_KEY` to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -234,7 +226,7 @@ describe('validate-env', () => {
         const warnings = getEnvKeyWarnings('REACT_APP_PASSWORD');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The REACT_APP_ prefix will make PASSWORD visible to anyone visiting your site'
+          '`REACT_APP_` exposes `REACT_APP_PASSWORD` to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -243,7 +235,7 @@ describe('validate-env', () => {
         const warnings = getEnvKeyWarnings('VITE_SECRET');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The VITE_ prefix will make SECRET visible to anyone visiting your site'
+          '`VITE_` exposes `VITE_SECRET` to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -252,7 +244,7 @@ describe('validate-env', () => {
         const warnings = getEnvKeyWarnings('GATSBY_PRIVATE_KEY');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The GATSBY_ prefix will make PRIVATE_KEY visible to anyone visiting your site'
+          '`GATSBY_` exposes `GATSBY_PRIVATE_KEY` to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -261,7 +253,7 @@ describe('validate-env', () => {
         const warnings = getEnvKeyWarnings('NEXT_PUBLIC_ACCESS_TOKEN');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The NEXT_PUBLIC_ prefix will make ACCESS_TOKEN visible to anyone visiting your site'
+          '`NEXT_PUBLIC_` exposes `NEXT_PUBLIC_ACCESS_TOKEN` to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -270,7 +262,7 @@ describe('validate-env', () => {
         const warnings = getEnvKeyWarnings('NUXT_ENV_AUTH_TOKEN');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The NUXT_ENV_ prefix will make AUTH_TOKEN visible to anyone visiting your site'
+          '`NUXT_ENV_` exposes `NUXT_ENV_AUTH_TOKEN` to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -279,7 +271,7 @@ describe('validate-env', () => {
         const warnings = getEnvKeyWarnings('PUBLIC_JWT_SECRET');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The PUBLIC_ prefix will make JWT_SECRET visible to anyone visiting your site'
+          '`PUBLIC_` exposes `PUBLIC_JWT_SECRET` to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -288,7 +280,7 @@ describe('validate-env', () => {
         const warnings = getEnvKeyWarnings('VITE_SIGNATURE_KEY');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The VITE_ prefix will make SIGNATURE_KEY visible to anyone visiting your site'
+          '`VITE_` exposes `VITE_SIGNATURE_KEY` to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -297,7 +289,7 @@ describe('validate-env', () => {
         const warnings = getEnvKeyWarnings('REACT_APP_ACCESS_KEY');
         expect(warnings).toHaveLength(1);
         expect(warnings[0].message).toBe(
-          'The REACT_APP_ prefix will make ACCESS_KEY visible to anyone visiting your site'
+          '`REACT_APP_` exposes `REACT_APP_ACCESS_KEY` to anyone visiting your site'
         );
         expect(warnings[0].requiresConfirmation).toBe(true);
       });
@@ -660,6 +652,51 @@ describe('validate-env', () => {
 
       expect(opts.promptForValue).toHaveBeenCalledTimes(2);
       expect(result.finalValue).toBe('good');
+    });
+  });
+
+  describe('normalizeStdinEnvValue', () => {
+    it('strips a trailing newline from a single-line stdin value', () => {
+      expect(normalizeStdinEnvValue('my-api-key\n')).toEqual({
+        value: 'my-api-key',
+        strippedTrailingNewline: true,
+      });
+    });
+
+    it('preserves multiline stdin values', () => {
+      expect(normalizeStdinEnvValue('line1\nline2\n')).toEqual({
+        value: 'line1\nline2\n',
+        strippedTrailingNewline: false,
+      });
+    });
+  });
+
+  describe('parseSvelteKitPublicEnvVarPrefix', () => {
+    it.each([
+      ["kit: { env: { publicPrefix: 'BROWSER_' } }", 'BROWSER_'],
+      ['kit: { env: { publicPrefix: "CLIENT_" } }', 'CLIENT_'],
+      ['kit: { env: { publicPrefix: `WEB_` } }', 'WEB_'],
+      ["kit: { env: { publicPrefix: '' } }", ''],
+    ])('reads a static prefix from %s', (config, prefix) => {
+      expect(parseSvelteKitPublicEnvVarPrefix(config)).toEqual({
+        status: 'ready',
+        prefix,
+      });
+    });
+
+    it('uses the SvelteKit default when publicPrefix is absent', () => {
+      expect(parseSvelteKitPublicEnvVarPrefix('export default {}')).toEqual({
+        status: 'ready',
+        prefix: null,
+      });
+    });
+
+    it('does not guess a dynamic prefix', () => {
+      expect(
+        parseSvelteKitPublicEnvVarPrefix(
+          'export default { kit: { env: { publicPrefix } } }'
+        )
+      ).toEqual({ status: 'unavailable' });
     });
   });
 });

@@ -1,24 +1,29 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { enableSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
   resolveRoute,
   offerAutoPromote,
+  withGlobalFlags,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import editRoute from '../../util/routes/edit-route';
 import stamp from '../../util/output/stamp';
-import { getCommandName } from '../../util/pkg-name';
 
 export default async function enable(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, enableSubcommand);
+  const parsed = await parseSubcommandArgs(argv, enableSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
@@ -27,10 +32,31 @@ export default async function enable(client: Client, argv: string[]) {
   const identifier = args[0];
 
   if (!identifier) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'missing_arguments',
+          message: 'Route name or ID is required.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes enable <name-or-id>'),
+              when: 'replace <name-or-id>',
+            },
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'list routes',
+            },
+          ],
+        },
+        2
+      );
+    }
     output.error(
-      `Route name or ID is required. Usage: ${getCommandName('routes enable <name-or-id>')}`
+      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes enable <name-or-id>')}`
     );
-    return 1;
+    return 2;
   }
 
   // Check for existing staging version (for auto-promote logic)
@@ -43,6 +69,23 @@ export default async function enable(client: Client, argv: string[]) {
   output.stopSpinner();
 
   if (routes.length === 0) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: 'No routes found in this project.',
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes add --help'),
+              when: 'add routes first',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error('No routes found in this project.');
     return 1;
   }
@@ -50,9 +93,26 @@ export default async function enable(client: Client, argv: string[]) {
   // Resolve the route
   const route = await resolveRoute(client, routes, identifier);
   if (!route) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'not_found',
+          message: `No route found matching "${identifier}".`,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list'),
+              when: 'list routes',
+            },
+          ],
+        },
+        1
+      );
+    }
     output.error(
       `No route found matching "${identifier}". Run ${chalk.cyan(
-        getCommandName('routes list')
+        withGlobalFlags(client, 'routes list')
       )} to see all routes.`
     );
     return 1;
@@ -101,6 +161,17 @@ export default async function enable(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'api_error',
+          message: error.message || 'Failed to enable route',
+        },
+        1
+      );
+    }
     output.error(error.message || 'Failed to enable route');
     return 1;
   }

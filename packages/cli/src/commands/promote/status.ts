@@ -11,7 +11,7 @@ import formatDate from '../../util/format-date';
 import getDeployment from '../../util/get-deployment';
 import { packageName } from '../../util/pkg-name';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import ms from 'ms';
 import { ProjectNotFound } from '../../util/errors-ts';
 import renderAliasStatus from '../../util/alias/render-alias-status';
@@ -67,7 +67,7 @@ export default async function promoteStatus({
     : `Checking promotion status of ${project.name}`;
 
   if (!contextName) {
-    ({ contextName } = await getScope(client));
+    contextName = await getContextName(client);
   }
 
   try {
@@ -205,7 +205,7 @@ async function renderJobFailed({
     output.error(
       `Failed to remap all aliases to the requested deployment ${name} (${toDeploymentId})`
     );
-  } catch (e) {
+  } catch (_e) {
     output.error(
       `Failed to remap all aliases to the requested deployment ${toDeploymentId}`
     );

@@ -7,7 +7,9 @@ import {
   execCommand,
   FileBlob,
   FileFsRef,
+  generateProjectManifest,
   getEnvForPackageManager,
+  getReportedServiceType,
   getNodeVersion,
   glob,
   EdgeFunction,
@@ -81,6 +83,9 @@ export const build: BuildV2 = async ({
   repoRootPath,
   config,
   meta = {},
+  service,
+  diagnosticsValues,
+  span,
 }) => {
   const { installCommand, buildCommand } = config;
 
@@ -103,6 +108,7 @@ export const build: BuildV2 = async ({
     lockfileVersion,
     lockfilePath,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
@@ -120,6 +126,8 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -142,6 +150,22 @@ export const build: BuildV2 = async ({
       { env: spawnEnv },
       meta,
       config.projectSettings?.createdAt
+    );
+  }
+
+  try {
+    await generateProjectManifest({
+      workPath: entrypointFsDirname,
+      nodeVersion,
+      cliType,
+      lockfilePath,
+      lockfileVersion,
+      framework: diagnosticsValues?.framework,
+      serviceType: service ? getReportedServiceType(service) : undefined,
+    });
+  } catch (err) {
+    debug(
+      `Failed to write remix manifest: ${err instanceof Error ? err.message : String(err)}`
     );
   }
 
@@ -187,7 +211,7 @@ export const build: BuildV2 = async ({
   >();
   for (const route of remixRoutes) {
     const routePath = join(remixConfig.appDirectory, route.file);
-    let staticConfig = getConfig(project, routePath);
+    let staticConfig = getConfig(project, routePath, undefined, span);
     if (staticConfig && isHydrogen2) {
       console.log(
         'WARN: `export const config` is currently not supported for Hydrogen v2 apps'
@@ -465,7 +489,7 @@ module.exports = config;`;
       if (lockfilePath && lockfileRaw) {
         cleanupOps.push(
           fs
-            .writeFile(lockfilePath, lockfileRaw)
+            .writeFile(lockfilePath, Uint8Array.from(lockfileRaw))
             .then(() => debug(`Restored original "${lockfilePath}" file`))
         );
       }
@@ -616,7 +640,11 @@ module.exports = config;`;
     continue: true,
   });
 
-  return { routes, output, framework: { version: remixVersion } };
+  return {
+    routes,
+    output,
+    framework: { slug: 'remix', version: remixVersion },
+  };
 };
 
 function hasScript(scriptName: string, pkg: PackageJson | null) {

@@ -14,8 +14,14 @@ import { packageName } from '../../util/pkg-name';
 import { removeIntegration } from '../../util/integration/remove-integration';
 import { removeSubcommand } from './command';
 import { IntegrationRemoveTelemetryClient } from '../../util/telemetry/commands/integration/remove';
+import {
+  buildCommandWithGlobalFlags,
+  outputAgentError,
+  shouldEmitNonInteractiveCommandError,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 
-export async function remove(client: Client) {
+export async function remove(client: Client, argv: string[]) {
   const telemetry = new IntegrationRemoveTelemetryClient({
     opts: {
       store: client.telemetryEventStore,
@@ -26,16 +32,16 @@ export async function remove(client: Client) {
   const flagsSpecification = getFlagsSpecification(removeSubcommand.options);
 
   try {
-    parsedArguments = parseArguments(client.argv.slice(3), flagsSpecification);
+    parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -45,8 +51,8 @@ export async function remove(client: Client) {
   telemetry.trackCliOptionFormat(parsedArguments.flags['--format']);
 
   if (asJson && !skipConfirmation) {
-    output.error('--format=json requires --yes to skip confirmation prompts');
-    return 1;
+    output.error('--json requires --yes to skip confirmation prompts');
+    return 2;
   }
 
   const { team } = await getScope(client);
@@ -56,19 +62,73 @@ export async function remove(client: Client) {
   }
   client.config.currentTeam = team.id;
 
-  const isMissingResourceOrIntegration = parsedArguments.args.length < 2;
-  if (isMissingResourceOrIntegration) {
-    output.error('You must specify an integration. See `--help` for details.');
-    return 1;
+  const isMissingIntegrationSlug = parsedArguments.args.length < 1;
+  if (isMissingIntegrationSlug) {
+    const message =
+      'You must specify an integration. See `--help` for details.';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.MISSING_ARGUMENTS,
+        message,
+        hint: `Put global options (\`--cwd\`, \`--non-interactive\`, etc.) first, then \`integration remove <slug> --yes\`. Replace \`<slug>\` with your integration; non-interactive removal requires \`--yes\`.`,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration installations',
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: 'List integration slugs for this team',
+          },
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration remove <slug> --yes',
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: 'Substitute your integration slug for <slug> (angle brackets are not part of the command)',
+          },
+        ],
+      },
+      2
+    );
+    output.error(message);
+    return 2;
   }
 
-  const hasTooManyArguments = parsedArguments.args.length > 2;
+  const hasTooManyArguments = parsedArguments.args.length > 1;
   if (hasTooManyArguments) {
-    output.error('Cannot specify more than one integration at a time.');
-    return 1;
+    const message = 'Cannot specify more than one integration at a time.';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message,
+        hint: `Use one slug only: \`${packageName} [global options] integration remove <slug> --yes\`. Global options belong before \`integration\`.`,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'integration remove <slug> --yes',
+              packageName,
+              { prependGlobalFlags: true }
+            ),
+            when: 'Single slug in place of <slug>; keep one integration remove invocation',
+          },
+        ],
+      },
+      2
+    );
+    output.error(message);
+    return 2;
   }
 
-  const integrationName = parsedArguments.args[1];
+  const integrationName = parsedArguments.args[0];
 
   output.spinner('Retrieving integration…', 500);
   const integrationConfiguration = await getFirstConfiguration(
@@ -105,7 +165,7 @@ export async function remove(client: Client) {
   }
 
   try {
-    output.spinner('Uninstalling integration…', 1000);
+    output.spinner('Removing integration…', 1000);
     await removeIntegration(client, integrationConfiguration);
   } catch (error) {
     if (
@@ -131,30 +191,56 @@ export async function remove(client: Client) {
         // Ignore errors fetching resources; the actionable guidance below is still useful.
       }
 
-      if (asJson) {
+      const emitStructuredHasResources =
+        asJson || shouldEmitNonInteractiveCommandError(client);
+
+      if (emitStructuredHasResources) {
         output.stopSpinner();
-        client.stdout.write(
-          `${JSON.stringify(
-            {
-              integration: integrationName,
-              removed: false,
-              error: 'has_resources',
-              message: `Cannot uninstall ${integrationName} because it still has resources.`,
-              resources: resourceNames,
-              next: resourceNames.map(name => ({
-                command: `${packageName} integration-resource remove ${name} --disconnect-all --yes --format=json`,
-              })),
-              retry: `${packageName} integration remove ${integrationName} --yes --format=json`,
-            },
-            null,
-            2
-          )}\n`
-        );
+        const approvalHint =
+          'Delete each resource with --disconnect-all (non-interactive: include --yes). Get user approval before deleting resources.';
+        const resourceTail = asJson
+          ? '--disconnect-all --yes --json'
+          : '--disconnect-all --yes';
+        const integrationRemoveTail = asJson ? `--yes --json` : '--yes';
+        /** Template already includes `--yes`; omit it from prepended globals to avoid duplicates. */
+        const suggestNextOpts = {
+          prependGlobalFlags: true as const,
+          excludeFlags: ['--yes', '-y'],
+        };
+        const payload = {
+          status: 'error' as const,
+          reason: AGENT_REASON.HAS_RESOURCES,
+          integration: integrationName,
+          removed: false,
+          error: 'has_resources',
+          message: `Cannot remove ${integrationName} because it still has resources.`,
+          resources: resourceNames,
+          hint: client.isAgent
+            ? `${approvalHint} Agents must obtain explicit user approval before running integration resource delete.`
+            : approvalHint,
+          userActionRequired: client.isAgent ? true : undefined,
+          next: resourceNames.map(name => ({
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              `integration resource delete ${name} ${resourceTail}`,
+              packageName,
+              suggestNextOpts
+            ),
+            when: `Disconnect and remove resource ${name}; substitute the real resource name if different`,
+          })),
+          retry: buildCommandWithGlobalFlags(
+            client.argv,
+            `integration remove ${integrationName} ${integrationRemoveTail}`,
+            packageName,
+            suggestNextOpts
+          ),
+        };
+        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
         return 1;
       }
 
       output.error(
-        `Cannot uninstall ${chalk.bold(integrationName)} because it still has resources.`
+        `Cannot remove ${chalk.bold(integrationName)} because it still has resources.`
       );
 
       if (resourceNames.length > 0) {
@@ -172,7 +258,7 @@ export async function remove(client: Client) {
         );
       }
       output.log(
-        `Remove and disconnect all resources first with: ${chalk.cyan(`${packageName} integration-resource remove <resource-name> --disconnect-all`)}`
+        `Delete and disconnect all resources first with: ${chalk.cyan(`${packageName} integration resource delete <resource-name> --disconnect-all`)}`
       );
       output.log(
         `Then retry: ${chalk.cyan(`${packageName} integration remove ${integrationName}`)}`

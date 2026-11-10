@@ -62,14 +62,14 @@ async function* postDeployment(
         }),
         apiUrl: clientOptions.apiUrl,
         userAgent: clientOptions.userAgent,
-        agent: clientOptions.agent,
+        dispatcher: clientOptions.dispatcher,
       }
     );
 
     let deployment = undefined;
     try {
       deployment = await response.json();
-    } catch (error) {
+    } catch (_error) {
       throw new Error('Invalid JSON response');
     }
 

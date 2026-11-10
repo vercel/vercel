@@ -15,6 +15,15 @@ export class BlobListTelemetryClient
     }
   }
 
+  trackCliOptionNext(next: string | undefined) {
+    if (next) {
+      this.trackCliOption({
+        option: 'next',
+        value: next,
+      });
+    }
+  }
+
   trackCliOptionCursor(cursor: string | undefined) {
     if (cursor) {
       this.trackCliOption({
@@ -39,6 +48,12 @@ export class BlobListTelemetryClient
         option: 'mode',
         value: mode,
       });
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
     }
   }
 }

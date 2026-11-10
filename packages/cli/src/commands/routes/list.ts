@@ -1,19 +1,28 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 import type Client from '../../util/client';
+import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { listSubcommand } from './command';
 import {
   parseSubcommandArgs,
-  ensureProjectLink,
+  findVersionById,
   formatCondition,
   formatTransform,
+  withGlobalFlags,
 } from './shared';
+import { outputAgentError } from '../../util/agent-output';
+import { getTypedOptionName } from '../../util/get-args';
+import { getFlagsSpecification } from '../../util/get-flags-specification';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 import getRoutes from '../../util/routes/get-routes';
 import getRouteVersions from '../../util/routes/get-route-versions';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
-import { getCommandName } from '../../util/pkg-name';
 import {
   getRouteTypeLabel,
   getSrcSyntaxLabel,
@@ -23,21 +32,51 @@ import {
 } from '../../util/routes/types';
 
 export default async function list(client: Client, argv: string[]) {
-  const parsed = await parseSubcommandArgs(argv, listSubcommand);
+  const parsed = await parseSubcommandArgs(argv, listSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await ensureProjectLink(client);
+  const asJson = Boolean(parsed.flags['--json']);
+  const spec = getFlagsSpecification(listSubcommand.options);
+  const query = getRenamedOption(parsed.flags, '--query', '--search', {
+    json: asJson,
+    typedName: getTypedOptionName(argv, spec, '--search'),
+  });
+  if ('error' in query) {
+    return reportRenamedOptionError(client, query.error, { json: asJson });
+  }
+  const type = getRenamedOption(parsed.flags, '--type', '--filter', {
+    json: asJson,
+    typedName: getTypedOptionName(argv, spec, '--filter'),
+  });
+  if ('error' in type) {
+    return reportRenamedOptionError(client, type.error, { json: asJson });
+  }
+  const routesVersion = getRenamedOption(
+    parsed.flags,
+    '--routes-version',
+    '--version-id',
+    { json: asJson }
+  );
+  if ('error' in routesVersion) {
+    return reportRenamedOptionError(client, routesVersion.error, {
+      json: asJson,
+    });
+  }
+
+  const link = await requireProjectContext(
+    client,
+    'routes',
+    parsed.flags['--project']
+  );
   if (typeof link === 'number') return link;
 
   const { project, org } = link;
   const { flags } = parsed;
   const teamId = org.type === 'team' ? org.id : undefined;
-  const search = flags['--search'] as string | undefined;
-  const filter = flags['--filter'] as RouteType | undefined;
-  const page = flags['--page'] as number | undefined;
-  const perPage = flags['--per-page'] as number | undefined;
-  const staging = flags['--staging'] as boolean | undefined;
-  const versionIdFlag = flags['--version'] as string | undefined;
+  const search = query.value;
+  const filter = type.value as RouteType | undefined;
+  const production = flags['--production'] as boolean | undefined;
+  const versionIdFlag = routesVersion.value;
   const diffFlag = flags['--diff'] as boolean | undefined;
   const expand = flags['--expand'] as boolean | undefined;
 
@@ -50,75 +89,150 @@ export default async function list(client: Client, argv: string[]) {
       'transform',
     ];
     if (!validFilters.includes(filter)) {
-      output.error(
-        `Invalid filter type "${filter}". Valid types: ${validFilters.join(', ')}`
-      );
-      return 1;
+      const msg = `Invalid filter type "${filter}". Valid types: ${validFilters.join(', ')}`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: msg,
+          next: [{ command: withGlobalFlags(client, 'routes list') }],
+        });
+        process.exit(1);
+      }
+      output.error(msg);
+      return 2;
     }
   }
 
-  // Check for conflicting flags early
-  if (staging && versionIdFlag) {
-    output.error('Cannot use both --staging and --version flags together');
-    return 1;
+  if (production && versionIdFlag) {
+    const msg =
+      'Cannot use both --production and --routes-version options together';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: msg,
+        next: [{ command: withGlobalFlags(client, 'routes list') }],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
+    return 2;
+  }
+
+  if (production && diffFlag) {
+    const msg =
+      'Cannot use both --production and --diff options together. --diff compares staged changes against production.';
+    if (client.nonInteractive) {
+      outputAgentError(client, {
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: msg,
+        next: [{ command: withGlobalFlags(client, 'routes list --diff') }],
+      });
+      process.exit(1);
+    }
+    output.error(msg);
+    return 2;
   }
 
   let versionId: string | undefined;
   let versionName: string | undefined;
-
   let useDiff = false;
 
-  if (staging) {
-    output.spinner('Fetching staging version');
+  if (production) {
+    if (!asJson) output.spinner('Fetching production version');
+    const { versions } = await getRouteVersions(client, project.id, {
+      teamId,
+    });
+    const productionVersion = versions.find(v => !v.isStaging);
+
+    if (!productionVersion) {
+      const msg = `No production version found for ${project.name}.`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'not_found',
+          message: msg,
+          next: [{ command: withGlobalFlags(client, 'routes list') }],
+        });
+        process.exit(1);
+      }
+      output.error(
+        `No production version found for ${chalk.bold(project.name)}.`
+      );
+      return 1;
+    }
+
+    versionId = productionVersion.id;
+    versionName = productionVersion.id;
+  }
+
+  if (diffFlag && !versionIdFlag) {
+    // --diff without --routes-version: diff staging against production
+    if (!asJson) output.spinner('Fetching staging version');
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
     });
     const stagingVersion = versions.find(v => v.isStaging);
 
     if (!stagingVersion) {
+      const msg = `No staged changes to diff. Run ${withGlobalFlags(client, 'routes add')} or ${withGlobalFlags(client, 'routes update')} to make changes.`;
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'not_found',
+          message: msg,
+          next: [
+            { command: withGlobalFlags(client, 'routes list') },
+            { command: withGlobalFlags(client, 'routes add') },
+          ],
+        });
+        process.exit(1);
+      }
       output.error(
-        `No staging version found for ${chalk.bold(project.name)}. Run ${chalk.cyan(
-          getCommandName('routes list-versions')
-        )} to see available versions.`
+        `No staged changes to diff. Run ${chalk.cyan(withGlobalFlags(client, 'routes add'))} or ${chalk.cyan(withGlobalFlags(client, 'routes update'))} to make changes.`
       );
       return 1;
     }
 
     versionId = stagingVersion.id;
     versionName = stagingVersion.id;
-
-    // Enable diff mode when viewing staging without search/filter/page
-    if (!search && !filter && !page) {
-      useDiff = diffFlag !== false; // Default to diff unless explicitly disabled
-    }
+    useDiff = true;
   }
 
   if (versionIdFlag) {
-    output.spinner('Fetching version');
+    if (!asJson) output.spinner('Fetching version');
     const { versions } = await getRouteVersions(client, project.id, {
       teamId,
     });
-    const version = versions.find(v => v.id === versionIdFlag);
+    const result = findVersionById(client, versions, versionIdFlag);
 
-    if (!version) {
-      output.error(
-        `Version "${versionIdFlag}" not found. Run ${chalk.cyan(
-          getCommandName('routes list-versions')
-        )} to see available versions.`
-      );
+    if (result.error || !result.version) {
+      const msg = result.error ?? 'Version not found';
+      if (client.nonInteractive) {
+        outputAgentError(client, {
+          status: 'error',
+          reason: 'not_found',
+          message: msg,
+          next: [
+            {
+              command: withGlobalFlags(client, 'routes list-versions'),
+            },
+          ],
+        });
+        process.exit(1);
+      }
+      output.error(msg);
       return 1;
     }
 
-    versionId = version.id;
-    versionName = version.id;
-  }
+    versionId = result.version.id;
+    versionName = result.version.id;
 
-  // If --diff flag is explicitly set without --staging, show error
-  if (diffFlag && !staging && !versionIdFlag) {
-    output.error(
-      'The --diff flag requires --staging or --version to compare against production'
-    );
-    return 1;
+    if (diffFlag) {
+      useDiff = true;
+    }
   }
 
   const lsStamp = stamp();
@@ -133,17 +247,30 @@ export default async function list(client: Client, argv: string[]) {
   if (filter) {
     spinnerMessage += ` filtered by ${filter}`;
   }
-  output.spinner(spinnerMessage);
+  if (!asJson) output.spinner(spinnerMessage);
 
   const { routes, version, limit } = await getRoutes(client, project.id, {
     teamId,
     search,
     filter,
-    page,
-    perPage,
     versionId,
     diff: useDiff,
   });
+
+  if (asJson) {
+    client.stdout.write(
+      `${JSON.stringify(
+        withWarnings({ routes, version, limit: limit ?? null }, [
+          query.warning,
+          type.warning,
+          routesVersion.warning,
+        ]),
+        null,
+        2
+      )}\n`
+    );
+    return 0;
+  }
 
   if (useDiff) {
     const added = routes.filter(r => r.action === '+');

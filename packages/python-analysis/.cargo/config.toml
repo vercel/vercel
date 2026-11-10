@@ -1,0 +1,5 @@
+[target.wasm32-wasip2]
+# Cargo runs the test runner from the package directory (e.g. crates/idna-stub/).
+# The wasm binary path is absolute, so the runner derives the workspace root from it.
+# All test packages live under crates/*, hence ../../ reaches the workspace root.
+runner = ["node", "--no-warnings=ExperimentalWarning", "--experimental-strip-types", "../../tests/wasm-test-runner.mjs"]

@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun"],
+    "lib": ["ES2022", "DOM"],
+    "paths": {
+      "#*": ["./src/*"],
+      "@repro/data/*": ["../data/src/*"],
+      "@repro/shared/*": ["../shared/src/*"]
+    }
+  },
+  "include": ["src/**/*"]
+}

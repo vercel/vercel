@@ -1,12 +1,27 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { getExitCodeForReason } from '../../../src/util/agent-output-constants';
 import {
   isActionRequiredPayload,
   outputActionRequired,
+  outputAgentError,
+  argvHasNonInteractive,
+  exitWithNonInteractiveError,
   buildCommandWithScope,
   buildCommandWithYes,
+  buildCommandWithGlobalFlags,
+  getGlobalFlagsFromArgv,
+  getPreservedArgsForEnvAdd,
+  getPreservedArgsForEnvPull,
+  getPreservedArgsForEnvRm,
+  getPreservedArgsForEnvUpdate,
+  redactEnvValueArgs,
+  buildEnvAddCommandWithPreservedArgs,
+  buildEnvRmCommandWithPreservedArgs,
+  buildEnvUpdateCommandWithPreservedArgs,
   enrichActionRequiredWithInvokingCommand,
   type ActionRequiredPayload,
 } from '../../../src/util/agent-output';
+import { APIError, LinkRequiredError } from '../../../src/util/errors-ts';
 import type Client from '../../../src/util/client';
 
 describe('isActionRequiredPayload', () => {
@@ -86,7 +101,6 @@ describe('outputActionRequired', () => {
     reason: 'missing_scope',
   };
   let exitSpy: { mockRestore: () => void };
-  let logSpy: { mockRestore: () => void };
 
   beforeEach(() => {
     exitSpy = vi
@@ -94,35 +108,176 @@ describe('outputActionRequired', () => {
       .mockImplementation((() => {}) as () => never) as unknown as {
       mockRestore: () => void;
     };
-    logSpy = vi
-      .spyOn(console, 'log')
-      .mockImplementation(() => {}) as unknown as { mockRestore: () => void };
   });
 
   afterEach(() => {
     exitSpy.mockRestore();
-    logSpy.mockRestore();
   });
 
   it('does nothing when client.nonInteractive is false', () => {
-    const client = { nonInteractive: false } as Client;
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: false,
+      stdout: { write: stdoutWrite },
+      argv: ['/node', '/vc.js', 'deploy'],
+    } as unknown as Client;
+
     outputActionRequired(client, payload);
-    expect(logSpy).not.toHaveBeenCalled();
+    expect(stdoutWrite).not.toHaveBeenCalled();
     expect(exitSpy).not.toHaveBeenCalled();
   });
 
   it('logs JSON and exits with default code when client.nonInteractive is true', () => {
-    const client = { nonInteractive: true } as Client;
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+      argv: ['/node', '/vc.js', 'deploy'],
+    } as unknown as Client;
+
     outputActionRequired(client, payload);
-    expect(logSpy).toHaveBeenCalledTimes(1);
-    expect(logSpy).toHaveBeenCalledWith(JSON.stringify(payload, null, 2));
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const written = String(stdoutWrite.mock.calls[0][0]);
+    const parsed = JSON.parse(written);
+    expect(parsed.status).toBe('action_required');
+    expect(parsed.message).toBe(payload.message);
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it('logs JSON when argv includes --non-interactive even if client.nonInteractive is false', () => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: false,
+      stdout: { write: stdoutWrite },
+      argv: ['/node', '/vc.js', 'deploy', '--non-interactive'],
+    } as unknown as Client;
+
+    outputActionRequired(client, payload);
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(stdoutWrite.mock.calls[0][0])).status).toBe(
+      'action_required'
+    );
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
   it('exits with custom exitCode when provided', () => {
-    const client = { nonInteractive: true } as Client;
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+      argv: ['/node', '/vc.js', 'deploy'],
+    } as unknown as Client;
+
     outputActionRequired(client, payload, 2);
     expect(exitSpy).toHaveBeenCalledWith(2);
+  });
+});
+
+describe('outputAgentError', () => {
+  const errorPayload = {
+    status: 'error' as const,
+    reason: 'test_reason',
+    message: 'Something went wrong',
+  };
+
+  let exitSpy: { mockRestore: () => void };
+
+  beforeEach(() => {
+    exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as () => never) as unknown as {
+      mockRestore: () => void;
+    };
+  });
+
+  afterEach(() => {
+    exitSpy.mockRestore();
+  });
+
+  it('does nothing when client.nonInteractive is false', () => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: false,
+      stdout: { write: stdoutWrite },
+    } as unknown as Client;
+
+    outputAgentError(client, errorPayload);
+    expect(stdoutWrite).not.toHaveBeenCalled();
+    expect(exitSpy).not.toHaveBeenCalled();
+  });
+
+  it('writes JSON and exits when client.nonInteractive is true', () => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+    } as unknown as Client;
+
+    outputAgentError(client, errorPayload, 3);
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const written = String(stdoutWrite.mock.calls[0][0]);
+    const parsed = JSON.parse(written);
+    expect(parsed.status).toBe('error');
+    expect(parsed.reason).toBe('test_reason');
+    expect(parsed.message).toBe('Something went wrong');
+    expect(exitSpy).toHaveBeenCalledWith(3);
+  });
+
+  it.each([
+    ['invalid_arguments', 2],
+    ['missing_arguments', 2],
+    ['unknown_command', 2],
+    ['api_error', 1],
+    ['not_found', 1],
+    ['test_reason', 1],
+  ])('exits by default with the code for the %s reason', (reason, code) => {
+    const client = {
+      nonInteractive: true,
+      stdout: { write: vi.fn() },
+    } as unknown as Client;
+
+    outputAgentError(client, { ...errorPayload, reason });
+    expect(exitSpy).toHaveBeenCalledWith(code);
+  });
+
+  it.each([
+    true,
+    false,
+  ])('includes feedback only for agents (isAgent=%s)', isAgent => {
+    const stdoutWrite = vi.fn();
+    const client = {
+      isAgent,
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+    } as unknown as Client;
+
+    outputAgentError(client, errorPayload);
+
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const written = JSON.parse(stdoutWrite.mock.calls[0][0] as string);
+    expect(written).toMatchObject(errorPayload);
+    if (isAgent) {
+      expect(written.feedback).toEqual({
+        message:
+          "Please send one brief feedback report about this error while helping the user resolve it. Don't delay the user's request for feedback.",
+        command:
+          "Run the 'vercel feedback --help' command to see how to report feedback. Make sure all feedback, including text copied from errors or logs, excludes personal data, account identifiers (e.g., usernames, team IDs, project names), and secrets (e.g., API keys, tokens, env values, credentials).",
+      });
+    } else {
+      expect(written).not.toHaveProperty('feedback');
+    }
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+});
+
+describe('getExitCodeForReason', () => {
+  it('returns 2 for usage errors and 1 for every other failure', () => {
+    expect(getExitCodeForReason('invalid_arguments')).toBe(2);
+    expect(getExitCodeForReason('missing_name')).toBe(2);
+    expect(getExitCodeForReason('login_required')).toBe(1);
+    expect(getExitCodeForReason('invalid_cron_expression')).toBe(1);
+    expect(getExitCodeForReason(undefined)).toBe(1);
   });
 });
 
@@ -140,6 +295,32 @@ describe('buildCommandWithYes', () => {
   it('keeps existing -y when present', () => {
     const argv = ['/node', '/vc.js', 'deploy', '-y'];
     expect(buildCommandWithYes(argv)).toBe('vercel deploy -y');
+  });
+
+  it('removes --token from suggested command', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token', 'secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+
+  it('removes bare --token value even when it starts with a dash', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token', '-secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+
+  it('removes --token=<value> from suggested command', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '--token=secret-token'];
+    expect(buildCommandWithYes(argv)).toBe('vercel deploy --yes');
+  });
+});
+
+describe('redactEnvValueArgs', () => {
+  it('redacts separated and inline Environment Variable values', () => {
+    expect(
+      redactEnvValueArgs(['env', 'update', 'API_KEY', '--value', 'secret'])
+    ).toEqual(['env', 'update', 'API_KEY', '--value', '"<value>"']);
+    expect(
+      redactEnvValueArgs(['env', 'update', 'API_KEY', '--value=secret'])
+    ).toEqual(['env', 'update', 'API_KEY', '--value="<value>"']);
   });
 });
 
@@ -192,6 +373,27 @@ describe('buildCommandWithScope', () => {
       'vercel deploy --scope new-team'
     );
   });
+
+  it('strips token flags before adding scope', () => {
+    const argv = [
+      '/node',
+      '/vc.js',
+      'deploy',
+      '--token',
+      'secret-token',
+      '--yes',
+    ];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --yes --scope new-team'
+    );
+  });
+
+  it('strips shorthand token value when it starts with a dash', () => {
+    const argv = ['/node', '/vc.js', 'deploy', '-t', '-secret-token', '--yes'];
+    expect(buildCommandWithScope(argv, 'new-team')).toBe(
+      'vercel deploy --yes --scope new-team'
+    );
+  });
 });
 
 describe('enrichActionRequiredWithInvokingCommand', () => {
@@ -199,6 +401,7 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     const payload: ActionRequiredPayload = {
       status: 'action_required',
       message: 'Choose scope.',
+      reason: 'missing_scope',
       choices: [
         { id: 'team_1', name: 'team-a' },
         { id: 'team_2', name: 'team-b' },
@@ -218,10 +421,39 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     expect(out.next![3].command).toBe('vercel deploy --scope team-b');
   });
 
+  it('does not treat non-scope choices as team slugs', () => {
+    const payload: ActionRequiredPayload = {
+      status: 'action_required',
+      reason: 'public_prefix_requires_type',
+      message: 'Choose how to store this variable.',
+      choices: [
+        { id: 'private', name: 'Keep private' },
+        { id: 'public', name: 'Expose publicly' },
+      ],
+      next: [
+        { command: 'vercel env add SAFE_NAME production --type secret' },
+        { command: 'vercel env add NEXT_PUBLIC_NAME production --type config' },
+      ],
+    };
+
+    const out = enrichActionRequiredWithInvokingCommand(payload, [
+      '/node',
+      '/vc.js',
+      'env',
+      'add',
+      'NEXT_PUBLIC_NAME',
+      'production',
+    ]);
+
+    expect(out).toBe(payload);
+    expect(out.next).toEqual(payload.next);
+  });
+
   it('preserves --project and other flags in link command when present in argv', () => {
     const payload: ActionRequiredPayload = {
       status: 'action_required',
       message: 'Choose scope.',
+      reason: 'missing_scope',
       choices: [{ id: 'team_1', name: 'team-a' }],
       next: [],
     };
@@ -236,6 +468,30 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     );
   });
 
+  it("links without the invoking command's subcommand or arguments", () => {
+    const payload: ActionRequiredPayload = {
+      status: 'action_required',
+      message: 'Choose scope.',
+      reason: 'missing_scope',
+      choices: [{ id: 'team_1', name: 'team-a' }],
+      next: [],
+    };
+    const argv = [
+      '/node',
+      '/vc.js',
+      'domains',
+      'add',
+      'example.com',
+      '--cwd',
+      '/app',
+    ];
+    const out = enrichActionRequiredWithInvokingCommand(payload, argv);
+    expect(out.next![0].command).toBe('vercel link --cwd /app --scope team-a');
+    expect(out.next![1].command).toBe(
+      'vercel domains add example.com --cwd /app --scope team-a'
+    );
+  });
+
   it('returns payload unchanged when no choices', () => {
     const payload: ActionRequiredPayload = {
       status: 'action_required',
@@ -245,5 +501,545 @@ describe('enrichActionRequiredWithInvokingCommand', () => {
     const out = enrichActionRequiredWithInvokingCommand(payload, []);
     expect(out).toBe(payload);
     expect(out.next).toHaveLength(1);
+  });
+});
+
+describe('outputAgentError', () => {
+  it('writes JSON including hint to stdout and exits when nonInteractive', () => {
+    const stdoutWrite = vi.fn();
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => undefined) as never);
+
+    const client = {
+      nonInteractive: true,
+      stdout: { write: stdoutWrite },
+    } as unknown as Client;
+    outputAgentError(client, {
+      status: 'error',
+      reason: 'no_credentials',
+      message: 'No credentials.',
+      userActionRequired: true,
+      hint: 'Use --token or VERCEL_TOKEN.',
+      next: [{ command: 'vercel login', when: 'TTY only' }],
+    });
+
+    expect(stdoutWrite).toHaveBeenCalledTimes(1);
+    const written = JSON.parse(stdoutWrite.mock.calls[0][0] as string);
+    expect(written.status).toBe('error');
+    expect(written.reason).toBe('no_credentials');
+    expect(written.userActionRequired).toBe(true);
+    expect(written.hint).toBe('Use --token or VERCEL_TOKEN.');
+    expect(written.next).toHaveLength(1);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+
+    exitSpy.mockRestore();
+  });
+});
+
+describe('argvHasNonInteractive', () => {
+  it('detects --non-interactive', () => {
+    expect(argvHasNonInteractive(['node', 'vc.js', 'project', 'ls'])).toBe(
+      false
+    );
+    expect(
+      argvHasNonInteractive([
+        'node',
+        'vc.js',
+        'project',
+        'ls',
+        '--non-interactive',
+      ])
+    ).toBe(true);
+    expect(
+      argvHasNonInteractive([
+        'node',
+        'vc.js',
+        '--non-interactive=false',
+        'project',
+        'ls',
+      ])
+    ).toBe(false);
+  });
+});
+
+describe('getGlobalFlagsFromArgv', () => {
+  it.each([
+    [
+      ['--config', 'custom.json'],
+      ['--config', 'custom.json'],
+    ],
+    [['--config=custom.json'], ['--config=custom.json']],
+  ])('preserves config arguments %#', (configArgs, expected) => {
+    expect(
+      getGlobalFlagsFromArgv(['node', 'vc.js', 'deploy', ...configArgs])
+    ).toEqual(expected);
+  });
+
+  it('does not treat the subcommand after --non-interactive as a flag value', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--cwd',
+      '/tmp/p',
+      '--non-interactive',
+      'integration',
+      'remove',
+      'neon',
+      '--yes',
+    ];
+    expect(getGlobalFlagsFromArgv(argv)).toEqual([
+      '--cwd',
+      '/tmp/p',
+      '--non-interactive',
+      '--yes',
+    ]);
+  });
+});
+
+describe('env suggestion argument preservation', () => {
+  it('does not mistake a global option value for the env command', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--scope',
+      'env',
+      'env',
+      'add',
+      'API_KEY',
+      'preview',
+      '--value',
+      'secret',
+      '--yes',
+    ];
+
+    expect(getPreservedArgsForEnvAdd(argv)).toEqual([
+      '--value',
+      'secret',
+      '--yes',
+    ]);
+    expect(
+      buildEnvAddCommandWithPreservedArgs(
+        argv,
+        'env add API_KEY preview --value <value> --yes'
+      )
+    ).toBe('vercel env add API_KEY preview --value <value> --yes');
+  });
+
+  it.each([
+    {
+      name: 'add',
+      getPreserved: getPreservedArgsForEnvAdd,
+      argv: [
+        'env',
+        'add',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--value',
+        'next-value',
+        '--yes',
+      ],
+      expected: ['--project', 'payments-api', '--value', 'next-value', '--yes'],
+    },
+    {
+      name: 'pull',
+      getPreserved: getPreservedArgsForEnvPull,
+      argv: [
+        'env',
+        'pull',
+        '--project',
+        'payments-api',
+        '.env.test',
+        '--environment',
+        'preview',
+        '--git-branch',
+        'feature',
+        '--id',
+        'dpl_123',
+        '--yes',
+      ],
+      expected: [
+        '--project',
+        'payments-api',
+        '--environment',
+        'preview',
+        '--git-branch',
+        'feature',
+        '--id',
+        'dpl_123',
+        '--yes',
+      ],
+    },
+    {
+      name: 'remove alias',
+      getPreserved: getPreservedArgsForEnvRm,
+      argv: [
+        'env',
+        'remove',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--yes',
+      ],
+      expected: ['--project', 'payments-api', '--yes'],
+    },
+    {
+      name: 'update',
+      getPreserved: getPreservedArgsForEnvUpdate,
+      argv: [
+        'env',
+        'update',
+        '--project=payments-api',
+        'API_KEY',
+        'preview',
+        'feature',
+        '--value=next-value',
+        '--yes',
+      ],
+      expected: ['--project=payments-api', '--value=next-value', '--yes'],
+    },
+  ])('preserves $name flags regardless of positional order', testCase => {
+    expect(testCase.getPreserved(['node', 'vc.js', ...testCase.argv])).toEqual(
+      testCase.expected
+    );
+  });
+
+  it.each([
+    {
+      name: 'add',
+      build: buildEnvAddCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'add',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--value',
+        'old-value',
+        '--yes',
+      ],
+      template: 'env add <name> preview --value <value> --yes',
+    },
+    {
+      name: 'remove',
+      build: buildEnvRmCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'remove',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--yes',
+      ],
+      template: 'env rm <name> preview --yes',
+    },
+    {
+      name: 'update',
+      build: buildEnvUpdateCommandWithPreservedArgs,
+      argv: [
+        'env',
+        'update',
+        '--project',
+        'payments-api',
+        'API_KEY',
+        'preview',
+        '--value',
+        'old-value',
+        '--yes',
+      ],
+      template: 'env update <name> preview --value <value> --yes',
+    },
+  ])('deduplicates flags already present in $name templates', testCase => {
+    expect(
+      testCase.build(['node', 'vc.js', ...testCase.argv], testCase.template)
+    ).toBe(`vercel ${testCase.template} --project payments-api`);
+  });
+
+  it.each([
+    ['add', buildEnvAddCommandWithPreservedArgs, 'add'],
+    ['remove', buildEnvRmCommandWithPreservedArgs, 'remove'],
+    ['update', buildEnvUpdateCommandWithPreservedArgs, 'update'],
+  ] as const)('shell-quotes preserved values in %s suggestions', (_name, build, subcommand) => {
+    const argv = [
+      'node',
+      'vc.js',
+      'env',
+      subcommand,
+      'API_KEY',
+      'preview',
+      '--cwd',
+      '/tmp/project $(touch unsafe)',
+    ];
+
+    expect(build(argv, 'env add API_KEY preview')).toBe(
+      "vercel env add API_KEY preview --cwd '/tmp/project $(touch unsafe)'"
+    );
+  });
+});
+
+describe('buildCommandWithGlobalFlags', () => {
+  it('prepends globals without swallowing the integration subcommand', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      '--cwd',
+      '/tmp/p',
+      '--non-interactive',
+      'integration',
+      'remove',
+      'neon',
+      '--yes',
+    ];
+    expect(
+      buildCommandWithGlobalFlags(
+        argv,
+        'integration resource remove r1 --disconnect-all --yes',
+        'vercel',
+        { prependGlobalFlags: true, excludeFlags: ['--yes', '-y'] }
+      )
+    ).toBe(
+      'vercel --cwd /tmp/p --non-interactive integration resource remove r1 --disconnect-all --yes'
+    );
+  });
+
+  it('does not append a global flag the template already carries', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(
+      buildCommandWithGlobalFlags(
+        argv,
+        'deploy --project my-app --scope <team-slug> --yes'
+      )
+    ).toBe('vercel deploy --project my-app --scope <team-slug> --yes');
+  });
+
+  it('dedupes shorthand and long form of the same global flag', () => {
+    const argv = ['node', 'vc.js', 'deploy', '-S', 'vercel'];
+    expect(
+      buildCommandWithGlobalFlags(argv, 'deploy --scope <team-slug>')
+    ).toBe('vercel deploy --scope <team-slug>');
+  });
+
+  it('still appends globals absent from the template', () => {
+    const argv = ['node', 'vc.js', 'deploy', '--scope', 'vercel', '--yes'];
+    expect(buildCommandWithGlobalFlags(argv, 'link')).toBe(
+      'vercel link --scope vercel --yes'
+    );
+  });
+
+  it.each([
+    [['--project', 'payments-api'], '--project payments-api'],
+    [['--project=payments-api'], '--project=payments-api'],
+  ])('optionally preserves an explicit project selector', (project, expected) => {
+    const argv = [
+      'node',
+      'vc.js',
+      'routes',
+      'list',
+      '--cwd',
+      '/tmp/project',
+      ...project,
+    ];
+
+    expect(
+      buildCommandWithGlobalFlags(argv, 'routes list', undefined, {
+        globalFlags: 'all',
+        preserveProject: true,
+      })
+    ).toBe(`vercel routes list --cwd /tmp/project ${expected}`);
+  });
+
+  it('does not preserve authentication or child-command project options', () => {
+    const argv = [
+      'node',
+      'vc.js',
+      'env',
+      'run',
+      '--cwd',
+      '/tmp/project',
+      '--token',
+      'secret',
+      '--',
+      '--project',
+      'child-project',
+    ];
+
+    expect(
+      buildCommandWithGlobalFlags(argv, 'env run', undefined, {
+        globalFlags: 'all',
+        preserveProject: true,
+      })
+    ).toBe('vercel env run --cwd /tmp/project');
+  });
+});
+
+describe('exitWithNonInteractiveError', () => {
+  it('emits JSON when argv includes --non-interactive even if client.nonInteractive is false', async () => {
+    const { Response } = await import('../../../src/util/fetch-primitives');
+    const res = new Response(
+      JSON.stringify({
+        error: { code: 'not_found', message: 'Project not found.' },
+      }),
+      { status: 404 }
+    );
+    const err = new APIError('Project not found.', res);
+
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: false,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() => exitWithNonInteractiveError(client, err, 1)).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'project_not_found',
+      message: 'Project not found.',
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it('emits link_required JSON for LinkRequiredError', () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: true,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() =>
+      exitWithNonInteractiveError(client, new LinkRequiredError(), 1, {
+        variant: 'members',
+      })
+    ).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'link_required',
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it('includes action and resource from a 403 APIError', async () => {
+    const { Response } = await import('../../../src/util/fetch-primitives');
+    const res = new Response(
+      JSON.stringify({
+        error: {
+          code: 'forbidden',
+          message: "You don't have permission to read the project.",
+          action: 'read',
+          resource: 'project',
+        },
+      }),
+      { status: 403 }
+    );
+    const err = new APIError(
+      "You don't have permission to read the project.",
+      res,
+      { action: 'read', resource: 'project' }
+    );
+
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: true,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() => exitWithNonInteractiveError(client, err, 1)).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'forbidden',
+      message: "You don't have permission to read the project.",
+      action: 'read',
+      resource: 'project',
+    });
+
+    vi.restoreAllMocks();
+  });
+
+  it('omits action and resource from a 404 APIError', async () => {
+    const { Response } = await import('../../../src/util/fetch-primitives');
+    const res = new Response(
+      JSON.stringify({
+        error: { code: 'not_found', message: 'Not found.' },
+      }),
+      { status: 404 }
+    );
+    const err = new APIError('Not found.', res);
+
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+
+    const chunks: string[] = [];
+    const stdout = {
+      write: (s: string) => {
+        chunks.push(s);
+        return true;
+      },
+    };
+
+    const client = {
+      nonInteractive: true,
+      argv: ['node', 'vc.js', 'project', 'members', '--non-interactive'],
+      stdout,
+    } as unknown as Client;
+
+    expect(() => exitWithNonInteractiveError(client, err, 1)).toThrow('exit:1');
+    const payload = JSON.parse(chunks.join('').trim());
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'project_not_found',
+      message: 'Not found.',
+    });
+    expect(payload).not.toHaveProperty('action');
+    expect(payload).not.toHaveProperty('resource');
+
+    vi.restoreAllMocks();
   });
 });

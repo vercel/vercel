@@ -1,0 +1,184 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "mustContain": "Hello from Web Next.js"
+    },
+    {
+      "path": "/api/ping",
+      "status": 200,
+      "mustContain": "pong from Web Next.js"
+    },
+    {
+      "path": "/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Web Next.js"
+    },
+    {
+      "path": "/dashboard",
+      "status": 200,
+      "mustContain": "Hello from Dashboard Next.js"
+    },
+    {
+      "path": "/dashboard/api/ping",
+      "status": 200,
+      "mustContain": "pong from Dashboard Next.js"
+    },
+    {
+      "path": "/dashboard/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Dashboard Next.js"
+    },
+    {
+      "path": "/api/go",
+      "status": 200,
+      "mustContain": "Hello from Gin"
+    },
+    {
+      "path": "/api/go/ping",
+      "status": 200,
+      "mustContain": "pong from Gin"
+    },
+    {
+      "path": "/api/go/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Gin"
+    },
+    {
+      "path": "/api/py",
+      "status": 200,
+      "mustContain": "Hello from Flask"
+    },
+    {
+      "path": "/api/py/ping",
+      "status": 200,
+      "mustContain": "pong from Flask"
+    },
+    {
+      "path": "/api/py/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Flask"
+    },
+    {
+      "path": "/api/node",
+      "status": 200,
+      "mustContain": "Hello from Node HTTP"
+    },
+    {
+      "path": "/api/node/ping",
+      "status": 200,
+      "mustContain": "pong from Node HTTP"
+    },
+    {
+      "path": "/api/node/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Node HTTP"
+    },
+    {
+      "path": "/api/express",
+      "status": 200,
+      "mustContain": "Hello from Express"
+    },
+    {
+      "path": "/api/express/ping",
+      "status": 200,
+      "mustContain": "pong from Express"
+    },
+    {
+      "path": "/api/express/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Express"
+    },
+    {
+      "path": "/api/koa",
+      "status": 200,
+      "mustContain": "Hello from Koa"
+    },
+    {
+      "path": "/api/koa/ping",
+      "status": 200,
+      "mustContain": "pong from Koa"
+    },
+    {
+      "path": "/api/koa/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Koa"
+    },
+    {
+      "path": "/api/hono",
+      "status": 200,
+      "mustContain": "Hello from Hono"
+    },
+    {
+      "path": "/api/hono/ping",
+      "status": 200,
+      "mustContain": "pong from Hono"
+    },
+    {
+      "path": "/api/hono/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Hono"
+    },
+    {
+      "path": "/api/rb",
+      "status": 200,
+      "mustContain": "Hello from Sinatra"
+    },
+    {
+      "path": "/api/rb/ping",
+      "status": 200,
+      "mustContain": "pong from Sinatra"
+    },
+    {
+      "path": "/api/rb/does-not-exist",
+      "status": 404,
+      "mustContain": "404 from Sinatra"
+    },
+    {
+      "path": "/api",
+      "status": 404,
+      "mustContain": "404 from Web Next.js"
+    },
+    {
+      "path": "/api/goo",
+      "status": 404,
+      "mustContain": "404 from Web Next.js"
+    },
+    {
+      "path": "/api/pythonic",
+      "status": 404,
+      "mustContain": "404 from Web Next.js"
+    },
+    {
+      "path": "/api/nodejs",
+      "status": 404,
+      "mustContain": "404 from Web Next.js"
+    },
+    {
+      "path": "/api/expressive",
+      "status": 404,
+      "mustContain": "404 from Web Next.js"
+    },
+    {
+      "path": "/api/koala",
+      "status": 404,
+      "mustContain": "404 from Web Next.js"
+    },
+    {
+      "path": "/api/honorable",
+      "status": 404,
+      "mustContain": "404 from Web Next.js"
+    },
+    {
+      "path": "/api/rbx",
+      "status": 404,
+      "mustContain": "404 from Web Next.js"
+    },
+    {
+      "path": "/dashboard/api/go",
+      "status": 404,
+      "mustContain": "404 from Dashboard Next.js"
+    }
+  ]
+}

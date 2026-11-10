@@ -8,7 +8,7 @@ import {
   detectFrameworkRecord,
   LocalFileSystemDetector,
 } from '@vercel/fs-detectors';
-import frameworks from '@vercel/frameworks';
+import { frameworkList as frameworks } from '@vercel/frameworks';
 import fs from 'fs-extra';
 import os from 'os';
 

@@ -48,4 +48,27 @@ export class CurlTelemetryClient
       this.trackCliFlag('yes');
     }
   }
+
+  trackCliFlagTrace(trace: boolean | undefined) {
+    if (trace) {
+      this.trackCliFlag('trace');
+    }
+  }
+
+  trackCliFlagJson(json: boolean | undefined) {
+    if (json) {
+      this.trackCliFlag('json');
+    }
+  }
+
+  /**
+   * Fired only when --yes is supplied AND the target is a production
+   * deployment. Lets us distinguish "user explicitly confirmed prod via
+   * --yes" from generic --yes usage on previews.
+   */
+  trackCliFlagYesOnProduction(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('yes-on-production');
+    }
+  }
 }

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import logout from '../../../../src/commands/logout';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
-import _fetch, { type Response } from 'node-fetch';
+import _fetch, { type Response } from '../../../../src/util/fetch';
 import {
   as,
   VERCEL_CLI_CLIENT_ID,
@@ -11,8 +11,8 @@ import {
 import { randomUUID } from 'node:crypto';
 
 const fetch = vi.mocked(_fetch);
-vi.mock('node-fetch', async () => ({
-  ...(await vi.importActual('node-fetch')),
+vi.mock('../../../../src/util/fetch', async () => ({
+  ...(await vi.importActual('../../../../src/util/fetch')),
   default: vi.fn(),
 }));
 
@@ -48,6 +48,8 @@ describe('logout', () => {
     client.setArgv('logout');
     client.authConfig.token = randomUUID();
     const tokenBefore = client.authConfig.token;
+    client.authConfig.userId = randomUUID();
+    const userIdBefore = client.authConfig.userId;
     client.authConfig.refreshToken = randomUUID();
     const refreshTokenBefore = client.authConfig.refreshToken;
     client.config.currentTeam = randomUUID();
@@ -83,6 +85,9 @@ describe('logout', () => {
     const tokenAfter = client.authConfig.token;
     expect(tokenAfter).not.toBe(tokenBefore);
     expect(tokenAfter).toBeUndefined();
+    const userIdAfter = client.authConfig.userId;
+    expect(userIdAfter).not.toBe(userIdBefore);
+    expect(userIdAfter).toBeUndefined();
     const refreshTokenAfter = client.authConfig.refreshToken;
     expect(refreshTokenAfter).not.toBe(refreshTokenBefore);
     expect(refreshTokenAfter).toBeUndefined();
@@ -103,6 +108,8 @@ describe('logout', () => {
     client.setArgv('logout', '--debug');
     client.authConfig.token = randomUUID();
     const tokenBefore = client.authConfig.token;
+    client.authConfig.userId = randomUUID();
+    const userIdBefore = client.authConfig.userId;
     client.authConfig.refreshToken = randomUUID();
     const refreshTokenBefore = client.authConfig.refreshToken;
     client.config.currentTeam = randomUUID();
@@ -122,6 +129,9 @@ describe('logout', () => {
     const tokenAfter = client.authConfig.token;
     expect(tokenAfter).not.toBe(tokenBefore);
     expect(tokenAfter).toBeUndefined();
+    const userIdAfter = client.authConfig.userId;
+    expect(userIdAfter).not.toBe(userIdBefore);
+    expect(userIdAfter).toBeUndefined();
     const refreshTokenAfter = client.authConfig.refreshToken;
     expect(refreshTokenAfter).not.toBe(refreshTokenBefore);
     expect(refreshTokenAfter).toBeUndefined();
