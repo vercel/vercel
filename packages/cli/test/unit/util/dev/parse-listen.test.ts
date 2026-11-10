@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { describe, expect, it, test } from 'vitest';
 import {
+  isWildcardAddress,
   parseListen,
   replaceLocalhost,
 } from '../../../../src/util/dev/parse-listen';
@@ -85,5 +86,18 @@ describe('replaceLocalhost', () => {
     { input: 'http://[::]:3002', output: 'http://localhost:3002' },
   ])('"$input" → "$output"', ({ input, output }) => {
     expect(replaceLocalhost(input)).toEqual(output);
+  });
+});
+
+describe('isWildcardAddress', () => {
+  test.each([
+    { input: 'http://0.0.0.0:3000', output: true },
+    { input: 'http://[::]:3002', output: true },
+    { input: 'http://192.168.0.1:1234', output: false },
+    { input: 'http://127.0.0.1:4000', output: false },
+    { input: 'http://[::1]:3001', output: false },
+    { input: 'http://localhost:3000', output: false },
+  ])('"$input" → $output', ({ input, output }) => {
+    expect(isWildcardAddress(input)).toBe(output);
   });
 });

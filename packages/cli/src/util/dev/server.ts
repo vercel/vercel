@@ -191,7 +191,7 @@ import {
 } from '@vercel/error-utils';
 import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
-import { replaceLocalhost } from './parse-listen';
+import { isWildcardAddress, replaceLocalhost } from './parse-listen';
 import {
   type BulkRedirectTable,
   getBulkRedirectsSignature,
@@ -244,6 +244,9 @@ export default class DevServer {
   public files: BuilderInputs;
 
   private _address: URL | undefined;
+  // `_address` has wildcard hosts rewritten to `localhost`, so remember
+  // whether the listener is actually bound to all network interfaces.
+  private _boundToWildcard = false;
   public get address(): URL {
     if (!this._address) {
       throw dev.DEV_INTERNAL_ADDRESS_UNAVAILABLE();
@@ -2210,6 +2213,7 @@ export default class DevServer {
     }
 
     if (this.stopping) return;
+    this._boundToWildcard = isWildcardAddress(address);
     this._address = new URL(replaceLocalhost(address));
 
     // One store for the whole project, created before any service starts so
@@ -3163,7 +3167,9 @@ export default class DevServer {
       // the operator has explicitly chosen to expose it to all network
       // interfaces. Any Host header is therefore reachable and legitimate;
       // blocking LAN requests would break intentional LAN development.
-      if (listenHostname === '0.0.0.0' || listenHostname === '::') {
+      // `_address` already has the wildcard rewritten to `localhost`, so this
+      // relies on the flag recorded when the listener started.
+      if (this._boundToWildcard) {
         return true;
       }
       if (hostname.toLowerCase() === listenHostname) {

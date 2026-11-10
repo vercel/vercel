@@ -50,3 +50,16 @@ export function parseListen(str: string, defaultPort = 3000): ListenSpec {
 export function replaceLocalhost(address: string): string {
   return address.replace('[::]', 'localhost').replace('0.0.0.0', 'localhost');
 }
+
+/**
+ * Whether the listen address is bound to all network interfaces (`0.0.0.0` or
+ * `::`). Must be checked before `replaceLocalhost()` rewrites the host.
+ */
+export function isWildcardAddress(address: string): boolean {
+  try {
+    const hostname = new URL(address).hostname.toLowerCase();
+    return hostname === '0.0.0.0' || hostname === '[::]' || hostname === '::';
+  } catch {
+    return address.includes('0.0.0.0') || address.includes('[::]');
+  }
+}
