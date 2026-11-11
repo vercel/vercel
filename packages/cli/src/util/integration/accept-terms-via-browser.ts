@@ -28,6 +28,11 @@ export async function acceptTermsViaBrowser(
     `https://vercel.com/${encodeURIComponent(teamSlug)}/~/integrations/accept-terms/${encodeURIComponent(integration.slug)}`
   );
   url.searchParams.set('source', 'cli');
+  // Lets the dashboard record this session on the install it finishes.
+  url.searchParams.set(
+    'cliSessionId',
+    client.telemetryEventStore.currentSessionId
+  );
 
   // Non-interactive mode (AI agent): emit structured action_required payload
   // and exit 1. Done before opening a browser so AI agents / CI don't spawn

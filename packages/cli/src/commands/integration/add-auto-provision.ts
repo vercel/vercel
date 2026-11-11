@@ -473,6 +473,12 @@ export async function addAutoProvision(
     const url = new URL(fallback.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
+    // Lets the dashboard record this session on the install and resource
+    // it finishes, so browser-finished installs can be tied back to the CLI.
+    url.searchParams.set(
+      'cliSessionId',
+      client.telemetryEventStore.currentSessionId
+    );
     if (Object.keys(metadata).length > 0) {
       url.searchParams.set('metadata', JSON.stringify(metadata));
     }

@@ -633,6 +633,9 @@ describe('integration add (auto-provision)', () => {
       const parsed = new URL(calledUrl);
       expect(parsed.pathname).toContain('/~/integrations/accept-terms/acme');
       expect(parsed.searchParams.get('source')).toEqual('cli');
+      expect(parsed.searchParams.get('cliSessionId')).toEqual(
+        client.telemetryEventStore.currentSessionId
+      );
     });
 
     it('should reject --yes flag to prevent automated term bypass (legal requirement)', async () => {
@@ -807,6 +810,9 @@ describe('integration add (auto-provision)', () => {
         JSON.stringify({ version: '5.4', region: 'pdx1' })
       );
       expect(parsed.searchParams.get('source')).toEqual('cli');
+      expect(parsed.searchParams.get('cliSessionId')).toEqual(
+        client.telemetryEventStore.currentSessionId
+      );
     });
 
     it('should show error for missing required metadata on unknown fallback', async () => {
