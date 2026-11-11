@@ -838,6 +838,16 @@ const autoProvisionResponses: Record<
     product: autoProvisionProduct,
     installation: { id: 'acme-install' },
   },
+  // How the server reports an error in any step, provisioning included
+  provisioning_error: {
+    kind: 'unknown',
+    reason: 'error',
+    error_message: 'Partner API returned 500',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installation: { id: 'acme-install' },
+  },
   multiple_installations: {
     kind: 'unknown',
     reason: 'multiple_installations',

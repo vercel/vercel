@@ -1129,8 +1129,8 @@ describe('integration add (auto-provision)', () => {
     });
   });
 
-  // Every `provisioning_started` must resolve to `completed` or `failed`, so
-  // runs the server hands to the browser must not track it.
+  // Every `provisioning_started` must resolve to `completed` or `failed`, and
+  // fallbacks decided before provisioning must not track it.
   describe('provisioning funnel telemetry', () => {
     function marketplaceEventKeys() {
       return client.telemetryEventStore.readonlyEvents
@@ -1199,6 +1199,36 @@ describe('integration add (auto-provision)', () => {
         'output:marketplace_checkout_provisioning_started',
         'output:marketplace_checkout_provisioning_failed',
       ]);
+    });
+
+    it('should track provisioning_failed when the server falls back with an error', async () => {
+      useAutoProvision({ responseKey: 'provisioning_error' });
+
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required: Partner API returned 500'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).toHaveBeenCalledTimes(1);
+      expect(marketplaceEventKeys()).toEqual([
+        'output:marketplace_install_flow_started',
+        'output:marketplace_checkout_plan_selected',
+        'output:marketplace_checkout_provisioning_started',
+        'output:marketplace_checkout_provisioning_failed',
+        'output:marketplace_install_flow_web_fallback',
+      ]);
+      expect(client.telemetryEventStore.readonlyEvents).toContainEqual(
+        expect.objectContaining({
+          key: 'output:marketplace_checkout_provisioning_failed',
+          value: expect.stringContaining(
+            '"error_message":"Partner API returned 500"'
+          ),
+        })
+      );
     });
   });
 

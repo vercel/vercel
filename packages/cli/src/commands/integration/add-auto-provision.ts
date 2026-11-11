@@ -351,10 +351,24 @@ export async function addAutoProvision(
       : 'server_default',
   });
 
-  // Provision resource. `marketplace_checkout_provisioning_started` is tracked
-  // only once the server answers without handing the run to the browser: it
-  // decides fallbacks such as `no_eligible_plan` or `preauthorization_required`
-  // before provisioning anything, and those are tracked as `web_fallback`.
+  // `marketplace_checkout_provisioning_started` is tracked with its outcome,
+  // after the server answers: the run is provisioned, or it fails with an
+  // error. Fallbacks the server decides before provisioning anything, such as
+  // `no_eligible_plan` or `preauthorization_required`, are not provisioning
+  // attempts and are tracked only as `web_fallback`.
+  const trackProvisioningOutcome = (
+    event:
+      | 'marketplace_checkout_provisioning_completed'
+      | 'marketplace_checkout_provisioning_failed',
+    props: Record<string, unknown>
+  ) => {
+    telemetry.trackMarketplaceEvent(
+      'marketplace_checkout_provisioning_started',
+      baseProps
+    );
+    telemetry.trackMarketplaceEvent(event, { ...baseProps, ...props });
+  };
+
   output.spinner('Provisioning resource...');
   let result: AutoProvisionResult;
   try {
@@ -371,17 +385,9 @@ export async function addAutoProvision(
     );
   } catch (error) {
     output.stopSpinner();
-    telemetry.trackMarketplaceEvent(
-      'marketplace_checkout_provisioning_started',
-      baseProps
-    );
-    telemetry.trackMarketplaceEvent(
-      'marketplace_checkout_provisioning_failed',
-      {
-        ...baseProps,
-        error_message: errorToString(error),
-      }
-    );
+    trackProvisioningOutcome('marketplace_checkout_provisioning_failed', {
+      error_message: errorToString(error),
+    });
     output.error(errorToString(error));
     return 1;
   }
@@ -429,6 +435,13 @@ export async function addAutoProvision(
   // Handle non-provisioned responses — pass through kind/reason from server
   if (result.kind !== 'provisioned') {
     const fallback = result as AutoProvisionFallback;
+    // The server reports an error in any step, provisioning included, as a
+    // fallback with `reason: 'error'`, so count it as a failed attempt.
+    if (fallback.reason === 'error') {
+      trackProvisioningOutcome('marketplace_checkout_provisioning_failed', {
+        error_message: fallback.error_message,
+      });
+    }
     telemetry.trackMarketplaceEvent('marketplace_install_flow_web_fallback', {
       ...baseProps,
       reason: fallback.reason ?? fallback.kind,
@@ -529,17 +542,9 @@ export async function addAutoProvision(
 
   // Success!
   const provisioned = result as AutoProvisionedResponse;
-  telemetry.trackMarketplaceEvent(
-    'marketplace_checkout_provisioning_started',
-    baseProps
-  );
-  telemetry.trackMarketplaceEvent(
-    'marketplace_checkout_provisioning_completed',
-    {
-      ...baseProps,
-      resource_id: provisioned.resource.id,
-    }
-  );
+  trackProvisioningOutcome('marketplace_checkout_provisioning_completed', {
+    resource_id: provisioned.resource.id,
+  });
   output.debug(
     `Provisioned resource: ${JSON.stringify(provisioned.resource, null, 2)}`
   );
