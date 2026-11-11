@@ -701,14 +701,15 @@ describe('integration add (auto-provision)', () => {
             value: expect.stringContaining('"plan_selection_method"'),
           }),
           expect.objectContaining({
-            key: 'output:marketplace_checkout_provisioning_started',
-            value: expect.stringContaining('"integration_slug":"acme"'),
-          }),
-          expect.objectContaining({
             key: 'output:marketplace_install_flow_web_fallback',
             value: expect.stringContaining('"reason"'),
           }),
         ])
+      );
+      expect(client.telemetryEventStore.readonlyEvents).not.toContainEqual(
+        expect.objectContaining({
+          key: 'output:marketplace_checkout_provisioning_started',
+        })
       );
     });
 
@@ -1125,6 +1126,79 @@ describe('integration add (auto-provision)', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(1);
+    });
+  });
+
+  // Every `provisioning_started` must resolve to `completed` or `failed`, so
+  // runs the server hands to the browser must not track it.
+  describe('provisioning funnel telemetry', () => {
+    function marketplaceEventKeys() {
+      return client.telemetryEventStore.readonlyEvents
+        .map(event => event.key)
+        .filter(key => key.startsWith('output:marketplace_'));
+    }
+
+    it.each([
+      'no_eligible_plan',
+      'preauthorization_required',
+    ] as const)('should not track provisioning_started when the server falls back with %s', async reason => {
+      useAutoProvision({ responseKey: reason });
+
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput('Additional setup required.');
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).toHaveBeenCalledTimes(1);
+      expect(marketplaceEventKeys()).toEqual([
+        'output:marketplace_install_flow_started',
+        'output:marketplace_checkout_plan_selected',
+        'output:marketplace_install_flow_web_fallback',
+      ]);
+      expect(client.telemetryEventStore.readonlyEvents).toContainEqual(
+        expect.objectContaining({
+          key: 'output:marketplace_install_flow_web_fallback',
+          value: expect.stringContaining(`"reason":"${reason}"`),
+        })
+      );
+    });
+
+    it('should not track provisioning_started when multiple installations exist', async () => {
+      useAutoProvision({ responseKey: 'multiple_installations' });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(1);
+      expect(marketplaceEventKeys()).toEqual([
+        'output:marketplace_install_flow_started',
+        'output:marketplace_checkout_plan_selected',
+        'output:marketplace_install_flow_multiple_installations',
+      ]);
+    });
+
+    it('should track provisioning_started before provisioning_failed when the request is rejected', async () => {
+      useAutoProvision({
+        error: {
+          status: 403,
+          code: 'forbidden',
+          message: 'Not allowed to provision',
+        },
+      });
+
+      client.setArgv('integration', 'add', 'acme');
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(1);
+      expect(openMock).not.toHaveBeenCalled();
+      expect(marketplaceEventKeys()).toEqual([
+        'output:marketplace_install_flow_started',
+        'output:marketplace_checkout_plan_selected',
+        'output:marketplace_checkout_provisioning_started',
+        'output:marketplace_checkout_provisioning_failed',
+      ]);
     });
   });
 

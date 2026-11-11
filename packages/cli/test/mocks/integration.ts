@@ -821,6 +821,23 @@ const autoProvisionResponses: Record<
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
   },
+  // Plan checks the server makes before provisioning anything
+  no_eligible_plan: {
+    kind: 'unknown',
+    reason: 'no_eligible_plan',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installation: { id: 'acme-install' },
+  },
+  preauthorization_required: {
+    kind: 'unknown',
+    reason: 'preauthorization_required',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installation: { id: 'acme-install' },
+  },
   multiple_installations: {
     kind: 'unknown',
     reason: 'multiple_installations',
@@ -1123,6 +1140,8 @@ export function useAutoProvision(opts?: {
   responseKey?: keyof typeof autoProvisionResponses;
   withInstallation?: boolean;
   installationAppearsAfterPolls?: number;
+  /** Reject the auto-provision request with this error instead of a step. */
+  error?: { status: number; code: string; message: string };
 }) {
   const withInstallation = opts?.withInstallation ?? true;
   const storeId = 'resource_123';
@@ -1196,6 +1215,14 @@ export function useAutoProvision(opts?: {
     '/v1/integrations/integration/:integrationSlug/marketplace/auto-provision/:productSlug',
     (req, res) => {
       requestBodies.push(req.body);
+
+      if (opts?.error) {
+        res.status(opts.error.status);
+        res.json({
+          error: { code: opts.error.code, message: opts.error.message },
+        });
+        return;
+      }
 
       // When installationId is provided and responseKey is multiple_installations,
       // simulate the server accepting the selection and provisioning successfully

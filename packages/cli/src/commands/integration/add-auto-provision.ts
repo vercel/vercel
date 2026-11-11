@@ -351,11 +351,10 @@ export async function addAutoProvision(
       : 'server_default',
   });
 
-  // Provision resource
-  telemetry.trackMarketplaceEvent(
-    'marketplace_checkout_provisioning_started',
-    baseProps
-  );
+  // Provision resource. `marketplace_checkout_provisioning_started` is tracked
+  // only once the server answers without handing the run to the browser: it
+  // decides fallbacks such as `no_eligible_plan` or `preauthorization_required`
+  // before provisioning anything, and those are tracked as `web_fallback`.
   output.spinner('Provisioning resource...');
   let result: AutoProvisionResult;
   try {
@@ -372,6 +371,10 @@ export async function addAutoProvision(
     );
   } catch (error) {
     output.stopSpinner();
+    telemetry.trackMarketplaceEvent(
+      'marketplace_checkout_provisioning_started',
+      baseProps
+    );
     telemetry.trackMarketplaceEvent(
       'marketplace_checkout_provisioning_failed',
       {
@@ -526,6 +529,10 @@ export async function addAutoProvision(
 
   // Success!
   const provisioned = result as AutoProvisionedResponse;
+  telemetry.trackMarketplaceEvent(
+    'marketplace_checkout_provisioning_started',
+    baseProps
+  );
   telemetry.trackMarketplaceEvent(
     'marketplace_checkout_provisioning_completed',
     {
