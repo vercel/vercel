@@ -32,7 +32,10 @@ import type {
   AutoProvisionResult,
 } from '../../util/integration/types';
 import { buildSSOLink } from '../../util/integration/build-sso-link';
-import { resolveResourceName } from '../../util/integration/generate-resource-name';
+import {
+  isResourceNameTakenError,
+  resolveResourceName,
+} from '../../util/integration/generate-resource-name';
 import {
   ENV_PULL_FAILED_MESSAGE,
   getLinkedProjectField,
@@ -337,7 +340,13 @@ export async function addAutoProvision(
     });
     return 1;
   }
-  const { resourceName } = nameResult;
+  // Only a name the CLI generated may be replaced; a --name value never is.
+  const { isGenerated } = nameResult;
+  let { resourceName } = nameResult;
+  const regenerateResourceName = () => {
+    const next = resolveResourceName(product.slug);
+    return 'resourceName' in next ? next.resourceName : undefined;
+  };
 
   output.debug(`Collected metadata: ${JSON.stringify(metadata)}`);
   output.debug(`Resource name: ${resourceName}`);
@@ -357,19 +366,52 @@ export async function addAutoProvision(
     baseProps
   );
   output.spinner('Provisioning resource...');
-  let result: AutoProvisionResult;
-  try {
-    result = await autoProvisionResource(
+  const provision = (name: string, installationId: string | undefined) =>
+    autoProvisionResource(
       client,
       integration.slug,
       product.slug,
-      resourceName,
+      name,
       metadata,
       acceptedPolicies,
       options.billingPlanId,
-      browserInstallationId ?? options.installationId,
+      installationId,
       installationMetadata
     );
+  let result: AutoProvisionResult;
+  try {
+    const installationId = browserInstallationId ?? options.installationId;
+    result = await provision(resourceName, installationId);
+
+    // The partner already has a resource with the generated name. It created
+    // nothing (the API saves the resource only after the partner accepts it),
+    // so try once more with a new generated name. The retry targets a known
+    // installation, the one sent or the one the server reported (the first
+    // request may have just created it), so it cannot create another one.
+    if (isGenerated && isResourceNameTakenError(result, resourceName)) {
+      const retryInstallationId = installationId ?? result.installation?.id;
+      const retryName = regenerateResourceName();
+      if (retryInstallationId && retryName) {
+        output.debug(
+          `Resource name "${resourceName}" is already taken, retrying as "${retryName}"`
+        );
+        telemetry.trackMarketplaceEvent(
+          'marketplace_checkout_provisioning_retried',
+          {
+            ...baseProps,
+            reason: 'resource_name_taken',
+          }
+        );
+        resourceName = retryName;
+        result = await provision(resourceName, retryInstallationId);
+      }
+
+      // Still taken: suggest a fresh name in the browser, not one known to
+      // collide.
+      if (isResourceNameTakenError(result, resourceName)) {
+        resourceName = regenerateResourceName() ?? resourceName;
+      }
+    }
   } catch (error) {
     output.stopSpinner();
     telemetry.trackMarketplaceEvent(

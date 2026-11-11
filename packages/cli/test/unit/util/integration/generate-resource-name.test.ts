@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   generateRandomNameSuffix,
+  generateUniqueNameSuffix,
   generateDefaultResourceName,
   getValidationRuleForProduct,
+  isResourceNameTakenError,
+  MAX_GENERATED_NAME_LENGTH,
   validateResourceName,
   resolveResourceName,
 } from '../../../../src/util/integration/generate-resource-name';
@@ -46,49 +49,158 @@ describe('generateRandomNameSuffix', () => {
   });
 });
 
+describe('generateUniqueNameSuffix', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns 4 lowercase letters or digits', () => {
+    expect(generateUniqueNameSuffix()).toMatch(/^[a-z0-9]{4}$/);
+  });
+
+  it('covers both ends of the alphabet', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    expect(generateUniqueNameSuffix()).toBe('aaaa');
+    vi.spyOn(Math, 'random').mockReturnValue(0.9999);
+    expect(generateUniqueNameSuffix()).toBe('9999');
+  });
+
+  it('rarely repeats', () => {
+    const suffixes = new Set(
+      Array.from({ length: 200 }, () => generateUniqueNameSuffix())
+    );
+    // 200 draws from 36^4 values: a handful of repeats at most
+    expect(suffixes.size).toBeGreaterThan(195);
+  });
+});
+
 describe('generateDefaultResourceName', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('prefixes with product slug', () => {
+  it('is the product slug, color and noun, then a unique suffix', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
-    expect(generateDefaultResourceName('neon')).toBe('neon-gray-apple');
+    expect(generateDefaultResourceName('neon')).toBe('neon-gray-apple-aaaa');
   });
 
-  it('works with different product slugs', () => {
+  it('drops whole words that do not fit, but keeps the suffix', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
+    // upstash-redis-gray-apple-aaaa would be 29 characters
     expect(generateDefaultResourceName('upstash-redis')).toBe(
-      'upstash-redis-gray-apple'
+      'upstash-redis-gray-aaaa'
     );
   });
 
-  it('produces valid resource name format', () => {
+  it('drops slug words that do not fit', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    expect(generateDefaultResourceName('mongodb-atlas-cluster-plus')).toBe(
+      'mongodb-atlas-aaaa'
+    );
+  });
+
+  it('cuts a first word that is too long on its own', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const name = generateDefaultResourceName('a'.repeat(40));
+    expect(name).toBe(`${'a'.repeat(18)}-aaaa`);
+    expect(name).toHaveLength(MAX_GENERATED_NAME_LENGTH);
+  });
+
+  it('never exceeds 23 characters, even when the product allows more', () => {
+    for (const slug of [
+      'neon',
+      'supabase',
+      'upstash-kv',
+      'mongodbatlas',
+      'turso-database',
+      'aws-dynamodb',
+      'x'.repeat(100),
+    ]) {
+      for (let i = 0; i < 50; i++) {
+        const name = generateDefaultResourceName(slug, 128);
+        expect(name.length).toBeLessThanOrEqual(MAX_GENERATED_NAME_LENGTH);
+        expect(name).not.toMatch(/--|-$/);
+        expect(name).toMatch(/-[a-z0-9]{4}$/);
+      }
+    }
+  });
+
+  it('respects a product maxLength lower than 23', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    expect(generateDefaultResourceName('neon', 12)).toBe('neon-aaaa');
+    expect(generateDefaultResourceName('neon', 3)).toBe('aaa');
+  });
+
+  it('produces lowercase names of letters, digits and single hyphens', () => {
     const name = generateDefaultResourceName('test-product');
-    // Should be: productSlug-color-noun, all lowercase with hyphens
-    expect(name).toMatch(/^[a-z0-9-]+-[a-z]+-[a-z]+$/);
+    expect(name).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
   });
 
-  it('truncates to 128 chars by default when product slug is too long', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0);
-    const longSlug = 'a'.repeat(125); // Will generate 125 + 1 + 10 = 136 chars
-    const name = generateDefaultResourceName(longSlug);
-    expect(name.length).toBe(128);
+  it('differs between calls', () => {
+    const names = new Set(
+      Array.from({ length: 50 }, () => generateDefaultResourceName('supabase'))
+    );
+    expect(names.size).toBeGreaterThan(45);
+  });
+});
+
+describe('isResourceNameTakenError', () => {
+  const NAME = 'supabase-gray-k3x9';
+  const fallback = (error_message?: string) => ({
+    kind: 'unknown',
+    reason: 'error',
+    error_message,
   });
 
-  it('truncates to custom maxLength when provided', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0);
-    const longSlug = 'a'.repeat(50); // Will generate 50 + 1 + 10 = 61 chars
-    const name = generateDefaultResourceName(longSlug, 50);
-    expect(name.length).toBe(50);
+  it.each([
+    // Supabase
+    `Project with name "${NAME}" already exists in your organization.`,
+    // Upstash
+    'database with same name already exists',
+    `database with name ${NAME} already exists`,
+    // MongoDB Atlas, which may add its own suffix to the name
+    `A project named '${NAME}-atlas' already exists in Atlas. To proceed, choose a different cluster name or delete the project in MongoDB Atlas.`,
+    `Name "${NAME.toUpperCase()}" has already been taken`,
+    `Database ${NAME} already exist`,
+    `Resource ${NAME}:\nalready in use`,
+  ])('matches %j', message => {
+    expect(isResourceNameTakenError(fallback(message), NAME)).toBe(true);
   });
 
-  it('does not truncate when name fits in maxLength', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0);
-    const shortSlug = 'neon'; // 4 + 1 + 10 = 15 chars total
-    const name = generateDefaultResourceName(shortSlug);
-    expect(name).toBe('neon-gray-apple');
-    expect(name.length).toBeLessThanOrEqual(128);
+  it.each([
+    // Supabase organization comes from the team, not the resource name
+    'You are already a member of an organization named "Acme". Please choose a different name.',
+    // Installation-level conflict that names something else
+    'An organization named "Acme" already exists',
+    'Project with name "personal-db" already exists in your organization.',
+    'A QStash resource already exists in region us-east-1 for this installation.',
+    'acme.com is already registered with Resend. Use a different domain or contact support.',
+    `database name ${NAME} exceeds maximum length of 26 characters`,
+    'An unexpected error occurred during provisioning',
+  ])('does not match %j', message => {
+    expect(isResourceNameTakenError(fallback(message), NAME)).toBe(false);
+  });
+
+  it('requires an unknown/error fallback with a message', () => {
+    const message = `Project with name "${NAME}" already exists`;
+    expect(
+      isResourceNameTakenError(
+        { kind: 'metadata', reason: 'error', error_message: message },
+        NAME
+      )
+    ).toBe(false);
+    expect(
+      isResourceNameTakenError(
+        {
+          kind: 'unknown',
+          reason: 'multiple_installations',
+          error_message: message,
+        },
+        NAME
+      )
+    ).toBe(false);
+    expect(isResourceNameTakenError(fallback(undefined), NAME)).toBe(false);
+    expect(isResourceNameTakenError({ kind: 'provisioned' }, NAME)).toBe(false);
   });
 });
 
@@ -283,7 +395,10 @@ describe('resolveResourceName', () => {
   describe('with user-provided name', () => {
     it('returns valid user-provided name', () => {
       const result = resolveResourceName('neon', 'my-resource');
-      expect(result).toEqual({ resourceName: 'my-resource' });
+      expect(result).toEqual({
+        resourceName: 'my-resource',
+        isGenerated: false,
+      });
     });
 
     it('returns error for invalid user-provided name', () => {
@@ -299,39 +414,46 @@ describe('resolveResourceName', () => {
     it('generates and validates name for default products', () => {
       vi.spyOn(Math, 'random').mockReturnValue(0);
       const result = resolveResourceName('neon');
-      expect(result).toEqual({ resourceName: 'neon-gray-apple' });
+      expect(result).toEqual({
+        resourceName: 'neon-gray-apple-aaaa',
+        isGenerated: true,
+      });
     });
 
     it('generates and validates name for aws-apg (strict custom validation)', () => {
       // aws-apg has customValidation that rejects trailing hyphens and consecutive hyphens.
-      // Auto-generated names like "aws-apg-gray-apple" start with a letter and have
+      // Auto-generated names like "aws-apg-gray-apple-aaaa" start with a letter and have
       // no trailing hyphens or consecutive hyphens, so they should pass.
       vi.spyOn(Math, 'random').mockReturnValue(0);
       const result = resolveResourceName('aws-apg');
-      expect(result).toEqual({ resourceName: 'aws-apg-gray-apple' });
+      expect(result).toEqual({
+        resourceName: 'aws-apg-gray-apple-aaaa',
+        isGenerated: true,
+      });
     });
 
     it('generates and validates name for aws-dynamodb (minLength: 3)', () => {
       // aws-dynamodb requires minLength: 3. Auto-generated names like
-      // "aws-dynamodb-gray-apple" are well above 3 characters.
+      // "aws-dynamodb-gray-aaaa" are well above 3 characters.
       vi.spyOn(Math, 'random').mockReturnValue(0);
       const result = resolveResourceName('aws-dynamodb');
-      expect(result).toEqual({ resourceName: 'aws-dynamodb-gray-apple' });
+      expect(result).toEqual({
+        resourceName: 'aws-dynamodb-gray-aaaa',
+        isGenerated: true,
+      });
     });
 
-    it('respects product-specific maxLength during generation', () => {
-      // Use a long slug that will trigger truncation against aws-apg's maxLength of 50
-      vi.spyOn(Math, 'random').mockReturnValue(0);
-      const result = resolveResourceName('aws-apg');
-      if ('resourceName' in result) {
-        // aws-apg maxLength is 50; generated name must respect it
-        expect(result.resourceName.length).toBeLessThanOrEqual(50);
-        // Also verify truncation works for generateDefaultResourceName directly
-        const longSlug = 'a'.repeat(45);
-        const truncated = generateDefaultResourceName(longSlug, 50);
-        expect(truncated.length).toBeLessThanOrEqual(50);
-      } else {
-        expect.unreachable('Expected a resourceName, got an error');
+    it('caps generated names at 23 characters even when the product allows more', () => {
+      // aws-apg allows 50 and the default rule 128, but generated names must
+      // also fit the strictest partner limit
+      for (const slug of ['aws-apg', 'neon', 'x'.repeat(60)]) {
+        const result = resolveResourceName(slug);
+        if (!('resourceName' in result)) {
+          expect.unreachable('Expected a resourceName, got an error');
+        }
+        expect(result.resourceName.length).toBeLessThanOrEqual(
+          MAX_GENERATED_NAME_LENGTH
+        );
       }
     });
 

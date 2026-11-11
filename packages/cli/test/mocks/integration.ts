@@ -821,6 +821,39 @@ const autoProvisionResponses: Record<
     integration: autoProvisionIntegration,
     product: autoProvisionProduct,
   },
+  // Partner rejected the resource name (Supabase wording); the API reports
+  // the installation it provisioned into. `{name}` is replaced with the
+  // requested name.
+  name_taken: {
+    kind: 'unknown',
+    reason: 'error',
+    error_message:
+      'Project with name "{name}" already exists in your organization.',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+    installation: { id: 'acme-install' },
+  },
+  // Same, but without the installation in the response.
+  name_taken_without_installation: {
+    kind: 'unknown',
+    reason: 'error',
+    error_message:
+      'Project with name "{name}" already exists in your organization.',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
+  // Partner conflict that a new resource name cannot fix.
+  organization_name_taken: {
+    kind: 'unknown',
+    reason: 'error',
+    error_message:
+      'You are already a member of an organization named "Acme". Please choose a different name.',
+    url: 'https://vercel.com/acme/~/integrations/checkout/acme?productSlug=acme',
+    integration: autoProvisionIntegration,
+    product: autoProvisionProduct,
+  },
   multiple_installations: {
     kind: 'unknown',
     reason: 'multiple_installations',
@@ -1121,6 +1154,11 @@ export function useIntegration({
 
 export function useAutoProvision(opts?: {
   responseKey?: keyof typeof autoProvisionResponses;
+  /**
+   * One response per auto-provision request, in order; the last one repeats.
+   * Takes precedence over `responseKey`.
+   */
+  responseKeys?: (keyof typeof autoProvisionResponses)[];
   withInstallation?: boolean;
   installationAppearsAfterPolls?: number;
 }) {
@@ -1208,8 +1246,21 @@ export function useAutoProvision(opts?: {
         return;
       }
 
+      const responseKeys = opts?.responseKeys;
+      const responseKey = responseKeys?.length
+        ? responseKeys[Math.min(requestBodies.length, responseKeys.length) - 1]
+        : (opts?.responseKey ?? 'provisioned');
+      const fixture = autoProvisionResponses[responseKey];
       const response =
-        autoProvisionResponses[opts?.responseKey ?? 'provisioned'];
+        'error_message' in fixture && fixture.error_message
+          ? {
+              ...fixture,
+              error_message: fixture.error_message.replace(
+                '{name}',
+                req.body.name
+              ),
+            }
+          : fixture;
 
       if (response.kind !== 'provisioned') {
         // 422 responses for fallback cases

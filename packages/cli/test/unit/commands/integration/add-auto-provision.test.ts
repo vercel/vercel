@@ -52,7 +52,7 @@ beforeEach(() => {
   pullMock.mockClear();
   connectMock.mockClear();
   execaMock.mockReset().mockResolvedValue({ exitCode: 0 } as never);
-  // Mock Math.random to get predictable resource names (gray-apple suffix)
+  // Mock Math.random to get predictable resource names (gray-apple-aaaa suffix)
   vi.spyOn(Math, 'random').mockReturnValue(0);
 });
 
@@ -85,7 +85,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -111,7 +111,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       // After provisioning, auto-connect and env pull happen without prompts
@@ -152,10 +152,10 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
       await expect(client.stderr).toOutput(
-        'acme-gray-apple successfully connected to vercel-integration-add'
+        'acme-gray-apple-aaaa successfully connected to vercel-integration-add'
       );
       await expect(client.stderr).toOutput(
         'Failed to pull environment variables. You can run `vercel env pull` manually.'
@@ -185,7 +185,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -221,7 +221,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -242,11 +242,11 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       await expect(client.stderr).toOutput(
-        'acme-gray-apple successfully connected to vercel-integration-add'
+        'acme-gray-apple-aaaa successfully connected to vercel-integration-add'
       );
 
       const exitCode = await exitCodePromise;
@@ -260,7 +260,7 @@ describe('integration add (auto-provision)', () => {
 
       // Auto-generated name, server fills metadata defaults — no prompts
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       await exitCodePromise;
@@ -373,7 +373,7 @@ describe('integration add (auto-provision)', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -432,7 +432,7 @@ describe('integration add (auto-provision)', () => {
       );
       await expect(client.stderr).toOutput('Terms accepted in browser.');
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -464,7 +464,7 @@ describe('integration add (auto-provision)', () => {
       );
       await expect(client.stderr).toOutput('Terms accepted in browser.');
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -498,7 +498,7 @@ describe('integration add (auto-provision)', () => {
       );
       await expect(client.stderr).toOutput('Terms accepted in browser.');
       await expect(client.stderr).toOutput(
-        'Aurora Postgres successfully provisioned: aws-apg-gray-apple'
+        'Aurora Postgres successfully provisioned: aws-apg-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -953,7 +953,7 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
       // Verify all three URL parameters are present
       expect(openMock).toHaveBeenCalledWith(
-        expect.stringMatching(/defaultResourceName=acme-gray-apple/)
+        expect.stringMatching(/defaultResourceName=acme-gray-apple-aaaa/)
       );
       expect(openMock).toHaveBeenCalledWith(
         expect.stringMatching(/projectSlug=vercel-integration-add/)
@@ -991,7 +991,7 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(1);
       // Verify defaultResourceName and source are present, but not projectSlug
       expect(openMock).toHaveBeenCalledWith(
-        expect.stringMatching(/defaultResourceName=acme-gray-apple/)
+        expect.stringMatching(/defaultResourceName=acme-gray-apple-aaaa/)
       );
       expect(openMock).toHaveBeenCalledWith(
         expect.not.stringMatching(/projectSlug=/)
@@ -1251,6 +1251,206 @@ describe('integration add (auto-provision)', () => {
     });
   });
 
+  describe('resource name already taken at the partner', () => {
+    // acme, then up to two words, then the unique suffix
+    const GENERATED_NAME = /^acme(-[a-z]+){0,2}-[a-z0-9]{4}$/;
+
+    // Every Math.random() call returns a new value, so each generated name
+    // differs from the one before it.
+    function useVaryingRandom() {
+      let calls = 0;
+      vi.spyOn(Math, 'random').mockImplementation(
+        () => (calls++ % 10) / 10 + 0.05
+      );
+    }
+
+    it('retries once with a new generated name and provisions it', async () => {
+      useVaryingRandom();
+      const { requestBodies } = useAutoProvision({
+        responseKeys: ['name_taken', 'provisioned'],
+      });
+
+      client.setArgv('integration', 'add', 'acme', '--no-connect');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: '
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+
+      expect(requestBodies).toHaveLength(2);
+      const [first, second] = requestBodies as {
+        name: string;
+        installationId?: string;
+      }[];
+      expect(first.name).toMatch(GENERATED_NAME);
+      expect(second.name).toMatch(GENERATED_NAME);
+      expect(second.name).not.toEqual(first.name);
+      // The retry targets the installation the server reported, so it cannot
+      // create a second one.
+      expect(first.installationId).toBeUndefined();
+      expect(second.installationId).toEqual('acme-install');
+
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toContain(
+        `Acme Product successfully provisioned: ${second.name}`
+      );
+      expect(stderr).not.toContain('Opening browser');
+      expect(openMock).not.toHaveBeenCalled();
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_retried',
+            value: expect.stringContaining('"reason":"resource_name_taken"'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_completed',
+          }),
+        ])
+      );
+    });
+
+    it('falls back to the browser with a fresh name when the retry is also taken', async () => {
+      useVaryingRandom();
+      const { requestBodies } = useAutoProvision({
+        responseKeys: ['name_taken'],
+      });
+
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Opening browser to finish setup...'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+
+      // Exactly one retry, into the reported installation
+      expect(requestBodies).toHaveLength(2);
+      const [first, second] = requestBodies as {
+        name: string;
+        installationId?: string;
+      }[];
+      expect(second.name).not.toEqual(first.name);
+      expect(second.installationId).toEqual('acme-install');
+
+      // The browser is not offered either name the partner rejected
+      const calledUrl = new URL(openMock.mock.calls[0]?.[0] as string);
+      const browserName = calledUrl.searchParams.get('defaultResourceName');
+      expect(browserName).toMatch(GENERATED_NAME);
+      expect(browserName).not.toEqual(first.name);
+      expect(browserName).not.toEqual(second.name);
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_web_fallback',
+          }),
+        ])
+      );
+    });
+
+    it('does not retry or rename a name passed with --name', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKeys: ['name_taken', 'provisioned'],
+      });
+
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--name',
+        'my-db',
+        '-m',
+        'region=us-east-1'
+      );
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Opening browser to finish setup...'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+
+      expect(requestBodies).toHaveLength(1);
+      expect((requestBodies[0] as { name: string }).name).toEqual('my-db');
+      const calledUrl = new URL(openMock.mock.calls[0]?.[0] as string);
+      expect(calledUrl.searchParams.get('defaultResourceName')).toEqual(
+        'my-db'
+      );
+      expect(client.telemetryEventStore.readonlyEvents).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_retried',
+          }),
+        ])
+      );
+    });
+
+    it('does not retry a partner conflict that a new resource name cannot fix', async () => {
+      const { requestBodies } = useAutoProvision({
+        responseKeys: ['organization_name_taken', 'provisioned'],
+      });
+
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Opening browser to finish setup...'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(requestBodies).toHaveLength(1);
+    });
+
+    it('does not retry when the installation is unknown, so it cannot create a second one', async () => {
+      useVaryingRandom();
+      // First install from an interactive terminal: terms are accepted in the
+      // CLI and no installationId is sent, and this response does not report
+      // the installation.
+      const { requestBodies } = useAutoProvision({
+        responseKeys: ['name_taken_without_installation', 'provisioned'],
+        withInstallation: false,
+      });
+
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Accept all of the documents listed above?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Opening browser to finish setup...'
+      );
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+
+      expect(requestBodies).toHaveLength(1);
+      const [first] = requestBodies as {
+        name: string;
+        installationId?: string;
+        acceptedPolicies?: Record<string, string>;
+      }[];
+      expect(first.installationId).toBeUndefined();
+      expect(Object.keys(first.acceptedPolicies ?? {})).not.toHaveLength(0);
+      // The browser still gets a name that is not known to collide
+      const calledUrl = new URL(openMock.mock.calls[0]?.[0] as string);
+      const browserName = calledUrl.searchParams.get('defaultResourceName');
+      expect(browserName).toMatch(GENERATED_NAME);
+      expect(browserName).not.toEqual(first.name);
+      expect(client.telemetryEventStore.readonlyEvents).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_retried',
+          }),
+        ])
+      );
+    });
+  });
+
   describe('--plan flag', () => {
     it('should include billingPlanId in auto-provision request body', async () => {
       const { requestBodies } = useAutoProvision({
@@ -1261,7 +1461,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -1408,7 +1608,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -1434,7 +1634,7 @@ describe('integration add (auto-provision)', () => {
       client.stdin.write('y\n');
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -1980,7 +2180,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2005,7 +2205,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2100,7 +2300,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = install(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2136,7 +2336,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2170,7 +2370,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2205,7 +2405,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2240,7 +2440,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = install(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2266,7 +2466,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2292,7 +2492,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2437,7 +2637,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2463,7 +2663,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
@@ -2541,7 +2741,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Acme Product successfully provisioned: acme-gray-apple'
+        'Acme Product successfully provisioned: acme-gray-apple-aaaa'
       );
 
       const exitCode = await exitCodePromise;
