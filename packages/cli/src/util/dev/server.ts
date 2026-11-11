@@ -1,6 +1,6 @@
 import url, { URL } from 'url';
 import http from 'http';
-import { Socket } from 'net';
+import { Socket, isIP } from 'net';
 import fs from 'fs-extra';
 import ms from 'ms';
 import chalk from 'chalk';
@@ -191,7 +191,7 @@ import {
 } from '@vercel/error-utils';
 import isURL from './is-url';
 import { pickOverrides } from '../projects/project-settings';
-import { isWildcardAddress, replaceLocalhost } from './parse-listen';
+import { replaceLocalhost } from './parse-listen';
 import {
   type BulkRedirectTable,
   getBulkRedirectsSignature,
@@ -244,9 +244,6 @@ export default class DevServer {
   public files: BuilderInputs;
 
   private _address: URL | undefined;
-  // `_address` has wildcard hosts rewritten to `localhost`, so remember
-  // whether the listener is actually bound to all network interfaces.
-  private _boundToWildcard = false;
   public get address(): URL {
     if (!this._address) {
       throw dev.DEV_INTERNAL_ADDRESS_UNAVAILABLE();
@@ -2213,7 +2210,6 @@ export default class DevServer {
     }
 
     if (this.stopping) return;
-    this._boundToWildcard = isWildcardAddress(address);
     this._address = new URL(replaceLocalhost(address));
 
     // One store for the whole project, created before any service starts so
@@ -3160,18 +3156,18 @@ export default class DevServer {
       return true;
     }
 
+    // Always allow IP-literal Host headers (e.g. a LAN address when bound to
+    // `0.0.0.0`). DNS rebinding relies on an attacker-controlled domain name
+    // resolving to the local machine, which cannot happen for a bare IP, so
+    // LAN development keeps working while foreign domain names are rejected
+    // even when the server listens on all interfaces (the default).
+    if (isIP(hostname) !== 0) {
+      return true;
+    }
+
     // Allow the explicit listen address when the server is already running.
     if (this._address) {
       const listenHostname = this._address.hostname.toLowerCase();
-      // When the server is bound to a wildcard interface (0.0.0.0 or ::),
-      // the operator has explicitly chosen to expose it to all network
-      // interfaces. Any Host header is therefore reachable and legitimate;
-      // blocking LAN requests would break intentional LAN development.
-      // `_address` already has the wildcard rewritten to `localhost`, so this
-      // relies on the flag recorded when the listener started.
-      if (this._boundToWildcard) {
-        return true;
-      }
       if (hostname.toLowerCase() === listenHostname) {
         return true;
       }
