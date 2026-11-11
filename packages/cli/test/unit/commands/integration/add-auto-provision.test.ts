@@ -295,6 +295,30 @@ describe('integration add (auto-provision)', () => {
       ]);
     });
 
+    it('should track has_existing_installation when the team already has an installation', async () => {
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      await exitCodePromise;
+
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_started',
+            value: expect.stringContaining('"has_existing_installation":true'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_completed',
+            value: expect.stringContaining('"has_existing_installation":true'),
+          }),
+        ])
+      );
+    });
+
     it('should track metadata telemetry when --metadata is used', async () => {
       client.setArgv(
         'integration',
@@ -405,6 +429,37 @@ describe('integration add (auto-provision)', () => {
           expect.objectContaining({
             key: 'output:marketplace_install_flow_dropped',
             value: expect.stringContaining('"reason":"policy_declined"'),
+          }),
+        ])
+      );
+    });
+
+    it('should track has_existing_installation as false when the team has no installation', async () => {
+      client.setArgv('integration', 'add', 'acme');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Accept all of the documents listed above?'
+      );
+      client.stdin.write('y\n');
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      await exitCodePromise;
+
+      // The value describes the team when the flow started, so it stays false
+      // after the flow installs the integration.
+      expect(client.telemetryEventStore.readonlyEvents).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'output:marketplace_install_flow_started',
+            value: expect.stringContaining('"has_existing_installation":false'),
+          }),
+          expect.objectContaining({
+            key: 'output:marketplace_checkout_provisioning_completed',
+            value: expect.stringContaining('"has_existing_installation":false'),
           }),
         ])
       );

@@ -188,6 +188,11 @@ export async function addAutoProvision(
   const product = productResult.value;
   const installations = installationsResult.value;
 
+  // Check if integration is installed on this team
+  const teamInstallation = installations.find(
+    i => i.ownerId === team.id && i.installationType === 'marketplace'
+  );
+
   const baseProps = {
     integration_id: integration.id,
     integration_slug: integration.slug,
@@ -196,6 +201,9 @@ export async function addAutoProvision(
     product_slug: product.slug,
     team_id: team.id,
     source: 'cli',
+    // Whether the team had a marketplace installation when the flow started,
+    // so CLI and dashboard funnels can be split into new and existing installs.
+    has_existing_installation: Boolean(teamInstallation),
   };
 
   telemetry.trackMarketplaceEvent(
@@ -209,11 +217,6 @@ export async function addAutoProvision(
   output.debug(`Selected product: ${product.slug} (id: ${product.id})`);
   output.debug(
     `Product metadataSchema: ${JSON.stringify(product.metadataSchema, null, 2)}`
-  );
-
-  // Check if integration is installed on this team
-  const teamInstallation = installations.find(
-    i => i.ownerId === team.id && i.installationType === 'marketplace'
   );
 
   let acceptedPolicies: AcceptedPolicies = {};
