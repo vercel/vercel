@@ -48,6 +48,7 @@ interface MariaDBPool {
 interface MongoDBPool {
   options?: {
     maxIdleTimeMS?: number; // From MongoClientOptions
+    minPoolSizeCheckFrequencyMS?: number; // From the driver's ConnectionPoolOptions
   };
   on?: (
     event:
@@ -152,8 +153,51 @@ function getIdleTimeout(dbPool: DbPool): number {
   return 10000;
 }
 
-let idleTimeout: string | number | NodeJS.Timeout | null | undefined = null;
-let idleTimeoutResolve: (value: void | PromiseLike<void>) => void = () => {};
+interface PendingIdleWait {
+  timeout: NodeJS.Timeout;
+  resolve: () => void;
+}
+
+// Each pool keeps its own pending wait, so activity on (or attaching) one pool
+// never settles the wait that keeps another pool's idle connections alive.
+const pendingIdleWaits = new WeakMap<object, PendingIdleWait>();
+
+function settlePendingIdleWait(dbPool: DbPool) {
+  const pending = pendingIdleWaits.get(dbPool);
+  if (pending) {
+    clearTimeout(pending.timeout);
+    pending.resolve();
+    pendingIdleWaits.delete(dbPool);
+  }
+}
+
+// Extra time to wait after the idle timeout so the pool has actually closed the
+// idle connection before the invocation is allowed to settle.
+const DEFAULT_IDLE_MARGIN_MS = 100;
+
+// The MongoDB driver does not close a connection the instant it exceeds
+// maxIdleTimeMS: perished connections are pruned on the next checkout or by the
+// pool's background maintenance pass, which runs every
+// minPoolSizeCheckFrequencyMS (default 100ms). Allow two maintenance intervals.
+const MONGODB_DEFAULT_MAINTENANCE_INTERVAL_MS = 100;
+
+function getIdleMargin(dbPool: DbPool): number {
+  if (
+    'options' in dbPool &&
+    dbPool.options &&
+    'maxIdleTimeMS' in dbPool.options
+  ) {
+    const frequency = (dbPool as MongoDBPool).options
+      ?.minPoolSizeCheckFrequencyMS;
+    return (
+      2 *
+      (typeof frequency === 'number' && frequency > 0
+        ? frequency
+        : MONGODB_DEFAULT_MAINTENANCE_INTERVAL_MS)
+    );
+  }
+  return DEFAULT_IDLE_MARGIN_MS;
+}
 
 const maximumDuration = 15 * 60 * 1000 - 1000; // 15 minutes - 1 second
 
@@ -166,13 +210,11 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
     // We're not running in a Vercel function, so we don't need to wait for idle connections.
     return;
   }
-  if (idleTimeout) {
-    clearTimeout(idleTimeout);
-    idleTimeoutResolve();
-  }
+  settlePendingIdleWait(dbPool);
 
-  const promise = new Promise(resolve => {
-    idleTimeoutResolve = resolve;
+  let resolvePromise: () => void = () => {};
+  const promise = new Promise<void>(resolve => {
+    resolvePromise = resolve;
   });
 
   const deadline = getDeadline();
@@ -182,16 +224,20 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
 
   // Don't wait longer than the current invocation can run.
   const waitTime = Math.min(
-    getIdleTimeout(dbPool) + 100,
+    getIdleTimeout(dbPool) + getIdleMargin(dbPool),
     Math.max(100, remainingDuration)
   );
-  idleTimeout = setTimeout(() => {
-    idleTimeoutResolve?.();
+  const timeout = setTimeout(() => {
+    resolvePromise();
+    if (pendingIdleWaits.get(dbPool)?.timeout === timeout) {
+      pendingIdleWaits.delete(dbPool);
+    }
 
     if (DEBUG) {
       console.log('Database pool idle timeout reached. Releasing connections.');
     }
   }, waitTime);
+  pendingIdleWaits.set(dbPool, { timeout, resolve: resolvePromise });
 
   const requestContext = getContext();
   if (requestContext?.waitUntil) {
@@ -228,10 +274,8 @@ function waitUntilIdleTimeout(dbPool: DbPool) {
  * @experimental
  */
 export function attachDatabasePool(dbPool: DbPool) {
-  if (idleTimeout) {
-    idleTimeoutResolve?.();
-    clearTimeout(idleTimeout);
-  }
+  // Re-attaching the same pool replaces its own pending wait only.
+  settlePendingIdleWait(dbPool);
 
   // PostgreSQL, MySQL2, MariaDB - Listen for release events
   if (
@@ -292,9 +336,11 @@ export function attachDatabasePool(dbPool: DbPool) {
     'maxIdleTimeMS' in dbPool.options
   ) {
     const mongoPool = dbPool as MongoDBPool;
-    mongoPool.on!('connectionCheckedOut', () => {
+    // The driver's idle timer (maxIdleTimeMS) starts at check-in, so start the
+    // wait there as well.
+    mongoPool.on!('connectionCheckedIn', () => {
       if (DEBUG) {
-        console.log('MongoDB connection checked out');
+        console.log('MongoDB connection checked in');
       }
       waitUntilIdleTimeout(dbPool);
     });

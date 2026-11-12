@@ -72,8 +72,8 @@ describe('db-connections', () => {
       };
 
       attachDatabasePool(mongoPool);
-      const checkedOutCallback = mongoPool.on.mock.calls[0][1];
-      checkedOutCallback();
+      const checkedInCallback = mongoPool.on.mock.calls[0][1];
+      checkedInCallback();
 
       expect(vi.getTimerCount()).toBe(1);
     });
@@ -379,7 +379,7 @@ describe('db-connections', () => {
       );
     });
 
-    test('attaches connectionCheckedOut listener to MongoDB pool', () => {
+    test('attaches connectionCheckedIn listener to MongoDB pool', () => {
       const mongoPool = {
         options: { maxIdleTimeMS: 30000 },
         on: vi.fn(),
@@ -388,15 +388,17 @@ describe('db-connections', () => {
       attachDatabasePool(mongoPool);
 
       expect(mongoPool.on).toHaveBeenCalledWith(
+        'connectionCheckedIn',
+        expect.any(Function)
+      );
+      expect(mongoPool.on).not.toHaveBeenCalledWith(
         'connectionCheckedOut',
         expect.any(Function)
       );
 
-      const checkedOutCallback = mongoPool.on.mock.calls[0][1];
-      checkedOutCallback();
-      expect(console.log).toHaveBeenCalledWith(
-        'MongoDB connection checked out'
-      );
+      const checkedInCallback = mongoPool.on.mock.calls[0][1];
+      checkedInCallback();
+      expect(console.log).toHaveBeenCalledWith('MongoDB connection checked in');
     });
 
     test('attaches end listener to Redis pool', () => {
@@ -439,6 +441,113 @@ describe('db-connections', () => {
       attachDatabasePool(pgPool2);
 
       expect(vi.getTimerCount()).toBeLessThanOrEqual(timerCount1);
+    });
+  });
+
+  describe('MongoDB idle wait', () => {
+    function setup() {
+      const settled: string[] = [];
+      let index = 0;
+      globalThis[SYMBOL_FOR_REQ_CONTEXT] = {
+        get: () => ({
+          waitUntil: (promise: Promise<unknown>) => {
+            const id = `wait-${++index}`;
+            promise.then(() => settled.push(id));
+          },
+        }),
+      };
+      return settled;
+    }
+
+    function createMongoPool() {
+      const listeners: Record<string, () => void> = {};
+      return {
+        options: { maxIdleTimeMS: 5000 } as {
+          maxIdleTimeMS: number;
+          minPoolSizeCheckFrequencyMS?: number;
+        },
+        on: vi.fn((event: string, cb: () => void) => {
+          listeners[event] = cb;
+        }),
+        listeners,
+      };
+    }
+
+    test('starts the wait at check-in, not at check-out', async () => {
+      const settled = setup();
+      const pool = createMongoPool();
+      attachDatabasePool(pool);
+
+      // A long-running query: the wait must not start while checked out.
+      expect(pool.listeners.connectionCheckedOut).toBeUndefined();
+      await vi.advanceTimersByTimeAsync(6000);
+      pool.listeners.connectionCheckedIn();
+
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(settled).toEqual([]);
+      await vi.advanceTimersByTimeAsync(200);
+      expect(settled).toEqual(['wait-1']);
+    });
+
+    test('allows two maintenance intervals after maxIdleTimeMS', async () => {
+      const settled = setup();
+      const pool = createMongoPool();
+      pool.options.minPoolSizeCheckFrequencyMS = 500;
+      attachDatabasePool(pool);
+      pool.listeners.connectionCheckedIn();
+
+      await vi.advanceTimersByTimeAsync(5999);
+      expect(settled).toEqual([]);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toEqual(['wait-1']);
+    });
+
+    test('attaching another pool does not settle a pending wait', async () => {
+      const settled = setup();
+      const pool1 = createMongoPool();
+      attachDatabasePool(pool1);
+      pool1.listeners.connectionCheckedIn();
+
+      attachDatabasePool(createMongoPool());
+      await vi.advanceTimersByTimeAsync(0);
+      expect(settled).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(5200);
+      expect(settled).toEqual(['wait-1']);
+    });
+
+    test('activity on one pool does not settle the wait of another pool', async () => {
+      const settled = setup();
+      const pool1 = createMongoPool();
+      const pool2 = createMongoPool();
+      attachDatabasePool(pool1);
+      attachDatabasePool(pool2);
+
+      pool1.listeners.connectionCheckedIn();
+      await vi.advanceTimersByTimeAsync(1000);
+      pool2.listeners.connectionCheckedIn();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(settled).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(4200);
+      expect(settled).toEqual(['wait-1']);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(settled).toEqual(['wait-1', 'wait-2']);
+    });
+
+    test('a new check-in on the same pool replaces its pending wait', async () => {
+      const settled = setup();
+      const pool = createMongoPool();
+      attachDatabasePool(pool);
+
+      pool.listeners.connectionCheckedIn();
+      await vi.advanceTimersByTimeAsync(3000);
+      pool.listeners.connectionCheckedIn();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(settled).toEqual(['wait-1']);
+
+      await vi.advanceTimersByTimeAsync(5200);
+      expect(settled).toEqual(['wait-1', 'wait-2']);
     });
   });
 
