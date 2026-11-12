@@ -53,7 +53,13 @@ export default async function removeStore(
         {
           command: buildCommandWithGlobalFlags(
             client.argv,
-            'blob delete-store <storeId>'
+            'blob delete-store <storeId>',
+            undefined,
+            {
+              // The command is for a human at a terminal, so it must not
+              // carry the flag that forces the refusal it recovers from.
+              excludeFlags: ['--non-interactive'],
+            }
           ),
           when: 'user runs this command interactively',
         },

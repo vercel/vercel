@@ -596,6 +596,25 @@ describe('blob store remove', () => {
       expect(client.stdout.getFullOutput()).not.toContain('--yes');
     });
 
+    it('does not repeat --non-interactive in the interactive recovery command', async () => {
+      client.setArgv(
+        'blob',
+        'delete-store',
+        'store_1234567890123456',
+        '--non-interactive'
+      );
+
+      await removeStore(client, ['store_1234567890123456'], noToken).catch(
+        () => {}
+      );
+
+      const payload = JSON.parse(client.stdout.getFullOutput());
+      expect(payload.next).toHaveLength(1);
+      expect(payload.next[0].when).toBe('user runs this command interactively');
+      expect(payload.next[0].command).toContain('blob delete-store <storeId>');
+      expect(payload.next[0].command).not.toContain('--non-interactive');
+    });
+
     it('emits dangerous_operation_requires_user even when no store id is given', async () => {
       await removeStore(client, [], noToken).catch(() => {});
 
