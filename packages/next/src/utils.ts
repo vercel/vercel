@@ -19,6 +19,7 @@ import {
   FlagDefinitions,
   Chain,
   PrerenderInitialMetadata,
+  type Schedules,
 } from '@vercel/build-utils';
 import { NodeFileTraceReasons } from '@vercel/nft';
 import type {
@@ -1996,6 +1997,124 @@ function compareRegions(
   return sortedA.every((val, idx) => val === sortedB[idx]);
 }
 
+/**
+ * The config the Workflow SDK writes next to its generated routes
+ * (`.well-known/workflow/v1/config.json`): Lambda options for the flow and
+ * step functions, and the static schedules its workflows declare.
+ */
+type GeneratedWorkflowConfig = {
+  steps?: LambdaOptions;
+  workflows?: LambdaOptions;
+  schedules?: unknown;
+};
+
+function isGeneratedWorkflowsRoute(routeName: string): boolean {
+  return (
+    routeName.includes('.well-known/workflow/v1/flow') ||
+    routeName.includes('api/generated/workflows')
+  );
+}
+
+async function readGeneratedWorkflowConfig({
+  entryPath,
+  routeName,
+  page,
+  pageExtensions,
+  inversedAppPathManifest,
+}: {
+  entryPath: string;
+  routeName: string;
+  page: string;
+  pageExtensions?: ReadonlyArray<string>;
+  inversedAppPathManifest?: Record<string, string>;
+}): Promise<GeneratedWorkflowConfig> {
+  const sourceFile = await getSourceFilePathFromPage({
+    workPath: entryPath,
+    page: normalizeSourceFilePageFromManifest(
+      routeName,
+      page,
+      inversedAppPathManifest
+    ),
+    pageExtensions,
+  });
+  // For App Router, source file is like `step/route.js` so config is at `../config.json`
+  // For Pages Router, source file is like `step.js` so config is at `./config.json`
+  const isAppRouterRoute =
+    sourceFile.endsWith('/route.js') || sourceFile.endsWith('/route.ts');
+  const configRelativePath = isAppRouterRoute
+    ? '../config.json'
+    : './config.json';
+  return JSON.parse(
+    await fs
+      .readFile(
+        path.join(entryPath, path.dirname(sourceFile), configRelativePath),
+        'utf8'
+      )
+      .catch(() => '{}')
+  ) as GeneratedWorkflowConfig;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The static schedules the Workflow SDK declares for the app's workflows
+ * (`experimental_schedule`), from the config next to its generated flow route.
+ * Returned with the build result as `schedules`, which `vercel build` merges
+ * with `vercel.json#schedules` like any builder's. Each targets the queue
+ * topic the flow route consumes, so it needs no function of its own.
+ */
+export async function getWorkflowSchedules({
+  entryPath,
+  pages,
+  pageExtensions,
+  inversedAppPathManifest,
+}: {
+  entryPath: string;
+  pages: ReadonlyArray<string>;
+  pageExtensions?: ReadonlyArray<string>;
+  inversedAppPathManifest?: Record<string, string>;
+}): Promise<Schedules | undefined> {
+  const schedules: Schedules = {};
+  for (const page of pages) {
+    const routeName = normalizePage(page.replace(/\.js$/, ''));
+    if (!isGeneratedWorkflowsRoute(routeName)) continue;
+    const config = await readGeneratedWorkflowConfig({
+      entryPath,
+      routeName,
+      page,
+      pageExtensions,
+      inversedAppPathManifest,
+    });
+    if (config.schedules === undefined) continue;
+    const invalid = (message: string) =>
+      new NowBuildError({
+        code: 'INVALID_WORKFLOW_SCHEDULES',
+        message: `The Workflow SDK's schedules for "${routeName}" ${message}`,
+      });
+    if (!isPlainObject(config.schedules)) {
+      throw invalid('must be an object keyed by schedule name.');
+    }
+    for (const [name, schedule] of Object.entries(config.schedules)) {
+      if (
+        !isPlainObject(schedule) ||
+        typeof schedule.schedule !== 'string' ||
+        typeof schedule.topic !== 'string'
+      ) {
+        throw invalid(
+          `must be { schedule, topic } objects, and "${name}" is not one.`
+        );
+      }
+      if (name in schedules) {
+        throw invalid(`define "${name}" more than once.`);
+      }
+      schedules[name] = schedule as Schedules[string];
+    }
+  }
+  return Object.keys(schedules).length > 0 ? schedules : undefined;
+}
+
 export async function getPageLambdaGroups({
   entryPath,
   config,
@@ -2094,38 +2213,16 @@ export async function getPageLambdaGroups({
     const isGeneratedSteps =
       routeName.includes('.well-known/workflow/v1/step') ||
       routeName.includes('api/generated/steps');
-    const isGeneratedWorkflows =
-      routeName.includes('.well-known/workflow/v1/flow') ||
-      routeName.includes('api/generated/workflows');
+    const isGeneratedWorkflows = isGeneratedWorkflowsRoute(routeName);
 
     if (isGeneratedSteps || isGeneratedWorkflows) {
-      const sourceFile = await getSourceFilePathFromPage({
-        workPath: entryPath,
-        page: normalizeSourceFilePageFromManifest(
-          routeName,
-          page,
-          inversedAppPathManifest
-        ),
+      const config = await readGeneratedWorkflowConfig({
+        entryPath,
+        routeName,
+        page,
         pageExtensions,
+        inversedAppPathManifest,
       });
-      // For App Router, source file is like `step/route.js` so config is at `../config.json`
-      // For Pages Router, source file is like `step.js` so config is at `./config.json`
-      const isAppRouterRoute =
-        sourceFile.endsWith('/route.js') || sourceFile.endsWith('/route.ts');
-      const configRelativePath = isAppRouterRoute
-        ? '../config.json'
-        : './config.json';
-      const config = JSON.parse(
-        await fs
-          .readFile(
-            path.join(entryPath, path.dirname(sourceFile), configRelativePath),
-            'utf8'
-          )
-          .catch(() => '{}')
-      ) as {
-        steps?: LambdaOptions;
-        workflows?: LambdaOptions;
-      };
 
       if (isGeneratedSteps && config.steps) {
         Object.assign(opts, config.steps);

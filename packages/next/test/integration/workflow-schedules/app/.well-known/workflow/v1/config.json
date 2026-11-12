@@ -1,0 +1,20 @@
+{
+  "version": "0",
+  "workflows": {
+    "maxDuration": "max",
+    "experimentalTriggers": [
+      {
+        "type": "queue/v2beta",
+        "topic": "__wkf_workflow_*",
+        "consumer": "default"
+      }
+    ]
+  },
+  "schedules": {
+    "nightlyReport": {
+      "schedule": "0 2 * * *",
+      "timezone": "America/New_York",
+      "topic": "__wkf_workflow_schedule_workflows_snightly-report__nightlyReport"
+    }
+  }
+}
