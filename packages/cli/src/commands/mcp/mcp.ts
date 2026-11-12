@@ -1,6 +1,8 @@
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { execSync } from 'child_process';
+import { homedir } from 'os';
+import { join } from 'path';
 import { getLinkedProject } from '../../util/projects/link';
 import { packageName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
@@ -285,12 +287,9 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
             ? `${process.env.APPDATA}/Cursor/User/settings.json`
             : `${process.env.HOME}/.config/Cursor/User/settings.json`;
 
-      const cursorMcpPath =
-        process.platform === 'darwin'
-          ? `${process.env.HOME}/.cursor/mcp.json`
-          : process.platform === 'win32'
-            ? `${process.env.APPDATA}/Cursor/mcp.json`
-            : `${process.env.HOME}/.cursor/mcp.json`;
+      // Cursor's global MCP config lives at ~/.cursor/mcp.json on every
+      // platform (%USERPROFILE%\.cursor\mcp.json on Windows).
+      const cursorMcpPath = join(homedir(), '.cursor', 'mcp.json');
 
       let cursorAlreadyConfigured = false;
       try {
@@ -344,7 +343,9 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         if (process.platform === 'darwin') {
           execSync(`open '${oneClickUrl}'`);
         } else if (process.platform === 'win32') {
-          execSync(`start ${oneClickUrl}`);
+          // Quote the URL so cmd.exe doesn't split it at `&`, and pass an
+          // empty title since `start` treats the first quoted arg as one.
+          execSync(`start "" "${oneClickUrl}"`);
         } else {
           execSync(`xdg-open '${oneClickUrl}'`);
         }
