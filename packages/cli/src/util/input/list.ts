@@ -57,10 +57,16 @@ export default async function list(
   let biggestLength = 0;
   let selected: string | undefined;
 
-  // First calculate the biggest length
+  // First calculate the biggest length (include separator labels so padding
+  // never goes negative when a separator is wider than every choice name).
   for (const choice of _choices) {
     if ('name' in choice) {
       const length = getLength(choice.name);
+      if (length > biggestLength) {
+        biggestLength = length;
+      }
+    } else if (choice && typeof choice === 'object' && 'separator' in choice) {
+      const length = getLength(`── ${choice.separator} `);
       if (length > biggestLength) {
         biggestLength = length;
       }
@@ -74,7 +80,7 @@ export default async function list(
 
     if ('separator' in choice) {
       const prefix = `── ${choice.separator} `;
-      const suffix = '─'.repeat(biggestLength - getLength(prefix));
+      const suffix = '─'.repeat(Math.max(0, biggestLength - getLength(prefix)));
       return new Separator(`${prefix}${suffix}`);
     }
 

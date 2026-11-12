@@ -13,14 +13,23 @@ import { tagsAggregateCommand } from './tags/command';
 const projectScopeOption = {
   ...projectOption,
   shorthand: 'p',
-  description: 'Project name or ID (defaults to the linked project).',
+  description: 'Project name or ID (default: linked project).',
+} as const;
+
+const nextOption = {
+  name: 'next',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Show the next page using the cursor from the previous output',
+  argument: 'CURSOR',
 } as const;
 
 const cursorOption = {
   name: 'cursor',
   shorthand: 'c',
   type: String,
-  deprecated: false,
+  deprecated: true,
   description: 'Cursor from a previous page to continue listing from',
   argument: 'STRING',
 } as const;
@@ -30,7 +39,7 @@ const platformOption = {
   shorthand: null,
   type: String,
   deprecated: false,
-  description: 'Target platform for the build (defaults to linux/amd64).',
+  description: 'Target platform for the build (default: linux/amd64).',
   argument: 'PLATFORM',
 } as const;
 
@@ -43,6 +52,23 @@ const pushOption = {
     'Push the image after building. With Docker this builds and pushes in one step (Buildx enables zstd compression); Podman and Buildah build, then push with zstd compression.',
 } as const;
 
+const publicOption = {
+  name: 'public',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description: 'Make the repository public.',
+  legacyValues: { on: 'true', off: 'false' },
+} as const;
+
+const noPublicOption = {
+  name: 'no-public',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description: 'Make the repository private.',
+} as const;
+
 export const listSubcommand = {
   name: 'ls',
   aliases: ['list'],
@@ -51,6 +77,7 @@ export const listSubcommand = {
   options: [
     projectScopeOption,
     limitOption,
+    nextOption,
     cursorOption,
     formatOption,
     jsonOption,
@@ -87,8 +114,8 @@ export const inspectSubcommand = {
 } as const;
 
 export const addSubcommand = {
-  name: 'add',
-  aliases: ['create'],
+  name: 'create',
+  aliases: ['add'],
   description: 'Create a container registry repository',
   arguments: [
     {
@@ -100,14 +127,44 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Create a repository',
-      value: `${packageName} vcr add my-repository`,
+      value: `${packageName} vcr create my-repository`,
+    },
+  ],
+} as const;
+
+export const configSubcommand = {
+  name: 'update',
+  aliases: ['config'],
+  description:
+    "Update a container registry repository, such as the repository's visibility",
+  arguments: [
+    {
+      name: 'repository',
+      required: true,
+    },
+  ],
+  options: [
+    publicOption,
+    noPublicOption,
+    projectScopeOption,
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Make a repository public',
+      value: `${packageName} vcr update my-repository --public`,
+    },
+    {
+      name: 'Make a repository private',
+      value: `${packageName} vcr update my-repository --no-public`,
     },
   ],
 } as const;
 
 export const removeSubcommand = {
-  name: 'rm',
-  aliases: ['remove', 'delete'],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete a container registry repository',
   arguments: [
     {
@@ -119,11 +176,11 @@ export const removeSubcommand = {
   examples: [
     {
       name: 'Delete a repository',
-      value: `${packageName} vcr rm my-repository`,
+      value: `${packageName} vcr delete my-repository`,
     },
     {
       name: 'Delete a repository without the confirmation prompt',
-      value: `${packageName} vcr rm my-repository --yes`,
+      value: `${packageName} vcr delete my-repository --yes`,
     },
   ],
 } as const;
@@ -194,7 +251,7 @@ export const buildSubcommand = {
       value: `${packageName} vcr build docker ./app my-api:1.2.3`,
     },
     {
-      name: 'Pass extra flags through to the container tool',
+      name: 'Pass extra options through to the container tool',
       value: `${packageName} vcr build docker . -- --no-cache --build-arg KEY=value`,
     },
   ],
@@ -238,6 +295,7 @@ export const vcrCommand = {
     listSubcommand,
     inspectSubcommand,
     addSubcommand,
+    configSubcommand,
     removeSubcommand,
     loginSubcommand,
     buildSubcommand,
@@ -254,7 +312,7 @@ export const vcrCommand = {
     },
     {
       name: 'Create a repository',
-      value: `${packageName} vcr add my-app`,
+      value: `${packageName} vcr create my-app`,
     },
     {
       name: 'List images in a repository',

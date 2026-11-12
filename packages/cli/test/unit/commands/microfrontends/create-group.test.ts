@@ -2,7 +2,7 @@ import { describe, beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import microfrontends from '../../../../src/commands/microfrontends';
 import * as linkModule from '../../../../src/util/projects/link';
-import { teamCache } from '../../../../src/util/teams/get-team-by-id';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
 import type { MicrofrontendsGroupsResponse } from '../../../../src/commands/microfrontends/types';
 
 vi.mock('../../../../src/util/projects/link');
@@ -148,7 +148,7 @@ describe('microfrontends create-group', () => {
     it('prints usage', async () => {
       client.setArgv('microfrontends', 'create-group', '--help');
       const exitCode = await microfrontends(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
     });
   });
 
@@ -226,7 +226,7 @@ describe('microfrontends create-group', () => {
       await expect(client.stderr).toOutput(
         'Error: Default app "blog" must be one of the selected projects.'
       );
-      expect(await exitCodePromise).toBe(1);
+      expect(await exitCodePromise).toBe(2);
     });
 
     it('errors when project not found', async () => {
@@ -474,9 +474,9 @@ describe('microfrontends create-group', () => {
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Missing required flag --name. Use --name in non-interactive mode.'
+        'Error: Missing required option --name. Use --name in non-interactive mode.'
       );
-      expect(await exitCodePromise).toBe(1);
+      expect(await exitCodePromise).toBe(2);
     });
 
     it('errors when --project is missing', async () => {
@@ -491,9 +491,9 @@ describe('microfrontends create-group', () => {
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Missing required flag --project. Use --project in non-interactive mode.'
+        'Error: Missing required option --project. Use --project in non-interactive mode.'
       );
-      expect(await exitCodePromise).toBe(1);
+      expect(await exitCodePromise).toBe(2);
     });
 
     it('errors when multiple projects are set without --default-app', async () => {
@@ -510,9 +510,9 @@ describe('microfrontends create-group', () => {
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Missing required flag --default-app when using multiple --project values in non-interactive mode.'
+        'Error: Missing required option --default-app when using multiple --project values in non-interactive mode.'
       );
-      expect(await exitCodePromise).toBe(1);
+      expect(await exitCodePromise).toBe(2);
     });
 
     it('creates group without prompts when billing is not affected', async () => {
@@ -553,9 +553,9 @@ describe('microfrontends create-group', () => {
       const exitCodePromise = microfrontends(client);
 
       await expect(client.stderr).toOutput(
-        'Error: Missing required flag --project-default-route for "docs". Use --project-default-route=docs=/<path> in non-interactive mode.'
+        'Error: Missing required option --project-default-route for "docs". Use --project-default-route=docs=/<path> in non-interactive mode.'
       );
-      expect(await exitCodePromise).toBe(1);
+      expect(await exitCodePromise).toBe(2);
     });
 
     it('errors for invalid --project-default-route format', async () => {

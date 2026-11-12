@@ -18,6 +18,13 @@ export class AiGatewayBudgetsSetTelemetryClient
     }
   }
 
+  trackCliOptionAmount(amount: number | undefined) {
+    if (amount !== undefined) {
+      this.trackCliOption({ option: 'amount', value: this.redactedValue });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionLimit(limit: number | undefined) {
     if (limit !== undefined) {
       this.trackCliOption({ option: 'limit', value: this.redactedValue });
@@ -30,9 +37,9 @@ export class AiGatewayBudgetsSetTelemetryClient
     }
   }
 
-  trackCliFlagIncludeByok(includeByok: boolean | undefined) {
-    if (includeByok) {
-      this.trackCliFlag('include-byok');
+  trackCliFlagDefault(defaultValue: boolean | undefined) {
+    if (defaultValue) {
+      this.trackCliFlag('default');
     }
   }
 

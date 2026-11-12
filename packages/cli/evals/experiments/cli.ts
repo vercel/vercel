@@ -3,6 +3,8 @@ import { join, dirname, relative } from 'path';
 import { fileURLToPath } from 'url';
 import type { ExperimentConfig } from '@vercel/agent-eval';
 import { setupAuthAndConfig } from '../setup/auth-and-config';
+import { ALLOWED_EVAL_TEAM_ID } from '../team-guard';
+import { filterDisabledEvals } from '../disabled-evals';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SKILLS_DIR = join(__dirname, '../../../../skills/vercel-cli');
@@ -74,9 +76,12 @@ export function getEvalsFromEnv(): string[] {
   const known = new Set(ALL_EVALS);
 
   const base = requested.length > 0 ? requested : ALL_EVALS;
-  return base.filter(
-    evalName => known.has(evalName) && !excluded.has(evalName)
-  );
+  // Safety: hard-disabled evals are dropped even when explicitly requested
+  // (see disabled-evals.ts). This also covers direct agent-eval invocations
+  // that bypass run.ts.
+  return filterDisabledEvals(
+    base.filter(evalName => known.has(evalName) && !excluded.has(evalName))
+  ).allowed;
 }
 
 /**
@@ -108,7 +113,9 @@ export function createCliExperimentConfig({
     timeout, // 15 min per eval (env can need link + env ls; build is long)
     sandbox: 'docker', // Use Docker sandbox in CI (no OIDC required; Vercel sandbox prefers OIDC)
     setup: async sandbox => {
-      const teamId = process.env.CLI_EVAL_TEAM_ID ?? '';
+      // Team guard: setupAuthAndConfig (below) verifies the token and pins
+      // the sandbox scope; it throws if CLI_EVAL_TEAM_ID is any other team.
+      const teamId = process.env.CLI_EVAL_TEAM_ID ?? ALLOWED_EVAL_TEAM_ID;
       const projectId = process.env.CLI_EVAL_PROJECT_ID ?? '';
 
       await setupAuthAndConfig(sandbox);

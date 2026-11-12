@@ -13,10 +13,16 @@ import {
   buildDeltaString,
   createEnvObject,
 } from '../../util/env/diff-env-files';
-import { VERCEL_OIDC_TOKEN } from '../../util/env/constants';
+import {
+  SENSITIVE_ENV_VALUE_PLACEHOLDER,
+  VERCEL_OIDC_TOKEN,
+} from '../../util/env/constants';
+import { isSecretEnvVar } from '../../util/env/env-var-config-secret-ui';
+import { getUnavailableSecretValuesMessage } from '../../util/env/secret-read-guidance';
 import { updateOidcTokenContents } from '../../util/env/update-oidc-token-contents';
 import { isErrnoException } from '@vercel/error-utils';
 import { addToGitIgnore } from '../../util/link/add-to-gitignore';
+import { ensureLink } from '../../util/link/ensure-link';
 import JSONparse from 'json-parse-better-errors';
 import { formatProject } from '../../util/projects/format-project';
 import type { ProjectLinked } from '@vercel-internals/types';
@@ -30,6 +36,11 @@ import parseTarget from '../../util/parse-target';
 import { resolveProjectContext } from '../../util/projects/resolve-project-context';
 import getDeployment from '../../util/get-deployment';
 import {
+  getRenamedOption,
+  renameOptionInArgs,
+  reportRenamedOptionError,
+} from '../../util/renamed-option';
+import {
   buildCommandWithYes,
   getPreservedArgsForEnvPull,
   outputActionRequired,
@@ -38,6 +49,10 @@ import {
 import { printAlignedLabel } from '../../util/output/print-aligned-label';
 
 const CONTENTS_PREFIX = '# Created by Vercel CLI\n';
+
+function printEnvPullWarning(message: string): void {
+  output.print(`${chalk.yellow('!')} ${message}\n`);
+}
 
 export interface EnvPullOptions {
   /** Refresh only VERCEL_OIDC_TOKEN while preserving all other file content. */
@@ -77,7 +92,7 @@ const VARIABLES_TO_IGNORE = [
   'VERCEL_WEB_ANALYTICS_ID',
 ];
 
-export const SENSITIVE_PLACEHOLDER = '[SENSITIVE]';
+export const SENSITIVE_PLACEHOLDER = SENSITIVE_ENV_VALUE_PLACEHOLDER;
 
 async function getRedactedSensitiveKeys(
   client: Client,
@@ -97,7 +112,7 @@ async function getRedactedSensitiveKeys(
       gitBranch,
     });
     const sensitiveKeys = new Set(
-      envs.filter(env => env.type === 'sensitive').map(env => env.key)
+      envs.filter(isSecretEnvVar).map(env => env.key)
     );
     return new Set(emptyKeys.filter(key => sensitiveKeys.has(key)));
   } catch {
@@ -123,7 +138,7 @@ export default async function pull(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags: opts } = parsedArgs;
@@ -132,7 +147,7 @@ export default async function pull(
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(`env pull <file>`)}`
     );
-    return 1;
+    return 2;
   }
 
   // handle relative or absolute filename
@@ -145,20 +160,29 @@ export default async function pull(
   telemetryClient.trackCliFlagYes(skipConfirmation);
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
+  telemetryClient.trackCliOptionDeployment(opts['--deployment']);
   telemetryClient.trackCliOptionId(opts['--id']);
   telemetryClient.trackCliOptionProject(opts['--project']);
 
-  const link = await resolveProjectContext({
+  const deploymentFlag = getRenamedOption(opts, '--deployment', '--id');
+  if ('error' in deploymentFlag) {
+    return reportRenamedOptionError(client, deploymentFlag.error);
+  }
+
+  let link = await resolveProjectContext({
     client,
     projectNameOrId: opts['--project'],
+    skipOwnerLookup: true,
   });
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
     if (client.nonInteractive) {
-      const preserved = getPreservedArgsForEnvPull(client.argv);
+      // Suggestions teach `--deployment`, even when `--id` was typed.
+      const argv = renameOptionInArgs(client.argv, '--id', '--deployment');
+      const preserved = getPreservedArgsForEnvPull(argv);
       const linkArgv = [
-        ...client.argv.slice(0, 2),
+        ...argv.slice(0, 2),
         'link',
         '--scope',
         '<scope>',
@@ -169,31 +193,50 @@ export default async function pull(
         {
           status: 'error',
           reason: 'not_linked',
-          message: `Your codebase isn't linked to a project on Vercel. Run ${getCommandNamePlain(
+          message: `Your codebase isn't linked to a project on Vercel. Run \`${getCommandNamePlain(
             'link'
-          )} to begin. Use --yes for non-interactive; use --scope or --project to specify team or project.`,
+          )}\` to begin. Use \`--yes\` for non-interactive; use \`--scope\` or \`--project\` to specify team or project.`,
           next: [
             { command: buildCommandWithYes(linkArgv) },
-            { command: buildCommandWithYes(client.argv) },
+            { command: buildCommandWithYes(argv) },
           ],
         },
         1
       );
     }
-    output.error(
-      `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
-        'link'
-      )} to begin.`
-    );
-    return 1;
+
+    // In an interactive session, offer the shared linking flow inline instead
+    // of requiring a separate `vercel link` run followed by `vercel env pull`.
+    if (!client.nonInteractive && client.stdin.isTTY && !skipConfirmation) {
+      const ensuredLink = await ensureLink('env pull', client, client.cwd, {
+        link,
+        // The env vars are pulled below, so don't offer to pull them twice.
+        pullEnv: false,
+      });
+      if (typeof ensuredLink === 'number') {
+        return ensuredLink;
+      }
+      link = ensuredLink;
+    } else {
+      output.error(
+        `Your codebase isn’t linked to a project on Vercel. Run ${getCommandName(
+          'link'
+        )} to begin.`
+      );
+      return 1;
+    }
   }
   client.config.currentTeam =
     link.org.type === 'team' ? link.org.id : undefined;
 
-  const deploymentId = opts['--id'];
+  const deploymentId = deploymentFlag.value;
 
   if (deploymentId && opts['--project']) {
-    const deployment = await getDeployment(client, link.org.slug, deploymentId);
+    const deployment = await getDeployment(
+      client,
+      link.org.slug || link.org.id,
+      deploymentId
+    );
     if (deployment.projectId && deployment.projectId !== link.project.id) {
       output.error(
         `Deployment ${chalk.bold(deploymentId)} does not belong to project ${chalk.bold(link.project.name)}.`
@@ -244,9 +287,9 @@ export async function envPullCommandLogic(
     output.log(`Overwriting existing ${chalk.bold(filename)} file`);
   } else if (exists && !skipConfirmation && !oidcTokenOnly) {
     if (client.nonInteractive) {
-      const preserved = getPreservedArgsForEnvPull(client.argv).filter(
-        arg => arg !== '--yes' && arg !== '-y'
-      );
+      const preserved = getPreservedArgsForEnvPull(
+        renameOptionInArgs(client.argv, '--id', '--deployment')
+      ).filter(arg => arg !== '--yes' && arg !== '-y');
       const suffix = preserved.length > 0 ? ` ${preserved.join(' ')}` : '';
       outputActionRequired(client, {
         status: 'action_required',
@@ -275,7 +318,9 @@ export async function envPullCommandLogic(
     }
   }
 
-  const projectSlugLink = formatProject(link.org.slug, link.project.name);
+  const projectSlugLink = link.org.slug
+    ? formatProject(link.org.slug, link.project.name)
+    : chalk.bold(link.project.name);
 
   const downloadMessage = oidcTokenOnly
     ? `Downloading a fresh \`${chalk.cyan(
@@ -315,6 +360,9 @@ export async function envPullCommandLogic(
   let contents: string;
   let fileChanged = true;
   const keptLocalKeys: string[] = [];
+  const preservedLocalSecretKeys: string[] = [];
+  let redactedSecretCount = 0;
+  let placeholderSecretCount = 0;
 
   if (oidcTokenOnly) {
     const existingContents = exists ? await readFile(fullPath, 'utf8') : '';
@@ -332,10 +380,18 @@ export async function envPullCommandLogic(
       gitBranch,
       records
     );
+    redactedSecretCount = sensitiveKeys.size;
 
     const mergedRecords: Record<string, string | undefined> = { ...records };
     for (const key of sensitiveKeys) {
-      mergedRecords[key] = SENSITIVE_PLACEHOLDER;
+      const localValue = oldEnv?.[key];
+      if (localValue && localValue !== SENSITIVE_PLACEHOLDER) {
+        mergedRecords[key] = localValue;
+        preservedLocalSecretKeys.push(key);
+      } else {
+        mergedRecords[key] = SENSITIVE_PLACEHOLDER;
+        placeholderSecretCount++;
+      }
     }
     if (oldEnv) {
       for (const [key, value] of Object.entries(oldEnv)) {
@@ -385,6 +441,31 @@ export async function envPullCommandLogic(
         .join(', ')} (defined locally, not found in the ${chalk.cyan(
         environment
       )} Environment)`
+    );
+  }
+
+  if (redactedSecretCount > 0) {
+    const preservedMessage =
+      preservedLocalSecretKeys.length > 0
+        ? ` Kept ${preservedLocalSecretKeys.length} existing local ${
+            preservedLocalSecretKeys.length === 1 ? 'value' : 'values'
+          }.`
+        : '';
+    const placeholderMessage =
+      placeholderSecretCount > 0
+        ? ` Wrote "${SENSITIVE_PLACEHOLDER}" ${
+            placeholderSecretCount === 1
+              ? 'as a placeholder'
+              : 'as placeholders'
+          } for the remaining ${
+            placeholderSecretCount === 1 ? 'value' : 'values'
+          }; replace ${placeholderSecretCount === 1 ? 'it' : 'them'} with local-only values.`
+        : '';
+    printEnvPullWarning(
+      `${getUnavailableSecretValuesMessage(
+        environment,
+        redactedSecretCount
+      )}${preservedMessage}${placeholderMessage}`
     );
   }
 

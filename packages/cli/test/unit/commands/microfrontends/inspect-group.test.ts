@@ -2,7 +2,7 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import microfrontends from '../../../../src/commands/microfrontends';
 import * as linkModule from '../../../../src/util/projects/link';
-import { teamCache } from '../../../../src/util/teams/get-team-by-id';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
 import type { MicrofrontendsGroupsResponse } from '../../../../src/commands/microfrontends/types';
 
 const groupsResponse: MicrofrontendsGroupsResponse = {
@@ -149,7 +149,7 @@ describe('microfrontends inspect-group', () => {
   it('prints usage with --help', async () => {
     client.setArgv('microfrontends', 'inspect-group', '--help');
     const exitCode = await microfrontends(client);
-    expect(exitCode).toBe(2);
+    expect(exitCode).toBe(0);
   });
 
   it('outputs JSON when --format=json is provided', async () => {
@@ -294,7 +294,7 @@ describe('microfrontends inspect-group', () => {
     await expect(client.stderr).toOutput(
       'Error: Invalid --config-file-name. Value must end with .json or .jsonc.'
     );
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('errors in non-TTY mode without --group', async () => {
@@ -304,9 +304,9 @@ describe('microfrontends inspect-group', () => {
     const exitCodePromise = microfrontends(client);
 
     await expect(client.stderr).toOutput(
-      'Error: Missing required flag --group.'
+      'Error: Missing required option --group.'
     );
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
     (client.stdin as any).isTTY = true;
   });
 });

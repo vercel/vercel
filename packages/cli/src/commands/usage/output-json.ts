@@ -1,5 +1,17 @@
 import type Client from '../../util/client';
-import type { JsonOutputOptions } from './types';
+import type { JsonOutputOptions, ServiceAggregation } from './types';
+
+function serializeService(service: ServiceAggregation) {
+  return {
+    name: service.name,
+    product: service.product,
+    quantity: service.quantity,
+    unit: service.unit,
+    cost: service.cost,
+    included: service.included,
+    category: service.category,
+  };
+}
 
 export function outputJson(
   client: Client,
@@ -12,94 +24,60 @@ export function outputJson(
   }: JsonOutputOptions
 ): void {
   const sortedServices = [...data.services.entries()].sort(
-    (a, b) => b[1].billedCost - a[1].billedCost
+    (a, b) => b[1].cost - a[1].cost
   );
 
-  const sortedPeriods = [...data.periodUsage.keys()].sort();
-
   const jsonOutput: Record<string, unknown> = {
-    period: {
-      from: fromDate,
-      to: toDate,
-    },
+    period: { from: fromDate, to: toDate },
     context: data.contextName,
-    pricingUnit: data.pricingUnit,
+    costUnit: data.costUnit,
   };
 
-  // Include breakdown data if a breakdown period is specified
+  if (data.creditBalance) {
+    jsonOutput.creditBalance = data.creditBalance;
+  }
+
   if (breakdownPeriod) {
     jsonOutput.breakdown = {
       period: breakdownPeriod,
-      data: sortedPeriods.map(periodKey => {
-        const periodData = data.periodUsage.get(periodKey)!;
-        const sortedPeriodServices = [...periodData.services.entries()].sort(
-          (a, b) => b[1].billedCost - a[1].billedCost
-        );
+      data: [...data.periodUsage.keys()].sort().map(periodKey => {
+        const period = data.periodUsage.get(periodKey)!;
         return {
           periodKey,
-          services: sortedPeriodServices.map(([name, svc]) => ({
-            name,
-            pricingQuantity: svc.pricingQuantity,
-            pricingUnit: svc.pricingUnit,
-            effectiveCost: svc.effectiveCost,
-            billedCost: svc.billedCost,
-          })),
+          services: [...period.services.entries()]
+            .sort((a, b) => b[1].cost - a[1].cost)
+            .map(([, service]) => serializeService(service)),
           totals: {
-            pricingQuantity: periodData.totalPricingQuantity,
-            effectiveCost: periodData.totalEffectiveCost,
-            billedCost: periodData.totalBilledCost,
+            cost: period.totalCost,
           },
         };
       }),
     };
   }
 
-  // Include group-by data if a dimension is specified
   if (groupByDimension) {
-    const sortedGroups = [...data.groupByUsage.entries()].sort(
-      (a, b) => b[1].totalBilledCost - a[1].totalBilledCost
-    );
-
     jsonOutput.groupBy = {
       dimension: groupByDimension,
-      data: sortedGroups.map(([groupName, groupData]) => {
-        const sortedGroupServices = [...groupData.services.entries()].sort(
-          (a, b) => b[1].billedCost - a[1].billedCost
-        );
-        return {
-          name: groupName,
-          services: sortedGroupServices.map(([name, svc]) => ({
-            name,
-            pricingQuantity: svc.pricingQuantity,
-            pricingUnit: svc.pricingUnit,
-            effectiveCost: svc.effectiveCost,
-            billedCost: svc.billedCost,
-          })),
+      data: [...data.groupByUsage.entries()]
+        .sort((a, b) => b[1].totalCost - a[1].totalCost)
+        .map(([name, group]) => ({
+          name,
+          services: [...group.services.entries()]
+            .sort((a, b) => b[1].cost - a[1].cost)
+            .map(([, service]) => serializeService(service)),
           totals: {
-            pricingQuantity: groupData.totalPricingQuantity,
-            effectiveCost: groupData.totalEffectiveCost,
-            billedCost: groupData.totalBilledCost,
+            cost: group.totalCost,
           },
-        };
-      }),
+        })),
     };
   }
 
-  jsonOutput.services = sortedServices.map(([name, svc]) => ({
-    name,
-    pricingQuantity: svc.pricingQuantity,
-    pricingUnit: svc.pricingUnit,
-    effectiveCost: svc.effectiveCost,
-    billedCost: svc.billedCost,
-  }));
-
+  jsonOutput.services = sortedServices.map(([, service]) =>
+    serializeService(service)
+  );
   jsonOutput.totals = {
-    pricingQuantity: data.grandTotals.pricingQuantity,
-    effectiveCost: data.grandTotals.effectiveCost,
-    billedCost: data.grandTotals.billedCost,
+    cost: data.totalCost,
   };
-
-  jsonOutput.chargeCount = data.chargeCount;
 
   client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
 }

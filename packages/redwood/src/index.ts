@@ -57,6 +57,8 @@ export const build: BuildV2 = async ({
   meta = {},
   config = {},
   service,
+  diagnosticsValues,
+  span,
 }) => {
   await download(files, workPath, meta);
 
@@ -84,6 +86,7 @@ export const build: BuildV2 = async ({
     lockfilePath,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
     turboSupportsCorepackHome,
   } = await scanParentDirs(entrypointFsDirname, true);
 
@@ -91,6 +94,8 @@ export const build: BuildV2 = async ({
     cliType,
     lockfileVersion,
     packageJsonPackageManager,
+    packageJsonDevEngines,
+    nodeVersion,
     env: process.env,
     turboSupportsCorepackHome,
     projectCreatedAt: config.projectSettings?.createdAt,
@@ -124,7 +129,7 @@ export const build: BuildV2 = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: config.framework ?? undefined,
+      framework: diagnosticsValues?.framework,
       serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {
@@ -299,7 +304,7 @@ export const build: BuildV2 = async ({
 
     lambdaFiles[relative(workPath, fileFsRef.fsPath)] = fileFsRef;
 
-    const staticConfig = getConfig(project, sourceFile);
+    const staticConfig = getConfig(project, sourceFile, undefined, span);
 
     const regions = staticConfig?.regions;
     if (regions && !Array.isArray(regions)) {

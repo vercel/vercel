@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import { isBucketingAttribute } from './attribute-types';
 import type { FlagSettings } from './types';
 
 export interface FlagBucketingBase {
@@ -38,6 +39,12 @@ export function resolveFlagBucketingBase(
     );
     throw new Error(
       `Unknown attribute ${chalk.bold(selector)}. Available attributes for ${kind}: ${availableAttributes.join(', ')}`
+    );
+  }
+
+  if (!isBucketingAttribute(matchingAttribute)) {
+    throw new Error(
+      `Attribute ${chalk.bold(selector)} is a Timestamp and cannot be used for bucketing. Choose a string or number attribute.`
     );
   }
 

@@ -50,8 +50,8 @@ describe('flags versions', () => {
     client.setArgv('flags', 'versions', 'diff', '--help');
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(2);
-    const output = client.stderr.getFullOutput();
+    expect(exitCode).toEqual(0);
+    const output = stripAnsi(client.stderr.getFullOutput());
     expect(output).toContain(
       'Show changes introduced by a feature flag version'
     );
@@ -72,7 +72,7 @@ describe('flags versions', () => {
       'production',
       '--limit',
       '1',
-      '--cursor',
+      '--next',
       '1',
       '--json'
     );
@@ -84,7 +84,7 @@ describe('flags versions', () => {
       { key: 'argument:flag', value: '[REDACTED]' },
       { key: 'option:environment', value: 'production' },
       { key: 'option:limit', value: '1' },
-      { key: 'option:cursor', value: '[REDACTED]' },
+      { key: 'option:next', value: '[REDACTED]' },
       { key: 'flag:json', value: 'TRUE' },
     ]);
   });
@@ -167,7 +167,7 @@ describe('flags versions', () => {
     expect(output).toContain('Ada Lovelace');
     expect(output).toContain('Enabled production rollout');
     expect(output).toContain('production');
-    expect(output).toContain('flags versions my-feature --limit 1 --cursor 1');
+    expect(output).toContain('flags versions my-feature --limit 1 --next 1');
   });
 
   it('quotes values with shell metacharacters in the next-page command', async () => {
@@ -199,7 +199,7 @@ describe('flags versions', () => {
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
     expect(output).toContain(
-      "flags versions 'my feature' --limit 1 --environment 'custom preview' --cursor 1"
+      "flags versions 'my feature' --limit 1 --environment 'custom preview' --next 1"
     );
   });
 
@@ -463,6 +463,26 @@ describe('flags versions', () => {
     expect(parsed.versions).toHaveLength(1);
     expect(parsed.versions[0].revision).toEqual(2);
     expect(parsed.pagination.next).toEqual('2');
+    // `--json` keeps stderr clean, so the deprecation warning is skipped.
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+  });
+
+  it('warns that --cursor is deprecated in human output', async () => {
+    client.setArgv(
+      'flags',
+      'versions',
+      'my-feature',
+      '--limit',
+      '1',
+      '--cursor',
+      '1'
+    );
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      '! --cursor is deprecated. Use --next.'
+    );
   });
 
   it('lists versions with --project when the cwd is not linked', async () => {
@@ -495,7 +515,7 @@ describe('flags versions', () => {
     client.setArgv('flags', 'versions');
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Missing required argument: flag'
     );
@@ -505,7 +525,7 @@ describe('flags versions', () => {
     client.setArgv('flags', 'versions', 'my-feature', '--limit', '0');
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
       'The --limit option must be an integer between 1 and 100.'
     );
@@ -515,7 +535,7 @@ describe('flags versions', () => {
     client.setArgv('flags', 'versions', 'diff', 'my-feature');
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
       'The --revision option must be a non-negative integer.'
     );

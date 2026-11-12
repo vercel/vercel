@@ -1,15 +1,18 @@
-import { join } from 'path';
+import { dirname, join, resolve } from 'path';
 import ms from 'ms';
 import fs, { mkdirp } from 'fs-extra';
 import {
   sleep,
   fixture,
+  getDevResourcePorts,
   testFixture,
   testFixtureStdio,
   validateResponseHeaders,
 } from './utils';
 import assert from 'assert';
+import _execa, { type ExecaChildProcess } from 'execa';
 import nodeFetch from '../../src/util/fetch';
+import { prepareFixtureCopy, waitForDevReady } from './e2e-fixture-utils';
 
 test(
   '[vercel dev] temporary directory listing',
@@ -824,6 +827,35 @@ describe('[vercel dev] experimentalServicesV2 service bindings', () => {
   });
 });
 
+describe('[vercel dev] services with a top-level proxy', () => {
+  test('[vercel dev] proxy runs ahead of service rewrites', async () => {
+    const dir = fixture('services-proxy');
+    const { dev, port, readyResolver } = await testFixture(dir, {}, [
+      '--local',
+    ]);
+
+    try {
+      await readyResolver;
+
+      // The proxy responds directly for its own path.
+      const proxied = await nodeFetch(`http://localhost:${port}/from-proxy`);
+      expect(proxied.status).toBe(200);
+      expect(await proxied.text()).toBe('hi from proxy');
+
+      // Everything else falls through the proxy to the routed service.
+      const web = await nodeFetch(`http://localhost:${port}/`);
+      expect(web.status).toBe(200);
+      expect(await web.text()).toBe('web: /');
+
+      const webPath = await nodeFetch(`http://localhost:${port}/some/path`);
+      expect(webPath.status).toBe(200);
+      expect(await webPath.text()).toBe('web: /some/path');
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
 describe('[vercel dev] Pyproject queue subscribers', () => {
   const resultsDir = join(
     __dirname,
@@ -884,6 +916,61 @@ describe('[vercel dev] Pyproject queue subscribers', () => {
         priority: 'low-priority',
         sum: 42,
       });
+    } finally {
+      await dev.kill();
+    }
+  });
+});
+
+describe('[vercel dev] APScheduler pyproject subscriber', () => {
+  const resultsDir = join(
+    __dirname,
+    'fixtures',
+    'services-v2-apscheduler',
+    '.results'
+  );
+
+  beforeEach(async () => {
+    await fs.remove(resultsDir);
+  });
+
+  test('[vercel dev] first request activates the scheduler and the wake chain ticks', async () => {
+    const dir = fixture('services-v2-apscheduler');
+    const { dev, port, readyResolver } = await testFixture(
+      dir,
+      {
+        skipNpmInstall: true,
+        env: {
+          VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+        },
+      },
+      ['--local']
+    );
+
+    try {
+      await readyResolver;
+
+      // Traffic-driven activation: the first web request publishes the
+      // durable start message; the sidecar starts the scheduler and keeps
+      // it alive through delayed wake messages on the dev queue broker.
+      const res = await nodeFetch(`http://localhost:${port}/`);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ service: 'web' });
+
+      // Two ticks prove the chain advances (start -> wake -> wake), not
+      // just a single delivery.
+      const ticksPath = join(resultsDir, 'ticks.log');
+      let ticks: string[] = [];
+      for (let i = 0; i < 60; i++) {
+        await sleep(500);
+        if (await fs.pathExists(ticksPath)) {
+          const contents = await fs.readFile(ticksPath, 'utf8');
+          ticks = contents.split('\n').filter(Boolean);
+          if (ticks.length >= 2) break;
+        }
+      }
+
+      expect(ticks.length).toBeGreaterThanOrEqual(2);
     } finally {
       await dev.kill();
     }
@@ -951,6 +1038,132 @@ describe('[vercel dev] Worker service', () => {
       expect(wildcardResult.message).toHaveProperty('value', 42);
     } finally {
       await dev.kill();
+    }
+  });
+});
+
+describe('[vercel dev] Queues + Runtime Cache across services', () => {
+  test('[vercel dev] external Python worker polls and uses the shared Runtime Cache', async () => {
+    const dir = await prepareFixtureCopy(
+      join(__dirname, 'fixtures', 'services-queue-cache')
+    );
+    const { queuePort, runtimeCachePort } = getDevResourcePorts();
+    let dev: Awaited<ReturnType<typeof testFixture>>['dev'] | undefined;
+    let worker: ExecaChildProcess | undefined;
+
+    try {
+      const fixtureRun = await testFixture(
+        dir,
+        {
+          skipNpmInstall: true,
+          env: {
+            VERCEL_USE_EXPERIMENTAL_FRAMEWORKS: '1',
+          },
+        },
+        [
+          '--local',
+          `--queue-port=${queuePort}`,
+          `--runtime-cache-port=${runtimeCachePort}`,
+        ]
+      );
+      dev = fixtureRun.dev;
+      const { port, readyResolver } = fixtureRun;
+
+      await readyResolver;
+      await waitForDevReady(
+        dev,
+        `http://localhost:${port}`,
+        '/api/status?taskId=ready'
+      );
+
+      // Publish before the external consumer group exists to verify that a
+      // poll-mode group starts at the beginning of the retained topic.
+      const enqueueRes = await nodeFetch(
+        `http://localhost:${port}/api/enqueue`,
+        {
+          method: 'POST',
+        }
+      );
+      expect(enqueueRes.status).toBe(200);
+      const { taskId, messageId } = await enqueueRes.json();
+      expect(taskId).toBeTruthy();
+      expect(messageId).toBeTruthy();
+
+      const backendDir = resolve(dir, 'backend');
+      const pythonBin = join(
+        backendDir,
+        '.venv',
+        process.platform === 'win32' ? 'Scripts' : 'bin',
+        process.platform === 'win32' ? 'python.exe' : 'python'
+      );
+      let pythonReady = false;
+      for (let i = 0; i < 150; i++) {
+        if (await fs.pathExists(pythonBin)) {
+          const importCheck = await _execa(
+            pythonBin,
+            ['-c', 'import vercel.cache; import vercel.queue'],
+            { cwd: backendDir, reject: false }
+          );
+          if (importCheck.exitCode === 0) {
+            pythonReady = true;
+            break;
+          }
+        }
+        await sleep(2_000);
+      }
+      expect(pythonReady).toBe(true);
+
+      worker = _execa(pythonBin, ['poll_worker.py'], {
+        cwd: backendDir,
+        reject: false,
+        timeout: 30_000,
+        env: {
+          ...process.env,
+          VERCEL_QUEUE_BASE_URL: `http://127.0.0.1:${queuePort}`,
+          VERCEL_QUEUE_TOKEN: 'vc-dev-token',
+          VERCEL_REGION: 'dev1',
+          RUNTIME_CACHE_ENDPOINT: `http://127.0.0.1:${runtimeCachePort}/v1/suspense-cache/`,
+          RUNTIME_CACHE_HEADERS: JSON.stringify({
+            authorization: 'Bearer vc-dev-token',
+          }),
+        },
+      });
+      const workerResult = await worker;
+      expect(
+        workerResult.exitCode,
+        `Python worker failed:\n${workerResult.stdout}\n${workerResult.stderr}`
+      ).toBe(0);
+
+      // Next.js reads the external worker's completion from the shared store.
+      let status: any = null;
+      for (let i = 0; i < 60; i++) {
+        await sleep(500);
+        const statusRes = await nodeFetch(
+          `http://localhost:${port}/api/status?taskId=${taskId}`
+        );
+        if (statusRes.status !== 200) continue;
+        const json = await statusRes.json();
+        if (json.status === 'completed') {
+          status = json;
+          break;
+        }
+      }
+
+      expect(status).not.toBeNull();
+      expect(status.completion).toMatchObject({
+        completed: true,
+        messageId,
+      });
+    } finally {
+      if (worker?.exitCode === null) {
+        worker.kill('SIGTERM', { forceKillAfterTimeout: 5000 });
+        await worker.catch(() => null);
+      }
+      try {
+        await dev?.kill();
+      } finally {
+        await fs.remove(dirname(dir));
+      }
     }
   });
 });

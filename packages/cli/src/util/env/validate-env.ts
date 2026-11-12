@@ -1,4 +1,7 @@
 import { frameworkList } from '@vercel/frameworks';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { getMatchingServerOnlyKey, looksLikeSecret } from './secret-detection';
 
 export interface EnvWarning {
   message: string;
@@ -81,17 +84,31 @@ export function formatWarnings(warnings: EnvWarning[]): string | null {
   return `Value ${messages.join(', ')}, and ${last}`;
 }
 
-/** Framework prefixes that expose variables to the browser. */
-const PUBLIC_PREFIXES = [
-  ...new Set(
-    frameworkList.map(f => f.envPrefix).filter((p): p is string => !!p)
-  ),
-];
+/** Prefixes the API currently rejects for Secret variables. */
+const API_PUBLIC_PREFIXES = [
+  'NEXT_PUBLIC_',
+  'VUE_APP_',
+  'REACT_APP_',
+  'GATSBY_',
+  'GRIDSOME_',
+  'NUXT_PUBLIC_',
+  'STORYBOOK_',
+  'VITE_',
+  'PUBLIC_',
+  'EXPO_PUBLIC_',
+  'NG_APP_',
+  'REDWOOD_ENV_',
+] as const;
 
-// Require word boundaries: pattern must be preceded/followed by _ or string boundary
-// Matches: _PASSWORD_, _SECRET, KEY_, etc. but not KEYBOARD, ACCESSIBLE
-const SENSITIVE_PATTERN =
-  /(?:^|_)(password|secret|private|token|key|auth|jwt|signature)(?:_|$)/i;
+/** All known framework prefixes used for Config/Secret safety guidance. */
+const PUBLIC_PREFIXES = [
+  ...new Set([
+    ...API_PUBLIC_PREFIXES,
+    ...frameworkList
+      .map(f => f.envPrefix)
+      .filter((prefix): prefix is string => !!prefix),
+  ]),
+];
 
 /**
  * Returns true if all warnings are whitespace-related (can be trimmed).
@@ -162,6 +179,60 @@ export function normalizeStdinEnvValue(
 export function getPublicPrefix(key: string): string | null {
   const upperKey = key.toUpperCase();
   return PUBLIC_PREFIXES.find(p => upperKey.startsWith(p)) || null;
+}
+
+/** Returns the linked framework's public prefix when it matches the key. */
+export function getFrameworkPublicPrefix(
+  frameworkSlug: string | null | undefined,
+  key: string
+): string | null {
+  const prefix = frameworkList.find(
+    framework => framework.slug === frameworkSlug
+  )?.envPrefix;
+  return prefix && key.toUpperCase().startsWith(prefix.toUpperCase())
+    ? prefix
+    : null;
+}
+
+export function getApiPublicPrefix(key: string): string | null {
+  const upperKey = key.toUpperCase();
+  return (
+    API_PUBLIC_PREFIXES.find(prefix => upperKey.startsWith(prefix)) ?? null
+  );
+}
+
+export function parseSvelteKitPublicEnvVarPrefix(
+  config: string
+): { status: 'ready'; prefix: string | null } | { status: 'unavailable' } {
+  if (!config.includes('publicPrefix')) {
+    return { status: 'ready', prefix: null };
+  }
+  const match =
+    /publicPrefix:\s*(?:'(?<single>[^']*)'|"(?<double>[^"]*)"|`(?<template>[^`$]*)`)/.exec(
+      config
+    );
+  const prefix =
+    match?.groups?.single ?? match?.groups?.double ?? match?.groups?.template;
+  return prefix === undefined
+    ? { status: 'unavailable' }
+    : { status: 'ready', prefix };
+}
+
+/** Reads the same static SvelteKit publicPrefix syntax supported by Dashboard. */
+export async function getLocalSvelteKitPublicPrefixes(
+  cwd: string,
+  rootDirectory?: string | null
+): Promise<string[] | undefined> {
+  const projectRoot = rootDirectory ? join(cwd, rootDirectory) : cwd;
+  let config: string;
+  try {
+    config = await readFile(join(projectRoot, 'svelte.config.js'), 'utf8');
+  } catch {
+    return undefined;
+  }
+  const parsed = parseSvelteKitPublicEnvVarPrefix(config);
+  if (parsed.status === 'unavailable') return undefined;
+  return [parsed.prefix ?? 'PUBLIC_', 'VITE_'];
 }
 
 /**
@@ -254,16 +325,18 @@ export function getEnvKeyWarnings(key: string): EnvWarning[] {
   const matchingPrefix = getPublicPrefix(key);
 
   if (matchingPrefix) {
-    const sensitiveMatch = SENSITIVE_PATTERN.exec(key);
     const nameWithoutPrefix = key.slice(matchingPrefix.length);
+    const sensitiveMatch =
+      looksLikeSecret(nameWithoutPrefix) &&
+      getMatchingServerOnlyKey(nameWithoutPrefix);
     if (sensitiveMatch) {
       warnings.push({
-        message: `The ${matchingPrefix} prefix will make ${nameWithoutPrefix} visible to anyone visiting your site`,
+        message: `\`${matchingPrefix}\` exposes \`${key}\` to anyone visiting your site`,
         requiresConfirmation: true,
       });
     } else {
       warnings.push({
-        message: `${matchingPrefix} variables can be seen by anyone visiting your site`,
+        message: `\`${matchingPrefix}\` exposes this value to anyone visiting your site`,
         requiresConfirmation: false,
       });
     }

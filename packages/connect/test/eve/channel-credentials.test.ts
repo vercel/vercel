@@ -3,7 +3,9 @@ import {
   connectDiscordCredentials,
   connectGitHubCredentials,
   connectLinearCredentials,
+  connectLinqCredentials,
   connectPhotonCredentials,
+  connectTeamsCredentials,
   connectSlackCredentials,
 } from '../../src/eve/index.js';
 
@@ -101,6 +103,44 @@ describe('Eve channel credential helpers', () => {
     });
   });
 
+  it('resolves the GitHub App slug from connector metadata', async () => {
+    fetchMock.mockResolvedValue(
+      jsonConnectorResponse('oauth/github', { appSlug: 'my-agent' })
+    );
+
+    const credentials = connectGitHubCredentials(
+      'oauth/github',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(resolveToken(credentials.appSlug)).resolves.toBe('my-agent');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(
+      `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent('oauth/github')}`
+    );
+    expect(init.method).toBe('GET');
+    expect(init.headers).toMatchObject({
+      Authorization: 'Bearer vercel_token',
+    });
+  });
+
+  it('fails clearly when connector metadata has no GitHub App slug', async () => {
+    fetchMock.mockResolvedValue(jsonConnectorResponse('oauth/github', {}));
+
+    const credentials = connectGitHubCredentials(
+      'oauth/github',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(resolveToken(credentials.appSlug)).rejects.toThrow(
+      'did not return a GitHub App slug'
+    );
+  });
+
   it('builds Linear credentials backed by an app-scoped Connect token', async () => {
     fetchMock.mockResolvedValue(jsonTokenResponse('linear_token'));
 
@@ -119,6 +159,85 @@ describe('Eve channel credential helpers', () => {
       installationId: 'linear-installation',
       subject: { type: 'app' },
     });
+  });
+
+  it('resolves Linq credentials from an app-scoped Connect token', async () => {
+    fetchMock.mockResolvedValue(jsonTokenResponse('linq-api-key'));
+
+    const credentials = connectLinqCredentials(
+      'linq/my-agent',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(credentials.webhookVerifier).toEqual(expect.any(Function));
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(credentials.apiKey()).resolves.toBe('linq-api-key');
+    expectTokenRequest('linq/my-agent', { subject: { type: 'app' } });
+  });
+
+  it('builds Teams credentials from connector metadata and a Bot Framework token', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonConnectorResponse('microsoft-teams/my-bot', {
+          appId: 'teams-app-id',
+        })
+      )
+      .mockResolvedValueOnce(jsonTokenResponse('bot-framework-token'));
+
+    const credentials = connectTeamsCredentials(
+      'microsoft-teams/my-bot',
+      { installationId: 'teams-installation' },
+      { vercelToken: 'vercel_token' }
+    );
+
+    expect(credentials.webhookVerifier).toEqual(expect.any(Function));
+    expect(credentials.tokenProvider).toEqual(expect.any(Function));
+    await expect(resolveToken(credentials.appId)).resolves.toBe('teams-app-id');
+    await expect(credentials.tokenProvider!()).resolves.toEqual({
+      accessToken: 'bot-framework-token',
+      expiresAt: expect.any(Number),
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [metadataUrl, metadataInit] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(metadataUrl).toBe(
+      `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent('microsoft-teams/my-bot')}`
+    );
+    expect(metadataInit.headers).toMatchObject({
+      Authorization: 'Bearer vercel_token',
+    });
+    const [tokenUrl, tokenInit] = fetchMock.mock.calls[1] as [
+      string,
+      RequestInit,
+    ];
+    expect(tokenUrl).toBe(
+      `https://api.vercel.com/v1/connect/token/${encodeURIComponent('microsoft-teams/my-bot')}`
+    );
+    expect(JSON.parse(tokenInit.body as string)).toEqual({
+      installationId: 'teams-installation',
+      scopes: ['https://api.botframework.com/.default'],
+      subject: { type: 'app' },
+    });
+  });
+
+  it('fails clearly when connector metadata has no Microsoft Teams app id', async () => {
+    fetchMock.mockResolvedValue(
+      jsonConnectorResponse('microsoft-teams/missing-app-id', {})
+    );
+
+    const credentials = connectTeamsCredentials(
+      'microsoft-teams/missing-app-id',
+      {},
+      { vercelToken: 'vercel_token' }
+    );
+
+    await expect(resolveToken(credentials.appId)).rejects.toThrow(
+      'did not return a Microsoft Teams app id'
+    );
   });
 
   it('resolves Photon credentials from an app-scoped Connect token', async () => {
@@ -178,6 +297,15 @@ describe('Eve channel credential helpers', () => {
     );
 
     expect(credentials.webhookVerifier).toEqual(expect.any(Function));
+    expect(credentials.vercelConnect).toEqual({
+      connector: 'oauth/slack',
+      requirement: {
+        reference: 'connector:oauth/slack',
+        service: 'slack',
+        subjectTypes: ['app'],
+        method: 'slack',
+      },
+    });
     expect(credentials.botToken).toEqual(expect.any(Function));
     await expect(resolveToken(credentials.botToken)).resolves.toBe(
       'slack_token'
@@ -201,7 +329,9 @@ describe('Eve channel credential helpers', () => {
     expect(init.headers).toMatchObject({
       Authorization: 'Bearer vercel_token',
     });
-    expect(JSON.parse(init.body as string)).toEqual(body);
+    expect(JSON.parse(init.body as string)).toEqual(
+      body.scopes === undefined ? { ...body, scopes: ['*'] } : body
+    );
   }
 });
 
@@ -212,6 +342,25 @@ async function resolveToken(
     throw new Error('Expected token callback.');
   }
   return token();
+}
+
+function jsonConnectorResponse(
+  uid: string,
+  vendor: Record<string, unknown>
+): Response {
+  return new Response(
+    JSON.stringify({
+      id: 'scl_abc',
+      uid,
+      name: 'Test Connector',
+      type: 'oauth',
+      service: 'github',
+      createdAt: 0,
+      updatedAt: 0,
+      data: vendor,
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
 }
 
 function jsonTokenResponse(

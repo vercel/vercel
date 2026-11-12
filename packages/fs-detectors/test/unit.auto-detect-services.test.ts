@@ -374,8 +374,11 @@ describe('detectServices with auto-detection', () => {
       expect(result.source).toBe('configured');
       expect(result.services).toHaveLength(1);
       expect(result.services[0].name).toBe('api');
-      expect(result.services[0].routePrefix).toBe('/api');
-      expect(result.services[0].routePrefixSource).toBe('configured');
+      expect(result.services[0]).toHaveProperty('routePrefix', '/api');
+      expect(result.services[0]).toHaveProperty(
+        'routePrefixSource',
+        'configured'
+      );
     });
   });
 
@@ -506,7 +509,7 @@ describe('detectServices with auto-detection', () => {
       );
       expect(backend).toBeDefined();
       expect(backend?.schema).toBe('experimentalServicesV2');
-      expect(backend?.root).toBe('backend');
+      expect(backend).toHaveProperty('root', 'backend');
 
       // V2 auto-detect generates top-level service rewrites from mountPath.
       // Next.js is a BFF framework, so backend gets /api/backend prefix.
@@ -520,6 +523,58 @@ describe('detectServices with auto-detection', () => {
         source: '/(.*)',
         destination: { type: 'service', service: 'frontend' },
       });
+    });
+  });
+});
+
+describe('Rust backends', () => {
+  // No HTTP-library dependency: the generic `rust` preset is what a standalone
+  // Rust server matches, whatever it is built on.
+  const CARGO_TOML = '[package]\nname = "api"\nversion = "0.1.0"\n';
+
+  it('should detect Next.js at root and Rust in backend/', async () => {
+    const fs = new VirtualFilesystem({
+      'package.json': JSON.stringify({ dependencies: { next: '14.0.0' } }),
+      'backend/Cargo.toml': CARGO_TOML,
+      'backend/src/main.rs': 'fn main() {}',
+    });
+
+    const result = await autoDetectServices({ fs });
+
+    expect(result.errors).toEqual([]);
+    expect(result.services).not.toBeNull();
+    expect(result.services!.backend).toMatchObject({
+      root: 'backend',
+      framework: 'rust',
+    });
+  });
+
+  it('treats a Rust service as a runtime service, so detectEntrypoint runs', async () => {
+    const fs = new VirtualFilesystem({
+      'frontend/package.json': JSON.stringify({
+        dependencies: { next: '14.0.0' },
+      }),
+      'backend/Cargo.toml': CARGO_TOML,
+      'backend/src/main.rs': 'fn main() {}',
+    });
+
+    const detectEntrypoint: DetectEntrypointFn = async ({
+      workPath,
+      framework,
+    }) => {
+      expect(workPath).toBe('backend');
+      expect(framework).toBe('rust');
+      return { kind: 'file', entrypoint: 'src/main.rs' };
+    };
+
+    const result = await autoDetectServices({ fs, detectEntrypoint });
+
+    expect(result.errors).toEqual([]);
+    expect(result.services!.backend).toEqual({
+      root: 'backend',
+      framework: 'rust',
+      entrypoint: 'src/main.rs',
+      mountPath: '/api/backend',
     });
   });
 });

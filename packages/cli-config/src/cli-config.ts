@@ -1,15 +1,23 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { z } from 'zod';
+import * as z from 'zod';
 import { authConfigSchema, globalConfigSchema } from './schema';
 import type { AuthConfig, AuthFileConfig, GlobalConfig } from './types';
 import {
   getAuthConfigFilePath,
+  getCachePath,
   getConfigFilePath,
+  getDataPath,
   getGlobalPathConfig,
 } from './paths';
 
-export { getAuthConfigFilePath, getConfigFilePath, getGlobalPathConfig };
+export {
+  getAuthConfigFilePath,
+  getCachePath,
+  getConfigFilePath,
+  getDataPath,
+  getGlobalPathConfig,
+};
 
 const DOCS_URL =
   'https://vercel.com/docs/projects/project-configuration/global-configuration';
@@ -23,6 +31,7 @@ export const defaultGlobalConfig: GlobalConfig = {
   '// Note':
     'This is your Vercel config file. For more information see the global configuration documentation.',
   '// Docs': `${DOCS_URL}#config.json`,
+  usedBefore: false,
 };
 
 export function getDefaultAuthConfig(): AuthConfig {

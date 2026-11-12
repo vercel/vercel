@@ -18,19 +18,16 @@ const { readdir, readFile, unlink } = promises;
 
 export const frameworks = [
   {
-    // A `Dockerfile.vercel` / `Containerfile.vercel` is an explicit opt-in to
-    // deploy a project as a container, regardless of any other framework that
-    // may also be detected. It is listed first so that framework detection
-    // (which returns the first match in list order) selects it over everything
-    // else — e.g. a Next.js app shipping a `Dockerfile.vercel` deploys as a
-    // container, not via `@vercel/next`.
+    // Versioned container files are an explicit opt-in and remain eager. Plain
+    // Dockerfile and Containerfile matches are fallback-only so they do not
+    // override a project's actual framework preset.
     name: 'Container',
     slug: 'container',
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/container.svg',
     tagline: 'Deploy any project as a container image built from a Dockerfile.',
     description:
-      'A project deployed as a container image, built from a Dockerfile.vercel or Containerfile.vercel.',
+      'A project deployed as a container image, built from a Dockerfile or Containerfile.',
     website: 'https://docs.docker.com/reference/dockerfile/',
     useRuntime: { src: '<detect>', use: '@vercel/container' },
     detectors: {
@@ -40,6 +37,14 @@ export const frameworks = [
         },
         {
           path: 'Containerfile.vercel',
+        },
+        {
+          path: 'Dockerfile',
+          fallback: true,
+        },
+        {
+          path: 'Containerfile',
+          fallback: true,
         },
       ],
     },
@@ -724,7 +729,7 @@ export const frameworks = [
     name: 'Dojo',
     slug: 'dojo',
     demo: 'https://dojo-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/dojo.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/dojo.svg',
     tagline: 'Dojo is a modern progressive, TypeScript first framework.',
     description:
       "A Dojo app, created with the Dojo CLI's cli-create-app command.",
@@ -889,7 +894,7 @@ export const frameworks = [
     name: 'Scully',
     slug: 'scully',
     demo: 'https://scully-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/scullyio-logo.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/scullyio-logo.svg',
     tagline: 'Scully is a static site generator for Angular.',
     description: 'The Static Site Generator for Angular apps.',
     website: 'https://github.com/scullyio/scully',
@@ -1840,7 +1845,7 @@ export const frameworks = [
     name: 'Zola',
     slug: 'zola',
     demo: 'https://zola-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/zola.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/zola.svg',
     tagline: 'Everything you need to make a static site engine in one binary.',
     description: 'A Zola app, created with the "Getting Started" tutorial.',
     website: 'https://www.getzola.org',
@@ -2077,7 +2082,7 @@ export const frameworks = [
     name: 'VuePress',
     slug: 'vuepress',
     demo: 'https://vuepress-starter-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/vuepress.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/vuepress.svg',
     tagline: 'Vue-powered Static Site Generator',
     description: 'Vue-powered Static Site Generator',
     website: 'https://vuepress.vuejs.org/',
@@ -2110,7 +2115,7 @@ export const frameworks = [
     name: 'Parcel',
     slug: 'parcel',
     demo: 'https://parcel-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/parcel.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/parcel.svg',
     tagline:
       'Parcel is a zero configuration build tool for the web that scales to projects of any size and complexity.',
     description: 'A vanilla web app built with Parcel.',
@@ -2267,9 +2272,9 @@ export const frameworks = [
     name: 'FastHTML',
     slug: 'fasthtml',
     demo: 'https://fasthtml-template.vercel.app',
-    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.png',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/fasthtml.svg',
     darkModeLogo:
-      'https://api-frameworks.vercel.sh/framework-logos/fasthtml-dark.png',
+      'https://api-frameworks.vercel.sh/framework-logos/fasthtml-dark.svg',
     tagline: 'The fastest way to create an HTML app',
     description:
       'A library for writing fast and scalable Starlette-powered web applications',
@@ -2406,6 +2411,43 @@ export const frameworks = [
     },
     getOutputDirName: async () => '.output',
     experimental: true,
+  },
+  {
+    name: 'Factory (Eve)',
+    slug: 'factory-eve',
+    logo: 'https://api-frameworks.vercel.sh/framework-logos/eve.svg',
+    darkModeLogo:
+      'https://api-frameworks.vercel.sh/framework-logos/eve-dark.svg',
+    tagline: 'A software factory built with Eve.',
+    description: 'A Factory app built with the Eve agent framework.',
+    supersedes: ['eve'],
+    detectors: {
+      every: [
+        {
+          matchPackage: 'eve',
+        },
+        {
+          matchPackage: '@vercel/factory',
+        },
+      ],
+    },
+    settings: {
+      installCommand: {
+        placeholder: '`pnpm install`, `yarn install`, or `npm install`',
+      },
+      buildCommand: {
+        value: 'eve build',
+        placeholder: '`npm run build` or `eve build`',
+      },
+      devCommand: {
+        value: 'eve dev',
+        placeholder: 'eve dev',
+      },
+      outputDirectory: {
+        value: '.output',
+      },
+    },
+    getOutputDirName: async () => '.output',
   },
   {
     name: 'eve',
@@ -4410,7 +4452,6 @@ export const frameworks = [
   {
     name: 'Rust',
     slug: 'rust',
-    experimental: true,
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/rust.svg',
     tagline:
@@ -4421,6 +4462,8 @@ export const frameworks = [
     useRuntime: { src: 'src/main.rs', use: '@vercel/rust' },
     ignoreRuntimes: ['@vercel/rust'],
     detectors: {
+      // Do not detect on `[[bin]]` declarations: `api/**/*.rs` projects
+      // declare one per handler and must stay framework-less.
       every: [
         {
           path: 'Cargo.toml',
@@ -4447,15 +4490,9 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultRoutes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/src/main',
-      },
-    ],
+    // No `defaultRoutes`: `@vercel/rust` emits mode-specific routes. Plain
+    // servers must preserve rewritten request paths, while `vercel_runtime`
+    // servers retain the legacy `/src/main` fallback.
   },
   {
     name: 'Axum',
@@ -4497,15 +4534,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultRoutes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/src/main',
-      },
-    ],
+    // Routes are emitted by `@vercel/rust` based on the selected mode.
   },
   {
     name: 'Actix Web',
@@ -4548,15 +4577,7 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultRoutes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/src/main',
-      },
-    ],
+    // Routes are emitted by `@vercel/rust` based on the selected mode.
   },
   {
     name: 'Bun',
@@ -4770,15 +4791,9 @@ export const frameworks = [
       },
     },
     getOutputDirName: async () => 'public',
-    defaultRoutes: [
-      {
-        handle: 'filesystem',
-      },
-      {
-        src: '/(.*)',
-        dest: '/',
-      },
-    ],
+    // No `defaultRoutes`: `@vercel/go` emits its own catch-all, which points at
+    // the Lambda's real output path and carries the `request.path` transform
+    // that makes rewrites visible to the server.
   },
   {
     name: 'Services',

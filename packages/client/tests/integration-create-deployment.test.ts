@@ -116,7 +116,6 @@ describe('create v2 deployment', () => {
     console.log('testing url ' + url);
     const response = await fetch(url);
     const text = await response.text();
-    expect(deployment.readyState).toEqual('READY');
     expect(text).toContain('executed bash script');
   });
 

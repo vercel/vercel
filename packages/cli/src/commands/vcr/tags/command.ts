@@ -9,14 +9,23 @@ import { packageName } from '../../../util/pkg-name';
 const projectScopeOption = {
   ...projectOption,
   shorthand: 'p',
-  description: 'Project name or ID (defaults to the linked project).',
+  description: 'Project name or ID (default: linked project).',
+} as const;
+
+const nextOption = {
+  name: 'next',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description: 'Show the next page using the cursor from the previous output',
+  argument: 'CURSOR',
 } as const;
 
 const cursorOption = {
   name: 'cursor',
   shorthand: 'c',
   type: String,
-  deprecated: false,
+  deprecated: true,
   description: 'Cursor from a previous page to continue listing from',
   argument: 'STRING',
 } as const;
@@ -55,6 +64,7 @@ export const tagsLsSubcommand = {
       choices: TAGS_SORT_ORDER_CHOICES,
     },
     limitOption,
+    nextOption,
     cursorOption,
     formatOption,
     jsonOption,

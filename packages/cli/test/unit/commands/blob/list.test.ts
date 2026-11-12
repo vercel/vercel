@@ -97,7 +97,7 @@ describe('blob list', () => {
         'list',
         '--limit',
         '20',
-        '--cursor',
+        '--next',
         'cursor_123',
         '--prefix',
         'folder/',
@@ -110,7 +110,7 @@ describe('blob list', () => {
         [
           '--limit',
           '20',
-          '--cursor',
+          '--next',
           'cursor_123',
           '--prefix',
           'folder/',
@@ -135,7 +135,7 @@ describe('blob list', () => {
           value: '20',
         },
         {
-          key: 'option:cursor',
+          key: 'option:next',
           value: 'cursor_123',
         },
         {
@@ -224,6 +224,37 @@ describe('blob list', () => {
   });
 
   describe('pagination', () => {
+    it('warns that the hidden --cursor is deprecated and still uses it', async () => {
+      mockedBlob.list.mockResolvedValue({
+        blobs: [],
+        cursor: undefined,
+        hasMore: false,
+      });
+
+      const exitCode = await list(client, ['--cursor', 'old_cursor'], testAuth);
+
+      expect(exitCode).toBe(0);
+      expect(mockedBlob.list).toHaveBeenCalledWith(
+        expect.objectContaining({ cursor: 'old_cursor' })
+      );
+      expect(mockedOutput.warning).toHaveBeenCalledWith(
+        '--cursor is deprecated. Use --next.'
+      );
+    });
+
+    it('does not warn when --next is used', async () => {
+      mockedBlob.list.mockResolvedValue({
+        blobs: [],
+        cursor: undefined,
+        hasMore: false,
+      });
+
+      const exitCode = await list(client, ['--next', 'new_cursor'], testAuth);
+
+      expect(exitCode).toBe(0);
+      expect(mockedOutput.warning).not.toHaveBeenCalled();
+    });
+
     it('should show pagination command when cursor is available', async () => {
       mockedBlob.list.mockResolvedValue({
         blobs: [
@@ -243,8 +274,8 @@ describe('blob list', () => {
       const exitCode = await list(client, ['--limit', '5'], testAuth);
 
       expect(exitCode).toBe(0);
-      expect(mockedOutput.log).toHaveBeenCalledWith(
-        'To display the next page run `vercel blob list --limit 5 --cursor next_cursor_123`'
+      expect(mockedOutput.print).toHaveBeenCalledWith(
+        '  Next page:\n    vercel blob list --limit 5 --next next_cursor_123\n'
       );
     });
 
@@ -267,9 +298,9 @@ describe('blob list', () => {
       const exitCode = await list(client, [], testAuth);
 
       expect(exitCode).toBe(0);
-      // Should not call log with pagination message
-      expect(mockedOutput.log).not.toHaveBeenCalledWith(
-        expect.stringContaining('To display the next page')
+      // Should not print the next-page command
+      expect(mockedOutput.print).not.toHaveBeenCalledWith(
+        expect.stringContaining('Next page:')
       );
     });
 
@@ -287,9 +318,9 @@ describe('blob list', () => {
       );
 
       expect(exitCode).toBe(0);
-      expect(mockedOutput.log).toHaveBeenCalledWith(
+      expect(mockedOutput.print).toHaveBeenCalledWith(
         expect.stringContaining(
-          '--limit 10 --prefix test/ --mode folded --cursor paginated_cursor'
+          '--limit 10 --prefix test/ --mode folded --next paginated_cursor'
         )
       );
     });
@@ -347,7 +378,7 @@ describe('blob list', () => {
       }));
 
       const exitCode = await list(client, ['--invalid-flag'], testAuth);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when blob listing fails', async () => {
@@ -359,16 +390,6 @@ describe('blob list', () => {
       expect(exitCode).toBe(1);
       expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
       expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
-      expect(mockedOutput.print).not.toHaveBeenCalled();
-    });
-
-    it('should handle API errors gracefully', async () => {
-      const apiError = new Error('Network error');
-      mockedBlob.list.mockRejectedValue(apiError);
-
-      const exitCode = await list(client, ['--limit', '5'], testAuth);
-
-      expect(exitCode).toBe(1);
       expect(mockedOutput.print).not.toHaveBeenCalled();
     });
   });
@@ -467,34 +488,6 @@ describe('blob list', () => {
     });
   });
 
-  describe('spinner and output behavior', () => {
-    it('should show spinner during fetch and stop on success', async () => {
-      const exitCode = await list(client, [], testAuth);
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
-      expect(mockedOutput.stopSpinner).toHaveBeenCalled();
-    });
-
-    it('should not stop spinner on fetch error', async () => {
-      const fetchError = new Error('Fetch failed');
-      mockedBlob.list.mockRejectedValue(fetchError);
-
-      const exitCode = await list(client, [], testAuth);
-
-      expect(exitCode).toBe(1);
-      expect(mockedOutput.spinner).toHaveBeenCalledWith('Fetching blobs');
-      expect(mockedOutput.stopSpinner).not.toHaveBeenCalled();
-    });
-
-    it('should show debug output', async () => {
-      const exitCode = await list(client, [], testAuth);
-
-      expect(exitCode).toBe(0);
-      expect(mockedOutput.debug).toHaveBeenCalledWith('Fetching blobs');
-    });
-  });
-
   describe('large datasets', () => {
     it('should handle many blobs efficiently', async () => {
       const manyBlobs = Array.from({ length: 100 }, (_, i) => ({
@@ -524,6 +517,38 @@ describe('blob list', () => {
         ]),
         { hsep: 5 }
       );
+    });
+  });
+
+  describe('--json', () => {
+    it('writes blobs and the next cursor to stdout without a spinner', async () => {
+      client.setArgv('blob', 'list', '--json');
+
+      expect(await list(client, ['--json'], testAuth)).toBe(0);
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.blobs.map((b: { pathname: string }) => b.pathname)).toEqual(
+        ['file1.txt', 'folder/file2.jpg']
+      );
+      expect(result.pagination).toEqual({ next: null });
+      expect(mockedOutput.spinner).not.toHaveBeenCalled();
+      expect(mockedOutput.print).not.toHaveBeenCalled();
+    });
+
+    it('includes folders in folded mode', async () => {
+      mockedBlob.list.mockResolvedValue({
+        blobs: [],
+        folders: ['docs/', 'images/'],
+        cursor: undefined,
+        hasMore: false,
+      });
+      client.setArgv('blob', 'list', '--mode', 'folded', '--json');
+
+      expect(await list(client, ['--mode', 'folded', '--json'], testAuth)).toBe(
+        0
+      );
+      const result = JSON.parse(client.stdout.getFullOutput());
+      expect(result.blobs).toEqual([]);
+      expect(result.folders).toEqual(['docs/', 'images/']);
     });
   });
 });

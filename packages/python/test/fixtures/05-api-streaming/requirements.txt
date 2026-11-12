@@ -1,0 +1,3 @@
+fastapi
+flask>=3.1.2
+starlette>=0.48.0

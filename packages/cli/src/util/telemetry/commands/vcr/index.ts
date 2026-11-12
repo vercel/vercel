@@ -20,16 +20,23 @@ export class VcrTelemetryClient
     });
   }
 
-  trackCliSubcommandAdd(actual: string) {
+  trackCliSubcommandCreate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'add',
+      subcommand: 'create',
       value: actual,
     });
   }
 
-  trackCliSubcommandRm(actual: string) {
+  trackCliSubcommandUpdate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'rm',
+      subcommand: 'update',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandDelete(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -126,6 +133,15 @@ export class VcrTelemetryClient
     }
   }
 
+  trackCliOptionNext(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'next',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionCursor(value: string | undefined) {
     if (value) {
       this.trackCliOption({
@@ -150,6 +166,30 @@ export class VcrTelemetryClient
         option: 'sort-order',
         value,
       });
+    }
+  }
+
+  /** The old `--public true|false` form. */
+  trackCliOptionPublic(value: string | undefined) {
+    // Visibility is a bounded boolean ("true" | "false"), so it is safe to
+    // record the actual value; anything else is never recorded.
+    if (value === 'true' || value === 'false') {
+      this.trackCliOption({
+        option: 'public',
+        value,
+      });
+    }
+  }
+
+  trackCliFlagPublic(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('public');
+    }
+  }
+
+  trackCliFlagNoPublic(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('no-public');
     }
   }
 

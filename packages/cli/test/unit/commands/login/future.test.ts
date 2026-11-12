@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import login from '../../../../src/commands/login';
 import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
-import _fetch, { Headers, type Response } from '../../../../src/util/fetch';
+import _fetch, { type Response } from '../../../../src/util/fetch';
+import { Headers } from '../../../../src/util/fetch-primitives';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 import * as open from 'open';
@@ -53,8 +54,13 @@ function simulateTokenPolling(pollCount: number, finalResponse: Response) {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv('CI', '');
   // `open` is mocked to resolve a process-like object so `.on('error')` is safe.
   vi.mocked(open.default).mockResolvedValue({ on: vi.fn() } as never);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('login', () => {
@@ -102,6 +108,7 @@ describe('login', () => {
     const exitCodePromise = login(client, { shouldParseArgs: true });
     expect(await exitCodePromise, 'exit code for "login"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
+    expect(client.stderr.getFullOutput()).toContain('vercel setup');
 
     expect(fetch).toHaveBeenCalledTimes(pollCount + 4);
 
@@ -149,7 +156,6 @@ describe('login', () => {
     expect(tokenAfter).toBe(tokenResult.access_token);
   });
 
-  it.todo('Authorization request error');
   it.todo('Token request error');
 
   it('sends provided acr values for step-up device authorization requests', async () => {

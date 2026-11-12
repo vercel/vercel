@@ -32,7 +32,7 @@ describe('flags sdk-keys', () => {
     it('tracks telemetry', async () => {
       client.setArgv('flags', 'sdk-keys', '--help');
       const exitCodePromise = flags(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -67,12 +67,6 @@ describe('flags sdk-keys', () => {
           value: 'ls',
         },
       ]);
-    });
-
-    it('lists SDK keys successfully', async () => {
-      client.setArgv('flags', 'sdk-keys', 'ls');
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
     });
 
     it('lists SDK keys with --project when the cwd is not linked', async () => {
@@ -275,7 +269,7 @@ describe('flags sdk-keys', () => {
           value: 'sdk-keys',
         },
         {
-          key: 'subcommand:add',
+          key: 'subcommand:create',
           value: 'add',
         },
         {
@@ -289,20 +283,6 @@ describe('flags sdk-keys', () => {
       ]);
     });
 
-    it('creates SDK key successfully', async () => {
-      client.setArgv(
-        'flags',
-        'sdk-keys',
-        'add',
-        '--type',
-        'server',
-        '--environment',
-        'production'
-      );
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
-    });
-
     it('errors with invalid type', async () => {
       client.setArgv(
         'flags',
@@ -314,7 +294,7 @@ describe('flags sdk-keys', () => {
         'production'
       );
       const exitCode = await flags(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       expect(client.stderr.getFullOutput()).toContain('Invalid type');
     });
 
@@ -329,7 +309,7 @@ describe('flags sdk-keys', () => {
         'invalid'
       );
       const exitCode = await flags(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       expect(client.stderr.getFullOutput()).toContain('Invalid environment');
     });
   });
@@ -351,7 +331,7 @@ describe('flags sdk-keys', () => {
           value: 'sdk-keys',
         },
         {
-          key: 'subcommand:rm',
+          key: 'subcommand:revoke',
           value: 'rm',
         },
         {
@@ -365,16 +345,23 @@ describe('flags sdk-keys', () => {
       ]);
     });
 
-    it('deletes SDK key successfully', async () => {
-      client.setArgv(
-        'flags',
-        'sdk-keys',
-        'rm',
-        defaultSdkKeys[0].hashKey,
-        '--yes'
-      );
-      const exitCode = await flags(client);
-      expect(exitCode).toEqual(0);
+    it.each([
+      ['revoke', false],
+      ['remove', true],
+      ['rm', true],
+    ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+      // The mock deletes from the shared list, so add a key for each run.
+      const key: SdkKey = { ...defaultSdkKeys[0], hashKey: `sdk_key_${name}` };
+      defaultSdkKeys.push(key);
+      client.setArgv('flags', 'sdk-keys', name, key.hashKey, '--yes');
+      expect(await flags(client)).toEqual(0);
+      const warning = `\`vercel flags sdk-keys ${name}\` is deprecated. Use \`vercel flags sdk-keys revoke\`.`;
+      if (deprecated) {
+        expect(client.stderr.getFullOutput()).toContain(warning);
+      } else {
+        expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+      }
+      expect(client.stderr.getFullOutput()).toContain('has been revoked');
     });
 
     it('errors when SDK key is not found', async () => {
@@ -400,7 +387,7 @@ describe('flags sdk-keys', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       const out = client.stdout.getFullOutput();
       const parsed = JSON.parse(out);
       expect(parsed.status).toBe('error');
@@ -408,7 +395,7 @@ describe('flags sdk-keys', () => {
       expect(parsed.message).toContain('hash');
       expect(parsed.next).toBeDefined();
       expect(parsed.next.length).toBeGreaterThanOrEqual(1);
-      expect(parsed.next[0].command).toContain('flags sdk-keys rm');
+      expect(parsed.next[0].command).toContain('flags sdk-keys revoke');
       expect(parsed.next[0].command).toContain('<hashKey>');
       expect(parsed.next[0].command).toContain('--cwd');
       expect(parsed.next[0].command).toContain('--non-interactive');
@@ -434,7 +421,7 @@ describe('flags sdk-keys', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       const out = client.stdout.getFullOutput();
       const parsed = JSON.parse(out);
       expect(parsed.status).toBe('error');
@@ -442,12 +429,52 @@ describe('flags sdk-keys', () => {
       expect(parsed.message).toContain('--type');
       expect(parsed.next).toBeDefined();
       expect(parsed.next.length).toBeGreaterThan(0);
-      expect(parsed.next[0].command).toContain('flags sdk-keys add');
+      expect(parsed.next[0].command).toContain('flags sdk-keys create');
       expect(parsed.next[0].command).toContain('--type');
       expect(parsed.next[0].command).toContain('--cwd');
       expect(parsed.next[0].command).toContain('--non-interactive');
       exitSpy.mockRestore();
       client.nonInteractive = false;
+    });
+  });
+
+  describe('subcommand name', () => {
+    function useCreation() {
+      useFlags();
+    }
+
+    it('warns when invoked as the deprecated add name', async () => {
+      useCreation();
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'add',
+        '--type',
+        'server',
+        '--environment',
+        'production'
+      );
+
+      expect(await flags(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel flags sdk-keys add` is deprecated. Use `vercel flags sdk-keys create`.'
+      );
+    });
+
+    it('does not warn when invoked as create', async () => {
+      useCreation();
+      client.setArgv(
+        'flags',
+        'sdk-keys',
+        'create',
+        '--type',
+        'server',
+        '--environment',
+        'production'
+      );
+
+      expect(await flags(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     });
   });
 });

@@ -30,7 +30,7 @@ export const addSubcommand = {
       value: `${packageName} crons add`,
     },
     {
-      name: 'Add a cron job with flags',
+      name: 'Add a cron job with options',
       value: `${packageName} crons add --path /api/cron --schedule "0 10 * * *"`,
     },
   ],
@@ -46,11 +46,11 @@ export const listSubcommand = {
   examples: [
     {
       name: 'List all cron jobs',
-      value: `${packageName} crons ls`,
+      value: `${packageName} crons list`,
     },
     {
       name: 'List all cron jobs as JSON',
-      value: `${packageName} crons ls --json`,
+      value: `${packageName} crons list --json`,
     },
   ],
 } as const;

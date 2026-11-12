@@ -1,6 +1,6 @@
 import type {
   BuildOptions,
-  BuildResultV3,
+  BuildResultVX,
   Files,
   PrepareCacheOptions,
   ShouldServeOptions,
@@ -10,7 +10,7 @@ import type {
 
 export interface Runtime {
   version: number;
-  build: (options: BuildOptions) => Promise<BuildResultV3>;
+  build: (options: BuildOptions) => Promise<BuildResultVX>;
   prepareCache: (options: PrepareCacheOptions) => Promise<Files> | undefined;
   shouldServe: (options: ShouldServeOptions) => Promise<boolean> | undefined;
   startDevServer: (

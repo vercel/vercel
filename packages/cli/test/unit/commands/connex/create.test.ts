@@ -6,9 +6,14 @@ import open from 'open';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
 import { useTeam } from '../../../mocks/team';
+import { defaultProject, useProject } from '../../../mocks/project';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import connect from '../../../../src/commands/connex';
 import * as configFilesUtil from '../../../../src/util/config/files';
+import {
+  fakeConnexClient,
+  useConnexServiceNotFound,
+} from '../../../mocks/connex';
 
 // PNG magic header.
 const PNG_BYTES = Buffer.from([
@@ -26,43 +31,27 @@ async function writeTmpFile(name: string, bytes: Buffer): Promise<string> {
 vi.mock('open', () => ({ default: vi.fn(() => Promise.resolve()) }));
 vi.setConfig({ testTimeout: 15000 });
 
-function fakeConnexClient(overrides: Record<string, unknown> = {}) {
-  return {
-    id: 'scl_test123',
-    ownerId: 'team_abc',
-    createdAt: 0,
-    updatedAt: 0,
-    uid: 'uid_abc',
-    type: 'slack',
-    name: 'my-bot',
-    data: {},
-    typeName: 'Slack',
-    supportedSubjectTypes: ['user'],
-    supportsInstallation: false,
-    ...overrides,
-  };
-}
-
 describe('connex create', () => {
   let team: { id: string; slug: string };
   const writeConfigSpy = vi.spyOn(configFilesUtil, 'writeToConfigFile');
 
   beforeEach(() => {
     client.reset();
+    client.cwd = setupTmpDir();
     writeConfigSpy.mockClear();
     (open as unknown as ReturnType<typeof vi.fn>).mockClear();
     useUser();
-    team = useTeam();
+    team = useTeam('team_test');
     client.config.currentTeam = team.id;
   });
 
-  it('should error when no type argument is provided', async () => {
+  it('should error when no service argument is provided', async () => {
     client.setArgv('connect', 'create');
 
     const exitCode = await connect(client);
 
-    await expect(client.stderr).toOutput('Missing service type');
-    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Missing service.');
+    expect(exitCode).toBe(2);
   });
 
   it('should error in non-interactive mode without --name', async () => {
@@ -71,11 +60,12 @@ describe('connex create', () => {
 
     const exitCode = await connect(client);
 
-    await expect(client.stderr).toOutput('Missing required flag --name');
-    expect(exitCode).toBe(1);
+    await expect(client.stderr).toOutput('Missing required option --name');
+    expect(exitCode).toBe(2);
   });
 
   it('should show friendly error when connect feature flag is off (404)', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 404;
       res.json({ error: { code: 'not_found', message: 'Not Found' } });
@@ -90,6 +80,7 @@ describe('connex create', () => {
   });
 
   it('should create client directly when POST succeeds (no browser)', async () => {
+    useConnexServiceNotFound(client);
     let postBody: any;
     let pollHit = false;
     client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
@@ -135,10 +126,233 @@ describe('connex create', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(requestMade).toBe(false);
     await expect(client.stderr).toOutput(
-      'The --trigger-event flag requires --triggers.'
+      'The --trigger-event option requires --triggers.'
+    );
+  });
+
+  it('requires --triggers when setting a trigger path', async () => {
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--trigger-path',
+      '/eve/v1/github'
+    );
+
+    expect(await connect(client)).toBe(1);
+    await expect(client.stderr).toOutput(
+      'The --trigger-project, --trigger-path, --git-branch, and --trigger-environment options require --triggers.'
+    );
+  });
+
+  it('requires a linked project when setting a trigger path', async () => {
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--trigger-path',
+      '/eve/v1/github'
+    );
+
+    expect(await connect(client)).toBe(1);
+    await expect(client.stderr).toOutput(
+      'Trigger destination options require a linked project. Run `vercel link` first.'
+    );
+  });
+
+  it.each([
+    ['--git-branch', 'option:git-branch'],
+    ['--trigger-branch', 'option:trigger-branch'],
+  ])('forwards a custom trigger path and %s during connector creation', async (flag, telemetryKey) => {
+    const cwd = setupTmpDir();
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: team.id,
+      projectId: 'proj_linked',
+    });
+    client.cwd = cwd;
+
+    let postBody: any;
+    client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+      postBody = req.body;
+      res.json(fakeConnexClient({ type: 'github', name: 'github' }));
+    });
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--trigger-path',
+      '/eve/v1/github',
+      flag,
+      'main'
+    );
+
+    expect(await connect(client)).toBe(0);
+    expect(postBody).toMatchObject({
+      projectId: 'proj_linked',
+      triggers: { enabled: true },
+      triggerDestination: {
+        path: '/eve/v1/github',
+        branch: 'main',
+      },
+    });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:create', value: 'create' },
+      { key: 'argument:service', value: 'github' },
+      { key: 'option:name', value: '[REDACTED]' },
+      { key: 'flag:triggers', value: 'TRUE' },
+      { key: 'option:trigger-path', value: '[REDACTED]' },
+      { key: telemetryKey, value: '[REDACTED]' },
+    ]);
+    const warning = '! --trigger-branch is deprecated. Use --git-branch.';
+    if (flag === '--trigger-branch') {
+      expect(client.stderr.getFullOutput()).toContain(warning);
+    } else {
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+    }
+  });
+
+  it('rejects --trigger-branch with --git-branch before any request', async () => {
+    let requestMade = false;
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      requestMade = true;
+      res.json({});
+    });
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--trigger-branch',
+      'main',
+      '--git-branch',
+      'main'
+    );
+
+    expect(await connect(client)).toBe(2);
+    expect(requestMade).toBe(false);
+    await expect(client.stderr).toOutput(
+      "Can't use --trigger-branch with --git-branch. Use --git-branch."
+    );
+  });
+
+  it('reports --trigger-branch with --git-branch as a JSON error with --json', async () => {
+    let requestMade = false;
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      requestMade = true;
+      res.json({});
+    });
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--triggers',
+      '--git-branch',
+      'main',
+      '--trigger-branch',
+      'staging',
+      '--json'
+    );
+
+    expect(await connect(client)).toBe(2);
+    expect(requestMade).toBe(false);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      status: 'error',
+      reason: 'invalid_arguments',
+      message:
+        "Can't use --trigger-branch with --git-branch. Use --git-branch.",
+    });
+    expect(client.stderr.getFullOutput()).not.toContain("Can't use");
+  });
+
+  it('resolves a custom trigger environment slug to its stable ID', async () => {
+    const cwd = setupTmpDir();
+    await mkdirp(join(cwd, '.vercel'));
+    await writeJSON(join(cwd, '.vercel', 'project.json'), {
+      orgId: team.id,
+      projectId: 'proj_linked',
+    });
+    client.cwd = cwd;
+    useProject({
+      ...defaultProject,
+      id: 'proj_destination',
+      customEnvironments: [
+        {
+          id: 'env_qa123',
+          slug: 'qa',
+          type: 'preview',
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+    });
+
+    let postBody: any;
+    client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
+      postBody = req.body;
+      res.json(fakeConnexClient({ type: 'github', name: 'github' }));
+    });
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--trigger-project',
+      'proj_destination',
+      '--trigger-environment',
+      'qa'
+    );
+
+    expect(await connect(client)).toBe(0);
+    expect(postBody).toMatchObject({
+      projectId: 'proj_linked',
+      triggerDestination: {
+        projectId: 'proj_destination',
+        customEnvironmentId: 'env_qa123',
+      },
+    });
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:create', value: 'create' },
+      { key: 'argument:service', value: 'github' },
+      { key: 'option:name', value: '[REDACTED]' },
+      { key: 'flag:triggers', value: 'TRUE' },
+      { key: 'option:trigger-project', value: '[REDACTED]' },
+      { key: 'option:trigger-environment', value: '[REDACTED]' },
+    ]);
+  });
+
+  it('rejects branch and custom environment routing together', async () => {
+    client.setArgv(
+      'connect',
+      'create',
+      'github',
+      '--name',
+      'github',
+      '--triggers',
+      '--git-branch',
+      'main',
+      '--trigger-environment',
+      'qa'
+    );
+
+    expect(await connect(client)).toBe(2);
+    await expect(client.stderr).toOutput(
+      'The --git-branch and --trigger-environment options are mutually exclusive.'
     );
   });
 
@@ -174,6 +388,7 @@ describe('connex create', () => {
   });
 
   it('should pass any type to the server without validation', async () => {
+    useConnexServiceNotFound(client);
     let postBody: any;
     client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
       postBody = req.body;
@@ -550,6 +765,91 @@ describe('connex create', () => {
     });
   });
 
+  // Discovery-only on purpose, so these fail if `types[]` is read.
+  const DISCOVERY = {
+    serverUrl: 'https://mcp.example.com/v1/mcp',
+    discoveryServerUrl: 'https://auth.example.com',
+    type: {
+      type: 'oauth',
+      createInputSchema: {
+        type: 'object',
+        required: ['clientId'],
+        properties: { clientId: { type: 'string' } },
+      },
+    },
+  };
+
+  it('should read the connector type from a discovery result', async () => {
+    let postBody: any;
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      res.json({ discovery: DISCOVERY });
+    });
+    client.scenario.post('/v1/connect/connectors', (req, res) => {
+      postBody = req.body;
+      res.json(fakeConnexClient({ id: 'scl_discovered1', type: 'oauth' }));
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'mcp.example.com/v1/mcp',
+      '--name',
+      'example',
+      '--data',
+      '{"clientId":"abc"}'
+    );
+
+    expect(await connect(client)).toBe(0);
+    expect(postBody).toMatchObject({
+      service: 'mcp.example.com/v1/mcp',
+      type: 'oauth',
+      // The API discovers the server config from it, as for dashboard creates.
+      data: { serverUrl: 'https://mcp.example.com/v1/mcp', clientId: 'abc' },
+    });
+    expect(postBody.connectionMethod).toBeUndefined();
+  });
+
+  it('should keep a serverUrl supplied in --data over the discovered one', async () => {
+    let postBody: any;
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      res.json({ discovery: DISCOVERY });
+    });
+    client.scenario.post('/v1/connect/connectors', (req, res) => {
+      postBody = req.body;
+      res.json(fakeConnexClient({ id: 'scl_discovered2', type: 'oauth' }));
+    });
+
+    client.setArgv(
+      'connect',
+      'create',
+      'mcp.example.com/v1/mcp',
+      '--name',
+      'example',
+      '--data',
+      '{"serverUrl":"https://other.example.com","clientId":"abc"}'
+    );
+
+    expect(await connect(client)).toBe(0);
+    expect(postBody.data).toEqual({
+      serverUrl: 'https://other.example.com',
+      clientId: 'abc',
+    });
+  });
+
+  it('should show the discovery result schema when --data is empty', async () => {
+    client.scenario.get('/v1/connect/services/:service', (_req, res) => {
+      res.json({ discovery: DISCOVERY });
+    });
+    client.setArgv('connect', 'create', 'mcp.example.com/v1/mcp', '--data');
+
+    expect(await connect(client)).toBe(1);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(
+      'Expected --data schema for connector type "oauth"'
+    );
+    expect(stderr).toContain('"clientId"');
+  });
+
   it('should show create input schema when --data has no value', async () => {
     let discoveryUrl = '';
     let postHit = false;
@@ -818,14 +1118,15 @@ describe('connex create', () => {
 
     const exitCode = await connect(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(postHit).toBe(false);
     await expect(client.stderr).toOutput(
-      'The --connector-type flag requires --data.'
+      'The --connector-type option requires --data.'
     );
   });
 
   it('should output JSON when --format=json is used', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(
         fakeConnexClient({
@@ -874,12 +1175,15 @@ describe('connex create', () => {
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:create', value: 'create' },
+      { key: 'argument:service', value: 'slack' },
+      { key: 'option:name', value: '[REDACTED]' },
       { key: 'option:background-color', value: '[REDACTED]' },
       { key: 'option:accent-color', value: '#ff0066' },
     ]);
   });
 
   it('should include branding fields in --format=json output', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(
         fakeConnexClient({
@@ -912,6 +1216,7 @@ describe('connex create', () => {
   });
 
   it('should emit null branding fields in --format=json when API omits them', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(
         fakeConnexClient({
@@ -941,6 +1246,7 @@ describe('connex create', () => {
   });
 
   it('should open browser and poll when POST returns 422 with registerUrl', async () => {
+    useConnexServiceNotFound(client);
     let postHits = 0;
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       postHits++;
@@ -984,6 +1290,7 @@ describe('connex create', () => {
   });
 
   it('should keep polling through partial status until success', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
@@ -1036,6 +1343,7 @@ describe('connex create', () => {
   });
 
   it('should handle error status from polling after 422', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({
@@ -1061,7 +1369,35 @@ describe('connex create', () => {
     expect(exitCode).toBe(1);
   });
 
+  it('should stop polling when the browser flow is canceled', async () => {
+    useConnexServiceNotFound(client);
+    client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
+      res.statusCode = 422;
+      res.json({
+        error: {
+          message: 'Registration required',
+          registerUrl: 'https://vercel.com/test/~/connect/register',
+        },
+      });
+    });
+
+    let pollCount = 0;
+    client.scenario.get('/v1/connect/result/:code', (_req, res) => {
+      pollCount++;
+      res.json({ status: 'canceled', progress: null, data: null, error: null });
+    });
+
+    client.setArgv('connect', 'create', 'microsoft-teams', '--name', 'my-bot');
+
+    const exitCode = await connect(client);
+
+    await expect(client.stderr).toOutput('Setup was canceled in the browser.');
+    expect(exitCode).toBe(1);
+    expect(pollCount).toBe(1);
+  });
+
   it('should persist team to config after interactive selection', async () => {
+    useConnexServiceNotFound(client);
     delete client.config.currentTeam;
 
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
@@ -1086,6 +1422,7 @@ describe('connex create', () => {
 
   it('should use team from .vercel/project.json without prompting', async () => {
     client.reset();
+    useConnexServiceNotFound(client);
     useUser();
     team = useTeam('team_linked');
     delete client.config.currentTeam;
@@ -1129,6 +1466,7 @@ describe('connex create', () => {
   });
 
   it('should not rewrite config when team is already set', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.json(fakeConnexClient({ id: 'scl_noop', uid: 'uid_noop' }));
     });
@@ -1142,6 +1480,7 @@ describe('connex create', () => {
 
   describe('--triggers flag', () => {
     it('should send triggers: { enabled: true } when --triggers is passed', async () => {
+      useConnexServiceNotFound(client);
       let postBody: any;
       client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
         postBody = req.body;
@@ -1170,6 +1509,7 @@ describe('connex create', () => {
     });
 
     it('should send triggers: { enabled: false } when --triggers is not passed', async () => {
+      useConnexServiceNotFound(client);
       let postBody: any;
       client.scenario.post('/v1/connect/connectors/managed', (req, res) => {
         postBody = req.body;
@@ -1187,6 +1527,7 @@ describe('connex create', () => {
 
   describe('branding flags', () => {
     it('should upload icon and send branding in direct-path POST body', async () => {
+      useConnexServiceNotFound(client);
       let uploadHeaders: Record<string, unknown> | undefined;
       let uploadHit = false;
       let postBody: any;
@@ -1244,6 +1585,7 @@ describe('connex create', () => {
     });
 
     it('should send colors only when --icon is not provided', async () => {
+      useConnexServiceNotFound(client);
       let uploadHit = false;
       let postBody: any;
       client.scenario.post('/v2/files', (_req, res) => {
@@ -1279,6 +1621,7 @@ describe('connex create', () => {
     });
 
     it('should follow up with PATCH when browser flow runs', async () => {
+      useConnexServiceNotFound(client);
       let postBody: any;
       let patchBody: any;
       let patchedId: string | undefined;
@@ -1369,6 +1712,7 @@ describe('connex create', () => {
     });
 
     it('should append branding query params to registerUrl when 422 triggers browser flow', async () => {
+      useConnexServiceNotFound(client);
       client.scenario.post('/v2/files', (_req, res) => {
         res.json({});
       });
@@ -1455,6 +1799,7 @@ describe('connex create', () => {
     });
 
     it('should warn and exit non-zero when browser-flow branding PATCH fails', async () => {
+      useConnexServiceNotFound(client);
       let patchHit = false;
       client.scenario.post('/v2/files', (_req, res) => {
         res.json({});
@@ -1644,6 +1989,7 @@ describe('connex create', () => {
     });
 
     it('should surface server upload error and not create connector', async () => {
+      useConnexServiceNotFound(client);
       let postHit = false;
       client.scenario.post('/v2/files', (_req, res) => {
         res.statusCode = 413;
@@ -1742,6 +2088,7 @@ describe('connex create', () => {
   });
 
   it('should tolerate early 404s during polling after 422', async () => {
+    useConnexServiceNotFound(client);
     client.scenario.post('/v1/connect/connectors/managed', (_req, res) => {
       res.statusCode = 422;
       res.json({

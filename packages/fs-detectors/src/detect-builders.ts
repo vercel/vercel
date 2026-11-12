@@ -1,32 +1,34 @@
 import minimatch from 'minimatch';
+import { parsePyModuleAttrEntrypoint } from '@vercel-internals/runtimes/entrypoint';
 import { valid as validSemver } from 'semver';
 import { parse as parsePath, extname, join } from 'path';
 import type { Route, RouteWithSrc } from '@vercel/routing-utils';
 import { frameworkList, type Framework } from '@vercel/frameworks';
+import {
+  frameworksBySlug as slugToFramework,
+  inferBuilderRuntimeFromFramework,
+} from '@vercel-internals/runtimes/framework';
+import { ENTRYPOINT_EXTENSIONS } from '@vercel-internals/runtimes/constants';
 import type {
   PackageJson,
   Builder,
   Config,
   BuilderFunctions,
-  ExperimentalServices,
-  ExperimentalServicesV2,
-  Services,
   ProjectSettings,
-  Service,
 } from '@vercel/build-utils';
 import { isOfficialRuntime } from './is-official-runtime';
 import {
-  isPythonEntrypoint,
   isNodeEntrypoint,
   BACKEND_BUILDERS,
   UNIFIED_BACKEND_BUILDER,
   isExperimentalBackendsEnabled,
   getMaxDurationLimit,
 } from '@vercel/build-utils';
+import { isPythonEntrypoint } from './python';
 import {
-  getServicesBuilders,
-  warnIgnoredDirectories,
-} from './services/get-services-builders';
+  BUILDPACK_PROJECT_MARKERS,
+  toBuildpackRuntime,
+} from './buildpack-runtimes';
 
 /**
  * Pattern for finding all supported middleware files.
@@ -69,10 +71,6 @@ function getStaticFilesPattern(additionalExclusions: string[] = []): string {
  */
 export const REGEX_NON_VERCEL_PLATFORM_FILES = getStaticFilesPattern();
 
-const slugToFramework = new Map<string | null, Framework>(
-  frameworkList.map(f => [f.slug, f])
-);
-
 /**
  * Maps each builder name to the frameworks it handles.
  */
@@ -107,9 +105,13 @@ export interface ProxyConfig {
 export interface Options {
   tag?: string;
   functions?: BuilderFunctions;
-  experimentalServices?: ExperimentalServices;
-  services?: Services;
-  experimentalServicesV2?: ExperimentalServicesV2;
+  /**
+   * Source files built by a builder that detection does not create itself
+   * (e.g. schedule entrypoints resolved by the CLI). Detection neither builds
+   * them as `api/` functions nor serves them as static files, and `functions`
+   * patterns that match them count as used.
+   */
+  reservedFunctionFiles?: string[];
   ignoreBuildScript?: boolean;
   projectSettings?: ProjectSettings;
   cleanUrls?: boolean;
@@ -178,39 +180,12 @@ export async function detectBuilders(
   builders: Builder[] | null;
   errors: ErrorResponse[] | null;
   warnings: ErrorResponse[];
-  hostRewriteRoutes?: Route[] | null;
   defaultRoutes: Route[] | null;
-  fallbackRoutes?: Route[] | null;
   redirectRoutes: Route[] | null;
   rewriteRoutes: Route[] | null;
   errorRoutes: Route[] | null;
-  services?: Service[];
-  experimentalServicesV2?: Services;
-  useImplicitEnvInjection?: boolean;
 }> {
-  const {
-    experimentalServices: experimentalServicesV1,
-    services,
-    experimentalServicesV2,
-    projectSettings = {},
-  } = options;
-  if (services != null && experimentalServicesV2 != null) {
-    return {
-      builders: null,
-      errors: [
-        {
-          code: 'SERVICES_AND_EXPERIMENTAL_SERVICES_V2',
-          message:
-            'The `services` option cannot be used in conjunction with its deprecated alias `experimentalServicesV2`. Please use only `services`.',
-        },
-      ],
-      warnings: [],
-      defaultRoutes: null,
-      redirectRoutes: null,
-      rewriteRoutes: null,
-      errorRoutes: null,
-    };
-  }
+  const { projectSettings = {} } = options;
   const { framework } = projectSettings;
   const proxyError = validateProxy(options, files, framework);
   if (proxyError) {
@@ -223,40 +198,6 @@ export async function detectBuilders(
       rewriteRoutes: null,
       errorRoutes: null,
     };
-  }
-
-  const servicesConfig = services ?? experimentalServicesV2;
-  const configuredServices = servicesConfig ?? experimentalServicesV1;
-  const configuredServicesType = servicesConfig
-    ? services
-      ? 'services'
-      : 'experimentalServicesV2'
-    : 'experimentalServices';
-  const hasServicesConfig =
-    configuredServices != null && typeof configuredServices === 'object';
-
-  if (hasServicesConfig || framework === 'services') {
-    const result = await getServicesBuilders({
-      workPath: options.workPath,
-      configuredServices: configuredServices,
-      configuredServicesType,
-      projectFramework: framework,
-    });
-
-    if (configuredServices != null) {
-      result.warnings.push(
-        ...warnIgnoredDirectories(files, configuredServices)
-      );
-    }
-
-    if (!result.errors && options.proxy) {
-      result.builders = [
-        getProxyBuilder(options.proxy, options.tag, options.functions),
-        ...(result.builders ?? []),
-      ];
-    }
-
-    return result;
   }
 
   const errors: ErrorResponse[] = [];
@@ -292,18 +233,30 @@ export async function detectBuilders(
 
   const absolutePathCache = new Map<string, string>();
 
+  // The proxy: the `proxy` entrypoint or a root-level `middleware.[jt]s` file.
+  const proxy = resolveProxy(files, options);
+
+  // Files owned by a builder that this function does not derive from file
+  // conventions: the `proxy` builder and reserved function files.
+  const reservedFunctionFiles = options.reservedFunctionFiles ?? [];
+  const claimedFiles = new Set<string>([
+    ...(proxy?.source === 'vercel-config' ? [proxy.file] : []),
+    ...reservedFunctionFiles,
+  ]);
+  // The deployment has functions even when none live under `api/`.
+  const hasReservedFunctions = reservedFunctionFiles.length > 0;
+
   const { buildCommand, outputDirectory } = projectSettings;
   const frameworkConfig = slugToFramework.get(framework || '');
-  const ignoreRuntimes = new Set(frameworkConfig?.ignoreRuntimes);
+  // Rust static output keeps `api/**/*.rs` runtimes enabled.
+  const rustStaticOutput = isRustStaticOutput(framework, projectSettings);
+  const ignoreRuntimes = new Set<string>(
+    rustStaticOutput ? undefined : frameworkConfig?.ignoreRuntimes
+  );
   const withTag = options.tag ? `@${options.tag}` : '';
   const apiMatches = getApiMatches()
-    .filter(
-      b =>
-        // Root-level middleware is enabled, unless `disableRootMiddleware: true`
-        (b.config?.middleware && !frameworkConfig?.disableRootMiddleware) ||
-        // "api" dir runtimes are enabled, unless opted-out via `ignoreRuntimes`
-        !ignoreRuntimes.has(b.use)
-    )
+    // "api" dir runtimes are enabled, unless opted-out via `ignoreRuntimes`
+    .filter(b => !ignoreRuntimes.has(b.use))
     .map(b => {
       b.use = `${b.use}${withTag}`;
       return b;
@@ -326,15 +279,18 @@ export async function detectBuilders(
 
   // API
   for (const fileName of sortedFiles) {
-    // The proxy entrypoint is built by the explicitly configured proxy
-    // builder below, not by file-convention detection.
-    if (fileName === options.proxy?.entrypoint) {
+    // Claimed files are built by their own builder, not by file-convention
+    // detection, and are not static content either.
+    if (claimedFiles.has(fileName)) {
       continue;
     }
 
-    const apiBuilder = await maybeGetApiBuilder(fileName, apiMatches, options);
+    const functionBuilder =
+      proxy?.source === 'file-convention' && fileName === proxy.file
+        ? proxy.builder
+        : await maybeGetApiBuilder(fileName, apiMatches, options);
 
-    if (apiBuilder) {
+    if (functionBuilder) {
       const { routeError, apiRoute, isDynamic } = getApiRoute(
         fileName,
         apiSortedFiles,
@@ -361,8 +317,8 @@ export async function detectBuilders(
         }
       }
 
-      addToUsedFunctions(apiBuilder);
-      apiBuilders.push(apiBuilder);
+      addToUsedFunctions(functionBuilder);
+      apiBuilders.push(functionBuilder);
       continue;
     }
 
@@ -400,18 +356,16 @@ export async function detectBuilders(
     }
   }
 
-  if (options.proxy) {
-    const proxyBuilder = getProxyBuilder(
-      options.proxy,
-      options.tag,
-      options.functions
-    );
-    addToUsedFunctions(proxyBuilder);
-    apiBuilders.unshift(proxyBuilder);
+  if (proxy?.source === 'vercel-config') {
+    addToUsedFunctions(proxy.builder);
+    apiBuilders.unshift(proxy.builder);
   }
+
+  const rustStaticPrebuilt = rustStaticOutput && !pkg && !buildCommand;
 
   if (
     !makeFrontendStatic &&
+    !rustStaticPrebuilt &&
     (hasBuildScript(pkg) || buildCommand || framework)
   ) {
     // Framework or Build
@@ -427,6 +381,7 @@ export async function detectBuilders(
       pkg &&
       !makeFrontendStatic &&
       !apiBuilders.length &&
+      !hasReservedFunctions &&
       !options.ignoreBuildScript
     ) {
       // We only show this error when there are no api builders
@@ -454,14 +409,15 @@ export async function detectBuilders(
           outputDirectory: usedOutputDirectory,
         },
       };
-    } else if (apiBuilders.length && hasNoneApiFiles) {
-      // Everything besides the api directory
-      // and package.json can be served as static files
+    } else if (
+      (apiBuilders.length || hasReservedFunctions) &&
+      hasNoneApiFiles
+    ) {
+      // Everything besides the api directory, package.json and
+      // claimed files can be served as static files
       frontendBuilder = {
         use: '@vercel/static',
-        src: getStaticFilesPattern(
-          options.proxy ? [options.proxy.entrypoint] : []
-        ),
+        src: getStaticFilesPattern([...claimedFiles]),
         config: {
           zeroConfig: true,
         },
@@ -494,6 +450,7 @@ export async function detectBuilders(
   const unusedFunctionError = checkUnusedFunctions(
     frontendBuilder,
     usedFunctions,
+    claimedFiles,
     options
   );
 
@@ -512,7 +469,7 @@ export async function detectBuilders(
   // Exclude the middleware builder for Next.js apps since @vercel/next
   // will build middlewares.
   //
-  // While maybeGetApiBuilder() excludes the middleware builder, however,
+  // While resolveProxy() excludes the middleware builder, however,
   // we need to check if it's a Next.js app here again for the case where
   // `projectSettings.framework == null`.
   if (
@@ -536,12 +493,14 @@ export async function detectBuilders(
   if (frontendBuilder) {
     // Add @vercel/static build for public files for server-based frameworks
     // so that files in `public/` are served from the root path, e.g. `/logo.svg`.
-    // This applies to Express, Hono, Go, Python, and experimental backends.
     if (
       isOfficialRuntime('express', frontendBuilder?.use) ||
       isOfficialRuntime('hono', frontendBuilder?.use) ||
       isOfficialRuntime('python', frontendBuilder?.use) ||
       isOfficialRuntime('go', frontendBuilder?.use) ||
+      (isOfficialRuntime('container', frontendBuilder?.use) &&
+        (frontendBuilder.config?.buildpack === 'go' ||
+          frontendBuilder.config?.buildpack === 'rust')) ||
       isOfficialRuntime('backends', frontendBuilder?.use)
     ) {
       builders.push({
@@ -569,6 +528,26 @@ export async function detectBuilders(
     }
   }
 
+  const ignoredInstallCommandPatterns = new Set<string>();
+  for (const builder of apiBuilders) {
+    if (isOfficialRuntime('node', builder.use)) {
+      continue;
+    }
+    for (const [pattern, func] of Object.entries(
+      builder.config?.functions ?? {}
+    )) {
+      if (func.installCommand !== undefined) {
+        ignoredInstallCommandPatterns.add(pattern);
+      }
+    }
+  }
+  for (const pattern of ignoredInstallCommandPatterns) {
+    warnings.push({
+      code: 'unsupported_function_install_command',
+      message: `The \`installCommand\` property in \`functions["${pattern}"]\` is only supported for Node.js functions and will be ignored for other runtimes.`,
+    });
+  }
+
   const routesResult = getRouteResult(
     apiRoutes,
     dynamicRoutes,
@@ -594,19 +573,7 @@ async function maybeGetApiBuilder(
   apiMatches: Builder[],
   options: Options
 ): Promise<Builder | null> {
-  // Root-level Middleware files are superseded by an explicitly
-  // configured proxy entrypoint.
-  const middleware =
-    !options.proxy &&
-    (fileName === 'middleware.js' || fileName === 'middleware.ts');
-
-  // Root-level Middleware file is handled by `@vercel/next`, so don't
-  // schedule a separate Builder when "nextjs" framework is selected
-  if (middleware && options.projectSettings?.framework === 'nextjs') {
-    return null;
-  }
-
-  if (!(fileName.startsWith('api/') || middleware)) {
+  if (!fileName.startsWith('api/')) {
     return null;
   }
 
@@ -629,7 +596,7 @@ async function maybeGetApiBuilder(
   // For Python files, verify they are valid entrypoints before creating a builder
   if (fileName.endsWith('.py') && options.workPath) {
     const fsPath = join(options.workPath, fileName);
-    const isEntrypoint = await isPythonEntrypoint({ fsPath });
+    const isEntrypoint = await isPythonEntrypoint(fsPath);
     if (!isEntrypoint) {
       return null;
     }
@@ -665,11 +632,21 @@ async function maybeGetApiBuilder(
     return null;
   }
 
-  const config: Config = { zeroConfig: true };
+  const builder: Builder = {
+    use,
+    src: fileName,
+    config: getFunctionConfig(fnPattern, func, options),
+  };
 
-  if (middleware) {
-    config.middleware = true;
-  }
+  return builder;
+}
+
+function getFunctionConfig(
+  fnPattern: string | null,
+  func: BuilderFunctions[string] | null,
+  options: Options
+): Config {
+  const config: Config = { zeroConfig: true };
 
   if (fnPattern && func) {
     config.functions = { [fnPattern]: func };
@@ -687,13 +664,7 @@ async function maybeGetApiBuilder(
     config.bunVersion = options.bunVersion;
   }
 
-  const builder: Builder = {
-    use,
-    src: fileName,
-    config,
-  };
-
-  return builder;
+  return config;
 }
 
 function getFunction(fileName: string, { functions = {} }: Options) {
@@ -710,18 +681,100 @@ function getFunction(fileName: string, { functions = {} }: Options) {
     : { fnPattern: null, func: null };
 }
 
+interface ParsedProxyEntrypoint {
+  file: string;
+  variable?: string;
+}
+
+function parseProxyEntrypoint(entrypoint: string): ParsedProxyEntrypoint {
+  if (process.env.VERCEL_PYTHON_PROXY) {
+    const parsed = parsePyModuleAttrEntrypoint(entrypoint);
+    if (parsed) return { file: parsed.filePath, variable: parsed.attrName };
+  }
+  return { file: entrypoint };
+}
+
+interface ResolvedProxy {
+  /**
+   * `vercel-config`: the `proxy` property in the Vercel config (`vercel.json`, etc.).
+   * `file-convention`: a root-level `middleware.js` / `middleware.ts`.
+   */
+  source: 'vercel-config' | 'file-convention';
+  entrypoint: string | null;
+  file: string;
+  builder: Builder;
+}
+
+const ROOT_PROXY_FILES = ['middleware.js', 'middleware.ts'];
+
+/**
+ * Resolves the project's proxy: the `proxy` entrypoint if configured,
+ * otherwise a root-level `middleware.js` / `middleware.ts`.
+ */
+function resolveProxy(files: string[], options: Options): ResolvedProxy | null {
+  const { proxy } = options;
+  if (proxy) {
+    return {
+      source: 'vercel-config',
+      entrypoint: proxy.entrypoint,
+      file: parseProxyEntrypoint(proxy.entrypoint).file,
+      builder: getProxyBuilder(proxy, options.tag, options.functions),
+    };
+  }
+
+  // A root-level proxy file is built by `@vercel/next` when the "nextjs"
+  // framework is selected, and ignored when the framework disables it.
+  const framework = options.projectSettings?.framework;
+  if (
+    framework === 'nextjs' ||
+    slugToFramework.get(framework || '')?.disableRootMiddleware
+  ) {
+    return null;
+  }
+
+  const reserved = new Set(options.reservedFunctionFiles ?? []);
+  const file = ROOT_PROXY_FILES.find(
+    f => files.includes(f) && !reserved.has(f)
+  );
+  if (!file) {
+    return null;
+  }
+
+  const { fnPattern, func } = getFunction(file, options);
+  const withTag = options.tag ? `@${options.tag}` : '';
+
+  return {
+    source: 'file-convention',
+    entrypoint: null,
+    file,
+    builder: {
+      use: func?.runtime || `@vercel/node${withTag}`,
+      src: file,
+      config: {
+        ...getFunctionConfig(fnPattern, func, options),
+        middleware: true,
+      },
+    },
+  };
+}
+
 export function getProxyBuilder(
   proxy: ProxyConfig,
   tag?: string,
   functions: BuilderFunctions = {}
 ): Builder {
-  const { fnPattern, func } = getFunction(proxy.entrypoint, { functions });
+  const { file, variable } = parseProxyEntrypoint(proxy.entrypoint);
+  const isPython = extname(file) === '.py';
+
+  const { fnPattern, func } = getFunction(file, { functions });
   const runtime = func?.runtime;
+
   const config: Config = {
     zeroConfig: true,
     middleware: true,
-    ...(!runtime ? { middlewareRuntime: 'nodejs' as const } : {}),
+    ...(!runtime && !isPython ? { middlewareRuntime: 'nodejs' as const } : {}),
     ...(proxy.matcher ? { middlewareMatcher: proxy.matcher } : {}),
+    ...(variable ? { handlerFunction: variable } : {}),
   };
 
   if (fnPattern && func) {
@@ -736,9 +789,13 @@ export function getProxyBuilder(
     }
   }
 
+  const defaultRuntime = isPython
+    ? `@vercel/python${tag ? `@${tag}` : ''}`
+    : `@vercel/node${tag ? `@${tag}` : ''}`;
+
   return {
-    src: proxy.entrypoint,
-    use: runtime || `@vercel/node${tag ? `@${tag}` : ''}`,
+    src: file,
+    use: runtime || defaultRuntime,
     config,
   };
 }
@@ -747,11 +804,6 @@ function getApiMatches(): Builder[] {
   const config = { zeroConfig: true };
 
   return [
-    {
-      src: REGEX_MIDDLEWARE_FILES,
-      use: `@vercel/node`,
-      config: { ...config, middleware: true },
-    },
     { src: 'api/**/*.+(js|mjs|ts|tsx)', use: `@vercel/node`, config },
     { src: 'api/**/!(*_test).go', use: `@vercel/go`, config },
     { src: 'api/**/*.py', use: `@vercel/python`, config },
@@ -773,19 +825,21 @@ export function validateProxyConfig(proxy: ProxyConfig): ErrorResponse | null {
   ) {
     return {
       code: 'invalid_proxy',
-      message:
-        'The `proxy` property must contain an `entrypoint` string that references a `.js` or `.ts` file.',
+      message: 'The `proxy` property must contain an `entrypoint` string.',
     };
   }
 
-  const entrypoint = proxy.entrypoint;
-  const segments = entrypoint.split('/');
+  const { file, variable } = parseProxyEntrypoint(proxy.entrypoint);
+  const isPythonForm = extname(file) === '.py';
+  const isJsForm = /\.(?:js|ts)$/.test(file) && !file.endsWith('.d.ts');
+
+  const segments = file.split('/');
   if (
-    entrypoint.startsWith('/') ||
-    entrypoint.includes('\\') ||
+    file.startsWith('/') ||
+    file.includes('\\') ||
     segments.includes('.') ||
     segments.includes('..') ||
-    /[?#\u0000-\u001f]/.test(entrypoint)
+    /[?#\u0000-\u001f]/.test(file)
   ) {
     return {
       code: 'invalid_proxy_entrypoint',
@@ -794,11 +848,18 @@ export function validateProxyConfig(proxy: ProxyConfig): ErrorResponse | null {
     };
   }
 
-  if (!/\.(?:js|ts)$/.test(entrypoint) || entrypoint.endsWith('.d.ts')) {
+  if (!isPythonForm && !isJsForm) {
     return {
       code: 'invalid_proxy_entrypoint',
       message:
-        'The `proxy.entrypoint` path must end in `.js` or `.ts` and reference an executable file.',
+        'The `proxy.entrypoint` must be a `.js` or `.ts` file path, or a Python `module:attr`.',
+    };
+  }
+  if (isPythonForm && !variable) {
+    return {
+      code: 'invalid_proxy_entrypoint',
+      message:
+        'Python proxy entrypoints must use `module:attr` syntax, not a plain `.py` path.',
     };
   }
 
@@ -823,8 +884,8 @@ export function validateProxyConfig(proxy: ProxyConfig): ErrorResponse | null {
   return null;
 }
 
-function validateProxy(
-  options: Options,
+export function validateProxy(
+  options: Pick<Options, 'proxy'>,
   files: string[],
   framework: string | null | undefined
 ): ErrorResponse | null {
@@ -838,10 +899,28 @@ function validateProxy(
     return configError;
   }
 
-  if (!files.includes(proxy.entrypoint)) {
+  const { file } = parseProxyEntrypoint(proxy.entrypoint);
+  if (!files.includes(file)) {
     return {
       code: 'proxy_entrypoint_not_found',
-      message: `The proxy entrypoint \`${proxy.entrypoint}\` does not exist. Set \`proxy.entrypoint\` to an existing \`.js\` or \`.ts\` file.`,
+      message: `The proxy entrypoint \`${proxy.entrypoint}\` does not exist.`,
+    };
+  }
+
+  const appRuntime = inferBuilderRuntimeFromFramework(framework);
+  const proxyRuntime = ENTRYPOINT_EXTENSIONS[extname(file)];
+
+  if (
+    appRuntime !== undefined &&
+    proxyRuntime !== undefined &&
+    appRuntime !== proxyRuntime
+  ) {
+    return {
+      code: 'proxy_runtime_mismatch',
+      message:
+        `The proxy entrypoint \`${proxy.entrypoint}\` uses the ${proxyRuntime} runtime, ` +
+        `but the app uses the ${appRuntime} runtime. ` +
+        `The proxy and app must use the same runtime.`,
     };
   }
 
@@ -858,6 +937,23 @@ function validateProxy(
 function hasBuildScript(pkg: PackageJson | undefined | null) {
   const { scripts = {} } = pkg || {};
   return Boolean(scripts && scripts['build']);
+}
+
+/**
+ * A Rust project with an explicit output directory (e.g. a Trunk/wasm
+ * frontend) deploys static files, so the runtime preset must not apply.
+ */
+function isRustStaticOutput(
+  framework: string | null | undefined,
+  projectSettings: { outputDirectory?: string | null }
+): boolean {
+  return (
+    framework === 'rust' &&
+    typeof projectSettings.outputDirectory === 'string' &&
+    projectSettings.outputDirectory !== '' &&
+    // The framework preset's display default; not a real directory.
+    projectSettings.outputDirectory !== 'N/A'
+  );
 }
 
 function detectFrontBuilder(
@@ -926,7 +1022,27 @@ function detectFrontBuilder(
   }
 
   const f = slugToFramework.get(framework || '');
-  if (f && f.useRuntime) {
+  if (f && f.useRuntime && !isRustStaticOutput(framework, projectSettings)) {
+    // Buildpack-backed runtime frameworks build the whole project into a
+    // container image instead of using their Lambda runtime, but only when
+    // the buildpack's project marker sits at the project root; without it
+    // the legacy runtime keeps building the project as before. `api/**`
+    // function files never reach this branch: they are built by
+    // `getApiMatches()`.
+    const buildpackRuntime = toBuildpackRuntime(framework);
+    if (
+      buildpackRuntime &&
+      (BUILDPACK_PROJECT_MARKERS.get(buildpackRuntime) ?? []).some(marker =>
+        files.includes(marker)
+      )
+    ) {
+      config.buildpack = buildpackRuntime;
+      return {
+        src: '<detect>',
+        use: `@vercel/container${withTag}`,
+        config,
+      };
+    }
     const { src, use } = f.useRuntime;
     // Replace framework-specific backend builders with the unified backend builder
     // when experimental backends is enabled
@@ -1062,6 +1178,15 @@ function validateFunctions({ functions = {} }: Options) {
         };
       }
     }
+
+    if (func.installCommand !== undefined) {
+      if (typeof func.installCommand !== 'string') {
+        return {
+          code: 'invalid_function_property',
+          message: `The property \`installCommand\` must be a string.`,
+        };
+      }
+    }
   }
 
   return null;
@@ -1070,11 +1195,24 @@ function validateFunctions({ functions = {} }: Options) {
 function checkUnusedFunctions(
   frontendBuilder: Builder | null,
   usedFunctions: Set<string>,
+  claimedFiles: Set<string>,
   options: Options
 ): ErrorResponse | null {
   const unusedFunctions = new Set(
     Object.keys(options.functions || {}).filter(key => !usedFunctions.has(key))
   );
+
+  // A `functions` key that matches a claimed file is in use; its builder is
+  // just not created here. Keys match source paths with their extension, the
+  // same way `getLambdaOptionsFromFunction` applies them.
+  for (const fnKey of unusedFunctions) {
+    for (const filePath of claimedFiles) {
+      if (filePath === fnKey || minimatch(filePath, fnKey)) {
+        unusedFunctions.delete(fnKey);
+        break;
+      }
+    }
+  }
 
   if (!unusedFunctions.size) {
     return null;

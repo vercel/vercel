@@ -23,6 +23,7 @@ import {
   PackageJson,
   PrepareCache,
   glob,
+  createDaemonStaticFileFilter,
   download,
   execCommand,
   spawnCommand,
@@ -287,15 +288,18 @@ function getFramework(
     }
   }
 
+  return detectFrameworkFromDependencies(pkg);
+}
+
+function detectFrameworkFromDependencies(
+  pkg?: PackageJson | null
+): Framework | undefined {
   if (!pkg) {
     return;
   }
 
   const dependencies = Object.assign({}, pkg.dependencies, pkg.devDependencies);
-  const framework = frameworks.find(
-    ({ dependency }) => dependencies[dependency || '']
-  );
-  return framework;
+  return frameworks.find(({ dependency }) => dependencies[dependency || '']);
 }
 
 async function fetchBinary(
@@ -363,6 +367,8 @@ export const build: BuildV2 = async ({
   config,
   meta = {},
   service,
+  diagnosticsValues,
+  span,
 }) => {
   await download(files, workPath, meta);
 
@@ -517,6 +523,7 @@ export const build: BuildV2 = async ({
       lockfilePath,
       lockfileVersion,
       packageJsonPackageManager,
+      packageJsonDevEngines,
       turboSupportsCorepackHome,
     } = await scanParentDirs(entrypointDir, true);
 
@@ -524,6 +531,8 @@ export const build: BuildV2 = async ({
       cliType,
       lockfileVersion,
       packageJsonPackageManager,
+      packageJsonDevEngines,
+      nodeVersion,
       env: process.env,
       turboSupportsCorepackHome,
       projectCreatedAt: config.projectSettings?.createdAt,
@@ -692,7 +701,9 @@ export const build: BuildV2 = async ({
 
     await generateStaticBuildManifest({
       framework,
+      detectedFramework: detectFrameworkFromDependencies(pkg),
       service,
+      diagnosticsValues,
       entrypointDir,
       nodeVersion,
       cliType,
@@ -837,7 +848,7 @@ export const build: BuildV2 = async ({
       const buildOutputPathV2 =
         await BuildOutputV2.getBuildOutputDirectory(outputDirPrefix);
       if (buildOutputPathV2) {
-        return await BuildOutputV2.createBuildOutput(workPath);
+        return await BuildOutputV2.createBuildOutput(workPath, span);
       }
 
       const extraOutputs = await BuildOutputV1.readBuildOutputDirectory({
@@ -889,7 +900,13 @@ export const build: BuildV2 = async ({
           ];
           debug(`Using ignore: ${JSON.stringify(ignore)}`);
         }
-        output = await glob('**', { cwd: distPath, ignore }, mountpoint);
+        output = await collectStaticFiles(
+          distPath,
+          meta,
+          mountpoint,
+          ignore,
+          service?.name
+        );
         Object.assign(output, extraOutputs.functions);
       }
     }
@@ -902,7 +919,13 @@ export const build: BuildV2 = async ({
     await runShellScript(path.join(workPath, entrypoint));
     validateDistDir(distPath, workPath);
 
-    const output = await glob('**', distPath, mountpoint);
+    const output = await collectStaticFiles(
+      distPath,
+      meta,
+      mountpoint,
+      [],
+      service?.name
+    );
 
     return {
       output,
@@ -918,6 +941,30 @@ export const build: BuildV2 = async ({
 
   throw new Error(message);
 };
+
+// Keep daemon sources out of automatically collected assets.
+async function collectStaticFiles(
+  distPath: string,
+  meta: BuildOptions['meta'],
+  mountpoint: string,
+  ignore: string[] = [],
+  serviceName?: string
+): Promise<Files> {
+  if (!meta?.daemonContext)
+    return glob('**', { cwd: distPath, ignore }, mountpoint);
+  const canPublish = await createDaemonStaticFileFilter({
+    context: meta.daemonContext,
+    publishPath: distPath,
+    serviceName,
+  });
+  const output = await glob('**', { cwd: distPath, ignore }, mountpoint);
+  for (const [name, file] of Object.entries(output)) {
+    if (file.type === 'FileFsRef' && !(await canPublish(file.fsPath))) {
+      delete output[name];
+    }
+  }
+  return output;
+}
 
 export const prepareCache: PrepareCache = async ({
   entrypoint,
@@ -979,7 +1026,9 @@ const STATIC_BUILD_MANIFEST_RUNTIME = 'static-build' as const;
 
 async function generateStaticBuildManifest({
   framework,
+  detectedFramework,
   service,
+  diagnosticsValues,
   entrypointDir,
   nodeVersion,
   cliType,
@@ -987,13 +1036,17 @@ async function generateStaticBuildManifest({
   lockfileVersion,
 }: {
   framework?: Framework;
+  detectedFramework?: Framework;
   service?: BuildOptions['service'];
+  diagnosticsValues?: BuildOptions['diagnosticsValues'];
   entrypointDir: string;
   nodeVersion: NodeVersion | BunVersion;
   cliType: CliType;
   lockfilePath?: string;
   lockfileVersion?: number;
 }): Promise<void> {
+  const reportedFramework =
+    diagnosticsValues?.framework ?? detectedFramework?.slug ?? undefined;
   if (framework?.slug === 'hugo') {
     try {
       const hugoVersionOut = spawnSync('hugo', ['version'], {
@@ -1009,7 +1062,7 @@ async function generateStaticBuildManifest({
         {
           version: MANIFEST_VERSION,
           runtime: 'go',
-          framework: framework.slug,
+          framework: reportedFramework,
           serviceType: service ? getReportedServiceType(service) : undefined,
           dependencies: [
             {
@@ -1043,7 +1096,7 @@ async function generateStaticBuildManifest({
         {
           version: MANIFEST_VERSION,
           runtime: 'rust',
-          framework: framework.slug,
+          framework: reportedFramework,
           serviceType: service ? getReportedServiceType(service) : undefined,
           dependencies: [
             {
@@ -1066,7 +1119,7 @@ async function generateStaticBuildManifest({
     await generateRubyProjectManifest({
       workPath: entrypointDir,
       gemfileLockPath: path.join(entrypointDir, 'Gemfile.lock'),
-      framework: framework.slug,
+      framework: reportedFramework,
       serviceType: service ? getReportedServiceType(service) : undefined,
       outputRuntime: STATIC_BUILD_MANIFEST_RUNTIME,
     });
@@ -1078,7 +1131,7 @@ async function generateStaticBuildManifest({
         cliType,
         lockfilePath,
         lockfileVersion,
-        framework: framework.slug,
+        framework: reportedFramework,
         serviceType: service ? getReportedServiceType(service) : undefined,
         outputRuntime: STATIC_BUILD_MANIFEST_RUNTIME,
       });

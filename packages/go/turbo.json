@@ -5,7 +5,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputLogs": "new-only",
-      "outputs": ["dist/**", "bin/**", "bootstrap/utils.go"]
+      "outputs": ["dist/**", "bin/**"]
     }
   }
 }

@@ -6,11 +6,22 @@ vi.mock('@vercel/oidc', () => ({
   verifyVercelOidcToken: vi.fn(),
 }));
 
+function verified(
+  payload: Record<string, unknown>
+): Awaited<ReturnType<typeof verifyVercelOidcToken>> {
+  return { payload } as Awaited<ReturnType<typeof verifyVercelOidcToken>>;
+}
+
+const exchangedToken = {
+  aud: 'https://partner.example',
+  act: { aud: 'https://vercel.com/acme' },
+};
+
 describe('createConnectWebhookVerifier', () => {
   beforeEach(() => {
-    vi.mocked(verifyVercelOidcToken).mockResolvedValue(
-      {} as Awaited<ReturnType<typeof verifyVercelOidcToken>>
-    );
+    vi.mocked(verifyVercelOidcToken)
+      .mockReset()
+      .mockResolvedValue(verified({ aud: 'https://vercel.com/acme' }));
   });
 
   afterEach(() => {
@@ -24,6 +35,21 @@ describe('createConnectWebhookVerifier', () => {
     });
 
     await expect(verifier(request, '{}')).resolves.toBe(true);
+    expect(verifyVercelOidcToken).toHaveBeenCalledWith(
+      'connect_oidc_token',
+      undefined
+    );
+  });
+
+  it('accepts a raw byte body', async () => {
+    const verifier = createConnectWebhookVerifier();
+    const request = new Request('https://example.com/api/webhooks/linq', {
+      headers: { authorization: 'Bearer connect_oidc_token' },
+    });
+
+    await expect(verifier(request, new Uint8Array([123, 125]))).resolves.toBe(
+      true
+    );
     expect(verifyVercelOidcToken).toHaveBeenCalledWith(
       'connect_oidc_token',
       undefined
@@ -102,5 +128,36 @@ describe('createConnectWebhookVerifier', () => {
     });
 
     await expect(verifier(request, '{}')).rejects.toThrow('invalid token');
+  });
+
+  it('rejects a token re-minted by the audience exchange', async () => {
+    vi.mocked(verifyVercelOidcToken).mockResolvedValue(
+      verified(exchangedToken)
+    );
+    const verifier = createConnectWebhookVerifier();
+    const request = new Request('https://example.com/api/webhooks/slack', {
+      headers: { authorization: 'Bearer exchanged_token' },
+    });
+
+    await expect(verifier(request, '{}')).rejects.toThrow(
+      'Exchanged OIDC tokens are not accepted'
+    );
+  });
+
+  it('accepts exchanged tokens when an audience is configured', async () => {
+    vi.mocked(verifyVercelOidcToken).mockResolvedValue(
+      verified(exchangedToken)
+    );
+    const options = { audience: 'https://partner.example' };
+    const verifier = createConnectWebhookVerifier(options);
+    const request = new Request('https://example.com/api/webhooks/slack', {
+      headers: { authorization: 'Bearer partner_token' },
+    });
+
+    await expect(verifier(request, '{}')).resolves.toBe(true);
+    expect(verifyVercelOidcToken).toHaveBeenCalledWith(
+      'partner_token',
+      options
+    );
   });
 });

@@ -125,7 +125,7 @@ describe('flags disable', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = flags(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -145,7 +145,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const out = client.stdout.getFullOutput();
     const parsed = JSON.parse(out);
     expect(parsed.status).toBe('error');
@@ -177,7 +177,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const out = client.stdout.getFullOutput();
     const parsed = JSON.parse(out);
     expect(parsed.next[0].command).toContain('--environment production');
@@ -260,8 +260,8 @@ describe('flags disable', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
-    expect(stripAnsi(output)).toContain('Serving variant: false Off');
-    expect(output).toContain(chalk.dim('Off'));
+    expect(stripAnsi(output)).toContain('Serving variant: Off (false)');
+    expect(output).toContain(chalk.dim('false'));
     expect((testFlags[0] as Flag & { message?: string }).message).toEqual(
       'Disabled for production via CLI'
     );
@@ -309,7 +309,7 @@ describe('flags disable', () => {
   it('errors without flag argument', async () => {
     client.setArgv('flags', 'disable');
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
   });
 
   it('errors when invalid variant is provided', async () => {
@@ -340,7 +340,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:disable',
@@ -376,8 +376,8 @@ describe('flags disable', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
-    expect(stripAnsi(output)).toContain('Serving variant: false Off');
-    expect(output).toContain(chalk.dim('Off'));
+    expect(stripAnsi(output)).toContain('Serving variant: Off (false)');
+    expect(output).toContain(chalk.dim('false'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'abc123xyz' },
     });
@@ -402,8 +402,8 @@ describe('flags disable', () => {
     const exitCode = await flags(client);
     expect(exitCode).toEqual(0);
     const output = client.stderr.getFullOutput();
-    expect(stripAnsi(output)).toContain('Serving variant: false Disabled');
-    expect(output).toContain(chalk.dim('Disabled'));
+    expect(stripAnsi(output)).toContain('Serving variant: Disabled (false)');
+    expect(output).toContain(chalk.dim('false'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'random_id_1' },
     });
@@ -476,8 +476,8 @@ describe('flags disable', () => {
       })
     );
     const output = client.stderr.getFullOutput();
-    expect(stripAnsi(output)).toContain('Serving variant: false Off');
-    expect(output).toContain(chalk.dim('Off'));
+    expect(stripAnsi(output)).toContain('Serving variant: Off (false)');
+    expect(output).toContain(chalk.dim('false'));
     expect(testFlags[0].environments.production).toMatchObject({
       pausedOutcome: { type: 'variant', variantId: 'off' },
       fallthrough: { type: 'variant', variantId: 'off' },
@@ -506,8 +506,8 @@ describe('flags disable', () => {
       `vercel flags set ${testFlags[1].slug} --environment production --variant <VARIANT>`
     );
     expect(output).toContain('Available variants:');
-    expect(output).toContain('"control" Control');
-    expect(output).toContain('"variant-a" Variant A');
+    expect(output).toContain('Control ("control")');
+    expect(output).toContain('Variant A ("variant-a")');
     expect(output).toContain(`vercel flags inspect ${testFlags[1].slug}`);
     // Should show dashboard link
     expect(output).toContain('https://vercel.com/');
@@ -547,9 +547,9 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --environment'
+      'Missing required option --environment'
     );
     expect(selectMock).not.toHaveBeenCalled();
   });
@@ -570,7 +570,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const out = client.stdout.getFullOutput();
     const parsed = JSON.parse(out);
     expect(parsed.status).toBe('error');
@@ -605,7 +605,7 @@ describe('flags disable', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const out = client.stdout.getFullOutput();
     const parsed = JSON.parse(out);
     expect(parsed.status).toBe('error');
@@ -802,9 +802,10 @@ describe('flags disable', () => {
     });
   });
 
-  it('errors when flag is archived', async () => {
+  it('updates an archived flag without unarchiving it', async () => {
     // Set flag to archived (mock uses testFlags reference)
     testFlags[0].state = 'archived';
+    testFlags[0].environments.production.active = true;
 
     client.setArgv(
       'flags',
@@ -814,7 +815,17 @@ describe('flags disable', () => {
       'production'
     );
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(1);
-    expect(client.stderr.getFullOutput()).toContain('archived');
+    expect(exitCode).toEqual(0);
+    expect(testFlags[0].state).toBe('archived');
+    expect(testFlags[0].environments.production.pausedOutcome).toEqual({
+      type: 'variant',
+      variantId: 'off',
+    });
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'This flag remains archived'
+    );
+    expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+      'Serving variant:'
+    );
   });
 });

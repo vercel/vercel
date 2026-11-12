@@ -85,7 +85,7 @@ describe('vcr login', () => {
     it('tracks telemetry and exits 2', async () => {
       client.setArgv('vcr', 'login', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -126,7 +126,7 @@ describe('vcr login', () => {
   it('errors when the engine argument is omitted (no default)', async () => {
     client.setArgv('vcr', 'login');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('Missing engine');
     expect(client.stderr.getFullOutput()).toContain('docker, podman, buildah');
     expect(mockedExeca).not.toHaveBeenCalled();
@@ -154,6 +154,62 @@ describe('vcr login', () => {
     expect(client.stderr.getFullOutput()).toContain('was rejected');
   });
 
+  const KEYCHAIN_CONFLICT_STDERR =
+    'error saving credentials: error storing credentials - err: exit status 1, out: `The specified item already exists in the keychain. (-25299)`';
+
+  it('recovers from a stale keychain entry by logging out and retrying', async () => {
+    mockMint();
+    // First login fails with the macOS keychain duplicate-item error
+    mockedExeca.mockResolvedValueOnce({
+      exitCode: 1,
+      stderr: KEYCHAIN_CONFLICT_STDERR,
+    } as any);
+    client.setArgv('vcr', 'login', 'docker');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(0);
+    expect(mockedExeca).toHaveBeenNthCalledWith(
+      2,
+      'docker',
+      ['logout', 'vcr.vercel.com'],
+      { reject: false, stdio: 'ignore' }
+    );
+    expect(mockedExeca).toHaveBeenNthCalledWith(
+      3,
+      'docker',
+      ['login', 'vcr.vercel.com', '--username', 'oidc', '--password-stdin'],
+      { input: TOKEN, reject: false }
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      'Logged in to vcr.vercel.com'
+    );
+  });
+
+  it('retries the login only once when the keychain conflict persists', async () => {
+    mockMint();
+    mockedExeca.mockResolvedValue({
+      exitCode: 1,
+      stderr: KEYCHAIN_CONFLICT_STDERR,
+    } as any);
+    client.setArgv('vcr', 'login', 'docker');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(1);
+    // login, logout, retried login — no further attempts.
+    expect(mockedExeca).toHaveBeenCalledTimes(3);
+    expect(client.stderr.getFullOutput()).toContain('`docker login` failed');
+  });
+
+  it('does not retry a failure that is not a credential-store conflict', async () => {
+    mockMint();
+    mockedExeca.mockResolvedValue({
+      exitCode: 1,
+      stderr: 'Cannot connect to the Docker daemon',
+    } as any);
+    client.setArgv('vcr', 'login', 'docker');
+    const exitCode = await vcr(client);
+    expect(exitCode).toBe(1);
+    expect(mockedExeca).toHaveBeenCalledTimes(1);
+  });
+
   it('surfaces an unexpected engine failure with stderr tail', async () => {
     mockMint();
     mockedExeca.mockResolvedValue({
@@ -178,7 +234,7 @@ describe('vcr login', () => {
   it('rejects an invalid engine value', async () => {
     client.setArgv('vcr', 'login', 'nope');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('docker, podman, buildah');
     expect(mockedExeca).not.toHaveBeenCalled();
   });

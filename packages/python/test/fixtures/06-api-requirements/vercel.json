@@ -1,0 +1,8 @@
+{
+  "framework": null,
+  "build": {
+    "env": {
+      "UV_REQUIRE_HASHES": "true"
+    }
+  }
+}

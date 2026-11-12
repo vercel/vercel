@@ -1,5 +1,10 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import type { ConnectAuthorizationDetail } from './authorization-details.js';
+import { resolveBaseUrl } from './internal/base-url.js';
+import {
+  normalizeTokenParams,
+  normalizeTokenSubject,
+} from './internal/normalize-token-params.js';
 
 export type ConnectSubjectType = 'app' | 'user' | 'jwt-bearer' | 'token';
 
@@ -17,6 +22,15 @@ export interface ConnectUserTokenSubject {
   type: 'user';
   id: string;
   issuer?: string;
+  /**
+   * When specified, `id` and `issuer` identify the user in the namespace of
+   * this IDP connector. The connector must be configured as an IDP.
+   * The XAA/ID-JAG protocol is used to resolve the target access token when
+   * configured by the target connector.
+   *
+   * @experimental Subject to change.
+   */
+  experimental_idp?: string;
 }
 
 export interface ConnectJwtBearerTokenSubject {
@@ -30,7 +44,8 @@ export interface ConnectJwtBearerTokenSubject {
 }
 
 export interface ConnectTokenExchangeSubject {
-  type: 'token';
+  /** Inferred as `'token'` when omitted. */
+  type?: 'token';
   token: string;
 }
 
@@ -39,8 +54,8 @@ export interface ConnectTokenParams {
   installationId?: string;
   audience?: string[];
   /**
-   * Access scopes to request. Use `['*']` to request the default scopes for
-   * the specified subject type.
+   * Access scopes to request. Defaults to `['*']`, which requests the default
+   * scopes for the specified subject type.
    */
   scopes?: string[];
   resources?: string[];
@@ -142,6 +157,13 @@ export interface ConnectOptions {
    * a stale bearer.
    */
   forceRefresh?: boolean;
+
+  /**
+   * Region to send the request to, e.g. `sfo1`. Defaults to the
+   * `VERCEL_REGION` environment variable; override it to target a
+   * different region.
+   */
+  region?: string;
 }
 
 export async function getToken(
@@ -158,8 +180,9 @@ export async function getTokenResponse(
   params: ConnectTokenParams,
   options?: ConnectOptions
 ): Promise<ConnectTokenResponse> {
-  const bufferMs = params.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
-  const cacheKey = tokenCacheKey(connector, params);
+  const requestParams = normalizeTokenParams(params);
+  const bufferMs = requestParams.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
+  const cacheKey = tokenCacheKey(connector, requestParams);
 
   if (options?.forceRefresh) {
     cache.delete(cacheKey);
@@ -177,7 +200,8 @@ export async function getTokenResponse(
 
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
 
-  const endpoint = `https://api.vercel.com/v1/connect/token/${encodeURIComponent(connector)}`;
+  const baseUrl = resolveBaseUrl(options);
+  const endpoint = `${baseUrl}/v1/connect/token/${encodeURIComponent(connector)}`;
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -186,7 +210,7 @@ export async function getTokenResponse(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${vercelToken}`,
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify(requestParams),
   });
 
   if (!response.ok) {
@@ -212,7 +236,8 @@ export async function revokeToken(
   options?: ConnectOptions
 ): Promise<void> {
   const vercelToken = options?.vercelToken ?? (await getVercelOidcToken());
-  const endpoint = `https://api.vercel.com/v1/connect/connectors/${encodeURIComponent(connector)}/tokens`;
+  const baseUrl = resolveBaseUrl(options);
+  const endpoint = `${baseUrl}/v1/connect/connectors/${encodeURIComponent(connector)}/tokens`;
 
   const response = await fetch(endpoint, {
     method: 'DELETE',
@@ -221,7 +246,10 @@ export async function revokeToken(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${vercelToken}`,
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify({
+      ...params,
+      subject: normalizeTokenSubject(params.subject),
+    }),
   });
 
   if (!response.ok) {
@@ -255,7 +283,7 @@ export function deleteTokenCacheEntry(
   connector: string,
   params: ConnectTokenParams
 ): void {
-  cache.delete(tokenCacheKey(connector, params));
+  cache.delete(tokenCacheKey(connector, normalizeTokenParams(params)));
 }
 
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;

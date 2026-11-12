@@ -1,5 +1,114 @@
 # vercel-runtime
 
+## 0.24.1
+
+### Patch Changes
+
+- a4c0116: Update uv and uv_build to 0.13.5, including rejection of certificate chains containing compromised eMudhra intermediate keys.
+
+## 0.24.0
+
+### Minor Changes
+
+- 85020a6: When `VERCEL_IPC_PATH` is `/opt/vercel/ipc.sock`, ASGI apps now send `server-started` once lifespan startup completes and the server accepts connections, so the platform can hold traffic until the application is ready and cold start timings include lifespan startup. If the application reports a lifespan startup failure there, the runtime reports an unrecoverable error instead of announcing readiness and then exiting. Elsewhere, including AWS Lambda, the runtime still sends `server-started` before lifespan startup, so lifespan startup does not consume Lambda's Init phase budget.
+
+## 0.23.3
+
+### Patch Changes
+
+- be7f5aa: Preserve TCP socket metadata so ASGI responses use TCP_NODELAY.
+- 80fe638: Enable TCP_NODELAY for WSGI and `BaseHTTPRequestHandler` responses.
+
+## 0.23.2
+
+### Patch Changes
+
+- 6434298: `vercel dev` serves schedule functions without uvicorn's reloader. Each firing already runs the script as a fresh process.
+
+## 0.23.1
+
+### Patch Changes
+
+- 7102082: Add `vercel_runtime.schedules`, which runs a Python schedule entrypoint as a script once per firing. One function can serve several schedules; the dispatched schedule name selects the script. The script runs as `__main__` with its metadata in `VERCEL_SCHEDULE_*` environment variables; exit status 0 marks the firing successful. Output and `logging` records are attributed to the invocation, and the script is stopped before the function deadline.
+
+## 0.23.0
+
+### Minor Changes
+
+- 0c45a22: Increase reload delay for python asgi dev server when watchfiles is not installed
+
+## 0.22.1
+
+### Patch Changes
+
+- 37f5837: Keep unknown internal request headers out of Python applications.
+
+## 0.22.0
+
+### Minor Changes
+
+- ea424e5: Expose each invocation's deadline through `vercel_runtime.get_deadline()` while keeping the internal deadline header out of user request data.
+
+### Patch Changes
+
+- 8096adc: Keep invocation deadlines available while WebSocket handlers are running.
+
+## 0.21.1
+
+### Patch Changes
+
+- d7b6ff5: Serve Python queue subscribers through a runtime-owned callback handler instead of the removed `vercel.queue.asgi_app()` SDK API.
+
+## 0.21.0
+
+### Minor Changes
+
+- d92066f: Report the cold start phase breakdown as server timings.
+
+  The `bootstrap`, `import-fn` and `server-ready` phases are now reported on the
+  first response through `x-vercel-internal-timing`, the same channel and names the
+  Node bridge uses, instead of a `phases` field on the `server-started` handshake.
+  `userInitDuration` continues to be reported on the handshake.
+
+## 0.20.0
+
+### Minor Changes
+
+- 15e0a8e: Report a cold start phase breakdown from the Python runtime.
+
+  The `server-started` handshake now includes `userInitDuration` and a `phases`
+  breakdown (`bootstrap`, `importFn`, `serverReady`), and `initDuration` is
+  measured from a timestamp stamped by the generated handler before it does any
+  work, so it covers the `vercel_runtime` import chain and the user code import
+  instead of starting after them.
+
+## 0.19.0
+
+### Minor Changes
+
+- 4e2c621: Discover durable APScheduler subscribers, inject their stable runtime
+  identities, and activate the integration consistently in web and queue
+  Functions. Production schedulers activate on their first request, and
+  opted-in previews use request activity to renew a durable scheduling
+  deadline configured in pyproject.toml.
+- bacf4ff: Execute `wait_until` only for HTTP requests that are short-lived in `vc dev`. Lifespan ASGI events or websocket events are skipped for this mechanism to not block a possible fast request from invoking hooks.
+- 64879d7: Let invocation hook callbacks choose their next run time by returning a
+  non-negative number of seconds. Returning a number keeps even a one-shot
+  hook alive; returning None keeps the registered cadence.
+
+## 0.18.0
+
+### Minor Changes
+
+- a029198: Add private invocation hooks: Vercel-owned integrations can call
+  `run_on_next_invocation()` to run work once on an upcoming request, off the
+  response path and with that request's context. Failures retry with backoff on
+  later requests, and `repeat_after_seconds` re-arms a hook after each success.
+- 8f1364b: Add invocation-scoped `wait_until` to the Python runtime. Awaitables attached
+  during a request are drained after the response is sent, bounded by the
+  Function's maximum duration, and exposed to the SDK's
+  `vercel.functions.wait_until()` through the invocation context.
+
 ## 0.17.0
 
 ### Minor Changes

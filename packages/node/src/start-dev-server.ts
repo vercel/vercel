@@ -108,7 +108,7 @@ export const startDevServer: StartDevServer = async opts => {
   }
 
   const project = new Project();
-  const staticConfig = getConfig(project, entrypointPath);
+  const staticConfig = getConfig(project, entrypointPath, undefined, opts.span);
   if (config.middlewareRuntime) {
     validateMiddlewareRuntime(
       staticConfig?.runtime,

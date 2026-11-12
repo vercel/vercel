@@ -17,4 +17,16 @@ export class AiGatewayModelsListTelemetryClient
       this.trackCliFlag('json');
     }
   }
+
+  trackCliFlagVirtual(virtual: boolean | undefined) {
+    if (virtual) {
+      this.trackCliFlag('virtual');
+    }
+  }
+
+  trackCliFlagNoVirtual(noVirtual: boolean | undefined) {
+    if (noVirtual) {
+      this.trackCliFlag('no-virtual');
+    }
+  }
 }

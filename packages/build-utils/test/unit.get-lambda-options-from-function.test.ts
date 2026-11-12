@@ -13,6 +13,7 @@ describe('getLambdaOptionsFromFunction', () => {
           architecture: 'arm64',
           memory: 1024,
           maxDuration: 60,
+          affinity: { mode: 'strict' },
           maxConcurrency: 8,
           regions: ['sfo1', 'iad1'],
           functionFailoverRegions: ['dub1'],
@@ -29,6 +30,7 @@ describe('getLambdaOptionsFromFunction', () => {
       architecture: 'arm64',
       memory: 1024,
       maxDuration: 60,
+      affinity: { mode: 'strict' },
       maxConcurrency: 8,
       regions: ['sfo1', 'iad1'],
       functionFailoverRegions: ['dub1'],
@@ -149,5 +151,50 @@ describe('getLambdaOptionsFromFunction', () => {
     expect(options.experimentalTriggers).toEqual([
       { type: 'queue/v1beta', topic: 'orders', consumer: 'fixed' },
     ]);
+  });
+
+  it('adds the schedule trigger for a schedule entrypoint', async () => {
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'jobs/nightly.ts',
+      isScheduleEntrypoint: true,
+    });
+
+    expect(options.experimentalTriggers).toEqual([{ type: 'schedule/v1beta' }]);
+  });
+
+  it('preserves matching function options for a schedule entrypoint', async () => {
+    const options = await getLambdaOptionsFromFunction({
+      sourceFile: 'jobs/nightly.ts',
+      config: {
+        functions: {
+          'jobs/*.ts': {
+            memory: 1024,
+            experimentalTriggers: [{ type: 'schedule/v1beta' }],
+          },
+        },
+      },
+      isScheduleEntrypoint: true,
+    });
+
+    expect(options).toMatchObject({
+      memory: 1024,
+      experimentalTriggers: [{ type: 'schedule/v1beta' }],
+    });
+  });
+
+  it('rejects a conflicting trigger for a schedule entrypoint', async () => {
+    await expect(
+      getLambdaOptionsFromFunction({
+        sourceFile: 'jobs/nightly.ts',
+        config: {
+          functions: {
+            'jobs/*.ts': {
+              experimentalTriggers: [{ type: 'queue/v2beta', topic: 'orders' }],
+            },
+          },
+        },
+        isScheduleEntrypoint: true,
+      })
+    ).rejects.toThrow('conflicts with the schedule entrypoint trigger');
   });
 });

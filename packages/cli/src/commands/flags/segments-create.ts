@@ -9,6 +9,7 @@ import {
   outputAgentError,
 } from '../../util/agent-output';
 import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
+import { getFlagSettings } from '../../util/flags/get-flags';
 import {
   addSegmentValue,
   applySegmentOperations,
@@ -18,6 +19,7 @@ import {
   parseSegmentRuleInput,
 } from '../../util/flags/segment-input';
 import { createSegment } from '../../util/flags/segments';
+import { coerceTimestampSegmentData } from '../../util/flags/timestamp';
 import { printSegmentDetails } from '../../util/flags/print-segment-details';
 import output from '../../output-manager';
 import { formatProject } from '../../util/projects/format-project';
@@ -44,7 +46,7 @@ export default async function segmentsCreate(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -84,15 +86,15 @@ export default async function segmentsCreate(
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error('Please provide a slug for the segment');
     output.log(
       `Example: ${getCommandName('flags segments create beta-users --label "Beta users" --add include:user.id=user_123')}`
     );
-    return 1;
+    return 2;
   }
 
   const link = await getLinkedFlagsProject(client, projectName);
@@ -133,11 +135,17 @@ export default async function segmentsCreate(
   hint = await resolveSegmentHint(client, hint, description, label);
 
   let data: SegmentData;
+  let settings: Awaited<ReturnType<typeof getFlagSettings>>;
   try {
-    data = await collectSegmentData(client, {
-      dataInput,
-      addInputs,
-    });
+    settings = await getFlagSettings(client, project.id);
+    data = coerceTimestampSegmentData(
+      await collectSegmentData(client, {
+        dataInput,
+        addInputs,
+      }),
+      settings,
+      'input'
+    );
   } catch (err) {
     output.error((err as Error).message);
     return 1;
@@ -166,6 +174,7 @@ export default async function segmentsCreate(
       segment,
       projectSlugLink,
       showTimestamps: false,
+      settings,
     });
   } catch (err) {
     output.stopSpinner();

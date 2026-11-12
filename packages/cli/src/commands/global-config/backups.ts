@@ -12,7 +12,8 @@ import {
   exitWithNonInteractiveError,
   outputAgentError,
 } from '../../util/agent-output';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
 import table from '../../util/output/table';
 import output from '../../output-manager';
 import { GlobalConfigBackupsTelemetryClient } from '../../util/telemetry/commands/global-config/backups';
@@ -59,12 +60,12 @@ export default async function backupsCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, {
+      exitWithNonInteractiveError(client, error, 2, {
         variant: 'global-config',
       });
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -101,17 +102,17 @@ export default async function backupsCmd(
             },
           ],
         },
-        1
+        2
       );
     }
     const usage = getCommandName('global-config backups <id-or-slug>');
     output.error(`Missing id or slug. Usage: ${chalk.cyan(usage)}`);
-    return 1;
+    return 2;
   }
 
   if (backupVersion && restoreVersion) {
     output.error('Use either `--backup-version` or `--restore`, not both.');
-    return 1;
+    return 2;
   }
 
   if (
@@ -119,7 +120,7 @@ export default async function backupsCmd(
     (!Number.isFinite(limit) || limit < 0 || limit > 50)
   ) {
     output.error('The `--limit` value must be between 0 and 50.');
-    return 1;
+    return 2;
   }
 
   if (restoreVersion && client.nonInteractive && !skipConfirmation) {
@@ -139,7 +140,7 @@ export default async function backupsCmd(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -263,12 +264,11 @@ export default async function backupsCmd(
         '--restore',
         '--yes',
       ]);
-      output.print(
-        `${gray(
-          `Next page: ${getCommandName(
-            `global-config backups ${idOrSlug}${commandFlags} --next ${response.pagination.next}`
-          )}`
-        )}\n`
+      output.print('\n');
+      printNextPageCommand(
+        getCommandNamePlain(
+          `global-config backups ${idOrSlug}${commandFlags} --next ${response.pagination.next}`
+        )
       );
     }
     return 0;

@@ -1,4 +1,5 @@
 import type Client from '../client';
+import type { Page } from '../pagination';
 
 export type RuleType = 'rewrite' | 'deny';
 
@@ -48,16 +49,27 @@ export async function createRule(
   });
 }
 
-export async function listRules(
+/** One page of routing rules, oldest first. `next` is null on the last page. */
+export async function listRulesPage(
   client: Client,
-  includeDisabled = false
-): Promise<Rule[]> {
-  const query = includeDisabled ? '?includeDisabled=true' : '';
-  const { rules } = await client.fetch<{ rules: Rule[] }>(
-    `/ai-gateway/rules${query}`,
-    { method: 'GET' }
-  );
-  return rules ?? [];
+  opts: { limit?: number; next?: string; includeDisabled?: boolean } = {}
+): Promise<Page<Rule>> {
+  const query = new URLSearchParams();
+  if (opts.limit !== undefined) {
+    query.set('limit', String(opts.limit));
+  }
+  if (opts.next) {
+    query.set('cursor', opts.next);
+  }
+  if (opts.includeDisabled) {
+    query.set('includeDisabled', 'true');
+  }
+  const qs = query.toString();
+  const { rules, nextCursor } = await client.fetch<{
+    rules: Rule[];
+    nextCursor?: string | null;
+  }>(`/ai-gateway/rules${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  return { items: rules ?? [], next: nextCursor ?? null };
 }
 
 export async function updateRule(

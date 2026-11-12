@@ -2,13 +2,17 @@ import chalk from 'chalk';
 import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
+import { getContextName } from '../../util/get-scope';
+import {
+  getPaginationOpts,
+  InvalidNextError,
+} from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCerts from '../../util/certs/get-certs';
 import type { Cert } from '@vercel-internals/types';
 import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
 import output from '../../output-manager';
 import { CertsLsTelemetryClient } from '../../util/telemetry/commands/certs/ls';
 import { listSubcommand } from './command';
@@ -31,7 +35,7 @@ async function ls(client: Client, argv: string[]): Promise<number> {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -45,6 +49,7 @@ async function ls(client: Client, argv: string[]): Promise<number> {
 
   telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionNext(opts['--next']);
+  telemetry.trackCliFlagJson(opts['--json']);
 
   let paginationOptions;
 
@@ -52,7 +57,7 @@ async function ls(client: Client, argv: string[]): Promise<number> {
     paginationOptions = getPaginationOpts(opts);
   } catch (err: unknown) {
     output.prettyError(err);
-    return 1;
+    return err instanceof InvalidNextError ? 2 : 1;
   }
 
   const lsStamp = stamp();
@@ -60,7 +65,13 @@ async function ls(client: Client, argv: string[]): Promise<number> {
   // Get the list of certificates
   const { certs, pagination } = await getCerts(client, ...paginationOptions);
 
-  const { contextName } = await getScope(client);
+  if (opts['--json']) {
+    const result = { certs, pagination: { next: pagination?.next ?? null } };
+    client.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    return 0;
+  }
+
+  const contextName = await getContextName(client);
   output.log(
     `${
       certs.length > 0 ? 'Certificates' : 'No certificates'
@@ -73,10 +84,9 @@ async function ls(client: Client, argv: string[]): Promise<number> {
 
   if (pagination?.next) {
     const flags = getCommandFlags(opts, ['_', '--next']);
-    output.log(
-      `To display the next page run ${getCommandName(
-        `certs ls${flags} --next ${pagination.next}`
-      )}`
+    output.print('\n');
+    printNextPageCommand(
+      getCommandNamePlain(`certs ls${flags} --next ${pagination.next}`)
     );
   }
 

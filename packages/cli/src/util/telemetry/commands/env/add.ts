@@ -39,6 +39,28 @@ export class EnvAddTelemetryClient
     }
   }
 
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
+    if (gitBranch) {
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionEnvironment(environments: string[] | undefined) {
+    if (environments && environments.length > 0) {
+      const allStandard = environments
+        .flatMap(environment => environment.split(','))
+        .map(t => t.trim())
+        .every(t => STANDARD_ENVIRONMENTS.includes(t as CustomEnvironmentType));
+      this.trackCliOption({
+        option: 'environment',
+        value: allStandard ? environments.join(',') : this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionValue(value: string | undefined) {
     if (value) {
       this.trackCliOption({
@@ -56,6 +78,16 @@ export class EnvAddTelemetryClient
         value: validVisibilities.includes(visibility)
           ? visibility
           : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionType(type: string | undefined) {
+    if (type) {
+      const validTypes = ['config', 'secret'];
+      this.trackCliOption({
+        option: 'type',
+        value: validTypes.includes(type) ? type : this.redactedValue,
       });
     }
   }

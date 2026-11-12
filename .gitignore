@@ -39,9 +39,13 @@ test/lib/deployment/failed-page.txt
 /public
 __pycache__
 .vercel
+.vercel-cli-publish-integrity
 .turbo
 .eslintcache
 turbo-cache-key.json
+turbo-host-cache-key.json
+turbo-native-cache-key.json
+turbo-platform-cache-key.json
 junit.xml
 **/target/
 .env*.local
@@ -56,3 +60,4 @@ junit.xml
 .claude/settings.local.json
 .pnpm-store
 .env*
+tmp/

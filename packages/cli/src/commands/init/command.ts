@@ -18,7 +18,8 @@ export const initCommand = {
   options: [
     {
       ...forceOption,
-      description: 'Overwrite destination directory if exists [off]',
+      deprecatedShorthand: 'f',
+      description: 'Overwrite destination directory if exists (default: off)',
       argument: undefined,
     },
   ],
@@ -29,14 +30,17 @@ export const initCommand = {
     },
     {
       name: 'Initialize example project into a new directory',
+      placeholders: ['<example>'],
       value: `${packageName} init <example>`,
     },
     {
       name: 'Initialize example project into specified directory',
+      placeholders: ['<example>', '<dir>'],
       value: `${packageName} init <example> <dir>`,
     },
     {
       name: 'Initialize example project without checking',
+      placeholders: ['<example>'],
       value: `${packageName} init <example> --force`,
     },
   ],

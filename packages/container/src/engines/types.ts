@@ -5,7 +5,7 @@ export const VCR_REGISTRY = process.env.VERCEL_VCR_REGISTRY || 'vcr.vercel.com';
 /** Images must target linux/amd64 — the only architecture currently supported. */
 export const TARGET_PLATFORM = 'linux/amd64';
 
-export const DIGEST_RE = /sha256:[a-f0-9]{64}/;
+export const DIGEST_RE = /^sha256:[a-f0-9]{64}$/;
 
 /** Build `--build-arg KEY=VALUE` flags from the params' project build env. */
 export function buildArgFlags(params: { buildArgs?: Record<string, string> }) {
@@ -16,13 +16,20 @@ export function buildArgFlags(params: { buildArgs?: Record<string, string> }) {
   return flags;
 }
 
-export interface BuildPushParams {
-  contextDir: string;
-  dockerfilePath: string;
-  imageRef: string;
+/**
+ * The subset of {@link BuildPushParams} needed to authenticate to a registry,
+ * for callers with no Dockerfile or build context (the buildpack path).
+ */
+export interface RegistryCredentials {
   registry: string;
   username: string;
   token: string;
+}
+
+export interface BuildPushParams extends RegistryCredentials {
+  contextDir: string;
+  dockerfilePath: string;
+  imageRef: string;
   /** Bare repository name (without team/project prefix), for error messages. */
   repository: string;
   /**
@@ -33,6 +40,10 @@ export interface BuildPushParams {
    * internal environment.
    */
   buildArgs?: Record<string, string>;
+  /** Restored store images need fresh base images and one shared local tag. */
+  useBuildahStoreCache?: boolean;
+  /** The Dockerfile's base image was just built and isn't in a registry yet. */
+  baseImageIsLocal?: boolean;
   span?: Span;
 }
 
@@ -55,9 +66,13 @@ export interface ContainerEngine {
    */
   withRuntime<T>(span: Span | undefined, fn: () => Promise<T>): Promise<T>;
 
-  build(params: BuildPushParams): Promise<void>;
-  login(params: BuildPushParams): Promise<void>;
-  push(params: BuildPushParams): Promise<string | undefined>;
+  /** Build the image and return the local reference it was tagged with. */
+  build(params: BuildPushParams): Promise<string>;
+  /** ONBUILD triggers kept in a built image. Buildah's OCI images drop them. */
+  onBuildTriggers?(imageRef: string): Promise<string[]>;
+  login(params: RegistryCredentials): Promise<void>;
+  /** Push the image and return the digest of the manifest the registry stored. */
+  push(params: BuildPushParams): Promise<string>;
 
   /**
    * Verify the engine's storage is configured as intended (e.g. native overlay

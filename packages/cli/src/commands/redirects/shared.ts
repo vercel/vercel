@@ -31,7 +31,7 @@ export async function parseSubcommandArgs(
     parsedArgs = parseSubcommandArguments(argv, command);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   return parsedArgs;
@@ -105,7 +105,7 @@ export function getRedirectPromoteSuggestionFlags(
 /**
  * Builds flag parts for suggested redirects commands (e.g. missing args or confirm).
  * Uses args after the given subcommand, keeps only flags, and optionally ensures --yes.
- * Use when building next[] commands like `redirects upload <file> ...` or `redirects add <source> <dest> ...`.
+ * Use when building next[] commands like `redirects import <file> ...` or `redirects add <source> <dest> ...`.
  */
 export function buildRedirectsSuggestionFlags(
   fullArgs: string[],

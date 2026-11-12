@@ -1,1 +1,4 @@
 target/
+
+# Copied from @vercel-internals/ipc-proxy during build; anchored so fixture `src/bin/` sources stay tracked.
+/bin

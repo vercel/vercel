@@ -1,12 +1,13 @@
 import chalk from 'chalk';
 import { canPrompt } from '../can-prompt';
 import type Client from '../client';
-import { STANDARD_ENVIRONMENTS } from '../target/standard-environments';
+import {
+  STANDARD_ENVIRONMENTS,
+  type StandardEnvironment,
+} from '../target/standard-environments';
 import { normalizeOptionalInput } from './normalize-optional-input';
 import { printFlagEnvironmentDetails } from './print-flag-details';
 import type { Flag, FlagEnvironmentConfig, FlagVariant } from './types';
-
-type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];
 
 interface ResolveFlagEnvironmentOptions {
   showEnvironmentDetails?: boolean;
@@ -25,7 +26,7 @@ export async function resolveFlagEnvironment(
   if (!nextEnvironment) {
     if (!canPrompt(client)) {
       throw new Error(
-        'Missing required flag --environment. Use --environment <ENV>, or run interactively in a terminal.'
+        'Missing required option --environment. Use --environment <ENV>, or run interactively in a terminal.'
       );
     }
 
@@ -78,13 +79,13 @@ function formatEnvironmentChoiceLabel(
   return `${envName} (${status})`;
 }
 
-export function isOverridingEnvironmentToVariant(
+export function isServingVariantViaTargeting(
   envConfig: FlagEnvironmentConfig,
   variantId: string
 ): boolean {
   return (
-    !envConfig.active &&
-    envConfig.pausedOutcome?.variantId === variantId &&
+    envConfig.active &&
+    !envConfig.reuse?.active &&
     envConfig.fallthrough.type === 'variant' &&
     envConfig.fallthrough.variantId === variantId
   );
@@ -97,22 +98,94 @@ export function isPausingEnvironmentToVariant(
   return !envConfig.active && envConfig.pausedOutcome?.variantId === variantId;
 }
 
-export function buildVariantOverrideEnvironmentConfig(
+export function buildTargetingVariantEnvironmentConfig(
   envConfig: FlagEnvironmentConfig,
   variantId: string
 ): FlagEnvironmentConfig {
-  return {
-    ...envConfig,
-    active: false,
-    pausedOutcome: {
+  return buildOutcomeEnvConfig(envConfig, {
+    outcome: {
       type: 'variant',
       variantId,
     },
-    fallthrough: {
-      type: 'variant',
-      variantId,
-    },
-  };
+    defaultVariantId: variantId,
+  });
+}
+
+/**
+ * Enable targeting while keeping the effective fallthrough (variant, split, or
+ * rollout). When the environment reuses another environment, the inherited
+ * fallthrough is materialized locally and reuse is disabled.
+ */
+export function buildResumeTargetingEnvironmentConfig(
+  flag: Flag,
+  environment: string
+): FlagEnvironmentConfig {
+  const envConfig = flag.environments[environment];
+  const fallthrough = resolveEffectiveFallthrough(flag, environment);
+  const defaultVariantId = getFallthroughDefaultVariantId(fallthrough);
+
+  return buildOutcomeEnvConfig(envConfig, {
+    outcome: fallthrough,
+    defaultVariantId,
+  });
+}
+
+export function resolveEffectiveFallthrough(
+  flag: Flag,
+  environment: string
+): FlagEnvironmentConfig['fallthrough'] {
+  const envConfig = flag.environments[environment];
+  const inheritedFrom = envConfig.reuse?.active
+    ? envConfig.reuse.environment
+    : undefined;
+
+  if (inheritedFrom) {
+    const inheritedConfig = flag.environments[inheritedFrom];
+    if (inheritedConfig) {
+      return structuredClone(inheritedConfig.fallthrough);
+    }
+  }
+
+  return structuredClone(envConfig.fallthrough);
+}
+
+export function isUsableFallthrough(
+  fallthrough: FlagEnvironmentConfig['fallthrough'],
+  variants: FlagVariant[]
+): boolean {
+  const variantIds = new Set(variants.map(variant => variant.id));
+
+  if (fallthrough.type === 'variant') {
+    return variantIds.has(fallthrough.variantId);
+  }
+
+  if (fallthrough.type === 'split') {
+    return variantIds.has(fallthrough.defaultVariantId);
+  }
+
+  if (fallthrough.type === 'experiment') {
+    return false;
+  }
+
+  return (
+    variantIds.has(fallthrough.defaultVariantId) &&
+    variantIds.has(fallthrough.rollFromVariantId) &&
+    variantIds.has(fallthrough.rollToVariantId)
+  );
+}
+
+function getFallthroughDefaultVariantId(
+  fallthrough: FlagEnvironmentConfig['fallthrough']
+): string {
+  if (fallthrough.type === 'variant') {
+    return fallthrough.variantId;
+  }
+
+  if (fallthrough.type === 'experiment') {
+    throw new Error('Experiment outcomes do not have a default variant');
+  }
+
+  return fallthrough.defaultVariantId;
 }
 
 export function buildPausedEnvironmentConfig(

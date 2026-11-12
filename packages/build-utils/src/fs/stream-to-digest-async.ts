@@ -45,7 +45,3 @@ export async function streamToDigestAsync(
 export function sha256(value: any) {
   return createHash('sha256').update(value).digest('hex');
 }
-
-export function md5(value: Buffer) {
-  return createHash('md5').update(Uint8Array.from(value)).digest('hex');
-}

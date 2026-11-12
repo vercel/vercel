@@ -264,7 +264,7 @@ describe('selectOrg', () => {
       // Human error on stderr, no JSON payload without --non-interactive.
       expect(logSpy).not.toHaveBeenCalled();
       expect(client.stderr.getFullOutput()).toContain('Multiple teams found');
-      expect(client.stderr.getFullOutput()).toContain('--team <slug>');
+      expect(client.stderr.getFullOutput()).toContain('--scope <slug>');
       expect(client.stderr.getFullOutput()).toContain('teams ls');
       expect(exitSpy).toHaveBeenCalledWith(1);
 

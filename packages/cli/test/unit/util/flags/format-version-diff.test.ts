@@ -12,6 +12,28 @@ import type {
 import { defaultFlags } from '../../../mocks/flags';
 
 describe('formatVersionDataDiff', () => {
+  it('shows changes to the rollout final percentage', () => {
+    const before = createVersionData();
+    const after = createVersionData();
+    const outcome = {
+      type: 'rollout' as const,
+      base: { type: 'entity' as const, kind: 'user', attribute: 'userId' },
+      startTimestamp: 1_700_000_000_000,
+      rollFromVariantId: 'off',
+      rollToVariantId: 'on',
+      defaultVariantId: 'off',
+      slots: [{ promille: 5000, durationMs: 3_600_000 }],
+    };
+    before.environments.production.fallthrough = outcome;
+    after.environments.production.fallthrough = {
+      ...outcome,
+      finalPromille: 50_000,
+    };
+    const diff = render(before, after);
+    expect(diff).toContain('then 100%');
+    expect(diff).toContain('then 50%');
+  });
+
   it('renders a combined semantic diff', () => {
     const before = createVersionData();
     const after = createVersionData();

@@ -25,7 +25,7 @@ export default async function purge(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const projectName = parsedArgs.flags['--project'];

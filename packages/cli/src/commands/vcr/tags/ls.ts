@@ -27,6 +27,8 @@ import {
 } from '../utils/validators';
 import { emitVcrArgParseError, handleVcrApiError } from '../utils/errors';
 import { repositoryTagsPath } from '../utils/paths';
+import { warnDeprecatedOption } from '../../../util/warn-deprecated-subcommand';
+import { printNextPageHint } from '../../../util/pagination';
 
 interface Tag {
   tag: string;
@@ -71,12 +73,6 @@ function printTags(list: TagList): void {
     .join('\n')
     .replace(/^/gm, '  ');
   output.print(`\n${tableOutput}\n`);
-
-  if (list.nextCursor) {
-    output.log(
-      `More results available. Re-run with \`--cursor ${list.nextCursor}\`.`
-    );
-  }
 }
 
 export default async function ls(
@@ -97,7 +93,7 @@ export default async function ls(
       'vcr tag ls <repository> --project <name-or-id>'
     );
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -107,14 +103,20 @@ export default async function ls(
 
   const repository = parsedArgs.args[0];
   const project = parsedArgs.flags['--project'] as string | undefined;
-  const cursor = parsedArgs.flags['--cursor'] as string | undefined;
+  const cursor = (parsedArgs.flags['--next'] ?? parsedArgs.flags['--cursor']) as
+    | string
+    | undefined;
   const limitFlag = parsedArgs.flags['--limit'] as number | undefined;
   const sortBy = parsedArgs.flags['--sort-by'] as string | undefined;
   const sortOrder = parsedArgs.flags['--sort-order'] as string | undefined;
 
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliOptionLimit(limitFlag);
-  telemetry.trackCliOptionCursor(cursor);
+  telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionCursor(parsedArgs.flags['--cursor']);
+  if (parsedArgs.flags['--cursor'] !== undefined) {
+    warnDeprecatedOption(client.argv, '--cursor', '--next');
+  }
   telemetry.trackCliOptionSortBy(sortBy);
   telemetry.trackCliOptionSortOrder(sortOrder);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
@@ -142,7 +144,7 @@ export default async function ls(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: limitResult.message,
       },
-      1
+      2
     );
     return outputError(
       client,
@@ -192,9 +194,11 @@ export default async function ls(
   try {
     const list = await client.fetch<TagList>(path);
     if (fr.jsonOutput) {
-      client.stdout.write(`${JSON.stringify(list, null, 2)}\n`);
+      const json = { ...list, pagination: { next: list.nextCursor ?? null } };
+      client.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
     } else {
       printTags(list);
+      printNextPageHint(client, list.nextCursor ?? null, ['--cursor', '-c']);
     }
     return 0;
   } catch (err) {

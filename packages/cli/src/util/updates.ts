@@ -1,7 +1,6 @@
 import ciInfo from 'ci-info';
 import type { GlobalConfig } from '@vercel-internals/types';
 import type Client from './client';
-import { writeToConfigFile } from './config/files';
 import { isGlobal } from './get-update-command';
 import { isNativeBinaryInstall } from './native-install';
 
@@ -24,7 +23,7 @@ export function setAutoUpdate(client: Client, enabled: boolean): void {
     },
   };
 
-  writeToConfigFile(client.config);
+  client.writeToConfigFile();
 }
 
 export async function canAutoUpdate(

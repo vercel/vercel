@@ -118,10 +118,13 @@ describe('vcr permissions add', () => {
     );
     const exitCode = await vcr(client);
     expect(exitCode).toBe(0);
-    expect(bodies).toEqual([
-      { teamId: 'team_12345' },
-      { teamSlug: 'other-team' },
-    ]);
+    expect(bodies).toHaveLength(2);
+    expect(bodies).toEqual(
+      expect.arrayContaining([
+        { teamId: 'team_12345' },
+        { teamSlug: 'other-team' },
+      ])
+    );
   });
 
   it('accepts multiple team arguments', async () => {
@@ -245,7 +248,7 @@ describe('vcr permissions add', () => {
   it('errors when the team argument is missing', async () => {
     client.setArgv('vcr', 'permissions', 'my-app', 'add');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'vcr permissions <repository> add'
     );

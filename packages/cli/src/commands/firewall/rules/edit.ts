@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import type Client from '../../../util/client';
-import { requireProjectContext } from '../../../util/projects/require-project-context';
 import output from '../../../output-manager';
 import { rulesEditSubcommand } from '../command';
 import {
@@ -11,9 +10,15 @@ import {
   offerAutoPublish,
   resolveRule,
   printActionImpactWarning,
+  resolveFirewallScope,
+  failPriorityProjectGate,
+  mapFirewallApiError,
+  getRulePayload,
 } from '../shared';
 import listFirewallConfigs from '../../../util/firewall/list-firewall-configs';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
+import type { FirewallScope } from '../../../util/firewall/scope';
+import { projectScope } from '../../../util/firewall/scope';
 import generateFirewallRule from '../../../util/firewall/generate-firewall-rule';
 import { parseConditionFlags } from '../../../util/firewall/parse-conditions';
 import {
@@ -28,6 +33,13 @@ import {
 } from '../../../util/firewall/format';
 import type { FirewallRule } from '../../../util/firewall/types';
 import { runInteractiveEditLoop } from './edit-interactive';
+import { readOnOffOption } from '../../../util/on-off-option';
+import { editManagedBotRule } from './edit-managed-bot';
+import {
+  formatManagedBotAction,
+  getManagedBotRules,
+  resolveManagedBotRuleId,
+} from '../../../util/firewall/managed-bot-rules';
 import stamp from '../../../util/output/stamp';
 import { outputAgentError } from '../../../util/agent-output';
 
@@ -36,30 +48,24 @@ export default async function edit(client: Client, argv: string[]) {
     argv,
     rulesEditSubcommand,
     client,
-    'rules edit'
+    'rules update'
   );
   if (typeof parsed === 'number') return parsed;
 
   let identifier = parsed.args[0] as string | undefined;
 
-  const link = await requireProjectContext(
-    client,
-    'firewall',
-    parsed.flags['--project']
-  );
-  if (typeof link === 'number') return link;
-
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
   // Resolve the rule
-  output.spinner(`Fetching rules for ${chalk.bold(project.name)}`);
+  output.spinner(`Fetching rules for ${chalk.bold(scope.displayName)}`);
 
-  const { active, draft } = await listFirewallConfigs(client, project.id, {
-    teamId,
-  });
+  const { active, draft } = await listFirewallConfigs(client, scope);
 
+  const config = draft ?? active;
   const currentRules = draft?.rules || active?.rules || [];
+  const managedRules =
+    scope.type === 'project' ? getManagedBotRules(config) : [];
 
   // If no identifier provided, let interactive users pick from a list
   if (!identifier) {
@@ -67,12 +73,12 @@ export default async function edit(client: Client, argv: string[]) {
 
     if (client.nonInteractive || !client.stdin.isTTY) {
       output.error(
-        `Missing required argument: <name-or-id>. Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to see all rules.`
+        `Missing required argument: <name-or-id>. Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list', scope))} to see all rules.`
       );
-      return 1;
+      return 2;
     }
 
-    if (currentRules.length === 0) {
+    if (currentRules.length === 0 && managedRules.length === 0) {
       output.error(
         'No custom rules configured. Create one first with `vercel firewall rules add`.'
       );
@@ -80,26 +86,57 @@ export default async function edit(client: Client, argv: string[]) {
     }
 
     const selectedId = await client.input.select({
-      message: 'Select a rule to edit:',
-      choices: currentRules.map(r => ({
-        value: r.id,
-        name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
-      })),
+      message: 'Select a rule to update:',
+      choices: [
+        ...managedRules.map(r => ({
+          value: r.id,
+          name: `${r.name} — ${formatManagedBotAction(r.action)} (${r.id})`,
+        })),
+        ...currentRules.map(r => ({
+          value: r.id,
+          name: `${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
+        })),
+      ],
     });
+
+    const selectedManaged = resolveManagedBotRuleId(selectedId);
+    if (selectedManaged) {
+      return editManagedBotRule(client, {
+        id: selectedManaged,
+        flags: parsed.flags,
+        scope,
+        config,
+      });
+    }
 
     const selected = currentRules.find(r => r.id === selectedId);
     if (!selected) {
       output.error('No rule selected');
       return 1;
     }
-    identifier = selected.name;
+    // Keep the id the picker already disambiguated. A name would fall
+    // through to `resolveManagedBotRuleId` and reroute a custom rule named
+    // "AI Bots" (or another reserved alias) onto the managed setting.
+    identifier = selected.id;
+  }
+
+  const managedId =
+    scope.type === 'project' ? resolveManagedBotRuleId(identifier) : undefined;
+  if (managedId) {
+    output.stopSpinner();
+    return editManagedBotRule(client, {
+      id: managedId,
+      flags: parsed.flags,
+      scope,
+      config,
+    });
   }
 
   const matches = resolveRule(currentRules, identifier);
 
   if (matches.length === 0) {
     output.error(
-      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list'))} to view all rules.`
+      `No rule found for "${identifier}". Run ${chalk.cyan(withGlobalFlags(client, 'firewall rules list', scope))} to view all rules.`
     );
     return 1;
   }
@@ -135,7 +172,8 @@ export default async function edit(client: Client, argv: string[]) {
 
   // Mode dispatch
   const aiPrompt = parsed.flags['--ai'] as string | undefined;
-  const jsonInput = parsed.flags['--json'] as string | undefined;
+  const jsonInput = getRulePayload(parsed.flags);
+  if (typeof jsonInput === 'number') return jsonInput;
   const conditionFlags = parsed.flags['--condition'] as string[] | undefined;
 
   // Mutual exclusivity
@@ -144,32 +182,40 @@ export default async function edit(client: Client, argv: string[]) {
   ).length;
   if (modeCount > 1) {
     output.error(
-      'Cannot use --ai, --json, and --condition together. Use only one mode.'
+      'Cannot use --ai, --data, and --condition together. Use only one mode.'
     );
     return 1;
   }
 
   // AI mode — blocked for agents/non-interactive (AI output requires human review)
   if (aiPrompt) {
+    // AI generation is project-only (its endpoint requires a project)
+    if (scope.type === 'team') {
+      output.error(
+        'AI mode is not available with --team-level. Use --data or option-based editing instead.'
+      );
+      return 1;
+    }
+
     if (client.nonInteractive || !client.stdin.isTTY) {
       if (client.nonInteractive) {
         outputAgentError(client, {
           status: 'error',
           reason: 'ai_not_available',
           message:
-            'AI mode is not available in non-interactive mode. AI-generated changes require human review. Use --json or flag-based editing instead.',
+            'AI mode is not available in non-interactive mode. AI-generated changes require human review. Use --data or option-based editing instead.',
           next: [
             {
               command: withGlobalFlags(
                 client,
-                `firewall rules edit "${identifier}" --action challenge --yes`
+                `firewall rules update "${identifier}" --action challenge --yes`
               ),
-              when: 'edit with flags',
+              when: 'edit with options',
             },
             {
               command: withGlobalFlags(
                 client,
-                `firewall rules edit "${identifier}" --json '{"name":"...","conditionGroup":[...],"action":{...}}' --yes`
+                `firewall rules update "${identifier}" --data '{"name":"...","conditionGroup":[...],"action":{...}}' --yes`
               ),
               when: 'edit with JSON',
             },
@@ -177,27 +223,26 @@ export default async function edit(client: Client, argv: string[]) {
         });
       }
       output.error(
-        'AI mode is not available in non-interactive mode. Use --json or flag-based editing instead.'
+        'AI mode is not available in non-interactive mode. Use --data or option-based editing instead.'
       );
       return 1;
     }
 
-    return handleAIEdit(client, project, teamId, originalRule, {
-      prompt: aiPrompt,
-      skipPrompts: !!parsed.flags['--yes'],
-    });
+    return handleAIEdit(
+      client,
+      { id: scope.projectId, name: scope.displayName },
+      scope.teamId,
+      originalRule,
+      {
+        prompt: aiPrompt,
+        skipPrompts: !!parsed.flags['--yes'],
+      }
+    );
   }
 
   // JSON mode
   if (jsonInput) {
-    return handleJsonEdit(
-      client,
-      parsed,
-      originalRule,
-      jsonInput,
-      project,
-      teamId
-    );
+    return handleJsonEdit(client, parsed, originalRule, jsonInput, scope);
   }
 
   // Flag overrides
@@ -207,6 +252,8 @@ export default async function edit(client: Client, argv: string[]) {
     parsed.flags['--name'] ||
     parsed.flags['--description'] !== undefined ||
     parsed.flags['--duration'] ||
+    parsed.flags['--enable'] ||
+    parsed.flags['--no-enable'] ||
     parsed.flags['--enabled'] ||
     parsed.flags['--disabled'] ||
     parsed.flags['--rate-limit-algo'] ||
@@ -218,7 +265,7 @@ export default async function edit(client: Client, argv: string[]) {
     parsed.flags['--redirect-permanent'];
 
   if (hasEditFlags) {
-    return handleFlagEdit(client, parsed, originalRule, argv, project, teamId);
+    return handleFlagEdit(client, parsed, originalRule, argv, scope);
   }
 
   // Interactive mode
@@ -228,17 +275,26 @@ export default async function edit(client: Client, argv: string[]) {
     output.print(`${formatRuleExpanded(originalRule)}\n\n`);
 
     const mode = await client.input.select({
-      message: 'How would you like to edit this rule?',
+      message: 'How would you like to update this rule?',
       choices: [
-        { value: 'ai', name: 'Describe changes (AI-powered)' },
+        // AI generation is project-only (its endpoint requires a project)
+        ...(scope.type === 'project'
+          ? [{ value: 'ai', name: 'Describe changes (AI-powered)' }]
+          : []),
         { value: 'manual', name: 'Edit manually (field by field)' },
       ],
     });
 
-    if (mode === 'ai') {
-      return handleAIEdit(client, project, teamId, originalRule, {
-        skipPrompts: false,
-      });
+    if (mode === 'ai' && scope.type === 'project') {
+      return handleAIEdit(
+        client,
+        { id: scope.projectId, name: scope.displayName },
+        scope.teamId,
+        originalRule,
+        {
+          skipPrompts: false,
+        }
+      );
     }
 
     // Manual edit
@@ -254,7 +310,7 @@ export default async function edit(client: Client, argv: string[]) {
       return 0;
     }
 
-    return saveEdit(client, project, teamId, originalRule, modified, parsed, {
+    return saveEdit(client, scope, originalRule, modified, parsed, {
       skipConfirm: true,
     });
   }
@@ -265,19 +321,19 @@ export default async function edit(client: Client, argv: string[]) {
       status: 'error',
       reason: 'missing_flags',
       message:
-        'No edit flags provided. Use --json, --condition, --action, --name, etc.',
+        'No edit options provided. Use --data, --condition, --action, --name, etc.',
       next: [
         {
           command: withGlobalFlags(
             client,
-            `firewall rules edit "${identifier}" --action challenge --yes`
+            `firewall rules update "${identifier}" --action challenge --yes`
           ),
-          when: 'edit with flags',
+          when: 'edit with options',
         },
         {
           command: withGlobalFlags(
             client,
-            `firewall rules edit "${identifier}" --json '{"name":"...","conditionGroup":[...],"action":{"mitigate":{"action":"deny"}}}' --yes`
+            `firewall rules update "${identifier}" --data '{"name":"...","conditionGroup":[...],"action":{"mitigate":{"action":"deny"}}}' --yes`
           ),
           when: 'edit with JSON',
         },
@@ -285,9 +341,9 @@ export default async function edit(client: Client, argv: string[]) {
     });
   }
   output.error(
-    'Interactive mode is not available. Use --json or flag-based editing.'
+    'Interactive mode is not available. Use --data or option-based editing.'
   );
-  return 1;
+  return 2;
 }
 
 // --- AI Edit ---
@@ -410,9 +466,15 @@ async function handleAIEdit(
 
   // Auto-save with --yes
   if (opts.skipPrompts) {
-    return saveEdit(client, project, teamId, originalRule, currentRule, {
-      flags: { '--yes': true },
-    });
+    return saveEdit(
+      client,
+      projectScope(project, teamId),
+      originalRule,
+      currentRule,
+      {
+        flags: { '--yes': true },
+      }
+    );
   }
 
   // Review menu
@@ -435,8 +497,7 @@ async function handleAIEdit(
     if (choice === 'save') {
       return saveEdit(
         client,
-        project,
-        teamId,
+        projectScope(project, teamId),
         originalRule,
         currentRule,
         {
@@ -507,15 +568,14 @@ async function handleJsonEdit(
   parsed: { args: string[]; flags: Record<string, unknown> },
   originalRule: FirewallRule,
   jsonStr: string,
-  project: { id: string; name: string },
-  teamId: string | undefined
+  scope: FirewallScope
 ): Promise<number> {
   let ruleData: Record<string, unknown>;
   try {
     ruleData = JSON.parse(jsonStr);
   } catch {
     output.error('Invalid JSON. Please provide a valid JSON object.');
-    return 1;
+    return 2;
   }
 
   // Validate required fields
@@ -538,7 +598,7 @@ async function handleJsonEdit(
   if (ruleData.description !== undefined && ruleData.description !== null) {
     if (typeof ruleData.description !== 'string') {
       output.error('JSON "description" field must be a string.');
-      return 1;
+      return 2;
     }
     if (ruleData.description.length > 256) {
       output.error('Rule description must be 256 characters or less.');
@@ -573,7 +633,7 @@ async function handleJsonEdit(
     action: ruleData.action as FirewallRule['action'],
   };
 
-  return saveEdit(client, project, teamId, originalRule, modified, parsed);
+  return saveEdit(client, scope, originalRule, modified, parsed);
 }
 
 // --- Flag Edit ---
@@ -603,8 +663,7 @@ async function handleFlagEdit(
   parsed: { args: string[]; flags: Record<string, unknown> },
   originalRule: FirewallRule,
   rawArgv: string[],
-  project: { id: string; name: string },
-  teamId: string | undefined
+  scope: FirewallScope
 ): Promise<number> {
   // Clone the original rule
   const modified: FirewallRule = JSON.parse(JSON.stringify(originalRule));
@@ -628,15 +687,18 @@ async function handleFlagEdit(
     modified.description = desc === '' ? undefined : desc;
   }
 
-  if (parsed.flags['--enabled'] && parsed.flags['--disabled']) {
-    output.error('Cannot use --enabled and --disabled together.');
-    return 1;
+  const enable = readOnOffOption(client, parsed.flags, {
+    on: '--enable',
+    off: '--no-enable',
+    oldOn: '--enabled',
+    oldOff: '--disabled',
+  });
+  if ('error' in enable) {
+    output.error(enable.error);
+    return 2;
   }
-  if (parsed.flags['--enabled']) {
-    modified.active = true;
-  }
-  if (parsed.flags['--disabled']) {
-    modified.active = false;
+  if (enable.value !== undefined) {
+    modified.active = enable.value;
   }
 
   // Condition replacement
@@ -645,7 +707,7 @@ async function handleFlagEdit(
     const interleaved = extractConditionFlags(rawArgv);
     if (interleaved.length === 0) {
       output.error('At least one --condition is required.');
-      return 1;
+      return 2;
     }
     const condResult = parseConditionFlags(interleaved);
     if (typeof condResult === 'string') {
@@ -694,15 +756,14 @@ async function handleFlagEdit(
     return 0;
   }
 
-  return saveEdit(client, project, teamId, originalRule, modified, parsed);
+  return saveEdit(client, scope, originalRule, modified, parsed);
 }
 
 // --- Shared save logic ---
 
 async function saveEdit(
   client: Client,
-  project: { id: string; name: string },
-  teamId: string | undefined,
+  scope: FirewallScope,
   originalRule: FirewallRule,
   modified: FirewallRule,
   parsed: { flags: Record<string, unknown> },
@@ -728,43 +789,35 @@ async function saveEdit(
   output.spinner('Staging changes');
 
   try {
-    const hadExistingDraft = await detectExistingDraft(
-      client,
-      project.id,
-      teamId
-    );
+    const hadExistingDraft = await detectExistingDraft(client, scope);
 
-    await patchFirewallDraft(
-      client,
-      project.id,
-      {
-        action: 'rules.update',
-        id: originalRule.id,
-        value: {
-          name: modified.name,
-          description: modified.description,
-          active: modified.active,
-          conditionGroup: modified.conditionGroup,
-          action: modified.action,
-        },
+    await patchFirewallDraft(client, scope, {
+      action: 'rules.update',
+      id: originalRule.id,
+      value: {
+        name: modified.name,
+        description: modified.description,
+        active: modified.active,
+        conditionGroup: modified.conditionGroup,
+        action: modified.action,
       },
-      { teamId }
-    );
+    });
 
     output.log(
       `${chalk.cyan('Success!')} Rule "${chalk.bold(modified.name)}" updated and staged ${chalk.gray(editStamp())}`
     );
     printActionImpactWarning(modified.action);
 
-    await offerAutoPublish(client, project.id, hadExistingDraft, {
-      teamId,
+    await offerAutoPublish(client, scope, hadExistingDraft, {
       skipPrompts: parsed.flags['--yes'] as boolean,
     });
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to stage rule changes';
+    output.stopSpinner();
+    const priority = failPriorityProjectGate(client, e, scope);
+    if (priority !== null) return priority;
+    const msg = mapFirewallApiError(e, scope, 'Failed to stage rule changes');
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
@@ -774,7 +827,8 @@ async function saveEdit(
           {
             command: withGlobalFlags(
               client,
-              `firewall rules edit "${originalRule.name}" --yes`
+              `firewall rules update "${originalRule.name}" --yes`,
+              scope
             ),
           },
         ],

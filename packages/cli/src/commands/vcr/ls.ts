@@ -19,6 +19,8 @@ import { formatRelativeTime } from './utils/format';
 import { validateVcrJsonOutput } from './utils/validators';
 import { emitVcrArgParseError, handleVcrApiError } from './utils/errors';
 import { repositoriesPath } from './utils/paths';
+import { warnDeprecatedOption } from '../../util/warn-deprecated-subcommand';
+import { printNextPageHint } from '../../util/pagination';
 
 interface Repository {
   id: string;
@@ -55,12 +57,6 @@ function printRepositories(list: RepositoryList): void {
     .join('\n')
     .replace(/^/gm, '  ');
   output.print(`\n${tableOutput}\n`);
-
-  if (list.nextCursor) {
-    output.log(
-      `More results available. Re-run with \`--cursor ${list.nextCursor}\`.`
-    );
-  }
 }
 
 export default async function ls(
@@ -77,7 +73,7 @@ export default async function ls(
   } catch (err) {
     emitVcrArgParseError(client, err, 'vcr ls --project <name-or-id>');
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -86,12 +82,18 @@ export default async function ls(
   }
 
   const project = parsedArgs.flags['--project'] as string | undefined;
-  const cursor = parsedArgs.flags['--cursor'] as string | undefined;
+  const cursor = (parsedArgs.flags['--next'] ?? parsedArgs.flags['--cursor']) as
+    | string
+    | undefined;
   const limitFlag = parsedArgs.flags['--limit'] as number | undefined;
 
   telemetry.trackCliOptionProject(project);
   telemetry.trackCliOptionLimit(limitFlag);
-  telemetry.trackCliOptionCursor(cursor);
+  telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
+  telemetry.trackCliOptionCursor(parsedArgs.flags['--cursor']);
+  if (parsedArgs.flags['--cursor'] !== undefined) {
+    warnDeprecatedOption(client.argv, '--cursor', '--next');
+  }
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
   const limitResult = validateOptionalIntegerRange(limitFlag, {
@@ -107,7 +109,7 @@ export default async function ls(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: limitResult.message,
       },
-      1
+      2
     );
     return outputError(
       client,
@@ -133,9 +135,11 @@ export default async function ls(
   try {
     const list = await client.fetch<RepositoryList>(path);
     if (fr.jsonOutput) {
-      client.stdout.write(`${JSON.stringify(list, null, 2)}\n`);
+      const json = { ...list, pagination: { next: list.nextCursor ?? null } };
+      client.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
     } else {
       printRepositories(list);
+      printNextPageHint(client, list.nextCursor ?? null, ['--cursor', '-c']);
     }
     return 0;
   } catch (err) {

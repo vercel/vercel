@@ -5,7 +5,8 @@ import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
 import getCommandFlags from '../../util/get-command-flags';
 import {
   getFlagVersions,
@@ -25,6 +26,7 @@ import {
 import { formatProject } from '../../util/projects/format-project';
 import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
 import { quoteArg } from '../../util/flags/quote-arg';
+import { warnDeprecatedOption } from '../../util/warn-deprecated-subcommand';
 import type { FlagVersion } from '../../util/flags/types';
 import {
   diffVersionData,
@@ -62,7 +64,7 @@ export default async function versions(
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(
@@ -79,18 +81,20 @@ export default async function versions(
           ? versionsListSubcommand
           : versionsSubcommand,
         {
+          stream: client.stderr,
           parent:
             parsedArgs.args.length > 0 ? getVersionsHelpParent() : flagsCommand,
           columns: client.stderr.columns,
         }
       )
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: getVersionsHelpParent(),
         columns: client.stderr.columns,
       })
@@ -102,7 +106,7 @@ export default async function versions(
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('flags versions', subcommandOriginal);
         printHelp(versionsDiffSubcommand);
-        return 2;
+        return 0;
       }
       telemetryClient.trackCliSubcommandDiff(subcommandOriginal);
       return diffVersions(client, args, telemetryClient);
@@ -110,7 +114,7 @@ export default async function versions(
       if (needHelp) {
         telemetryClient.trackCliFlagHelp('flags versions', subcommandOriginal);
         printHelp(versionsListSubcommand);
-        return 2;
+        return 0;
       }
       telemetryClient.trackCliSubcommandList(subcommandOriginal);
       return listVersions(client, args, telemetryClient);
@@ -133,14 +137,14 @@ async function listVersions(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
   const [flagArg] = args;
   const environment = flags['--environment'] as string | undefined;
   const limit = flags['--limit'] as number | undefined;
-  const cursor = flags['--cursor'] as string | undefined;
+  const cursor = (flags['--next'] ?? flags['--cursor']) as string | undefined;
   const json = flags['--json'] as boolean | undefined;
   const projectName = getProjectNameFromFlags(flags);
 
@@ -148,14 +152,18 @@ async function listVersions(
     output.error(
       `Missing required argument: flag. Usage: ${getCommandName('flags versions <flag>')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
   telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionEnvironment(environment);
   telemetryClient.trackCliOptionLimit(limit);
-  telemetryClient.trackCliOptionCursor(cursor);
+  telemetryClient.trackCliOptionNext(flags['--next'] as string | undefined);
+  telemetryClient.trackCliOptionCursor(flags['--cursor'] as string | undefined);
+  if (flags['--cursor'] !== undefined) {
+    warnDeprecatedOption(client.argv, '--cursor', '--next');
+  }
   telemetryClient.trackCliFlagJson(json);
 
   if (
@@ -167,7 +175,7 @@ async function listVersions(
     output.error(
       `The --limit option must be an integer between 1 and ${MAX_FLAG_VERSIONS_PAGE_LIMIT}.`
     );
-    return 1;
+    return 2;
   }
 
   const link = await resolveLinkedProject(client, projectName);
@@ -208,7 +216,8 @@ async function listVersions(
       printVersionsTable(versionList);
       if (next) {
         const nextCmd = buildNextPageCommand(flagArg, flags, next);
-        output.log(`To display the next page, run ${getCommandName(nextCmd)}`);
+        output.print('\n');
+        printNextPageCommand(getCommandNamePlain(nextCmd));
       }
     }
   } catch (err) {
@@ -233,7 +242,7 @@ async function diffVersions(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -246,7 +255,7 @@ async function diffVersions(
     output.error(
       `Missing required argument: flag. Usage: ${getCommandName('flags versions diff <flag> --revision <number>')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -256,7 +265,7 @@ async function diffVersions(
 
   if (revision === undefined || !Number.isInteger(revision) || revision < 0) {
     output.error('The --revision option must be a non-negative integer.');
-    return 1;
+    return 2;
   }
 
   if (revision === 0) {
@@ -536,6 +545,7 @@ function buildNextPageCommand(
   const environment = flags['--environment'] as string | undefined;
   const baseFlags = getCommandFlags(flags, [
     '_',
+    '--next',
     '--cursor',
     '--environment',
     '--json',
@@ -543,5 +553,5 @@ function buildNextPageCommand(
   const environmentFlag = environment
     ? ` --environment ${quoteArg(environment)}`
     : '';
-  return `flags versions ${quoteArg(flagArg)}${baseFlags}${environmentFlag} --cursor ${quoteArg(nextCursor)}`;
+  return `flags versions ${quoteArg(flagArg)}${baseFlags}${environmentFlag} --next ${quoteArg(nextCursor)}`;
 }

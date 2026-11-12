@@ -1,9 +1,14 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import { requireProjectContext } from '../../util/projects/require-project-context';
 import output from '../../output-manager';
 import { publishSubcommand } from './command';
-import { parseSubcommandArgs, confirmAction, withGlobalFlags } from './shared';
+import {
+  parseSubcommandArgs,
+  confirmAction,
+  withGlobalFlags,
+  resolveFirewallScope,
+  mapFirewallApiError,
+} from './shared';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 import { formatDiffOutput } from '../../util/firewall/format';
@@ -14,22 +19,13 @@ export default async function publish(client: Client, argv: string[]) {
   const parsed = await parseSubcommandArgs(argv, publishSubcommand, client);
   if (typeof parsed === 'number') return parsed;
 
-  const link = await requireProjectContext(
-    client,
-    'firewall',
-    parsed.flags['--project']
-  );
-  if (typeof link === 'number') return link;
+  const scope = await resolveFirewallScope(client, parsed.flags);
+  if (typeof scope === 'number') return scope;
 
-  const { project, org } = link;
-  const teamId = org.type === 'team' ? org.id : undefined;
-
-  output.spinner(`Fetching draft changes for ${chalk.bold(project.name)}`);
+  output.spinner(`Fetching draft changes for ${chalk.bold(scope.displayName)}`);
 
   try {
-    const { active, draft } = await listFirewallConfigs(client, project.id, {
-      teamId,
-    });
+    const { active, draft } = await listFirewallConfigs(client, scope);
 
     if (!draft || draft.changes.length === 0) {
       output.warn('No draft changes to publish.');
@@ -48,7 +44,9 @@ export default async function publish(client: Client, argv: string[]) {
       client,
       parsed.flags['--yes'],
       'Publish these changes to production?',
-      `This will make them live for ${chalk.bold(project.name)}.`
+      scope.type === 'team'
+        ? `This will make them live team-wide for ${chalk.bold(scope.displayName)}.`
+        : `This will make them live for ${chalk.bold(scope.displayName)}.`
     );
 
     if (!confirmed) {
@@ -59,7 +57,7 @@ export default async function publish(client: Client, argv: string[]) {
     const updateStamp = stamp();
     output.spinner('Publishing to production');
 
-    await activateFirewallConfig(client, project.id, 'draft', { teamId });
+    await activateFirewallConfig(client, scope, 'draft');
 
     output.log(
       `${chalk.cyan('Success!')} Firewall config published to production ${chalk.gray(updateStamp())}`
@@ -67,14 +65,19 @@ export default async function publish(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    const error = e as { message?: string };
-    const msg = error.message || 'Failed to publish firewall config';
+    const msg = mapFirewallApiError(
+      e,
+      scope,
+      'Failed to publish firewall config'
+    );
     if (client.nonInteractive) {
       outputAgentError(client, {
         status: 'error',
         reason: 'api_error',
         message: msg,
-        next: [{ command: withGlobalFlags(client, 'firewall publish --yes') }],
+        next: [
+          { command: withGlobalFlags(client, 'firewall publish --yes', scope) },
+        ],
       });
       process.exit(1);
       return 1;

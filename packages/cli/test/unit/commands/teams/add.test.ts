@@ -1,10 +1,10 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import teams from '../../../../src/commands/teams';
 import { useUser } from '../../../mocks/user';
 import { createTeam, useTeams } from '../../../mocks/team';
 
-describe('teams add', () => {
+describe('teams create', () => {
   const currentTeamId = 'team_123';
   const team = createTeam(currentTeamId, 'team-slug', 'My Team');
 
@@ -24,7 +24,7 @@ describe('teams add', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = teams(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -59,7 +59,7 @@ describe('teams add', () => {
     client.stdin.write(`\n`);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'subcommand:add', value: 'add' },
+      { key: 'subcommand:create', value: 'add' },
     ]);
     await expect(exitCodePromise).resolves.toEqual(0);
   });
@@ -109,8 +109,30 @@ describe('teams add', () => {
       expect(payload.status).toBe('action_required');
       expect(payload.reason).toBe('missing_arguments');
       expect(payload.message).toContain('--slug');
-      expect(payload.next[0].command).toContain('teams add');
+      expect(payload.next[0].command).toContain('teams create');
       expect(payload.next[0].command).toContain('<slug>');
+
+      logSpy.mockRestore();
+      exitSpy.mockRestore();
+      client.nonInteractive = false;
+    });
+
+    it('preserves flags in the suggestion when invoked as `teams create`', async () => {
+      client.nonInteractive = true;
+      const logSpy = vi
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined as unknown as void);
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {
+        throw new Error('exit');
+      }) as () => never);
+
+      client.setArgv('teams', 'create', '--name', 'Acme Corp');
+      await expect(teams(client)).rejects.toThrow('exit');
+
+      const payload = JSON.parse(logSpy.mock.calls[0][0] as string);
+      expect(payload.status).toBe('action_required');
+      expect(payload.next[0].command).toContain('teams create');
+      expect(payload.next[0].command).toContain('--name Acme Corp');
 
       logSpy.mockRestore();
       exitSpy.mockRestore();
@@ -192,6 +214,53 @@ describe('teams add', () => {
       logSpy.mockRestore();
       exitSpy.mockRestore();
       client.nonInteractive = false;
+    });
+  });
+
+  describe('subcommand name', () => {
+    function useCreation() {
+      const newTeam = {
+        id: 'team_new',
+        slug: 'acme',
+        name: 'Acme Corp',
+        creatorId: 'user_1',
+        created: '2017-04-29T17:21:54.514Z',
+        avatar: null,
+      };
+      client.nonInteractive = true;
+      client.scenario.post('/teams', (_req, res) => res.json(newTeam));
+      client.scenario.patch(`/teams/${newTeam.id}`, (_req, res) =>
+        res.json(newTeam)
+      );
+    }
+
+    afterEach(() => {
+      client.nonInteractive = false;
+    });
+
+    it('warns when invoked as the deprecated add name', async () => {
+      useCreation();
+      client.setArgv('teams', 'add', '--slug', 'acme', '--name', 'Acme Corp');
+
+      expect(await teams(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel teams add` is deprecated. Use `vercel teams create`.'
+      );
+    });
+
+    it('does not warn when invoked as create', async () => {
+      useCreation();
+      client.setArgv(
+        'teams',
+        'create',
+        '--slug',
+        'acme',
+        '--name',
+        'Acme Corp'
+      );
+
+      expect(await teams(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     });
   });
 });

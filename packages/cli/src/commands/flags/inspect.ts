@@ -27,22 +27,24 @@ export default async function inspect(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
   const [flagArg] = args;
+  const json = flags['--json'] as boolean | undefined;
   const projectName = getProjectNameFromFlags(flags);
 
   if (!flagArg) {
     output.error(
       `Missing required argument: flag. Usage: ${getCommandName('flags inspect <flag>')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
   telemetryClient.trackCliOptionProject(projectName);
+  telemetryClient.trackCliFlagJson(json);
 
   const link = await getLinkedFlagsProject(client, projectName);
   if (link.status === 'error') {
@@ -61,6 +63,12 @@ export default async function inspect(
   const projectSlugLink = formatProject(org.slug, project.name);
 
   try {
+    if (json) {
+      const flag = await getFlag(client, project.id, flagArg);
+      client.stdout.write(`${JSON.stringify({ flag }, null, 2)}\n`);
+      return 0;
+    }
+
     const [flag, settings] = await Promise.all([
       getFlag(client, project.id, flagArg),
       getFlagSettings(client, project.id),
