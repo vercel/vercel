@@ -52,6 +52,9 @@ junit.xml
 # CLI "target" subcommand (e.g. vercel target list) is source, not build output
 !packages/cli/src/commands/target/
 !packages/cli/src/commands/target/**
+# CLI target helpers are source, not build output
+!packages/cli/src/util/target/
+!packages/cli/src/util/target/**
 !packages/cli/src/util/telemetry/commands/target/
 !packages/cli/src/util/telemetry/commands/target/**
 # CLI target command tests
