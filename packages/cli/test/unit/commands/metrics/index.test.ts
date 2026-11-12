@@ -60,6 +60,9 @@ describe('metrics', () => {
       expect(output).toContain(
         'vercel metrics vercel.analytics.page_view.count --aggregation unique/visitorId --group-by country --since 1d --granularity 1h --limit 5'
       );
+      expect(output).toContain(
+        'vercel metrics vercel.analytics.page_view.count --aggregation singleton/visitorId --since 7d --granularity 1d'
+      );
       expect(output).not.toContain('vercel.ai_gateway_request.cost');
       expect(output).not.toContain('vercel.analytics_pageview.count');
       expect(output).not.toContain('2026-05-28');
@@ -84,6 +87,7 @@ describe('metrics', () => {
         'vercel metrics vercel.analytics_pageview.count --since 7d --granularity 1d --bucket-timezone Europe/Paris'
       );
       expect(output).toContain('--bucket-timezone Europe/Paris');
+      expect(output).not.toContain('singleton/');
       expect(output).not.toContain('vercel.ai_gateway.request.cost');
       expect(output).not.toContain('vercel.analytics.page_view.count');
       expect(output).not.toContain('2026-05-28');

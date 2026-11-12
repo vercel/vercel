@@ -864,6 +864,44 @@ describe('text-output', () => {
       expect(normalized).toContain('Unique (period): 737,914');
     });
 
+    it('should label the period line for field-qualified singleton aggregations', () => {
+      const output = formatText(
+        {
+          data: [
+            {
+              timestamp: '2026-02-19T10:00:00.000Z',
+              vercel_analytics_page_view_count_singleton_visitorId: 1200,
+            },
+            {
+              timestamp: '2026-02-19T10:05:00.000Z',
+              vercel_analytics_page_view_count_singleton_visitorId: 1350,
+            },
+          ],
+          summary: [
+            { vercel_analytics_page_view_count_singleton_visitorId: 2100 },
+          ],
+          statistics: {},
+        },
+        {
+          metric: 'vercel.analytics.page_view.count',
+          metricUnit: 'count',
+          aggregation: 'singleton/visitorId' as Aggregation,
+          groupBy: [],
+          scope: projectScope,
+          periodStart: '2026-02-19T10:00:00.000Z',
+          periodEnd: '2026-02-19T10:10:00.000Z',
+          granularity: { minutes: 5 },
+        }
+      );
+
+      const normalized = stripAnsi(output);
+      expect(normalized).toContain('1,200');
+      expect(normalized).toContain('1,350');
+      expect(normalized).not.toContain('total');
+      expect(normalized).toContain('Singleton (period): 2,100');
+      expect(normalized).not.toContain('Unique (period)');
+    });
+
     it('should not show a period unique line for non-unique aggregations', () => {
       const output = formatText(
         {

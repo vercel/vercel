@@ -165,8 +165,14 @@ function toCanonicalMetricSelection(
   if (aggregation === 'percent') {
     return { metric, aggregation: additiveAggregation, normalize: 'percent' };
   }
-  if (aggregationName === 'unique' && dimension) {
-    return { metric, aggregation: 'unique', dimensions: [dimension] };
+  // `unique/<dim>` and `singleton/<dim>` carry the dimension they count over.
+  // The catalog leaves `singleton` out of a metric's aggregations because it
+  // always needs a dimension, so it is only reachable in this qualified form.
+  if (
+    (aggregationName === 'unique' || aggregationName === 'singleton') &&
+    dimension
+  ) {
+    return { metric, aggregation: aggregationName, dimensions: [dimension] };
   }
   return { metric, aggregation };
 }

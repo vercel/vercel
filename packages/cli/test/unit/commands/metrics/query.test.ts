@@ -645,6 +645,82 @@ describe('metrics query v2', () => {
       });
     });
 
+    it('translates qualified singleton aggregations for v1', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      // The catalog does not list `singleton`, because it requires dimensions.
+      mockSystemMetricCatalog('vercel.analytics.page_view.count', [
+        'count',
+        'unique',
+      ]);
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.analytics.page_view.count',
+        '--aggregation',
+        'singleton/visitorId',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: {
+            metric: 'vercel.analytics.page_view.count',
+            aggregation: 'singleton',
+            dimensions: ['visitorId'],
+          },
+        },
+      });
+    });
+
+    it('ranks grouped singleton aggregations by count', async () => {
+      vi.stubEnv('FF_LEGACY_METRICS', '');
+      mockSystemMetricCatalog('vercel.analytics.page_view.count', [
+        'count',
+        'unique',
+      ]);
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.analytics.page_view.count',
+        '--aggregation',
+        'singleton/visitorId',
+        '--group-by',
+        'country',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        groupBy: ['country'],
+        metrics: {
+          value: {
+            metric: 'vercel.analytics.page_view.count',
+            aggregation: 'singleton',
+            dimensions: ['visitorId'],
+          },
+          __seriesCount: {
+            metric: 'vercel.analytics.page_view.count',
+            aggregation: 'count',
+          },
+        },
+        outputs: ['value'],
+        seriesSelection: {
+          rankBy: [{ metric: '__seriesCount', direction: 'desc' }],
+        },
+      });
+    });
+
     it('passes stddev aggregations to v1', async () => {
       vi.stubEnv('FF_LEGACY_METRICS', '');
       mockSystemMetricCatalog('vercel.request.route_cpu_duration_ms', [
@@ -940,6 +1016,40 @@ describe('metrics query v2', () => {
         query: {
           metric: 'vercel.daemon.count',
           aggregation: 'unique/instanceId',
+        },
+      });
+    });
+
+    it('preserves explicit singleton aggregations in JSON queries', async () => {
+      mockCanonicalApiSuccess();
+      client.setArgv(
+        'metrics',
+        'vercel.analytics.page_view.count',
+        '--aggregation',
+        'singleton/visitorId',
+        '--since',
+        '2026-07-29T09:00:42.123Z',
+        '--until',
+        '2026-07-29T10:00:42.123Z',
+        '--format=json'
+      );
+
+      const exitCode = await query(client, new MockTelemetry());
+
+      expect(exitCode).toBe(0);
+      expect(postedBody).toMatchObject({
+        metrics: {
+          value: {
+            metric: 'vercel.analytics.page_view.count',
+            aggregation: 'singleton',
+            dimensions: ['visitorId'],
+          },
+        },
+      });
+      expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+        query: {
+          metric: 'vercel.analytics.page_view.count',
+          aggregation: 'singleton/visitorId',
         },
       });
     });

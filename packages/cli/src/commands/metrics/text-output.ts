@@ -148,13 +148,18 @@ export const BLOCKS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'] a
 export const MISSING_CHAR = '·';
 
 /**
- * An aggregation may carry a dimension qualifier (e.g. `unique/visitor_id`),
- * where the part before the `/` is the aggregation and the rest is the
- * dimension it operates over.
+ * An aggregation may carry a dimension qualifier (e.g. `unique/visitor_id` or
+ * `singleton/visitorId`), where the part before the `/` is the aggregation and
+ * the rest is the dimension it operates over.
  */
 function isAggregationWithDimension(aggregation: Aggregation): boolean {
   const [, dimension] = aggregation.split('/');
   return Boolean(dimension);
+}
+
+/** The aggregation without its dimension qualifier, if any. */
+function getAggregationName(aggregation: Aggregation): string {
+  return aggregation.split('/')[0];
 }
 
 /** Builds an internal map key from grouped dimension values. */
@@ -784,11 +789,16 @@ export function formatMetadataHeader(opts: MetadataHeaderOptions): string {
     }
   );
 
-  // Whole-period deduplicated count from the API summary. Per-bucket uniques
-  // cannot be summed, so this is the only correct period total for `unique`.
+  // Whole-period count from the API summary. Per-bucket uniques and
+  // singletons cannot be summed (a value can appear in several buckets, and a
+  // singleton in each bucket may not be one over the whole period), so this is
+  // the only correct period figure for `unique/<dim>` and `singleton/<dim>`.
   if (typeof opts.periodUnique === 'number') {
     rows.push({
-      key: 'Unique (period)',
+      key:
+        getAggregationName(opts.aggregation) === 'singleton'
+          ? 'Singleton (period)'
+          : 'Unique (period)',
       value: formatCount(opts.periodUnique),
     });
   }
@@ -931,7 +941,7 @@ export function formatText(
     granularityMs
   );
 
-  // Surface the whole-period deduplicated count for ungrouped unique queries.
+  // Surface the whole-period count for ungrouped unique and singleton queries.
   // With --group-by the summary holds one row per group, which a single header
   // line cannot represent.
   let periodUnique: number | undefined;

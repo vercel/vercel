@@ -222,6 +222,15 @@ export const metricsCommand = {
         name: 'Visitors time series from the top 5 countries',
         value: `${packageName} metrics ${pageViewMetric} --aggregation unique/${visitorId} --group-by country --since 1d --granularity 1h --limit 5`,
       },
+      // `singleton` is only served by the Observability query API.
+      ...(canonical
+        ? [
+            {
+              name: 'Daily bounced visitors (visitors with exactly one page view)',
+              value: `${packageName} metrics ${pageViewMetric} --aggregation singleton/${visitorId} --since 7d --granularity 1d`,
+            },
+          ]
+        : []),
       {
         name: 'List available metrics',
         value: `${packageName} metrics schema`,
