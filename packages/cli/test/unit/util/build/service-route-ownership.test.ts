@@ -81,6 +81,34 @@ describe('scopeRoutesToServiceOwnership()', () => {
     expect(match?.[2]).toBe('123');
   });
 
+  test('does not scope middleware routes', () => {
+    // vercel/vercel#16296: middleware routes are indexed by their exact
+    // `src` downstream, so wrapping them with the ownership guard breaks
+    // deploys of services-mode projects that have a middleware.
+    const owner = createWebService('web', '/');
+    const routes: Route[] = [
+      { src: '^/(.*)$', dest: '/$1' },
+      {
+        src: '^/middleware$',
+        middlewarePath: 'middleware',
+      },
+    ];
+    const scoped = scopeRoutesToServiceOwnership({
+      routes,
+      owner,
+      allServices: [
+        owner,
+        createWebService('service-a', '/a'),
+        createWebService('service-b', '/b'),
+      ],
+    });
+
+    // Normal routes are still scoped.
+    expect(getRegex(scoped[0]).test('/a/')).toBe(false);
+    // The middleware route is left exactly as-is.
+    expect(scoped[1]).toEqual(routes[1]);
+  });
+
   test('scopes unanchored catch-all routes while preserving captures', () => {
     const owner = createWebService('web', '/');
     const routes: Route[] = [{ src: '/(.*)' }];
