@@ -18,6 +18,12 @@ export function mockPnpmMajorAvailable(
         return isAvailable;
       }
     }
+    // The hardcoded toolchain directories only exist on Vercel's build image;
+    // report them as present so `getEnvForPackageManager()` tests can assert
+    // on the `$PATH` entries it prepends.
+    if (/^\/(pnpm\d+\/node_modules\/\.bin|bun\d+(\.\d+)?)$/.test(key)) {
+      return true;
+    }
     return realExistsSync(p);
   });
 }

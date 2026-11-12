@@ -1248,7 +1248,12 @@ export function getEnvForPackageManager({
       [newPath, bunRuntimePath].filter((value): value is string => !!value)
     )
   ).filter(
-    value => !alreadyInPath(value) && !(hasSelectedBunPath && value === newPath)
+    value =>
+      !alreadyInPath(value) &&
+      !(hasSelectedBunPath && value === newPath) &&
+      // Skip paths that do not exist on disk (e.g. running `vercel build`
+      // locally outside Vercel's infrastructure).
+      fs.existsSync(value)
   );
 
   if (pathsToPrepend.length > 0) {
