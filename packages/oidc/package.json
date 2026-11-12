@@ -30,7 +30,7 @@
   "dependencies": {
     "@vercel/cli-config": "workspace:*",
     "@vercel/cli-exec": "workspace:*",
-    "jose": "^5.9.6"
+    "jose": "^6.2.5"
   },
   "devDependencies": {
     "prettier": "3.8.3",
