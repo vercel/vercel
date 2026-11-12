@@ -1,4 +1,5 @@
 import { loadEnvConfig } from '@next/env';
+import { getNodeExecPath } from '@vercel/build-utils';
 import chalk from 'chalk';
 import execa from 'execa';
 import type Client from '../../util/client';
@@ -216,7 +217,9 @@ export default async function run(
   }
 
   try {
-    const result = await execa(userCommand[0], userCommand.slice(1), {
+    const command =
+      userCommand[0] === 'node' ? getNodeExecPath() : userCommand[0];
+    const result = await execa(command, userCommand.slice(1), {
       cwd: client.cwd,
       stdio: 'inherit',
       reject: false,

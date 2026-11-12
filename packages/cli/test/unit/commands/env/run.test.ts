@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { getNodeExecPath } from '@vercel/build-utils';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import env from '../../../../src/commands/env';
@@ -291,7 +292,52 @@ describe('env run', () => {
       ]);
     });
 
-    it('should run command with specified environment', async () => {
+    it.each([
+      '-e',
+      '--eval',
+    ])('passes Node %s through after -- in native mode', async evalFlag => {
+      useUser();
+      useTeams('team_dummy');
+      useProject({
+        ...defaultProject,
+        id: 'vercel-env-pull',
+        name: 'vercel-env-pull',
+      });
+      const cwd = setupUnitFixture('vercel-env-pull');
+      client.cwd = cwd;
+
+      vi.stubEnv('VERCEL_VC_NATIVE', '1');
+      vi.stubEnv('VERCEL_NODE_EXEC_PATH', process.execPath);
+      try {
+        client.setArgv(
+          'env',
+          'run',
+          '--environment',
+          'development',
+          '--',
+          'node',
+          evalFlag,
+          'console.log(1)'
+        );
+
+        await expect(env(client)).resolves.toEqual(0);
+        expect(execa).toHaveBeenCalledExactlyOnceWith(
+          process.execPath,
+          [evalFlag, 'console.log(1)'],
+          expect.objectContaining({
+            cwd,
+            env: expect.objectContaining({ SPECIAL_FLAG: '1' }),
+          })
+        );
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+
+    it.each([
+      '-e',
+      '--environment',
+    ])('should run command with specified environment using %s', async environmentFlag => {
       useUser();
       useTeams('team_dummy');
       useProject({
@@ -305,7 +351,7 @@ describe('env run', () => {
       client.setArgv(
         'env',
         'run',
-        '-e',
+        environmentFlag,
         'production',
         '--',
         'node',
@@ -320,7 +366,7 @@ describe('env run', () => {
       expect(exitCode).toEqual(0);
 
       // Verify execa was called with production env vars
-      expect(execa).toHaveBeenCalledWith('node', ['script.js'], {
+      expect(execa).toHaveBeenCalledWith(getNodeExecPath(), ['script.js'], {
         cwd,
         stdio: 'inherit',
         reject: false,
