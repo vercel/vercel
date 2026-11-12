@@ -1,3 +1,7 @@
+import {
+  channelCredentialsMetadata,
+  type ConnectChannelMetadata,
+} from '../internal/channel-credentials-metadata.js';
 import type { TeamsChannelCredentials } from 'eve/channels/teams';
 
 import { createConnectWebhookVerifier } from '../chat/webhook-verifier.js';
@@ -46,8 +50,9 @@ export function connectTeamsCredentials(
   connector: string,
   params: ConnectTeamsCredentialsParams = {},
   options?: ConnectOptions
-): TeamsChannelCredentials {
+): TeamsChannelCredentials & ConnectChannelMetadata {
   return {
+    ...channelCredentialsMetadata(connector, 'microsoft-teams'),
     appId: () => getTeamsAppId(connector, options),
     tokenProvider: async () => {
       const response = await getTokenResponse(

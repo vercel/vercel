@@ -7,6 +7,7 @@ import {
   connectPhotonCredentials,
   connectTeamsCredentials,
   connectSlackCredentials,
+  connectSendblueCredentials,
 } from '../../src/eve/index.js';
 
 describe('Eve channel credential helpers', () => {
@@ -20,6 +21,29 @@ describe('Eve channel credential helpers', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    ['slack', connectSlackCredentials],
+    ['github', connectGitHubCredentials],
+    ['linear', connectLinearCredentials],
+    ['discord', connectDiscordCredentials],
+    ['linq', connectLinqCredentials],
+    ['photon', connectPhotonCredentials],
+    ['microsoft-teams', connectTeamsCredentials],
+    ['sendblue', connectSendblueCredentials],
+  ] as const)('declares %s without resolving runtime credentials', (service, create) => {
+    const credentials = create(`${service}/agent`);
+    expect(credentials.vercelConnect).toEqual({
+      connector: `${service}/agent`,
+      requirement: {
+        reference: `connector:${service}/agent`,
+        service,
+        method: service,
+        subjectTypes: ['app'],
+      },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('builds Discord credentials backed by one app-scoped Connect token response', async () => {

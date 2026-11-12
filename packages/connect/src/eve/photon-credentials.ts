@@ -1,4 +1,8 @@
 import {
+  channelCredentialsMetadata,
+  type ConnectChannelMetadata,
+} from '../internal/channel-credentials-metadata.js';
+import {
   getTokenResponse,
   type ConnectOptions,
   type ConnectTokenParams,
@@ -46,8 +50,8 @@ export function connectPhotonCredentials(
   connector: string,
   params: ConnectPhotonCredentialsParams = {},
   options?: ConnectOptions
-): ConnectPhotonCredentialProvider {
-  return async () => {
+): ConnectPhotonCredentialProvider & ConnectChannelMetadata {
+  const credentials: ConnectPhotonCredentialProvider = async () => {
     const response = await getTokenResponse(
       connector,
       { ...params, subject: { type: 'app' } },
@@ -62,4 +66,8 @@ export function connectPhotonCredentials(
       projectSecret: response.token,
     };
   };
+  return Object.assign(
+    credentials,
+    channelCredentialsMetadata(connector, 'photon')
+  );
 }

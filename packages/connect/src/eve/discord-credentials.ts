@@ -1,3 +1,7 @@
+import {
+  channelCredentialsMetadata,
+  type ConnectChannelMetadata,
+} from '../internal/channel-credentials-metadata.js';
 import type { DiscordChannelCredentials } from 'eve/channels/discord';
 
 import { createConnectWebhookVerifier } from '../chat/webhook-verifier.js';
@@ -41,7 +45,7 @@ export function connectDiscordCredentials(
   connector: string,
   params: ConnectDiscordCredentialsParams = {},
   options?: ConnectOptions
-): DiscordChannelCredentials {
+): DiscordChannelCredentials & ConnectChannelMetadata {
   type ResolvedCredentials = {
     applicationId: string;
     botToken: string;
@@ -72,6 +76,7 @@ export function connectDiscordCredentials(
   }
 
   return {
+    ...channelCredentialsMetadata(connector, 'discord'),
     applicationId: async () => (await resolveCredentials()).applicationId,
     botToken: async () => (await resolveCredentials()).botToken,
     webhookVerifier: createConnectWebhookVerifier(),

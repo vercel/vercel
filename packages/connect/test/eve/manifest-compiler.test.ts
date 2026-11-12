@@ -176,7 +176,6 @@ describe('eve manifest compiler', () => {
   it.each([
     ['service', { service: 'linear-enterprise' }],
     ['method', { method: 'api-key' }],
-    ['subjectTypes', { subjectTypes: ['app'] }],
   ])('rejects conflicting %s for one credential target', (field, credentials) => {
     const shared = snapshot.resources[0];
 
@@ -193,7 +192,7 @@ describe('eve manifest compiler', () => {
         ],
       })
     ).toThrow(
-      `Conflicting declarations for credential target "connector:oauth/linear": ${field} must agree.`
+      `Conflicting declarations for credential target "connector:oauth/linear" in connections/linear.ts and connections/linear-conflict.ts: ${field} must agree.`
     );
   });
 
@@ -216,8 +215,68 @@ describe('eve manifest compiler', () => {
         ],
       })
     ).toThrow(
-      'Conflicting declarations for credential target "connector:slack/support": provider manifest must agree.'
+      'Conflicting declarations for credential target "connector:slack/support" in channels/slack.ts and channels/other-slack.ts: provider manifest must agree.'
     );
+  });
+
+  it('keeps credential-only channels and their delivery requirement', () => {
+    const result = experimental_createConnectManifestFromEveResources({
+      ...snapshot,
+      resources: [
+        {
+          kind: 'channel',
+          logicalPath: 'channels/github.ts',
+          name: 'github',
+          credentials: {
+            reference: 'connector:github/agent',
+            service: 'github',
+            method: 'github',
+            subjectTypes: ['app'],
+          },
+          route: { path: '/eve/v1/github' },
+        },
+      ],
+    });
+    expect(result.requirements[0]).toMatchObject({
+      connect: {
+        manifest: { $type: 'https://datatracker.ietf.org/doc/html/rfc7591' },
+        service: 'github',
+        type: 'github',
+      },
+      triggers: [{ path: '/eve/v1/github' }],
+    });
+  });
+
+  it.each([
+    false,
+    true,
+  ])('composes native channel and credential requirements regardless of order (%s)', reverse => {
+    const channel = snapshot.resources[1];
+    const connection = {
+      ...snapshot.resources[0],
+      protocol: { type: 'openapi', url: 'https://slack.com/api' },
+      credentials: {
+        reference: channel.credentials.reference,
+        service: 'slack',
+        subjectTypes: ['user'],
+      },
+    };
+    const resources = reverse ? [connection, channel] : [channel, connection];
+    const result = experimental_createConnectManifestFromEveResources({
+      ...snapshot,
+      resources,
+    });
+    expect(result.requirements).toHaveLength(1);
+    expect(result.requirements[0]).toMatchObject({
+      connect: {
+        manifest: channel.manifest,
+        type: 'slack',
+        subjectTypes: ['app', 'user'],
+      },
+      interfaces: [{ protocol: 'openapi', url: 'https://slack.com/api' }],
+      triggers: [{ path: '/eve/v1/slack' }],
+    });
+    expect(result.requirements[0]?.uses).toHaveLength(2);
   });
 
   it('rejects an unsupported snapshot version', () => {

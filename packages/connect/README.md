@@ -281,3 +281,9 @@ of the provider's `connectOptions.vercelToken` and `connectOptions.region`
 credential options. Event request failures use the provider's usual error
 translation. Compiler metadata must omit the live bridge and continue serializing
 only `connector` and `requirement`.
+
+### Deployment requirements
+
+The eve channel credential helpers attach serializable connector requirements without fetching tokens during a build. This includes Slack, GitHub, Linear, Discord, Microsoft Teams, Photon, Linq, and Sendblue. The matching eve channel must preserve that metadata for it to reach the deployment manifest.
+
+The manifest compiler accepts channels without native provider configuration and retains their event destinations. It combines declarations with the same connector reference when their service, explicit method, and native configuration agree. A credential-only connection can share a channel's connector; required app/user subjects are combined. Conflicts identify the source files. This does not provision provider apps or prove that callbacks and grants are configured; those checks remain Connect's responsibility.

@@ -31,7 +31,7 @@ interface ChannelResource {
   readonly credentials: CredentialRequirement;
   readonly kind: 'channel';
   readonly logicalPath: string;
-  readonly manifest: JsonObject;
+  readonly manifest?: JsonObject;
   readonly name: string;
   readonly route: { readonly path: string };
 }
@@ -64,9 +64,10 @@ function collectConnectRequirements(
       requirements.set(next.target, next);
       continue;
     }
-    assertCompatibleRequirements(current, next);
+    const connect = mergeRequirementConfiguration(current, next);
     requirements.set(next.target, {
       ...current,
+      connect,
       interfaces: appendDistinct(current.interfaces, next.interfaces),
       triggers: appendDistinct(current.triggers, next.triggers),
       uses: appendDistinct(current.uses, next.uses),
@@ -75,35 +76,47 @@ function collectConnectRequirements(
   return [...requirements.values()];
 }
 
-function assertCompatibleRequirements(
+function mergeRequirementConfiguration(
   current: ConnectRequirement,
   next: ConnectRequirement
-): void {
-  const target = current.target;
-  if (current.connect.service !== next.connect.service) {
-    throw conflictingRequirement(target, 'service');
-  }
-  if (current.connect.type !== next.connect.type) {
-    throw conflictingRequirement(target, 'method');
-  }
+): ConnectRequirement['connect'] {
+  const conflict = (field: string): never => {
+    throw new Error(
+      `Conflicting declarations for credential target "${current.target}" in ${current.uses.map(use => use.logicalPath).join(', ')} and ${next.uses.map(use => use.logicalPath).join(', ')}: ${field} must agree.`
+    );
+  };
+  if (current.connect.service !== next.connect.service) conflict('service');
   if (
-    canonicalJson([...current.connect.subjectTypes].sort()) !==
-    canonicalJson([...next.connect.subjectTypes].sort())
+    current.connect.type &&
+    next.connect.type &&
+    current.connect.type !== next.connect.type
   ) {
-    throw conflictingRequirement(target, 'subjectTypes');
+    conflict('method');
   }
+  const currentManifest = current.connect.manifest;
+  const nextManifest = next.connect.manifest;
+  const credentialOnly = (manifest: JsonObject): boolean =>
+    Object.keys(manifest).length === 1 &&
+    manifest.$type === RFC_7591_MANIFEST.$type;
   if (
-    canonicalJson(current.connect.manifest) !==
-    canonicalJson(next.connect.manifest)
+    !credentialOnly(currentManifest) &&
+    !credentialOnly(nextManifest) &&
+    canonicalJson(currentManifest) !== canonicalJson(nextManifest)
   ) {
-    throw conflictingRequirement(target, 'provider manifest');
+    conflict('provider manifest');
   }
-}
-
-function conflictingRequirement(target: string, field: string): Error {
-  return new Error(
-    `Conflicting declarations for credential target "${target}": ${field} must agree.`
-  );
+  const type = current.connect.type ?? next.connect.type;
+  return {
+    service: current.connect.service,
+    ...(type === undefined ? {} : { type }),
+    subjectTypes: [
+      ...new Set([
+        ...current.connect.subjectTypes,
+        ...next.connect.subjectTypes,
+      ]),
+    ].sort(),
+    manifest: credentialOnly(currentManifest) ? nextManifest : currentManifest,
+  };
 }
 
 function appendDistinct<T>(
@@ -140,7 +153,9 @@ function toConnectRequirement(resource: Resource): ConnectRequirement {
   return {
     connect: {
       manifest:
-        resource.kind === 'channel' ? resource.manifest : RFC_7591_MANIFEST,
+        resource.kind === 'channel' && resource.manifest !== undefined
+          ? resource.manifest
+          : RFC_7591_MANIFEST,
       service: resource.credentials.service,
       subjectTypes: resource.credentials.subjectTypes,
       ...(resource.credentials.method === undefined
@@ -226,7 +241,9 @@ function parseResource(value: unknown, index: number): Resource {
     ...common,
     kind,
     logicalPath: common.logicalPath,
-    manifest: jsonObject(resource.manifest, `${path}.manifest`),
+    ...(resource.manifest === undefined
+      ? {}
+      : { manifest: jsonObject(resource.manifest, `${path}.manifest`) }),
     name: common.name,
     route: { path: nonEmptyString(route.path, `${path}.route.path`) },
   };
