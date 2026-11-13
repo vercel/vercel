@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { getNodeExecPath } from '@vercel/build-utils';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import env from '../../../../src/commands/env';
@@ -320,7 +321,7 @@ describe('env run', () => {
       expect(exitCode).toEqual(0);
 
       // Verify execa was called with production env vars
-      expect(execa).toHaveBeenCalledWith('node', ['script.js'], {
+      expect(execa).toHaveBeenCalledWith(getNodeExecPath(), ['script.js'], {
         cwd,
         stdio: 'inherit',
         reject: false,
