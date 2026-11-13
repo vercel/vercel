@@ -35,13 +35,15 @@ function warnOidcRefreshFailed(): void {
 
 async function refreshOidcTokenAfterLink(
   client: Client,
-  cwd: string
+  cwd: string,
+  noGitignore: boolean
 ): Promise<void> {
   const originalCwd = client.cwd;
   try {
     client.cwd = await resolveProjectCwd(cwd);
     output.print('\n');
-    const exitCode = await pull(client, ['--yes'], 'vercel-cli:link', {
+    const args = noGitignore ? ['--yes', '--no-gitignore'] : ['--yes'];
+    const exitCode = await pull(client, args, 'vercel-cli:link', {
       oidcTokenOnly: true,
     });
 
@@ -152,6 +154,7 @@ async function linkProject(client: Client) {
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
   telemetry.trackCliFlagYes(parsedArgs.flags['--yes']);
   telemetry.trackCliOptionProject(parsedArgs.flags['--project']);
+  telemetry.trackCliFlagNoGitignore(parsedArgs.flags['--no-gitignore']);
 
   if ('--confirm' in parsedArgs.flags) {
     telemetry.trackCliFlagConfirm(parsedArgs.flags['--confirm']);
@@ -160,6 +163,7 @@ async function linkProject(client: Client) {
   }
 
   const yes = !!parsedArgs.flags['--yes'];
+  const noGitignore = !!parsedArgs.flags['--no-gitignore'];
 
   let cwd = parsedArgs.args[1];
   if (cwd) {
@@ -178,7 +182,7 @@ async function linkProject(client: Client) {
       `The ${cmd('--repo')} option is in alpha, please report issues`
     );
     try {
-      await ensureRepoLink(client, cwd, { yes, overwrite: true });
+      await ensureRepoLink(client, cwd, { yes, overwrite: true, noGitignore });
     } catch (err) {
       if (isPromptCanceledError(err)) {
         throw err;
@@ -204,6 +208,7 @@ async function linkProject(client: Client) {
       successEmoji: 'success',
       nonInteractive: linkNonInteractive,
       pullEnv: false,
+      noGitignore,
     });
 
     if (typeof link === 'number') {
@@ -225,7 +230,7 @@ async function linkProject(client: Client) {
       allowConfigExecution: false,
     });
 
-    await refreshOidcTokenAfterLink(client, cwd);
+    await refreshOidcTokenAfterLink(client, cwd, noGitignore);
   }
 
   return 0;

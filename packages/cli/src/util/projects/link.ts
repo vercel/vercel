@@ -695,7 +695,8 @@ export async function linkFolderToProject(
   successEmoji: EmojiLabel = 'link',
   autoConfirm: boolean = false,
   pullEnv: boolean = true,
-  resultLabel: 'Linked' | 'Created' = 'Linked'
+  resultLabel: 'Linked' | 'Created' = 'Linked',
+  noGitignore: boolean = false
 ) {
   // if the project is already linked, we skip linking
   if (await hasProjectLink(client, projectLink, path)) {
@@ -724,7 +725,9 @@ export async function linkFolderToProject(
   await writeReadme(path);
 
   // update .gitignore (silent — git status surfaces the change on demand)
-  await addToGitIgnore(path);
+  if (!noGitignore) {
+    await addToGitIgnore(path);
+  }
 
   output.print('\n');
   printAlignedLabel(resultLabel, `${orgSlug}/${projectName}`, { gutter: '✓' });
@@ -753,6 +756,9 @@ export async function linkFolderToProject(
       client.cwd = path;
 
       const args = autoConfirm ? ['--yes'] : [];
+      if (noGitignore) {
+        args.push('--no-gitignore');
+      }
       const { default: pull } = await import('../../commands/env/pull');
       const exitCode = await pull(client, args, 'vercel-cli:link');
 

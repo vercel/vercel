@@ -258,6 +258,13 @@ export const pullSubcommand = {
       description:
         'Skip the confirmation prompt when overwriting an existing file',
     },
+    {
+      name: 'no-gitignore',
+      description: 'Skip automatic addition of the env file to ".gitignore"',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
   ],
   examples: [
     {

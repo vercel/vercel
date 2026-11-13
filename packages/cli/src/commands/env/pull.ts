@@ -57,6 +57,8 @@ function printEnvPullWarning(message: string): void {
 export interface EnvPullOptions {
   /** Refresh only VERCEL_OIDC_TOKEN while preserving all other file content. */
   oidcTokenOnly?: boolean;
+  /** Skip automatic addition of the env file to `.gitignore`. */
+  noGitignore?: boolean;
 }
 
 function readHeadSync(path: string, length: number) {
@@ -158,6 +160,7 @@ export default async function pull(
 
   telemetryClient.trackCliArgumentFilename(args[0]);
   telemetryClient.trackCliFlagYes(skipConfirmation);
+  telemetryClient.trackCliFlagNoGitignore(opts['--no-gitignore']);
   telemetryClient.trackCliOptionGitBranch(gitBranch);
   telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   telemetryClient.trackCliOptionDeployment(opts['--deployment']);
@@ -251,6 +254,8 @@ export default async function pull(
       flags: opts,
     }) || 'development';
 
+  const noGitignore = !!opts['--no-gitignore'];
+
   await envPullCommandLogic(
     client,
     filename,
@@ -261,7 +266,7 @@ export default async function pull(
     client.cwd,
     source,
     deploymentId,
-    options
+    { ...options, noGitignore }
   );
 
   return 0;
@@ -277,7 +282,7 @@ export async function envPullCommandLogic(
   cwd: string,
   source: EnvRecordsSource,
   deploymentId?: string,
-  { oidcTokenOnly = false }: EnvPullOptions = {}
+  { oidcTokenOnly = false, noGitignore = false }: EnvPullOptions = {}
 ) {
   const fullPath = resolve(cwd, filename);
   const head = tryReadHeadSync(fullPath, Buffer.byteLength(CONTENTS_PREFIX));
@@ -471,7 +476,7 @@ export async function envPullCommandLogic(
 
   let isGitIgnoreUpdated = false;
   const fileExistsAfterPull = exists || contents.length > 0;
-  if (filename === '.env.local' && fileExistsAfterPull) {
+  if (filename === '.env.local' && fileExistsAfterPull && !noGitignore) {
     // When the file is `.env.local`, we also add it to `.gitignore`
     // to avoid accidentally committing it to git.
     // We use '.env*' to match the default .gitignore from

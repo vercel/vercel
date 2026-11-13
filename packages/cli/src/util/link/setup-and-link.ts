@@ -82,6 +82,8 @@ export interface SetupAndLinkOptions {
   /** When true, avoid prompts and return action_required payload when scope/project choice is needed */
   nonInteractive?: boolean;
   pullEnv?: boolean;
+  /** When true, skip automatic addition of ".vercel" to ".gitignore" */
+  noGitignore?: boolean;
   /** When true, indicates the project is being created from v0 (grants V0Builder permissions) */
   v0?: boolean;
   /**
@@ -213,7 +215,8 @@ async function maybePullEnvAfterLink(
   client: Client,
   path: string,
   autoConfirm: boolean,
-  pullEnv: boolean
+  pullEnv: boolean,
+  noGitignore: boolean = false
 ): Promise<void> {
   if (!pullEnv || !client.stdin.isTTY || client.nonInteractive) {
     return;
@@ -236,6 +239,9 @@ async function maybePullEnvAfterLink(
   try {
     client.cwd = path;
     const args = autoConfirm ? ['--yes'] : [];
+    if (noGitignore) {
+      args.push('--no-gitignore');
+    }
     const exitCode = await pull(client, args, 'vercel-cli:link');
 
     if (exitCode !== 0) {
@@ -259,6 +265,7 @@ async function linkCrossTeamMatch({
   successEmoji,
   autoConfirm,
   pullEnv,
+  noGitignore,
 }: {
   client: Client;
   path: string;
@@ -266,6 +273,7 @@ async function linkCrossTeamMatch({
   successEmoji: EmojiLabel;
   autoConfirm: boolean;
   pullEnv: boolean;
+  noGitignore: boolean;
 }): Promise<ProjectLinkResult> {
   client.config.currentTeam =
     match.org.type === 'team' ? match.org.id : undefined;
@@ -277,8 +285,15 @@ async function linkCrossTeamMatch({
       orgSlug: match.org.slug,
       remoteName: match.repo.remoteName,
       successEmoji,
+      noGitignore,
     });
-    await maybePullEnvAfterLink(client, path, autoConfirm, pullEnv);
+    await maybePullEnvAfterLink(
+      client,
+      path,
+      autoConfirm,
+      pullEnv,
+      noGitignore
+    );
     return {
       status: 'linked',
       org: match.org,
@@ -295,7 +310,9 @@ async function linkCrossTeamMatch({
     match.org.slug,
     successEmoji,
     autoConfirm,
-    pullEnv
+    pullEnv,
+    'Linked',
+    noGitignore
   );
   return { status: 'linked', org: match.org, project: match.project };
 }
@@ -313,6 +330,7 @@ export default async function setupAndLink(
     singleFile,
     nonInteractive = false,
     pullEnv = true,
+    noGitignore = false,
     v0,
     createIfNotFound = false,
   }: SetupAndLinkOptions
@@ -529,6 +547,7 @@ export default async function setupAndLink(
       successEmoji,
       autoConfirm,
       pullEnv,
+      noGitignore,
     });
   } else {
     const project = projectOrNewProjectName;
@@ -545,7 +564,9 @@ export default async function setupAndLink(
         org.slug,
         successEmoji,
         autoConfirm,
-        pullEnv
+        pullEnv,
+        'Linked',
+        noGitignore
       );
     }
     return { status: 'linked', org, project };
@@ -757,7 +778,8 @@ export default async function setupAndLink(
         successEmoji,
         autoConfirm,
         false, // don't prompt to pull env for newly created projects
-        'Created'
+        'Created',
+        noGitignore
       );
     }
 
