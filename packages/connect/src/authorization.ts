@@ -25,6 +25,12 @@ export interface ConnectAuthorizationOptions {
    * different region.
    */
   region?: string;
+
+  /**
+   * Abort the request. When the signal fires before the response is
+   * received, the underlying `fetch` rejects and the call throws.
+   */
+  signal?: AbortSignal;
 }
 
 export interface ConnectAuthorizationResponse {
@@ -105,6 +111,7 @@ export async function startAuthorization(
       Authorization: `Bearer ${vercelToken}`,
     },
     body: JSON.stringify(body),
+    signal: options?.signal,
   });
 
   if (!response.ok) {

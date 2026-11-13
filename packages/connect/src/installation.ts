@@ -23,6 +23,12 @@ export interface ConnectInstallationOptions {
    * different region.
    */
   region?: string;
+
+  /**
+   * Abort the request. When the signal fires before the response is
+   * received, the underlying `fetch` rejects and the call throws.
+   */
+  signal?: AbortSignal;
 }
 
 export interface ConnectInstallationResponse {
@@ -102,6 +108,7 @@ export async function experimental_startInstallation(
         expiresInMs: options.expiresInMs,
       }),
     }),
+    signal: options?.signal,
   });
 
   if (!response.ok) {

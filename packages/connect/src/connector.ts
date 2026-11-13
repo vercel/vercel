@@ -51,6 +51,7 @@ export async function getConnectorMetadata(
       Accept: 'application/json',
       Authorization: `Bearer ${vercelToken}`,
     },
+    signal: options?.signal,
   });
 
   if (!response.ok) {
