@@ -1,0 +1,164 @@
+data: {"type":"data-preamble","id":"preamble","data":{"sessionId":"00000000-0000-4000-8000-000000000000","text":"Identifying"}}
+
+data: {"type":"data-preamble","id":"preamble","data":{"sessionId":"00000000-0000-4000-8000-000000000000","text":"Identifying Ver"}}
+
+data: {"type":"data-preamble","id":"preamble","data":{"sessionId":"00000000-0000-4000-8000-000000000000","text":"Identifying Vercel Agent capabilities"}}
+
+data: {"type":"data-preamble","id":"preamble","data":{"sessionId":"00000000-0000-4000-8000-000000000000","text":"Identifying Vercel Agent capabilities."}}
+
+data: {"type":"start","messageId":"msg_answer"}
+
+data: {"type":"data-title","data":{"sessionId":"00000000-0000-4000-8000-000000000000","title":"Investigate Vercel deployment configuration"},"transient":true}
+
+data: {"type":"start-step"}
+
+data: {"type":"tool-input-start","toolCallId":"call_search","toolName":"KnowledgeSearch"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"{\""}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"query"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"\":\""}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"What"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" can"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" V"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"erc"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"el"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" Agent"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" do"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" projects"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" deployments"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" debugging"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" code"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" pull"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":" requests"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"\",\""}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"num"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"Results"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"\":"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"1"}
+
+data: {"type":"tool-input-delta","toolCallId":"call_search","inputTextDelta":"}"}
+
+data: {"type":"tool-input-available","toolCallId":"call_search","toolName":"KnowledgeSearch","input":{"query":"What can Vercel Agent do projects deployments debugging code pull requests","numResults":1}}
+
+data: {"type":"tool-output-available","toolCallId":"call_search","output":{"success":true,"results":[{"title":"","url":"https://vercel.com/docs/agent/chat","highlights":["# Chat\n\n> Vercel Agent Chat is available in Public Beta on Enterprise and Pro plans\n\nUse Vercel Agent to ask questions, investigate production issues, and take action on your behalf. You can use the same Vercel Agent from the Vercel dashboard or from Slack.\n\n## Choose where to chat\n\n- Dashboard: Start a private session with project and dashboard context. You can review session history, attach files, and approve plans in the dashboard.\n- Slack: Mention `@Vercel` in a supported Slack conversation to work with Vercel Agent in the context of your team's discussion.\n\nBoth surfaces use the same team-scoped authorization model. Vercel Agent operates within your existing permissions and asks for approval before it reads sensitive resources or performs a write. See Vercel Agent permissions for details.\n\n## What Vercel Agent can do\n\nVercel Agent can answer questions about your projects, investigate deployments and production behavior, and propose or perform approved actions. The available capabilities depend on your team, project, permissions, and feature rollout.\n\n- Ask questions grounded in your project and deployment data\n- Investigate failed deployments, runtime errors, and cost or performance issues\n- Read linked repositories and pull requests\n- Propose changes for your approval\n\nThe two chat surfaces have different context and interaction behavior. Read the documentation for the surface you plan to use before sharing sensitive information or approving a plan.\n\n## Data and privacy\n\nChat requests can include conversation context, project and team data, and files you attach. Dashboard chat can also include the current dashboard page context when that feature is enabled. Slack requests can include relevant messages from the Slack thread.\n\nFor information about stored content, staff review, product improvement, retention, and deletion, see the Vercel Agent privacy and data-use guidance."]}]}}
+
+data: {"type":"finish-step"}
+
+data: {"type":"start-step"}
+
+data: {"type":"text-start","id":"text_1"}
+
+data: {"type":"text-delta","id":"text_1","delta":"I"}
+
+data: {"type":"text-delta","id":"text_1","delta":" can"}
+
+data: {"type":"text-delta","id":"text_1","delta":" answer"}
+
+data: {"type":"text-delta","id":"text_1","delta":" V"}
+
+data: {"type":"text-delta","id":"text_1","delta":"erc"}
+
+data: {"type":"text-delta","id":"text_1","delta":"el"}
+
+data: {"type":"text-delta","id":"text_1","delta":" questions"}
+
+data: {"type":"text-delta","id":"text_1","delta":","}
+
+data: {"type":"text-delta","id":"text_1","delta":" investigate"}
+
+data: {"type":"text-delta","id":"text_1","delta":" deployment"}
+
+data: {"type":"text-delta","id":"text_1","delta":" failures"}
+
+data: {"type":"text-delta","id":"text_1","delta":","}
+
+data: {"type":"text-delta","id":"text_1","delta":" runtime"}
+
+data: {"type":"text-delta","id":"text_1","delta":" errors"}
+
+data: {"type":"text-delta","id":"text_1","delta":","}
+
+data: {"type":"text-delta","id":"text_1","delta":" costs"}
+
+data: {"type":"text-delta","id":"text_1","delta":" and"}
+
+data: {"type":"text-delta","id":"text_1","delta":" performance"}
+
+data: {"type":"text-delta","id":"text_1","delta":","}
+
+data: {"type":"text-delta","id":"text_1","delta":" review"}
+
+data: {"type":"text-delta","id":"text_1","delta":" linked"}
+
+data: {"type":"text-delta","id":"text_1","delta":" code"}
+
+data: {"type":"text-delta","id":"text_1","delta":","}
+
+data: {"type":"text-delta","id":"text_1","delta":" and"}
+
+data: {"type":"text-delta","id":"text_1","delta":" make"}
+
+data: {"type":"text-delta","id":"text_1","delta":" approved"}
+
+data: {"type":"text-delta","id":"text_1","delta":" changes"}
+
+data: {"type":"text-delta","id":"text_1","delta":" within"}
+
+data: {"type":"text-delta","id":"text_1","delta":" your"}
+
+data: {"type":"text-delta","id":"text_1","delta":" permissions"}
+
+data: {"type":"text-delta","id":"text_1","delta":" (["}
+
+data: {"type":"text-delta","id":"text_1","delta":"details"}
+
+data: {"type":"text-delta","id":"text_1","delta":"]("}
+
+data: {"type":"text-delta","id":"text_1","delta":"https"}
+
+data: {"type":"text-delta","id":"text_1","delta":"://"}
+
+data: {"type":"text-delta","id":"text_1","delta":"ver"}
+
+data: {"type":"text-delta","id":"text_1","delta":"cel"}
+
+data: {"type":"text-delta","id":"text_1","delta":".com"}
+
+data: {"type":"text-delta","id":"text_1","delta":"/docs"}
+
+data: {"type":"text-delta","id":"text_1","delta":"/"}
+
+data: {"type":"text-delta","id":"text_1","delta":"agent"}
+
+data: {"type":"text-delta","id":"text_1","delta":"/chat"}
+
+data: {"type":"text-delta","id":"text_1","delta":"))."}
+
+data: {"type":"text-end","id":"text_1"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"finish","finishReason":"stop"}
+
+data: [DONE]
+

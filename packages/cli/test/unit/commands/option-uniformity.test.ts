@@ -764,7 +764,7 @@ const GET_NAME_EXCEPTIONS = {
  */
 const MISSING_JSON_EXCEPTIONS = [
   'activity ls',
-  'agent',
+  'agent init',
   'agent-runs',
   'ai-gateway',
   'ai-gateway api-keys',

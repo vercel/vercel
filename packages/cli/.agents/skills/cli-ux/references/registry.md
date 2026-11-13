@@ -338,7 +338,7 @@ Every public command in the target CLI. **Kind** follows [grammar](guidelines.md
 | `setup`                                              | workflow | Sets up coding agents: `setup plugin`, `setup gateway` (`ai-gateway setup`), `setup skills`, `setup mcp` (`mcp`). |
 | `skills [query]`                                     | workflow | Discover agent skills for this project                                                                            |
 | `token-pass [setup]` (`tokenpass`)                   | alias    | `ai-gateway coding-agents setup --token-pass`; runs setup when bare and forwards its options                      |
-| `agent init`                                         | workflow | Generate an `AGENTS.md`                                                                                           |
+| `agent [prompt]`, `agent init`                       | workflow | Bare: chat with Vercel Agent in a terminal. With a prompt: one answer on stdout. `init` generates an `AGENTS.md`  |
 | `upgrade [version]`                                  | shortcut | `cli upgrade`                                                                                                     |
 | `install <integration>`                              | shortcut | `integrations add`                                                                                                |
 | `switch [team]`                                      | shortcut | `teams switch`                                                                                                    |

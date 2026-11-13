@@ -87,7 +87,7 @@ Account and Billing:
   whoami         Shows the username of the currently logged in user
 
 CLI and Integrations:
-  agent        Generate Vercel deployment guidance in AGENTS.md
+  agent        Chat with Vercel Agent about your projects
   api          Make authenticated HTTP requests to the Vercel API
   changelog    Show the latest Vercel product updates
   connect      Manage connectors
