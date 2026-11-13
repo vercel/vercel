@@ -97,6 +97,27 @@ export async function createGitMeta(
 }
 
 /**
+ * Resolves the directory to pass to `createGitMeta`. When deploying from within
+ * a Git repository, `project.rootDirectory` is resolved relative to the Git repository root.
+ * When deploying outside a Git repository, `project.rootDirectory` is resolved relative to `cwd`.
+ * If the resolved directory does not exist on disk, falls back to `cwd`.
+ */
+export function getGitMetaDirectory(
+  cwd: string,
+  rootDirectory?: string | null
+): string {
+  if (rootDirectory) {
+    const gitRoot = getGitRootDirectory({ cwd });
+    const baseDir = gitRoot || cwd;
+    const candidate = join(baseDir, rootDirectory);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return cwd;
+}
+
+/**
  * Returns the deployed directory path relative to the git repository root.
  * Empty string when `directory` is the repository root.
  */
