@@ -55,6 +55,7 @@ export {
 export {
   connectSlackCredentials,
   type ConnectSlackCredentialsParams,
+  type ConnectSlackCredentialsParamsResolver,
 } from './slack-credentials.js';
 export {
   connectSendblueCredentials,
