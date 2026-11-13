@@ -159,28 +159,17 @@ describe('agent init', () => {
     });
   });
 
-  describe('implicit init subcommand', () => {
-    it('should run init when no subcommand is provided', async () => {
+  describe('without the init subcommand', () => {
+    it('does not write AGENTS.md; a bare `agent` needs a prompt or a terminal', async () => {
       client.setArgv('agent', '--yes');
       client.stdin.isTTY = false;
+      client.stdin.end();
 
-      const exitCode = await agent(client);
-      expect(exitCode).toBe(0);
-
-      await expect(client.stderr).toOutput('Created AGENTS.md');
-
-      const content = await fs.readFile(join(cwd, 'AGENTS.md'), 'utf-8');
-      expect(content).toContain('<!-- VERCEL BEST PRACTICES START -->');
-      expect(content).toContain('## Best practices for developing on Vercel');
-      expect(content).toContain('<!-- VERCEL BEST PRACTICES END -->');
-    });
-  });
-
-  describe('unknown subcommand', () => {
-    it('should return 1 for unknown subcommand', async () => {
-      client.setArgv('agent', 'unknown');
       const exitCode = await agent(client);
       expect(exitCode).toBe(2);
+
+      await expect(client.stderr).toOutput('Missing prompt.');
+      expect(fs.existsSync(join(cwd, 'AGENTS.md'))).toBe(false);
     });
   });
 
