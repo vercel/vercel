@@ -33,6 +33,11 @@ export interface RefreshTokenOptions {
   expirationBufferMs?: number;
 }
 
+// In-flight refreshes, keyed by the resolved refresh parameters. Concurrent
+// callers share one refresh instead of each sending the same (rotating) OAuth
+// refresh token.
+const inFlightRefreshes = new Map<string, Promise<void>>();
+
 export async function refreshToken(
   options?: RefreshTokenOptions
 ): Promise<void> {
@@ -58,6 +63,28 @@ export async function refreshToken(
     );
   }
 
+  const key = JSON.stringify([
+    projectId,
+    teamId,
+    options?.expirationBufferMs ?? 0,
+  ]);
+  const inFlight = inFlightRefreshes.get(key);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const refresh = doRefreshToken(projectId, teamId, options).finally(() => {
+    inFlightRefreshes.delete(key);
+  });
+  inFlightRefreshes.set(key, refresh);
+  return refresh;
+}
+
+async function doRefreshToken(
+  projectId: string,
+  teamId: string | undefined,
+  options?: RefreshTokenOptions
+): Promise<void> {
   let maybeToken = loadToken(projectId);
 
   if (

@@ -39,8 +39,14 @@ export async function getVercelToken(
   }
 
   if (!authConfig.refreshToken) {
-    // No refresh token available, clear auth and throw
-    writeAuthConfig(configDir, {});
+    // No refresh token available. Another process may have saved a fresh login
+    // in the meantime. Otherwise leave `auth.json` untouched and throw.
+    const rotatedToken = getRotatedAccessToken(
+      configDir,
+      authConfig,
+      options?.expirationBufferMs
+    );
+    if (rotatedToken) return rotatedToken;
     throw new RefreshAccessTokenFailedError('No refresh token available');
   }
 
@@ -52,8 +58,6 @@ export async function getVercelToken(
     const [tokensError, tokens] = await processTokenResponse(tokenResponse);
 
     if (tokensError || !tokens) {
-      // Refresh failed - clear auth
-      writeAuthConfig(configDir, {});
       throw new RefreshAccessTokenFailedError(tokensError);
     }
 
@@ -68,8 +72,17 @@ export async function getVercelToken(
     // Token is guaranteed to be defined since we just set it from tokens.access_token
     return updatedConfig.token!;
   } catch (error) {
-    // Network error or other failure - clear auth
-    writeAuthConfig(configDir, {});
+    // The refresh failed (OAuth error, network error, ...). Never erase
+    // `auth.json` here: the refresh token may have been rotated by another
+    // caller or process, and a transient failure must not log the user out.
+    // If another process saved a fresh login in the meantime, use it.
+    const rotatedToken = getRotatedAccessToken(
+      configDir,
+      authConfig,
+      options?.expirationBufferMs
+    );
+    if (rotatedToken) return rotatedToken;
+
     if (
       error instanceof AccessTokenMissingError ||
       error instanceof RefreshAccessTokenFailedError
@@ -78,6 +91,28 @@ export async function getVercelToken(
     }
     throw new RefreshAccessTokenFailedError(error);
   }
+}
+
+/**
+ * Re-reads `auth.json` and returns its access token if it differs from the
+ * login we started with and is still valid, which means another caller or
+ * process has already refreshed the login.
+ */
+function getRotatedAccessToken(
+  configDir: string,
+  previous: AuthConfig,
+  expirationBufferMs?: number
+): string | undefined {
+  const latest = tryReadAuthConfig(configDir);
+  if (
+    latest &&
+    (latest.token !== previous.token ||
+      latest.refreshToken !== previous.refreshToken) &&
+    isValidAccessToken(latest, expirationBufferMs)
+  ) {
+    return latest.token;
+  }
+  return undefined;
 }
 
 function isValidAccessToken(
