@@ -149,6 +149,7 @@ import {
 import { UploadErrorMissingArchive } from '../../util/deploy/process-deployment';
 import { isGuidanceEnabled } from '../../util/guidance/is-enabled';
 import { validateJsonOutput } from '../../util/output-format';
+import { resolvePerDirectoryLinkRoot } from '../../util/build/repo-root';
 import {
   handleAnonymousDeploymentError,
   runImplicitBuild,
@@ -985,9 +986,18 @@ async function handleContinueSubcommand(
   }
 
   const { org } = link;
+  let rootDirectory = link.project.rootDirectory;
 
   if (link.repoRoot) {
     cwd = link.repoRoot;
+  }
+
+  // The continued deployment is implicitly prebuilt, so resolve the same root
+  // `vercel build` used for per-directory links in a workspace.
+  const perDirectoryRoot = resolvePrebuiltPerDirectoryRoot(link, cwd);
+  if (perDirectoryRoot) {
+    cwd = perDirectoryRoot.cwd;
+    rootDirectory = perDirectoryRoot.rootDirectory;
   }
 
   client.config.currentTeam = org.type === 'team' ? org.id : undefined;
@@ -1008,8 +1018,8 @@ async function handleContinueSubcommand(
 
   // Resolve vercelOutputDir - prebuilt is implicit for continue
   let vercelOutputDir: string = join(cwd, '.vercel/output');
-  if (link.repoRoot && link.project.rootDirectory) {
-    vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
+  if (rootDirectory && (link.repoRoot || perDirectoryRoot)) {
+    vercelOutputDir = join(cwd, rootDirectory, '.vercel/output');
   }
 
   const prebuiltExists = await fs.pathExists(vercelOutputDir);
@@ -1493,7 +1503,7 @@ async function runDefaultDeploy(
   );
 
   const { org, project } = link;
-  const rootDirectory = singleFile ? null : project.rootDirectory;
+  let rootDirectory = singleFile ? null : project.rootDirectory;
   const sourceFilesOutsideRootDirectory =
     project.sourceFilesOutsideRootDirectory ?? true;
   const projectCwd = cwd;
@@ -1515,10 +1525,21 @@ async function runDefaultDeploy(
   // build, so it is copied into a Build Output directory of its own.
   let singleFileOutputRoot: string | undefined;
   if (prebuilt) {
+    // Anonymous and single-file deployments have no real project link to
+    // re-anchor.
+    const perDirectoryRoot =
+      anonymousLink || singleFile
+        ? undefined
+        : resolvePrebuiltPerDirectoryRoot(link, cwd);
+    if (perDirectoryRoot) {
+      cwd = perDirectoryRoot.cwd;
+      rootDirectory = perDirectoryRoot.rootDirectory;
+    }
+
     vercelOutputDir = join(cwd, '.vercel/output');
 
-    if (link.repoRoot && link.project.rootDirectory) {
-      vercelOutputDir = join(cwd, link.project.rootDirectory, '.vercel/output');
+    if (rootDirectory && (link.repoRoot || perDirectoryRoot)) {
+      vercelOutputDir = join(cwd, rootDirectory, '.vercel/output');
     }
 
     let prebuiltExists = await fs.pathExists(vercelOutputDir);
@@ -1739,7 +1760,7 @@ async function runDefaultDeploy(
   // project `rootDirectory` setting (though they often resolve to the same path).
   const gitMetadata = singleFile
     ? Promise.resolve(undefined)
-    : createGitMeta(join(cwd, project.rootDirectory || ''), project);
+    : createGitMeta(join(cwd, rootDirectory || ''), project);
   // Validation can return before metadata is consumed; retain errors for the
   // eventual await without allowing an unhandled rejection in the meantime.
   void gitMetadata.catch(() => {});
@@ -1841,11 +1862,7 @@ async function runDefaultDeploy(
 
     const { packageJson } = singleFile
       ? { packageJson: null }
-      : await findPackageJson(
-          join(cwd, project?.rootDirectory ?? ''),
-          true,
-          cwd
-        );
+      : await findPackageJson(join(cwd, rootDirectory ?? ''), true, cwd);
     let nodeVersion: string | undefined;
     if (packageJson?.engines?.node) {
       try {
@@ -2765,6 +2782,37 @@ const addProcessEnv = async (
     }
   }
 };
+
+/**
+ * `vercel build` re-anchors a per-directory link (`<dir>/.vercel/project.json`)
+ * to the workspace root that claims the directory and writes `.vc-config.json`
+ * `filePathMap` entries relative to that root. A repo-level link reports its
+ * `repoRoot` directly, but a per-directory link does not, so `--prebuilt`
+ * would join those entries onto the linked subdirectory instead. Resolve the
+ * same root here so build and deploy agree.
+ *
+ * Returns `undefined` when there is nothing to re-anchor: a repo-level link,
+ * or a directory that no ancestor workspace claims as a member package.
+ */
+function resolvePrebuiltPerDirectoryRoot(
+  link: { repoRoot?: string; project: { rootDirectory?: string | null } },
+  cwd: string
+): { cwd: string; rootDirectory: string } | undefined {
+  if (link.repoRoot) {
+    return undefined;
+  }
+  const resolved = resolvePerDirectoryLinkRoot(cwd, link.project.rootDirectory);
+  if (resolved.advisory) {
+    output.warn(resolved.advisory);
+  }
+  if (resolved.resolvedRootDirectory === '') {
+    return undefined;
+  }
+  return {
+    cwd: resolved.repoRoot,
+    rootDirectory: resolved.resolvedRootDirectory,
+  };
+}
 
 async function handleContinueDeployment({
   client,

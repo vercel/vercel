@@ -275,6 +275,15 @@ export async function buildFileTree(
       // Warn with a bounded list of colliding paths so the user can fix them.
       // See https://github.com/vercel/vercel/issues/17386.
       const userIg = await getUserIgnore(path);
+      // When the deployment root is a workspace root that re-anchors a linked
+      // app (`rootDirectory`), the app's own `.vercelignore` / `.nowignore`
+      // lives in the app directory and its rules are relative to that
+      // directory. Apply them too so re-anchoring does not bypass them.
+      const appDir = rootDirectory ? join(path, rootDirectory) : undefined;
+      const appIg = appDir ? await getUserIgnore(appDir) : null;
+      const ignoreSources: { ig: UserIgnore; base: string }[] = [];
+      if (userIg) ignoreSources.push({ ig: userIg, base: path });
+      if (appDir && appIg) ignoreSources.push({ ig: appIg, base: appDir });
       const ignoredFilePathMap = new Map<
         string,
         Omit<FilePathMapIgnoreViolation, 'path'>
@@ -308,8 +317,23 @@ export async function buildFileTree(
                 'Prebuilt functions reference version-control files that cannot be uploaded. Exclude version-control files from tracing and rebuild the prebuilt output.',
             });
           }
-          if (userIg && userIg.ig.ignores(posixRel)) {
-            if (isFilePathMapIgnoreException(posixRel)) {
+          // Apply the project's rules and, when re-anchored at a workspace
+          // root, the linked app's own rules (relative to the app directory).
+          let ignoredBy: {
+            ig: UserIgnore;
+            posixRel: string;
+          } | null = null;
+          for (const source of ignoreSources) {
+            const sourceRel = relative(source.base, absPath);
+            if (sourceRel.startsWith('..') || isAbsolute(sourceRel)) continue;
+            const sourcePosixRel = sourceRel.split(sep).join('/');
+            if (source.ig.ig.ignores(sourcePosixRel)) {
+              ignoredBy = { ig: source.ig, posixRel: sourcePosixRel };
+              break;
+            }
+          }
+          if (ignoredBy) {
+            if (isFilePathMapIgnoreException(ignoredBy.posixRel)) {
               debug(
                 `Keeping "filePathMap" entry "${v}": matches a default-ignored dependency/output path`
               );
@@ -330,7 +354,10 @@ export async function buildFileTree(
             } else {
               ignoredFilePathMap.set(
                 posixRel,
-                findMatchingIgnoreRule(userIg.ignoreFile, posixRel)
+                findMatchingIgnoreRule(
+                  ignoredBy.ig.ignoreFile,
+                  ignoredBy.posixRel
+                )
               );
               continue;
             }
@@ -344,7 +371,7 @@ export async function buildFileTree(
           .map(([ignoredPath, match]) => ({ path: ignoredPath, ...match }));
         warning = formatFilePathMapIgnoreWarning(
           violations,
-          userIg?.ignoreFileName || '.vercelignore',
+          (userIg ?? appIg)?.ignoreFileName || '.vercelignore',
           ignoredFilePathMapTruncated
         );
       }
