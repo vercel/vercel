@@ -67,7 +67,12 @@ export async function getNextjsEdgeFunctionSource(
 
 function getWasmImportStatements(wasm: { name: string }[] = []) {
   return wasm
-    .filter(({ name }) => name.startsWith('wasm_'))
+    .filter(
+      ({ name }, index, self) =>
+        name.startsWith('wasm_') &&
+        // Prevents duplicated require statements for the same wasm file.
+        self.findIndex(t => t.name === name) === index
+    )
     .map(({ name }) => {
       const pathname = `/wasm/${name}.wasm`;
       return `const ${name} = require(${JSON.stringify(pathname)});`;
