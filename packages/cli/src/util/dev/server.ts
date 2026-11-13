@@ -1,6 +1,6 @@
 import url, { URL } from 'url';
 import http from 'http';
-import { Socket } from 'net';
+import { Socket, isIP } from 'net';
 import fs from 'fs-extra';
 import ms from 'ms';
 import chalk from 'chalk';
@@ -2439,6 +2439,15 @@ export default class DevServer {
     this.server.on('upgrade', async (req, socket, head) => {
       await this.startPromise;
 
+      // DNS-rebinding protection for WebSocket upgrades.
+      if (!this.isValidHostHeader(req.headers.host)) {
+        socket.write(
+          'HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\n\r\nInvalid Host header.'
+        );
+        socket.destroy();
+        return;
+      }
+
       if (this.orchestrator || this.sidecarOrchestrator) {
         // Services V1 and sidecars use routePrefixes for WebSocket routing.
         const pathname = url.parse(req.url || '/').pathname || '/';
@@ -3117,6 +3126,65 @@ export default class DevServer {
   };
 
   /**
+   * Returns true when the request Host header is a safe local address.
+   *
+   * Rejects requests whose Host header points to a foreign domain while the
+   * socket is bound to localhost — the classic DNS-rebinding attack vector.
+   * Pattern matches webpack-dev-server `allowedHosts` and Vite host-check logic.
+   */
+  private isValidHostHeader(host: string | undefined): boolean {
+    if (!host) {
+      // Absence of Host is technically invalid HTTP/1.1, but be lenient;
+      // curl and programmatic clients often omit it on loopback connections.
+      return true;
+    }
+
+    // Strip port suffix so we compare only the hostname part.
+    // IPv6 addresses are wrapped in brackets: [::1]:3000 → ::1
+    const hostname = host
+      .replace(/:\d+$/, '') // strip :PORT
+      .replace(/^\[(.+)\]$/, '$1'); // unwrap [IPv6]
+
+    // Always allow loopback addresses.
+    const loopback = new Set([
+      'localhost',
+      '127.0.0.1',
+      '::1',
+      '::ffff:127.0.0.1',
+    ]);
+    if (loopback.has(hostname.toLowerCase())) {
+      return true;
+    }
+
+    // Always allow IP-literal Host headers (e.g. a LAN address when bound to
+    // `0.0.0.0`). DNS rebinding relies on an attacker-controlled domain name
+    // resolving to the local machine, which cannot happen for a bare IP, so
+    // LAN development keeps working while foreign domain names are rejected
+    // even when the server listens on all interfaces (the default).
+    if (isIP(hostname) !== 0) {
+      return true;
+    }
+
+    // Allow the explicit listen address when the server is already running.
+    if (this._address) {
+      const listenHostname = this._address.hostname.toLowerCase();
+      if (hostname.toLowerCase() === listenHostname) {
+        return true;
+      }
+      // Containers reach the local resource proxies (e.g. schedules) through
+      // the `host.docker.internal` alias of this server.
+      if (
+        host.toLowerCase() ===
+        `host.docker.internal${this._address.port ? `:${this._address.port}` : ''}`
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * DevServer HTTP handler
    */
   devServerHandler: HttpHandler = async (
@@ -3135,6 +3203,17 @@ export default class DevServer {
     }
 
     const requestId = generateRequestId(this.podId);
+
+    // DNS-rebinding protection: reject requests whose Host header does not
+    // resolve to this server's listen address or a loopback address.
+    if (!this.isValidHostHeader(req.headers.host)) {
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'text/plain');
+      res.end(
+        'Invalid Host header. vercel dev only accepts requests from localhost.'
+      );
+      return;
+    }
 
     if (this.stopping) {
       res.setHeader('Connection', 'close');
