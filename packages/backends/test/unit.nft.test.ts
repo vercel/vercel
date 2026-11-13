@@ -101,4 +101,49 @@ describe('nft', () => {
       Buffer.compare((traced as FileBlob).data as Buffer, nativeAddon)
     ).toBe(0);
   });
+
+  it('traces imports in TypeScript files that use decorators', async () => {
+    const repoRootPath = await mkdtemp(join(tmpdir(), 'backends-nft-deco-'));
+    tmpDirs.push(repoRootPath);
+
+    const packagePath = join(repoRootPath, 'node_modules', 'decorated-only');
+    await mkdir(packagePath, { recursive: true });
+    await writeFile(
+      join(packagePath, 'package.json'),
+      JSON.stringify({ name: 'decorated-only', main: 'index.js' })
+    );
+    await writeFile(join(packagePath, 'index.js'), 'module.exports = 1;');
+
+    const entryRelPath = 'service.ts';
+    await writeFile(
+      join(repoRootPath, entryRelPath),
+      [
+        "import decoratedOnly from 'decorated-only';",
+        '',
+        'function Injectable() {',
+        '  return (_target: unknown) => {};',
+        '}',
+        '',
+        '@Injectable()',
+        'export class Service {',
+        '  value = decoratedOnly;',
+        '}',
+        '',
+      ].join('\n')
+    );
+
+    const files = {};
+
+    await nft({
+      workPath: repoRootPath,
+      repoRootPath,
+      localBuildFiles: new Set([join(repoRootPath, entryRelPath)]),
+      files,
+      span: new Span({ name: 'test' }),
+      ignoreNodeModules: false,
+      traceFiles: true,
+    });
+
+    expect(files).toHaveProperty('node_modules/decorated-only/index.js');
+  });
 });
