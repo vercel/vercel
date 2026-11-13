@@ -52,11 +52,28 @@ export const isErrorLike = (error: unknown): error is ErrorLike =>
   isObject(error) && 'message' in error;
 
 /**
+ * Extracts a human-readable message from an `Error#cause`, if one is
+ * present and itself an `Error` (or error-like object) or a `string`.
+ */
+const causeToString = (cause: unknown): string | undefined => {
+  if (isError(cause) || isErrorLike(cause)) return cause.message;
+  if (typeof cause === 'string') return cause;
+  return undefined;
+};
+
+/**
  * Parses errors to string, useful for getting the error message in a
  * `try...catch` statement.
+ *
+ * When the error has a `cause` (e.g. the underlying network error wrapped by
+ * a `TypeError: fetch failed`), its message is appended so the real reason
+ * for the failure isn't silently swallowed.
  */
 export const errorToString = (error: unknown, fallback?: string): string => {
-  if (isError(error) || isErrorLike(error)) return error.message;
+  if (isError(error) || isErrorLike(error)) {
+    const causeMessage = causeToString((error as { cause?: unknown }).cause);
+    return causeMessage ? `${error.message}: ${causeMessage}` : error.message;
+  }
 
   if (typeof error === 'string') return error;
 

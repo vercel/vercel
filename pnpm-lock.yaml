@@ -1403,6 +1403,9 @@ importers:
       tar-fs:
         specifier: 1.16.3
         version: 1.16.3
+      undici:
+        specifier: 5.29.0
+        version: 5.29.0
     devDependencies:
       '@types/async-retry':
         specifier: 1.4.5

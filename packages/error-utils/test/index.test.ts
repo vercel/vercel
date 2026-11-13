@@ -124,6 +124,18 @@ describe('errorToString', () => {
   test('returns default fallback message when first argument is not an error, error like, nor a string, and the second argument is not provided', () => {
     expect(errorToString(null)).toStrictEqual('An unknown error has ocurred.');
   });
+  test('appends the `cause` message when the error has an Error cause', () => {
+    const error = new Error(message, { cause: new Error('root cause') });
+    expect(errorToString(error)).toStrictEqual(`${message}: root cause`);
+  });
+  test('appends the `cause` message when the error has a string cause', () => {
+    const error = new Error(message, { cause: 'root cause' });
+    expect(errorToString(error)).toStrictEqual(`${message}: root cause`);
+  });
+  test('ignores a `cause` that is not an error, error-like, or string', () => {
+    const error = new Error(message, { cause: 42 });
+    expect(errorToString(error)).toStrictEqual(message);
+  });
 });
 
 describe('getSystemErrorMessage', () => {

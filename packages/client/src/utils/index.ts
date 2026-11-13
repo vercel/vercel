@@ -4,6 +4,7 @@ import { join, sep, relative, basename, isAbsolute } from 'path';
 import { Readable } from 'stream';
 import { URL } from 'url';
 import ignore from 'ignore';
+import { fetch as undiciFetch } from 'undici';
 import { pkgVersion } from '../pkg';
 import { NowBuildError } from '@vercel/build-utils';
 import { FetchDispatcher, VercelClientOptions, VercelConfig } from '../types';
@@ -611,7 +612,22 @@ export const fetchApi = async (
   debug(request);
   time = Date.now();
   try {
-    const res = await fetch(url, opts as unknown as NativeRequestInit);
+    // When a custom dispatcher is configured (e.g. the CLI's proxy-aware
+    // `EnvProxyDispatcher`, threaded through from `getFetchDispatcher()`),
+    // issue the request through the bundled `undici` package's own
+    // `fetch()` instead of the runtime's native `globalThis.fetch`.
+    //
+    // Node's native fetch is backed by whichever `undici` major version
+    // ships internally with that Node release, and the dispatcher/handler
+    // shape it expects is not a stable, cross-version public API. Handing
+    // it a dispatcher built from a *different* undici major (e.g. the
+    // bundled undici@5) than the one powering `globalThis.fetch` (e.g.
+    // undici@8 on Node 26) throws `TypeError: fetch failed`. Using the
+    // bundled undici's own `fetch` guarantees the dispatcher and fetch
+    // implementation always agree, regardless of the host Node version.
+    // See vercel/vercel#17629.
+    const doFetch = opts.dispatcher ? undiciFetch : fetch;
+    const res = await doFetch(url, opts as unknown as NativeRequestInit);
     const requestId = res.headers.get('x-vercel-id');
     const id =
       requestId && /^[a-zA-Z0-9:_.-]{1,200}$/.test(requestId)
