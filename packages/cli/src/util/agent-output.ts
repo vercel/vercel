@@ -616,6 +616,30 @@ export function enrichActionRequiredWithInvokingCommand(
 }
 
 /**
+ * Writes `payload` as pretty-printed JSON to `client.stdout`.
+ *
+ * When stdout is a pipe, Node writes asynchronously on some platforms (e.g.
+ * macOS, where the pipe buffer is small), so calling `process.exit()` right
+ * after `write()` can drop everything past the first buffer-full of data and
+ * leave consumers with truncated JSON. Switching the underlying handle to
+ * blocking mode first makes the write synchronous, so the full payload is
+ * flushed before the process exits.
+ */
+function writeJsonToStdout(client: Client, payload: unknown): void {
+  const handle = (
+    client.stdout as unknown as {
+      _handle?: { setBlocking?: (blocking: boolean) => void };
+    }
+  )._handle;
+  try {
+    handle?.setBlocking?.(true);
+  } catch {
+    // Best effort: fall back to the default (possibly async) write.
+  }
+  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+}
+
+/**
  * When non-interactive (`client.nonInteractive` or `--non-interactive` on argv),
  * writes the action_required payload as JSON to stdout and exits with exitCode
  * (by default 2 for a usage error reason, otherwise 1).
@@ -649,7 +673,7 @@ export function writeActionRequired(
       'Run one of the commands in next[] to complete without prompting.';
   }
   recordCliError({ code: payload.reason });
-  client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
+  writeJsonToStdout(client, enriched);
 }
 
 /** True when argv explicitly requests non-interactive mode (matches main `index.ts`). */
@@ -712,7 +736,7 @@ export function writeAgentError(
   // The message can hold resource names, so only the reason is recorded
   recordCliError({ code: payload.reason, reportOnSuccess: true });
   trackAgentError(client, enriched);
-  client.stdout.write(`${JSON.stringify(enriched, null, 2)}\n`);
+  writeJsonToStdout(client, enriched);
 }
 
 /**
@@ -731,7 +755,7 @@ export function outputAgentSuccess(
   if (!payload.hint && payload.next?.length) {
     payload.hint = 'Follow up with one of the commands in next[].';
   }
-  client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+  writeJsonToStdout(client, payload);
   process.exit(exitCode);
 }
 
