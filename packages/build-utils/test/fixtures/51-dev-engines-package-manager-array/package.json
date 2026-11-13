@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "name": "51-dev-engines-package-manager-array",
+  "devEngines": {
+    "packageManager": [
+      {
+        "name": "pnpm",
+        "version": "^11.0.0",
+        "onFail": "error"
+      },
+      {
+        "name": "yarn",
+        "version": "^4.0.0",
+        "onFail": "ignore"
+      }
+    ]
+  }
+}

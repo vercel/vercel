@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "name": "52-dev-engines-package-manager-ignored-with-packagemanager",
+  "packageManager": "npm@10.7.0",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.0.0",
+      "onFail": "error"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "name": "53-dev-engines-package-manager-unknown-name",
+  "devEngines": {
+    "packageManager": {
+      "name": "deno",
+      "version": "^2.0.0",
+      "onFail": "error"
+    }
+  }
+}
