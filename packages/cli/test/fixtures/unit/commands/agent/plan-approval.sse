@@ -1,0 +1,34 @@
+data: {"type":"start","messageId":"msg_plan"}
+
+data: {"type":"start-step"}
+
+data: {"type":"reasoning-start","id":"r1"}
+
+data: {"type":"reasoning-delta","id":"r1","delta":"Need to redeploy."}
+
+data: {"type":"reasoning-end","id":"r1"}
+
+data: {"type":"text-start","id":"t1"}
+
+data: {"type":"text-delta","id":"t1","delta":"Let me check the build logs."}
+
+data: {"type":"text-end","id":"t1"}
+
+data: {"type":"tool-input-start","toolCallId":"call_bash","toolName":"Bash"}
+
+data: {"type":"tool-input-available","toolCallId":"call_bash","toolName":"Bash","input":{"command":"vercel inspect --logs"}}
+
+data: {"type":"tool-output-error","toolCallId":"call_bash","errorText":"exit 1"}
+
+data: {"type":"tool-input-start","toolCallId":"call_plan","toolName":"ProposePlan"}
+
+data: {"type":"tool-input-available","toolCallId":"call_plan","toolName":"ProposePlan","input":{"title":"Redeploy","summary":"Redeploy the latest commit.","tasks":[{"id":"task_01","title":"Redeploy production","scopes":["read-write:deployment"]}]}}
+
+data: {"type":"tool-approval-request","approvalId":"approval_1","toolCallId":"call_plan"}
+
+data: {"type":"finish-step"}
+
+data: {"type":"finish","finishReason":"stop"}
+
+data: [DONE]
+

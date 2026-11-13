@@ -1,0 +1,20 @@
+data: {"type":"start","messageId":"msg_plan"}
+
+data: {"type":"tool-output-available","toolCallId":"call_plan","output":{"planId":"plan_1","status":"active","message":"approved","autoApproved":false,"scopes":[]}}
+
+data: {"type":"start-step"}
+
+data: {"type":"tool-input-start","toolCallId":"call_upd","toolName":"UpdatePlanTask"}
+
+data: {"type":"tool-output-available","toolCallId":"call_orphan","output":{}}
+
+data: {"type":"text-start","id":"t2"}
+
+data: {"type":"text-delta","id":"t2","delta":"Done."}
+
+data: {"type":"text-end","id":"t2"}
+
+data: {"type":"finish","finishReason":"stop"}
+
+data: [DONE]
+
