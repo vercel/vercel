@@ -530,7 +530,11 @@ export async function getDynamicRoutes({
         if (isAppClientSegmentCacheEnabled && !isAppPPREnabled) {
           routes.push({
             src: '^/(?<path>.+)(?<rscSuffix>\\.segments/.+\\.segment\\.rsc)(?:/)?$',
-            dest: `/$path${isAppPPREnabled ? '.prefetch.rsc' : '.rsc'}`,
+            // The `src` is prefixed with the basePath by
+            // `localizeDynamicRoutes`, so the `dest` must keep it too.
+            dest: `${
+              !isDev ? path.posix.join('/', entryDirectory, '/') : '/'
+            }$path${isAppPPREnabled ? '.prefetch.rsc' : '.rsc'}`,
             check: true,
             override: true,
           });

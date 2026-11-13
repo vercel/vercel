@@ -2553,6 +2553,34 @@ export async function serverBuild({
       // with that routing section
       ...afterFilesRewrites,
 
+      // when a basePath is used the `/index.rsc` normalization above leaves
+      // the bare basePath (e.g. `/docs`), which doesn't resolve to the
+      // `index.rsc` output, so restore it for RSC requests. This is only
+      // needed when the root is its own page (`app/page`); a root served by a
+      // dynamic route such as `app/[[...slug]]/page` must keep resolving
+      // through that route, since `/index.rsc` would match it with
+      // `slug=['index']` instead of an empty slug.
+      ...(appPathRoutesManifest &&
+      Object.values(appPathRoutesManifest).includes('/') &&
+      entryDirectory &&
+      entryDirectory !== '.'
+        ? [
+            {
+              src: `^${path.posix.join('/', entryDirectory)}/?$`,
+              has: [
+                {
+                  type: 'header',
+                  key: rscHeader,
+                  value: '1',
+                },
+              ],
+              dest: path.posix.join('/', entryDirectory, '/index.rsc'),
+              continue: true,
+              override: true,
+            },
+          ]
+        : []),
+
       // ensure non-normalized /.rsc from rewrites is handled
       ...(appPathRoutesManifest
         ? [
