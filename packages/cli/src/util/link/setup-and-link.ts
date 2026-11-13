@@ -314,6 +314,7 @@ export default async function setupAndLink(
     nonInteractive = false,
     pullEnv = true,
     v0,
+    failIfNotFound = false,
     createIfNotFound = false,
   }: SetupAndLinkOptions
 ): Promise<ProjectLinkResultWithGitGuidance> {
@@ -481,9 +482,22 @@ export default async function setupAndLink(
         {
           remoteNames: gitRemoteNames,
           currentRemoteName: currentGitRemoteName,
-        }
+        },
+        Boolean(gitProjectName && failIfNotFound)
       );
     } catch (err) {
+      if (err instanceof ProjectNotFound) {
+        // Explicit `--project` name didn't resolve under the now-known org;
+        // bail instead of falling through to project creation for a typo.
+        // `ensureLink` reports this (it has `commandName`, which this
+        // function doesn't receive).
+        return {
+          status: 'error',
+          exitCode: 1,
+          reason: 'PROJECT_NOT_FOUND',
+          orgId: org.id,
+        };
+      }
       if (
         err instanceof Error &&
         (err as NodeJS.ErrnoException).code === 'HEADLESS'

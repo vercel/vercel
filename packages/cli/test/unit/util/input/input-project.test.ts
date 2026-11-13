@@ -48,4 +48,75 @@ describe('inputProject', () => {
       inputProject(client, org, 'my-app', false, false)
     ).rejects.toMatchObject({ code: 'HEADLESS' });
   });
+
+  describe('failIfNotFound', () => {
+    it('throws ProjectNotFound instead of returning the name when auto-confirmed', async () => {
+      mockedGetProject.mockResolvedValue(new ProjectNotFound('my-proejct'));
+
+      await expect(
+        inputProject(
+          client,
+          org,
+          'my-proejct',
+          true, // autoConfirm
+          false,
+          false,
+          false,
+          [],
+          undefined,
+          true // failIfNotFound
+        )
+      ).rejects.toBeInstanceOf(ProjectNotFound);
+    });
+
+    it('throws ProjectNotFound instead of prompting to create/link when interactive', async () => {
+      mockedGetProject.mockResolvedValue(new ProjectNotFound('my-proejct'));
+
+      await expect(
+        inputProject(
+          client,
+          org,
+          'my-proejct',
+          false, // autoConfirm
+          false,
+          false,
+          false,
+          [],
+          undefined,
+          true // failIfNotFound
+        )
+      ).rejects.toBeInstanceOf(ProjectNotFound);
+    });
+
+    it('still returns the resolved project when the name does exist', async () => {
+      const project = {
+        id: 'prj_1',
+        name: 'my-app',
+        accountId: org.id,
+        createdAt: 0,
+        updatedAt: 0,
+      };
+      mockedGetProject.mockImplementation(async (_c, name: string) => {
+        if (name === 'my-app') {
+          return project as Awaited<ReturnType<typeof getProjectByIdOrName>>;
+        }
+        return new ProjectNotFound(name);
+      });
+
+      await expect(
+        inputProject(
+          client,
+          org,
+          'my-app',
+          true, // autoConfirm
+          false,
+          false,
+          false,
+          [],
+          undefined,
+          true // failIfNotFound
+        )
+      ).resolves.toEqual(project);
+    });
+  });
 });
