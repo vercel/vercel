@@ -275,6 +275,31 @@ export function getPathFromRoute(
   return { path, rePath };
 }
 
+/**
+ * Computes a specificity score for a route path (as returned by
+ * `getPathFromRoute()`), modeled after React Router's own route ranking
+ * (`computeScore()` in `react-router`): static segments score higher than
+ * dynamic segments, which score higher than splats, and routes with more
+ * segments score higher than shorter ones. Higher scores are more specific.
+ */
+export function getRouteSpecificityScore(path: string): number {
+  const segments = path.split('/');
+  let score = segments.length;
+  if (segments.includes('*')) {
+    // Splat penalty
+    score -= 2;
+  }
+  return segments
+    .filter(segment => segment !== '*')
+    .reduce((acc, segment) => {
+      if (segment === '') return acc + 1; // empty segment
+      if (/^\(?:[\w-]+\)?$/.test(segment)) {
+        return acc + 3; // dynamic segment
+      }
+      return acc + 10; // static segment
+    }, score);
+}
+
 export function getRegExpFromPath(rePath: string): RegExp | false {
   const keys: Key[] = [];
   const re = pathToRegexp('923', rePath, keys);
