@@ -227,7 +227,9 @@ export default async function main(client: Client) {
           ? 'protection enable'
           : args[0] === 'disable'
             ? 'protection disable'
-            : subcommandOriginal
+            : args[0] === 'status'
+              ? 'protection status'
+              : subcommandOriginal
       );
       exitCode = await protection(client, args);
       break;

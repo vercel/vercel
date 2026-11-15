@@ -3075,8 +3075,10 @@ Commands:
   access-groups [name]
     List access groups for a project
   protection [name]
-    Show or toggle deployment protection
-    settings for a project
+    Show or change Deployment Protection
+    settings (Vercel Authentication,
+    Password Protection, and more) for a
+    project
   web-analytics
     Enable or disable Web Analytics for
     a project
@@ -3134,8 +3136,9 @@ Commands:
   list                      Show all projects in the selected scope (default)
   members [name]            List, add, or remove project members for a project
   access-groups [name]      List access groups for a project
-  protection [name]         Show or toggle deployment protection settings for a
-                            project
+  protection [name]         Show or change Deployment Protection settings
+                            (Vercel Authentication, Password Protection, and
+                            more) for a project
   web-analytics             Enable or disable Web Analytics for a project
   speed-insights            Enable or disable Speed Insights for a project
   pause [project]           Pause production traffic for a project (visitors
@@ -3176,7 +3179,8 @@ Commands:
   list                      Show all projects in the selected scope (default)
   members [name]            List, add, or remove project members for a project
   access-groups [name]      List access groups for a project
-  protection [name]         Show or toggle deployment protection settings for a project
+  protection [name]         Show or change Deployment Protection settings (Vercel Authentication, Password Protection,
+                            and more) for a project
   web-analytics             Enable or disable Web Analytics for a project
   speed-insights            Enable or disable Speed Insights for a project
   pause [project]           Pause production traffic for a project (visitors will see an error page)

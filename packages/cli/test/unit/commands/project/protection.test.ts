@@ -889,3 +889,238 @@ describe('project protection (automation bypass)', () => {
     await expect(client.stderr).toOutput('requires --protection-bypass-secret');
   });
 });
+
+describe('project protection --deployment-type and status', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    client.nonInteractive = false;
+  });
+
+  it('keeps the legacy default for bare `enable --sso`', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv('project', 'protection', 'enable', 'my-project', '--sso');
+    expect(await project(client)).toBe(0);
+    expect(fetch).toHaveBeenCalledWith(
+      '/v9/projects/prj_123',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: {
+          ssoProtection: {
+            deploymentType: 'prod_deployment_urls_and_all_previews',
+          },
+        },
+      })
+    );
+    expect(client.stderr.getFullOutput()).not.toContain('changed from');
+  });
+
+  it.each([
+    ['preview', 'preview'],
+    ['standard', 'all_except_custom_domains'],
+    ['all', 'all'],
+    ['legacy-standard', 'prod_deployment_urls_and_all_previews'],
+    ['all_except_custom_domains', 'all_except_custom_domains'],
+  ])('maps --deployment-type %s to %s for --sso', async (flag, apiValue) => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--sso',
+      '--deployment-type',
+      flag,
+      '--json'
+    );
+    expect(await project(client)).toBe(0);
+    expect(fetch).toHaveBeenCalledWith(
+      '/v9/projects/prj_123',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: { ssoProtection: { deploymentType: apiValue } },
+      })
+    );
+    const out = JSON.parse(client.stdout.getFullOutput());
+    expect(out).toMatchObject({ action: 'enable', ssoProtection: true });
+    expect(out.previousSsoDeploymentType).toBeUndefined();
+  });
+
+  it('applies --deployment-type to --password', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      passwordProtection: { deploymentType: 'all' },
+    } as typeof defaultProject);
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--deployment-type',
+      'preview'
+    );
+    expect(await project(client)).toBe(0);
+    expect(fetch).toHaveBeenCalledWith(
+      '/v9/projects/prj_123',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: { passwordProtection: { deploymentType: 'preview' } },
+      })
+    );
+  });
+
+  it('rejects an unknown --deployment-type before any request', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--sso',
+      '--deployment-type',
+      'production'
+    );
+    expect(await project(client)).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Expected one of: standard, all, preview, legacy-standard'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [['disable', 'my-project', '--sso']],
+    [['enable', 'my-project', '--skew']],
+    [['my-project']],
+  ])('rejects --deployment-type outside enable --sso|--password (%j)', async args => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      ...args,
+      '--deployment-type',
+      'preview'
+    );
+    expect(await project(client)).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`--deployment-type` can only be used with `project protection enable`'
+    );
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('warns when bare `enable --sso` replaces a different existing setting', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      ssoProtection: { deploymentType: 'all' },
+    } as typeof defaultProject);
+    client.scenario.patch('/v9/projects/prj_123', (req, res) => {
+      expect(req.body).toEqual({
+        ssoProtection: {
+          deploymentType: 'prod_deployment_urls_and_all_previews',
+        },
+      });
+      res.json({ id: 'prj_123' });
+    });
+    client.setArgv('project', 'protection', 'enable', 'my-project', '--sso');
+    expect(await project(client)).toBe(0);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain(
+      'Vercel Authentication changed from All Deployments to Standard Protection (legacy)'
+    );
+    expect(stderr).toContain('--deployment-type all');
+    expect(stderr).toContain(
+      'Deployment protection enabled for my-project (Standard Protection (legacy))'
+    );
+  });
+
+  it('reports the previous setting in JSON without warnings on stderr', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      ssoProtection: { deploymentType: 'all' },
+    } as typeof defaultProject);
+    client.scenario.patch('/v9/projects/prj_123', (_req, res) => {
+      res.json({ id: 'prj_123' });
+    });
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--sso',
+      '--json'
+    );
+    expect(await project(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      ssoProtection: true,
+      ssoDeploymentType: 'legacy-standard',
+      previousSsoDeploymentType: 'all',
+    });
+    expect(client.stderr.getFullOutput()).not.toContain('changed from');
+  });
+
+  it('`status` shows readable coverage', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      ssoProtection: { deploymentType: 'preview' },
+      passwordProtection: null,
+    } as typeof defaultProject);
+    client.setArgv('project', 'protection', 'status', 'my-project');
+    expect(await project(client)).toBe(0);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('Protection settings');
+    expect(stderr).toContain(
+      'Vercel Authentication: Pre-Production Deployments (legacy) (--deployment-type preview)'
+    );
+    expect(stderr).toContain('Password Protection: Off');
+    expect(stderr).not.toContain('ssoProtection:');
+  });
+
+  it('`status --json` keeps raw fields and adds deploymentTypes', async () => {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      ssoProtection: { deploymentType: 'all_except_custom_domains' },
+    } as typeof defaultProject);
+    client.setArgv('project', 'protection', 'status', 'my-project', '--json');
+    expect(await project(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      projectId: 'prj_123',
+      ssoProtection: { deploymentType: 'all_except_custom_domains' },
+      deploymentTypes: {
+        ssoProtection: 'standard',
+        passwordProtection: 'off',
+      },
+    });
+  });
+
+  it('bare `protection` still shows status', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    client.setArgv('project', 'protection', 'my-project', '--json');
+    expect(await project(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+      projectId: 'prj_123',
+      deploymentTypes: { ssoProtection: 'off' },
+    });
+  });
+
+  it('rejects extra arguments to `status`', async () => {
+    client.setArgv('project', 'protection', 'status', 'a', 'b');
+    expect(await project(client)).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Usage: `vercel project protection status [name]`'
+    );
+  });
+});

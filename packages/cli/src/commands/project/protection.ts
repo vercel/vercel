@@ -29,6 +29,61 @@ const DEFAULT_SKEW_PROTECTION_MAX_AGE = 2592000;
 const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
 const MAX_PROTECTION_PASSWORD_LENGTH = 72;
 
+// `--deployment-type` values, mapped to the API's `deploymentType` field on
+// `ssoProtection` and `passwordProtection`.
+const DEPLOYMENT_TYPES = {
+  standard: 'all_except_custom_domains',
+  all: 'all',
+  preview: 'preview',
+  'legacy-standard': ENABLED_DEPLOYMENT_TYPE,
+} as const;
+type DeploymentTypeName = keyof typeof DEPLOYMENT_TYPES;
+const DEPLOYMENT_TYPE_NAMES = Object.keys(
+  DEPLOYMENT_TYPES
+) as DeploymentTypeName[];
+
+const DEPLOYMENT_TYPE_LABELS: Record<DeploymentTypeName, string> = {
+  standard: 'Standard Protection',
+  all: 'All Deployments',
+  preview: 'Pre-Production Deployments (legacy)',
+  'legacy-standard': 'Standard Protection (legacy)',
+};
+
+function parseDeploymentType(value: string): string | undefined {
+  const trimmed = value.trim();
+  if ((DEPLOYMENT_TYPE_NAMES as string[]).includes(trimmed)) {
+    return DEPLOYMENT_TYPES[trimmed as DeploymentTypeName];
+  }
+  // Also accept the raw API values (e.g. `all_except_custom_domains`).
+  if ((Object.values(DEPLOYMENT_TYPES) as string[]).includes(trimmed)) {
+    return trimmed;
+  }
+  return undefined;
+}
+
+/** The `--deployment-type` name for an API `deploymentType`, or the raw value if unknown. */
+function deploymentTypeName(apiValue: string): string {
+  const match = DEPLOYMENT_TYPE_NAMES.find(
+    name => DEPLOYMENT_TYPES[name] === apiValue
+  );
+  return match ?? apiValue;
+}
+
+function deploymentTypeLabel(apiValue: string): string {
+  const name = deploymentTypeName(apiValue);
+  return name in DEPLOYMENT_TYPE_LABELS
+    ? DEPLOYMENT_TYPE_LABELS[name as DeploymentTypeName]
+    : apiValue;
+}
+
+function getDeploymentType(setting: unknown): string | null {
+  if (setting && typeof setting === 'object' && 'deploymentType' in setting) {
+    const value = (setting as { deploymentType?: unknown }).deploymentType;
+    return typeof value === 'string' ? value : null;
+  }
+  return null;
+}
+
 function validateProtectionPassword(
   value: string
 ): { ok: true; password: string } | { ok: false; message: string } {
@@ -112,8 +167,34 @@ export default async function protection(
 
   const actionArg = parsedArgs.args[0];
   const action = isProtectionAction(actionArg) ? actionArg : undefined;
+  const statusMode = actionArg === 'status';
 
-  if (!action && parsedArgs.args.length > 1) {
+  if (statusMode && parsedArgs.args.length > 2) {
+    const msg =
+      'Invalid arguments. Usage: `vercel project protection status [name]`';
+    outputAgentError(
+      client,
+      {
+        status: 'error',
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message: msg,
+        next: [
+          {
+            command: buildCommandWithGlobalFlags(
+              client.argv,
+              'project protection status'
+            ),
+            when: 'Show deployment protection for the linked project',
+          },
+        ],
+      },
+      2
+    );
+    output.error(msg);
+    return 2;
+  }
+
+  if (!action && !statusMode && parsedArgs.args.length > 1) {
     outputAgentError(
       client,
       {
@@ -231,6 +312,64 @@ export default async function protection(
 
   const ssoSelected = Boolean(parsedArgs.flags['--sso']);
   const passwordSelected = Boolean(parsedArgs.flags['--password']);
+
+  const deploymentTypeFlag = parsedArgs.flags['--deployment-type'] as
+    | string
+    | undefined;
+  let requestedDeploymentType: string | undefined;
+  if (deploymentTypeFlag !== undefined) {
+    if (action !== 'enable' || (!ssoSelected && !passwordSelected)) {
+      const msg =
+        '`--deployment-type` can only be used with `project protection enable` and `--sso` or `--password`.';
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: msg,
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                'project protection enable --sso --deployment-type preview'
+              ),
+              when: 'Example: protect Preview deployments with Vercel Authentication',
+            },
+          ],
+        },
+        2
+      );
+      output.error(msg);
+      return 2;
+    }
+    requestedDeploymentType = parseDeploymentType(deploymentTypeFlag);
+    if (!requestedDeploymentType) {
+      const msg = `Invalid --deployment-type. Expected one of: ${DEPLOYMENT_TYPE_NAMES.join(', ')}.`;
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: AGENT_REASON.INVALID_ARGUMENTS,
+          message: msg,
+          hint: 'standard is Standard Protection, all is All Deployments, preview is the legacy Pre-Production Deployments, and legacy-standard is the legacy Standard Protection (the default).',
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                `project protection enable${ssoSelected ? ' --sso' : ''}${passwordSelected ? ' --password' : ''} --deployment-type standard`
+              ),
+              when: 'Example with a valid deployment type',
+            },
+          ],
+        },
+        2
+      );
+      output.error(msg);
+      return 2;
+    }
+  }
+  const enabledDeploymentType =
+    requestedDeploymentType ?? ENABLED_DEPLOYMENT_TYPE;
   const protectionPasswordFlag = parsedArgs.flags['--protection-password'] as
     | string
     | undefined;
@@ -392,7 +531,8 @@ export default async function protection(
     project = await getProjectByCwdOrLink({
       client,
       commandName: 'project protection',
-      projectNameOrId: action ? parsedArgs.args[1] : parsedArgs.args[0],
+      projectNameOrId:
+        action || statusMode ? parsedArgs.args[1] : parsedArgs.args[0],
       forReadOnlyCommand: !action,
     });
   } catch (err: unknown) {
@@ -514,18 +654,22 @@ export default async function protection(
       }
     }
 
+    const previousSsoDeploymentType = getDeploymentType(
+      (project as Project & { ssoProtection?: unknown }).ssoProtection
+    );
+    const previousPasswordDeploymentType =
+      getDeploymentType(passwordProtection);
+
     const patchBody: JSONObject = {};
     if (ssoSelected) {
       patchBody.ssoProtection =
-        action === 'enable'
-          ? { deploymentType: ENABLED_DEPLOYMENT_TYPE }
-          : null;
+        action === 'enable' ? { deploymentType: enabledDeploymentType } : null;
     }
     if (passwordSelected) {
       patchBody.passwordProtection =
         action === 'enable'
           ? {
-              deploymentType: ENABLED_DEPLOYMENT_TYPE,
+              deploymentType: enabledDeploymentType,
               ...(protectionPassword ? { password: protectionPassword } : {}),
             }
           : null;
@@ -553,7 +697,26 @@ export default async function protection(
       }
     }
 
+    // Without `--deployment-type`, `enable` keeps its long-standing default and
+    // replaces any existing coverage. Report what changed so nobody misses a
+    // silent narrowing or widening.
+    const ssoChangedFrom =
+      action === 'enable' &&
+      ssoSelected &&
+      previousSsoDeploymentType &&
+      previousSsoDeploymentType !== enabledDeploymentType
+        ? previousSsoDeploymentType
+        : undefined;
+    const passwordChangedFrom =
+      action === 'enable' &&
+      passwordSelected &&
+      previousPasswordDeploymentType &&
+      previousPasswordDeploymentType !== enabledDeploymentType
+        ? previousPasswordDeploymentType
+        : undefined;
+
     if (preferJson) {
+      const enabledName = deploymentTypeName(enabledDeploymentType);
       client.stdout.write(
         `${JSON.stringify(
           {
@@ -561,9 +724,31 @@ export default async function protection(
             projectId: project.id,
             projectName: project.name,
             ssoProtection: ssoSelected ? action === 'enable' : undefined,
+            ...(action === 'enable' && ssoSelected
+              ? {
+                  ssoDeploymentType: enabledName,
+                  ...(ssoChangedFrom
+                    ? {
+                        previousSsoDeploymentType:
+                          deploymentTypeName(ssoChangedFrom),
+                      }
+                    : {}),
+                }
+              : {}),
             passwordProtection: passwordSelected
               ? action === 'enable'
               : undefined,
+            ...(action === 'enable' && passwordSelected
+              ? {
+                  passwordDeploymentType: enabledName,
+                  ...(passwordChangedFrom
+                    ? {
+                        previousPasswordDeploymentType:
+                          deploymentTypeName(passwordChangedFrom),
+                      }
+                    : {}),
+                }
+              : {}),
             customerSupportCodeVisibility: customerSupportCodeVisibilitySelected
               ? action === 'enable'
               : undefined,
@@ -585,8 +770,22 @@ export default async function protection(
       return 0;
     }
 
+    for (const [label, from] of [
+      ['Vercel Authentication', ssoChangedFrom],
+      ['Password Protection', passwordChangedFrom],
+    ] as const) {
+      if (!from) continue;
+      output.warning(
+        `${label} changed from ${deploymentTypeLabel(from)} to ${deploymentTypeLabel(enabledDeploymentType)}. To restore it, rerun with \`--deployment-type ${deploymentTypeName(from)}\`.`
+      );
+    }
+
+    const coverage =
+      action === 'enable' && (ssoSelected || passwordSelected)
+        ? ` (${deploymentTypeLabel(enabledDeploymentType)})`
+        : '';
     output.log(
-      `${chalk.bold('Deployment protection')} ${action === 'enable' ? 'enabled' : 'disabled'} for ${chalk.cyan(project.name)}`
+      `${chalk.bold('Deployment protection')} ${action === 'enable' ? 'enabled' : 'disabled'} for ${chalk.cyan(project.name)}${coverage}`
     );
     return 0;
   }
@@ -599,9 +798,28 @@ export default async function protection(
     }
   }
 
+  const ssoDeploymentType = getDeploymentType(raw.ssoProtection);
+  const passwordDeploymentType = getDeploymentType(raw.passwordProtection);
+
   if (preferJson) {
     client.stdout.write(
-      `${JSON.stringify({ projectId: project.id, name: project.name, ...slice }, null, 2)}\n`
+      `${JSON.stringify(
+        {
+          projectId: project.id,
+          name: project.name,
+          ...slice,
+          deploymentTypes: {
+            ssoProtection: ssoDeploymentType
+              ? deploymentTypeName(ssoDeploymentType)
+              : 'off',
+            passwordProtection: passwordDeploymentType
+              ? deploymentTypeName(passwordDeploymentType)
+              : 'off',
+          },
+        },
+        null,
+        2
+      )}\n`
     );
     return 0;
   }
@@ -609,11 +827,20 @@ export default async function protection(
   output.log(
     `${chalk.bold('Protection settings')} for ${chalk.cyan(project.name)} (${project.id})`
   );
-  if (Object.keys(slice).length === 0) {
-    output.log('No deployment protection fields returned for this project.');
-    return 0;
-  }
-  for (const [k, v] of Object.entries(slice)) {
+  const describe = (deploymentType: string | null) =>
+    deploymentType
+      ? `${deploymentTypeLabel(deploymentType)} (--deployment-type ${deploymentTypeName(deploymentType)})`
+      : 'Off';
+  output.log(
+    `${chalk.cyan('Vercel Authentication:')} ${describe(ssoDeploymentType)}`
+  );
+  output.log(
+    `${chalk.cyan('Password Protection:')} ${describe(passwordDeploymentType)}`
+  );
+  const rest = Object.entries(slice).filter(
+    ([k]) => k !== 'ssoProtection' && k !== 'passwordProtection'
+  );
+  for (const [k, v] of rest) {
     output.log(`${chalk.cyan(`${k}:`)} ${JSON.stringify(v)}`);
   }
   return 0;

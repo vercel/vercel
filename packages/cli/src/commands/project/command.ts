@@ -680,7 +680,16 @@ const protectionToggleOptions = [
     name: 'sso',
     shorthand: null,
     type: Boolean,
-    description: 'Apply action to SSO protection.',
+    description: 'Apply action to Vercel Authentication (SSO protection).',
+    deprecated: false,
+  },
+  {
+    name: 'deployment-type',
+    shorthand: null,
+    type: String,
+    argument: 'TYPE',
+    description:
+      'When enabling --sso or --password, which deployments to protect: standard (Standard Protection), all (All Deployments), preview (legacy Pre-Production Deployments), or legacy-standard (legacy Standard Protection) (default: legacy-standard)',
     deprecated: false,
   },
   {
@@ -756,6 +765,18 @@ export const protectionEnableSubcommand = {
   options: [formatOption, jsonOption, ...protectionToggleOptions],
   examples: [
     {
+      name: 'Enable Vercel Authentication for Preview deployments only',
+      value: `${packageName} project protection enable my-app --sso --deployment-type preview`,
+    },
+    {
+      name: 'Enable Vercel Authentication with Standard Protection',
+      value: `${packageName} project protection enable my-app --sso --deployment-type standard`,
+    },
+    {
+      name: 'Enable Vercel Authentication (legacy Standard Protection)',
+      value: `${packageName} project protection enable my-app --sso`,
+    },
+    {
       name: 'Enable password protection',
       value: `${packageName} project protection enable my-app --password`,
     },
@@ -784,10 +805,6 @@ export const protectionEnableSubcommand = {
       name: 'Enable Git fork protection',
       value: `${packageName} project protection enable my-app --git-fork-protection`,
     },
-    {
-      name: 'Enable SSO deployment protection',
-      value: `${packageName} project protection enable my-app --sso`,
-    },
   ],
 } as const;
 
@@ -798,6 +815,10 @@ export const protectionDisableSubcommand = {
   arguments: [{ name: 'name', required: false }],
   options: [formatOption, jsonOption, ...protectionToggleOptions],
   examples: [
+    {
+      name: 'Disable Vercel Authentication',
+      value: `${packageName} project protection disable my-app --sso`,
+    },
     {
       name: 'Disable password protection',
       value: `${packageName} project protection disable my-app --password`,
@@ -819,9 +840,23 @@ export const protectionDisableSubcommand = {
       name: 'Disable Git fork protection',
       value: `${packageName} project protection disable my-app --git-fork-protection`,
     },
+  ],
+} as const;
+
+export const protectionStatusSubcommand = {
+  name: 'status',
+  aliases: [],
+  description: 'Show deployment protection settings for a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [formatOption, jsonOption],
+  examples: [
     {
-      name: 'Disable SSO for a named project',
-      value: `${packageName} project protection disable my-app --sso`,
+      name: 'Protection settings for the linked project',
+      value: `${packageName} project protection status`,
+    },
+    {
+      name: 'Named project as JSON',
+      value: `${packageName} project protection status my-app --json`,
     },
   ],
 } as const;
@@ -829,19 +864,28 @@ export const protectionDisableSubcommand = {
 export const protectionSubcommand = {
   name: 'protection',
   aliases: [],
-  description: 'Show or toggle deployment protection settings for a project',
+  description:
+    'Show or change Deployment Protection settings (Vercel Authentication, Password Protection, and more) for a project',
   runsWithoutSubcommand: true,
   arguments: [{ name: 'name', required: false }],
-  subcommands: [protectionEnableSubcommand, protectionDisableSubcommand],
+  subcommands: [
+    protectionStatusSubcommand,
+    protectionEnableSubcommand,
+    protectionDisableSubcommand,
+  ],
   options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Protection settings for the linked project',
-      value: `${packageName} project protection`,
+      value: `${packageName} project protection status`,
     },
     {
       name: 'Named project as JSON',
-      value: `${packageName} project protection my-app --json`,
+      value: `${packageName} project protection status my-app --json`,
+    },
+    {
+      name: 'Protect Preview deployments with Vercel Authentication',
+      value: `${packageName} project protection enable my-app --sso --deployment-type preview`,
     },
     {
       name: 'Enable password protection',
