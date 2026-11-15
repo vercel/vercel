@@ -38,7 +38,7 @@ A promise that resolves when the value is deleted.
 
 > **expireTag**: (`tag`) => [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`void`\>
 
-Defined in: [packages/functions/src/cache/types.ts:44](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L44)
+Defined in: [packages/functions/src/cache/types.ts:49](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L49)
 
 Expires cache entries by tag.
 
@@ -60,9 +60,9 @@ A promise that resolves when the cache entries expiration request is received.
 
 ### get
 
-> **get**: (`key`) => [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`unknown`\>
+> **get**: (`key`, `options?`) => [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`unknown`\>
 
-Defined in: [packages/functions/src/cache/types.ts:19](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L19)
+Defined in: [packages/functions/src/cache/types.ts:21](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L21)
 
 Retrieves a value from the cache.
 
@@ -73,6 +73,16 @@ Retrieves a value from the cache.
 `string`
 
 The key of the value to retrieve.
+
+##### options?
+
+Optional settings for the cache read.
+
+###### name?
+
+`string`
+
+Optional user-friendly name for the cache entry used for o11y. Defaults to the provided `key` when omitted; pass `''` to suppress sending a name.
 
 #### Returns
 
@@ -86,7 +96,7 @@ A promise that resolves to the value, or null if not found.
 
 > **set**: (`key`, `value`, `options?`) => [`Promise`](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)\<`void`\>
 
-Defined in: [packages/functions/src/cache/types.ts:32](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L32)
+Defined in: [packages/functions/src/cache/types.ts:37](https://github.com/vercel/vercel/blob/main/packages/functions/src/cache/types.ts#L37)
 
 Sets a value in the cache.
 
