@@ -677,11 +677,19 @@ export const membersSubcommand = {
 // The settings `project protection enable` and `disable` change.
 const protectionToggleOptions = [
   {
+    name: 'vercel-authentication',
+    shorthand: null,
+    type: Boolean,
+    description: 'Apply action to Vercel Authentication.',
+    deprecated: false,
+  },
+  // Hidden: `--sso` is the old name of `--vercel-authentication`.
+  {
     name: 'sso',
     shorthand: null,
     type: Boolean,
-    description: 'Apply action to Vercel Authentication (SSO protection).',
-    deprecated: false,
+    description: 'Deprecated alias for `--vercel-authentication`',
+    deprecated: true,
   },
   {
     name: 'deployment-type',
@@ -689,16 +697,24 @@ const protectionToggleOptions = [
     type: String,
     argument: 'TYPE',
     description:
-      'When enabling --sso or --password, which deployments to protect: standard (Standard Protection), all (All Deployments), preview (legacy Pre-Production Deployments), or legacy-standard (legacy Standard Protection) (default: legacy-standard)',
+      'When enabling --vercel-authentication or --password-protection, which deployments to protect: standard (Standard Protection), all (All Deployments), preview (legacy Pre-Production Deployments), or legacy-standard (legacy Standard Protection) (default: legacy-standard)',
     deprecated: false,
   },
+  {
+    name: 'password-protection',
+    shorthand: null,
+    type: Boolean,
+    description:
+      'Apply action to Password Protection (requires eligible plan/permissions).',
+    deprecated: false,
+  },
+  // Hidden: `--password` is the old name of `--password-protection`.
   {
     name: 'password',
     shorthand: null,
     type: Boolean,
-    description:
-      'Apply action to password protection (requires eligible plan/permissions).',
-    deprecated: false,
+    description: 'Deprecated alias for `--password-protection`',
+    deprecated: true,
   },
   {
     name: 'protection-password',
@@ -706,7 +722,7 @@ const protectionToggleOptions = [
     type: String,
     argument: 'PASSWORD',
     description:
-      'Password value when enabling password protection (max 72 characters). Requires --password.',
+      'Password value when enabling password protection (max 72 characters). Requires --password-protection.',
     deprecated: false,
   },
   {
@@ -766,24 +782,24 @@ export const protectionEnableSubcommand = {
   examples: [
     {
       name: 'Enable Vercel Authentication for Preview deployments only',
-      value: `${packageName} project protection enable my-app --sso --deployment-type preview`,
+      value: `${packageName} project protection enable my-app --vercel-authentication --deployment-type preview`,
     },
     {
       name: 'Enable Vercel Authentication with Standard Protection',
-      value: `${packageName} project protection enable my-app --sso --deployment-type standard`,
+      value: `${packageName} project protection enable my-app --vercel-authentication --deployment-type standard`,
     },
     {
       name: 'Enable Vercel Authentication (legacy Standard Protection)',
-      value: `${packageName} project protection enable my-app --sso`,
+      value: `${packageName} project protection enable my-app --vercel-authentication`,
     },
     {
       name: 'Enable password protection',
-      value: `${packageName} project protection enable my-app --password`,
+      value: `${packageName} project protection enable my-app --password-protection`,
     },
     {
       name: 'Enable password protection with a password',
       placeholders: ['<password>'],
-      value: `${packageName} project protection enable my-app --password --protection-password <password>`,
+      value: `${packageName} project protection enable my-app --password-protection --protection-password <password>`,
     },
     {
       name: 'Enable customer support code visibility',
@@ -817,11 +833,11 @@ export const protectionDisableSubcommand = {
   examples: [
     {
       name: 'Disable Vercel Authentication',
-      value: `${packageName} project protection disable my-app --sso`,
+      value: `${packageName} project protection disable my-app --vercel-authentication`,
     },
     {
       name: 'Disable password protection',
-      value: `${packageName} project protection disable my-app --password`,
+      value: `${packageName} project protection disable my-app --password-protection`,
     },
     {
       name: 'Disable customer support code visibility',
@@ -885,15 +901,15 @@ export const protectionSubcommand = {
     },
     {
       name: 'Protect Preview deployments with Vercel Authentication',
-      value: `${packageName} project protection enable my-app --sso --deployment-type preview`,
+      value: `${packageName} project protection enable my-app --vercel-authentication --deployment-type preview`,
     },
     {
       name: 'Enable password protection',
-      value: `${packageName} project protection enable my-app --password`,
+      value: `${packageName} project protection enable my-app --password-protection`,
     },
     {
       name: 'Disable password protection',
-      value: `${packageName} project protection disable my-app --password`,
+      value: `${packageName} project protection disable my-app --password-protection`,
     },
   ],
 } as const;

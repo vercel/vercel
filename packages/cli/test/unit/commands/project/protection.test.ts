@@ -18,7 +18,7 @@ describe('project protection (SSO)', () => {
     await expect(client.stderr).toOutput('Protection settings');
   });
 
-  it('requires --sso for action mode', async () => {
+  it('requires a protection option for action mode', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -32,7 +32,7 @@ describe('project protection (SSO)', () => {
     await expect(client.stderr).toOutput('No protection selected');
   });
 
-  it('disables SSO protection when --sso is set', async () => {
+  it('disables Vercel Authentication when --vercel-authentication is set', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -44,14 +44,20 @@ describe('project protection (SSO)', () => {
       res.json({ id: 'prj_123' });
     });
 
-    client.setArgv('project', 'protection', 'disable', 'my-project', '--sso');
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--vercel-authentication'
+    );
     const exitCode = await project(client);
 
     expect(exitCode).toBe(0);
     await expect(client.stderr).toOutput('Deployment protection disabled');
   });
 
-  it('returns JSON for enable with --sso', async () => {
+  it('returns JSON for enable with --vercel-authentication', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -67,7 +73,7 @@ describe('project protection (SSO)', () => {
       'protection',
       'enable',
       'my-project',
-      '--sso',
+      '--vercel-authentication',
       '--format',
       'json'
     );
@@ -119,7 +125,7 @@ describe('project protection (SSO)', () => {
       expect(payload.message).toMatch(/No protection selected/);
       expect(
         payload.next?.some((n: { command: string }) =>
-          /project protection.*--sso/.test(n.command)
+          /project protection.*--vercel-authentication/.test(n.command)
         )
       ).toBe(true);
       expect(
@@ -196,7 +202,7 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--protection-password',
       's3cret',
       ...(json ? ['--json'] : []),
@@ -220,7 +226,7 @@ describe('project protection (password)', () => {
         next: [
           {
             command: expect.stringContaining(
-              'vercel project protection enable prj_123 --password --protection-password <password>'
+              'vercel project protection enable prj_123 --password-protection --protection-password <password>'
             ),
             when: expect.stringContaining('interactive terminal'),
           },
@@ -246,8 +252,8 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
-      '--sso'
+      '--password-protection',
+      '--vercel-authentication'
     );
     expect(await project(client)).toBe(1);
     expect(
@@ -269,8 +275,8 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
-      '--sso'
+      '--password-protection',
+      '--vercel-authentication'
     );
     expect(await project(client)).toBe(0);
     expect(confirm).toHaveBeenCalledWith({
@@ -304,7 +310,7 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password'
+      '--password-protection'
     );
     expect(await project(client)).toBe(0);
     expect(confirm).toHaveBeenCalledOnce();
@@ -341,7 +347,7 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--protection-password',
       's3cret',
       '--json'
@@ -375,7 +381,7 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--protection-password',
       's3cret',
       '--scope',
@@ -403,7 +409,7 @@ describe('project protection (password)', () => {
       'protection',
       'disable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--non-interactive'
     );
     expect(await project(client)).toBe(0);
@@ -420,7 +426,7 @@ describe('project protection (password)', () => {
     });
   });
 
-  it('disables password protection when --password is set', async () => {
+  it('disables password protection when --password-protection is set', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -437,7 +443,7 @@ describe('project protection (password)', () => {
       'protection',
       'disable',
       'my-project',
-      '--password'
+      '--password-protection'
     );
     const exitCode = await project(client);
 
@@ -445,7 +451,7 @@ describe('project protection (password)', () => {
     await expect(client.stderr).toOutput('Deployment protection disabled');
   });
 
-  it('returns JSON for enable with --password', async () => {
+  it('returns JSON for enable with --password-protection', async () => {
     vi.spyOn(client.input, 'text').mockResolvedValue('my-project');
     useProject({
       ...defaultProject,
@@ -462,7 +468,7 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--format',
       'json'
     );
@@ -501,7 +507,7 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--protection-password',
       's3cret'
     );
@@ -511,7 +517,7 @@ describe('project protection (password)', () => {
     await expect(client.stderr).toOutput('Deployment protection enabled');
   });
 
-  it('requires --password when --protection-password is set', async () => {
+  it('requires --password-protection when --protection-password is set', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -529,7 +535,7 @@ describe('project protection (password)', () => {
     const exitCode = await project(client);
 
     expect(exitCode).toBe(2);
-    await expect(client.stderr).toOutput('requires `--password`');
+    await expect(client.stderr).toOutput('requires `--password-protection`');
   });
 
   it('rejects --protection-password with disable', async () => {
@@ -544,7 +550,7 @@ describe('project protection (password)', () => {
       'protection',
       'disable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--protection-password',
       's3cret'
     );
@@ -566,7 +572,7 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--protection-password',
       '   '
     );
@@ -588,7 +594,7 @@ describe('project protection (password)', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--protection-password',
       'a'.repeat(73)
     );
@@ -896,10 +902,16 @@ describe('project protection --deployment-type and status', () => {
     client.nonInteractive = false;
   });
 
-  it('keeps the legacy default for bare `enable --sso`', async () => {
+  it('keeps the legacy default for bare `enable --vercel-authentication`', async () => {
     useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
     const fetch = vi.spyOn(client, 'fetch');
-    client.setArgv('project', 'protection', 'enable', 'my-project', '--sso');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--vercel-authentication'
+    );
     expect(await project(client)).toBe(0);
     expect(fetch).toHaveBeenCalledWith(
       '/v9/projects/prj_123',
@@ -929,7 +941,7 @@ describe('project protection --deployment-type and status', () => {
       'protection',
       'enable',
       'my-project',
-      '--sso',
+      '--vercel-authentication',
       '--deployment-type',
       flag,
       '--json'
@@ -947,7 +959,7 @@ describe('project protection --deployment-type and status', () => {
     expect(out.previousSsoDeploymentType).toBeUndefined();
   });
 
-  it('applies --deployment-type to --password', async () => {
+  it('applies --deployment-type to --password-protection', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -960,7 +972,7 @@ describe('project protection --deployment-type and status', () => {
       'protection',
       'enable',
       'my-project',
-      '--password',
+      '--password-protection',
       '--deployment-type',
       'preview'
     );
@@ -982,7 +994,7 @@ describe('project protection --deployment-type and status', () => {
       'protection',
       'enable',
       'my-project',
-      '--sso',
+      '--vercel-authentication',
       '--deployment-type',
       'production'
     );
@@ -994,10 +1006,10 @@ describe('project protection --deployment-type and status', () => {
   });
 
   it.each([
-    [['disable', 'my-project', '--sso']],
+    [['disable', 'my-project', '--vercel-authentication']],
     [['enable', 'my-project', '--skew']],
     [['my-project']],
-  ])('rejects --deployment-type outside enable --sso|--password (%j)', async args => {
+  ])('rejects --deployment-type outside enable --vercel-authentication|--password-protection (%j)', async args => {
     useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
     const fetch = vi.spyOn(client, 'fetch');
     client.setArgv(
@@ -1014,7 +1026,7 @@ describe('project protection --deployment-type and status', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('warns when bare `enable --sso` replaces a different existing setting', async () => {
+  it('warns when bare `enable --vercel-authentication` replaces a different existing setting', async () => {
     useProject({
       ...defaultProject,
       id: 'prj_123',
@@ -1029,7 +1041,13 @@ describe('project protection --deployment-type and status', () => {
       });
       res.json({ id: 'prj_123' });
     });
-    client.setArgv('project', 'protection', 'enable', 'my-project', '--sso');
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--vercel-authentication'
+    );
     expect(await project(client)).toBe(0);
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain(
@@ -1056,7 +1074,7 @@ describe('project protection --deployment-type and status', () => {
       'protection',
       'enable',
       'my-project',
-      '--sso',
+      '--vercel-authentication',
       '--json'
     );
     expect(await project(client)).toBe(0);
@@ -1122,5 +1140,147 @@ describe('project protection --deployment-type and status', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'Usage: `vercel project protection status [name]`'
     );
+  });
+});
+
+describe('project protection status never prints bypass secrets', () => {
+  const SECRET = 'bypass-secret-abcdefghijklmnopqrstuvwxyz';
+
+  function useProjectWithBypass() {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      protectionBypass: {
+        [SECRET]: {
+          createdAt: 1700000000000,
+          createdBy: 'user_123',
+          scope: 'automation-bypass',
+        },
+      },
+    } as typeof defaultProject);
+  }
+
+  it('omits secrets from JSON and keeps non-secret metadata', async () => {
+    useProjectWithBypass();
+    client.setArgv('project', 'protection', 'status', 'my-project', '--json');
+    expect(await project(client)).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).not.toContain(SECRET);
+    const out = JSON.parse(stdout);
+    expect(out).not.toHaveProperty('protectionBypass');
+    expect(out.protectionBypassSecrets).toEqual([
+      {
+        scope: 'automation-bypass',
+        createdAt: 1700000000000,
+        createdBy: 'user_123',
+      },
+    ]);
+  });
+
+  it('summarizes bypass secrets in human output without the secret', async () => {
+    useProjectWithBypass();
+    client.setArgv('project', 'protection', 'status', 'my-project');
+    expect(await project(client)).toBe(0);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('Protection bypass: 1 secret (automation-bypass)');
+    expect(stderr).not.toContain(SECRET);
+    expect(client.stdout.getFullOutput()).not.toContain(SECRET);
+  });
+});
+
+describe('project protection deprecated option names', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    client.nonInteractive = false;
+  });
+
+  it('accepts --sso as a deprecated alias and warns', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv('project', 'protection', 'enable', 'my-project', '--sso');
+    expect(await project(client)).toBe(0);
+    expect(fetch).toHaveBeenCalledWith(
+      '/v9/projects/prj_123',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: {
+          ssoProtection: {
+            deploymentType: 'prod_deployment_urls_and_all_previews',
+          },
+        },
+      })
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      '--sso is deprecated. Use --vercel-authentication.'
+    );
+  });
+
+  it('accepts --password as a deprecated alias and reports the warning in JSON', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--password',
+      '--json'
+    );
+    expect(await project(client)).toBe(0);
+    expect(fetch).toHaveBeenCalledWith(
+      '/v9/projects/prj_123',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: { passwordProtection: null },
+      })
+    );
+    const out = JSON.parse(client.stdout.getFullOutput());
+    expect(out).toMatchObject({ action: 'disable', passwordProtection: false });
+    expect(out.warnings).toEqual([
+      {
+        reason: 'deprecated',
+        message: '--password is deprecated. Use --password-protection.',
+      },
+    ]);
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+  });
+
+  it('does not add warnings to JSON when only new names are used', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      '--vercel-authentication',
+      '--json'
+    );
+    expect(await project(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).not.toHaveProperty(
+      'warnings'
+    );
+  });
+
+  it.each([
+    ['--sso', '--vercel-authentication'],
+    ['--password', '--password-protection'],
+  ])('rejects %s together with %s', async (oldName, newName) => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.setArgv(
+      'project',
+      'protection',
+      'disable',
+      'my-project',
+      oldName,
+      newName
+    );
+    expect(await project(client)).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      `Can't use ${newName} with ${oldName}.`
+    );
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

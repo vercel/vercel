@@ -20,6 +20,11 @@ import { protectionEnableSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 import chalk from 'chalk';
 import type { JSONObject, Project } from '@vercel-internals/types';
 
@@ -132,8 +137,31 @@ const PROTECTION_KEYS = [
   'skewProtectionMaxAge',
   'customerSupportCodeVisibility',
   'gitForkProtection',
-  'protectionBypass',
 ] as const;
+
+/**
+ * The bypass secrets without the secrets themselves. `protectionBypass` is
+ * keyed by the secret value, so it's never printed; only each entry's
+ * non-secret metadata is.
+ */
+function summarizeProtectionBypass(
+  value: unknown
+): Array<Record<string, unknown>> | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  return Object.values(value as Record<string, unknown>).map(entry => {
+    const { scope, createdAt, createdBy, integrationId, configurationId } =
+      (entry ?? {}) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries({
+        scope,
+        createdAt,
+        createdBy,
+        integrationId,
+        configurationId,
+      }).filter(([, v]) => v !== undefined)
+    );
+  });
+}
 
 function isProtectionAction(v: string | undefined): v is ProtectionAction {
   return !!v && (PROTECTION_ACTIONS as readonly string[]).includes(v);
@@ -310,8 +338,31 @@ export default async function protection(
     enableSkewMaxAgeSeconds = parsed.seconds;
   }
 
-  const ssoSelected = Boolean(parsedArgs.flags['--sso']);
-  const passwordSelected = Boolean(parsedArgs.flags['--password']);
+  const ssoOption = getRenamedOption<boolean>(
+    parsedArgs.flags,
+    '--vercel-authentication',
+    '--sso',
+    { json: preferJson }
+  );
+  if ('error' in ssoOption) {
+    return reportRenamedOptionError(client, ssoOption.error, {
+      json: preferJson,
+    });
+  }
+  const passwordOption = getRenamedOption<boolean>(
+    parsedArgs.flags,
+    '--password-protection',
+    '--password',
+    { json: preferJson }
+  );
+  if ('error' in passwordOption) {
+    return reportRenamedOptionError(client, passwordOption.error, {
+      json: preferJson,
+    });
+  }
+  const deprecationWarnings = [ssoOption.warning, passwordOption.warning];
+  const ssoSelected = Boolean(ssoOption.value);
+  const passwordSelected = Boolean(passwordOption.value);
 
   const deploymentTypeFlag = parsedArgs.flags['--deployment-type'] as
     | string
@@ -320,7 +371,7 @@ export default async function protection(
   if (deploymentTypeFlag !== undefined) {
     if (action !== 'enable' || (!ssoSelected && !passwordSelected)) {
       const msg =
-        '`--deployment-type` can only be used with `project protection enable` and `--sso` or `--password`.';
+        '`--deployment-type` can only be used with `project protection enable` and `--vercel-authentication` or `--password-protection`.';
       outputAgentError(
         client,
         {
@@ -331,7 +382,7 @@ export default async function protection(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'project protection enable --sso --deployment-type preview'
+                'project protection enable --vercel-authentication --deployment-type preview'
               ),
               when: 'Example: protect Preview deployments with Vercel Authentication',
             },
@@ -356,7 +407,7 @@ export default async function protection(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                `project protection enable${ssoSelected ? ' --sso' : ''}${passwordSelected ? ' --password' : ''} --deployment-type standard`
+                `project protection enable${ssoSelected ? ' --vercel-authentication' : ''}${passwordSelected ? ' --password-protection' : ''} --deployment-type standard`
               ),
               when: 'Example with a valid deployment type',
             },
@@ -387,19 +438,19 @@ export default async function protection(
 
   if (protectionPasswordFlag !== undefined && !passwordSelected) {
     const msg =
-      '`--protection-password` requires `--password`. Usage: `vercel project protection enable [name] --password --protection-password <password>`';
+      '`--protection-password` requires `--password-protection`. Usage: `vercel project protection enable [name] --password-protection --protection-password <password>`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: msg,
-        hint: 'Pass --password together with --protection-password when enabling password protection.',
+        hint: 'Pass --password-protection together with --protection-password when enabling Password Protection.',
         next: [
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'project protection enable --password --protection-password <password>'
+              'project protection enable --password-protection --protection-password <password>'
             ),
             when: 'Replace <password> with the deployment protection password',
           },
@@ -420,7 +471,7 @@ export default async function protection(
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection disable ... --password` to turn password protection off.',
+        hint: 'Use `project protection disable ... --password-protection` to turn Password Protection off.',
       },
       2
     );
@@ -443,7 +494,7 @@ export default async function protection(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'project protection enable --password --protection-password <password>'
+                'project protection enable --password-protection --protection-password <password>'
               ),
               when: 'Replace <password> with a valid deployment protection password',
             },
@@ -467,26 +518,26 @@ export default async function protection(
     !gitForkProtectionSelected
   ) {
     const msg =
-      'No protection selected. Pass --sso, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --sso|--password|--customer-support-code-visibility|--skew|--protection-bypass|--git-fork-protection`';
+      'No protection selected. Pass --vercel-authentication, --password-protection, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --vercel-authentication|--password-protection|--customer-support-code-visibility|--skew|--protection-bypass|--git-fork-protection`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection option (e.g. --sso, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection).',
+        hint: 'Use `project protection enable|disable` with a protection option (e.g. --vercel-authentication, --password-protection, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              `project protection ${action} --sso`
+              `project protection ${action} --vercel-authentication`
             ),
-            when: 'Example: same action with SSO protection selected',
+            when: 'Example: same action with Vercel Authentication selected',
           },
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              `project protection ${action} --password`
+              `project protection ${action} --password-protection`
             ),
             when: 'Example: same action with password protection selected',
           },
@@ -554,7 +605,7 @@ export default async function protection(
         flag => !flag.startsWith('--non-interactive')
       );
       const interactiveCommand = getCommandNamePlain(
-        `project protection enable ${project.id} --password${
+        `project protection enable ${project.id} --password-protection${
           protectionPassword ? ' --protection-password <password>' : ''
         }${globalFlags.length ? ` ${globalFlags.join(' ')}` : ''} --non-interactive=false`
       );
@@ -719,50 +770,56 @@ export default async function protection(
       const enabledName = deploymentTypeName(enabledDeploymentType);
       client.stdout.write(
         `${JSON.stringify(
-          {
-            action,
-            projectId: project.id,
-            projectName: project.name,
-            ssoProtection: ssoSelected ? action === 'enable' : undefined,
-            ...(action === 'enable' && ssoSelected
-              ? {
-                  ssoDeploymentType: enabledName,
-                  ...(ssoChangedFrom
-                    ? {
-                        previousSsoDeploymentType:
-                          deploymentTypeName(ssoChangedFrom),
-                      }
-                    : {}),
-                }
-              : {}),
-            passwordProtection: passwordSelected
-              ? action === 'enable'
-              : undefined,
-            ...(action === 'enable' && passwordSelected
-              ? {
-                  passwordDeploymentType: enabledName,
-                  ...(passwordChangedFrom
-                    ? {
-                        previousPasswordDeploymentType:
-                          deploymentTypeName(passwordChangedFrom),
-                      }
-                    : {}),
-                }
-              : {}),
-            customerSupportCodeVisibility: customerSupportCodeVisibilitySelected
-              ? action === 'enable'
-              : undefined,
-            skewProtection: skewSelected ? action === 'enable' : undefined,
-            ...(skewSelected
-              ? action === 'enable'
-                ? { skewProtectionMaxAge }
-                : { skewProtectionMaxAge: 0 }
-              : {}),
-            protectionBypass: bypassSelected ? action === 'enable' : undefined,
-            gitForkProtection: gitForkProtectionSelected
-              ? action === 'enable'
-              : undefined,
-          },
+          withWarnings(
+            {
+              action,
+              projectId: project.id,
+              projectName: project.name,
+              ssoProtection: ssoSelected ? action === 'enable' : undefined,
+              ...(action === 'enable' && ssoSelected
+                ? {
+                    ssoDeploymentType: enabledName,
+                    ...(ssoChangedFrom
+                      ? {
+                          previousSsoDeploymentType:
+                            deploymentTypeName(ssoChangedFrom),
+                        }
+                      : {}),
+                  }
+                : {}),
+              passwordProtection: passwordSelected
+                ? action === 'enable'
+                : undefined,
+              ...(action === 'enable' && passwordSelected
+                ? {
+                    passwordDeploymentType: enabledName,
+                    ...(passwordChangedFrom
+                      ? {
+                          previousPasswordDeploymentType:
+                            deploymentTypeName(passwordChangedFrom),
+                        }
+                      : {}),
+                  }
+                : {}),
+              customerSupportCodeVisibility:
+                customerSupportCodeVisibilitySelected
+                  ? action === 'enable'
+                  : undefined,
+              skewProtection: skewSelected ? action === 'enable' : undefined,
+              ...(skewSelected
+                ? action === 'enable'
+                  ? { skewProtectionMaxAge }
+                  : { skewProtectionMaxAge: 0 }
+                : {}),
+              protectionBypass: bypassSelected
+                ? action === 'enable'
+                : undefined,
+              gitForkProtection: gitForkProtectionSelected
+                ? action === 'enable'
+                : undefined,
+            },
+            deprecationWarnings
+          ),
           null,
           2
         )}\n`
@@ -800,23 +857,30 @@ export default async function protection(
 
   const ssoDeploymentType = getDeploymentType(raw.ssoProtection);
   const passwordDeploymentType = getDeploymentType(raw.passwordProtection);
+  const protectionBypassSecrets = summarizeProtectionBypass(
+    raw.protectionBypass
+  );
 
   if (preferJson) {
     client.stdout.write(
       `${JSON.stringify(
-        {
-          projectId: project.id,
-          name: project.name,
-          ...slice,
-          deploymentTypes: {
-            ssoProtection: ssoDeploymentType
-              ? deploymentTypeName(ssoDeploymentType)
-              : 'off',
-            passwordProtection: passwordDeploymentType
-              ? deploymentTypeName(passwordDeploymentType)
-              : 'off',
+        withWarnings(
+          {
+            projectId: project.id,
+            name: project.name,
+            ...slice,
+            ...(protectionBypassSecrets ? { protectionBypassSecrets } : {}),
+            deploymentTypes: {
+              ssoProtection: ssoDeploymentType
+                ? deploymentTypeName(ssoDeploymentType)
+                : 'off',
+              passwordProtection: passwordDeploymentType
+                ? deploymentTypeName(passwordDeploymentType)
+                : 'off',
+            },
           },
-        },
+          deprecationWarnings
+        ),
         null,
         2
       )}\n`
@@ -842,6 +906,19 @@ export default async function protection(
   );
   for (const [k, v] of rest) {
     output.log(`${chalk.cyan(`${k}:`)} ${JSON.stringify(v)}`);
+  }
+  if (protectionBypassSecrets) {
+    const scopes = [
+      ...new Set(protectionBypassSecrets.map(s => String(s.scope))),
+    ];
+    const count = protectionBypassSecrets.length;
+    output.log(
+      `${chalk.cyan('Protection bypass:')} ${
+        count === 0
+          ? 'None'
+          : `${count} ${count === 1 ? 'secret' : 'secrets'} (${scopes.join(', ')})`
+      }`
+    );
   }
   return 0;
 }
