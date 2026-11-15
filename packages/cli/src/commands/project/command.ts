@@ -697,24 +697,16 @@ const protectionToggleOptions = [
     type: String,
     argument: 'TYPE',
     description:
-      'When enabling --vercel-authentication or --password-protection, which deployments to protect: standard (Standard Protection), all (All Deployments), preview (legacy Pre-Production Deployments), or legacy-standard (legacy Standard Protection) (default: legacy-standard)',
+      'When enabling --vercel-authentication or --password, which deployments to protect: standard (Standard Protection), all (All Deployments), preview (legacy Pre-Production Deployments), or legacy-standard (legacy Standard Protection) (default: legacy-standard)',
     deprecated: false,
   },
   {
-    name: 'password-protection',
+    name: 'password',
     shorthand: null,
     type: Boolean,
     description:
       'Apply action to Password Protection (requires eligible plan/permissions).',
     deprecated: false,
-  },
-  // Hidden: `--password` is the old name of `--password-protection`.
-  {
-    name: 'password',
-    shorthand: null,
-    type: Boolean,
-    description: 'Deprecated alias for `--password-protection`',
-    deprecated: true,
   },
   {
     name: 'protection-password',
@@ -722,7 +714,7 @@ const protectionToggleOptions = [
     type: String,
     argument: 'PASSWORD',
     description:
-      'Password value when enabling password protection (max 72 characters). Requires --password-protection.',
+      'Password value when enabling password protection (max 72 characters). Requires --password.',
     deprecated: false,
   },
   {
@@ -794,12 +786,12 @@ export const protectionEnableSubcommand = {
     },
     {
       name: 'Enable password protection',
-      value: `${packageName} project protection enable my-app --password-protection`,
+      value: `${packageName} project protection enable my-app --password`,
     },
     {
       name: 'Enable password protection with a password',
       placeholders: ['<password>'],
-      value: `${packageName} project protection enable my-app --password-protection --protection-password <password>`,
+      value: `${packageName} project protection enable my-app --password --protection-password <password>`,
     },
     {
       name: 'Enable customer support code visibility',
@@ -837,7 +829,7 @@ export const protectionDisableSubcommand = {
     },
     {
       name: 'Disable password protection',
-      value: `${packageName} project protection disable my-app --password-protection`,
+      value: `${packageName} project protection disable my-app --password`,
     },
     {
       name: 'Disable customer support code visibility',
@@ -905,11 +897,11 @@ export const protectionSubcommand = {
     },
     {
       name: 'Enable password protection',
-      value: `${packageName} project protection enable my-app --password-protection`,
+      value: `${packageName} project protection enable my-app --password`,
     },
     {
       name: 'Disable password protection',
-      value: `${packageName} project protection disable my-app --password-protection`,
+      value: `${packageName} project protection disable my-app --password`,
     },
   ],
 } as const;

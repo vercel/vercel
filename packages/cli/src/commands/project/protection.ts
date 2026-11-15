@@ -349,20 +349,9 @@ export default async function protection(
       json: preferJson,
     });
   }
-  const passwordOption = getRenamedOption<boolean>(
-    parsedArgs.flags,
-    '--password-protection',
-    '--password',
-    { json: preferJson }
-  );
-  if ('error' in passwordOption) {
-    return reportRenamedOptionError(client, passwordOption.error, {
-      json: preferJson,
-    });
-  }
-  const deprecationWarnings = [ssoOption.warning, passwordOption.warning];
+  const deprecationWarnings = [ssoOption.warning];
   const ssoSelected = Boolean(ssoOption.value);
-  const passwordSelected = Boolean(passwordOption.value);
+  const passwordSelected = Boolean(parsedArgs.flags['--password']);
 
   const deploymentTypeFlag = parsedArgs.flags['--deployment-type'] as
     | string
@@ -371,7 +360,7 @@ export default async function protection(
   if (deploymentTypeFlag !== undefined) {
     if (action !== 'enable' || (!ssoSelected && !passwordSelected)) {
       const msg =
-        '`--deployment-type` can only be used with `project protection enable` and `--vercel-authentication` or `--password-protection`.';
+        '`--deployment-type` can only be used with `project protection enable` and `--vercel-authentication` or `--password`.';
       outputAgentError(
         client,
         {
@@ -407,7 +396,7 @@ export default async function protection(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                `project protection enable${ssoSelected ? ' --vercel-authentication' : ''}${passwordSelected ? ' --password-protection' : ''} --deployment-type standard`
+                `project protection enable${ssoSelected ? ' --vercel-authentication' : ''}${passwordSelected ? ' --password' : ''} --deployment-type standard`
               ),
               when: 'Example with a valid deployment type',
             },
@@ -438,19 +427,19 @@ export default async function protection(
 
   if (protectionPasswordFlag !== undefined && !passwordSelected) {
     const msg =
-      '`--protection-password` requires `--password-protection`. Usage: `vercel project protection enable [name] --password-protection --protection-password <password>`';
+      '`--protection-password` requires `--password`. Usage: `vercel project protection enable [name] --password --protection-password <password>`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: msg,
-        hint: 'Pass --password-protection together with --protection-password when enabling Password Protection.',
+        hint: 'Pass --password together with --protection-password when enabling Password Protection.',
         next: [
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              'project protection enable --password-protection --protection-password <password>'
+              'project protection enable --password --protection-password <password>'
             ),
             when: 'Replace <password> with the deployment protection password',
           },
@@ -471,7 +460,7 @@ export default async function protection(
         status: 'error',
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection disable ... --password-protection` to turn Password Protection off.',
+        hint: 'Use `project protection disable ... --password` to turn Password Protection off.',
       },
       2
     );
@@ -494,7 +483,7 @@ export default async function protection(
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'project protection enable --password-protection --protection-password <password>'
+                'project protection enable --password --protection-password <password>'
               ),
               when: 'Replace <password> with a valid deployment protection password',
             },
@@ -518,14 +507,14 @@ export default async function protection(
     !gitForkProtectionSelected
   ) {
     const msg =
-      'No protection selected. Pass --vercel-authentication, --password-protection, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --vercel-authentication|--password-protection|--customer-support-code-visibility|--skew|--protection-bypass|--git-fork-protection`';
+      'No protection selected. Pass --vercel-authentication, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection. Usage: `vercel project protection enable|disable [name] --vercel-authentication|--password|--customer-support-code-visibility|--skew|--protection-bypass|--git-fork-protection`';
     outputAgentError(
       client,
       {
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection option (e.g. --vercel-authentication, --password-protection, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection).',
+        hint: 'Use `project protection enable|disable` with a protection option (e.g. --vercel-authentication, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -537,7 +526,7 @@ export default async function protection(
           {
             command: buildCommandWithGlobalFlags(
               client.argv,
-              `project protection ${action} --password-protection`
+              `project protection ${action} --password`
             ),
             when: 'Example: same action with password protection selected',
           },
@@ -605,7 +594,7 @@ export default async function protection(
         flag => !flag.startsWith('--non-interactive')
       );
       const interactiveCommand = getCommandNamePlain(
-        `project protection enable ${project.id} --password-protection${
+        `project protection enable ${project.id} --password${
           protectionPassword ? ' --protection-password <password>' : ''
         }${globalFlags.length ? ` ${globalFlags.join(' ')}` : ''} --non-interactive=false`
       );
