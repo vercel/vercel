@@ -593,9 +593,17 @@ export default async function protection(
       const globalFlags = getGlobalFlagsFromArgs(client.argv.slice(2)).filter(
         flag => !flag.startsWith('--non-interactive')
       );
+      // Repeat the selections that affect what gets enabled, so following
+      // the suggestion applies the coverage the user asked for.
       const interactiveCommand = getCommandNamePlain(
-        `project protection enable ${project.id} --password${
+        `project protection enable ${project.id}${
+          ssoSelected ? ' --vercel-authentication' : ''
+        } --password${
           protectionPassword ? ' --protection-password <password>' : ''
+        }${
+          requestedDeploymentType
+            ? ` --deployment-type ${deploymentTypeName(requestedDeploymentType)}`
+            : ''
         }${globalFlags.length ? ` ${globalFlags.join(' ')}` : ''} --non-interactive=false`
       );
       const payload: ActionRequiredPayload = {

@@ -399,6 +399,56 @@ describe('project protection (password)', () => {
     expect(JSON.stringify(payload)).not.toContain('s3cret');
   });
 
+  it.each([
+    ['all', ['--deployment-type', 'all'], ' --deployment-type all'],
+    [
+      'a raw API value',
+      ['--deployment-type', 'all_except_custom_domains'],
+      ' --deployment-type standard',
+    ],
+  ])('keeps --deployment-type (%s) in the interactive next step', async (_label, extra, expected) => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    const fetch = vi.spyOn(client, 'fetch');
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--vercel-authentication',
+      '--password',
+      ...extra,
+      '--non-interactive=true'
+    );
+    expect(await project(client)).toBe(1);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.next[0].command).toContain(expected);
+    expect(payload.next[0].command).toContain('--vercel-authentication');
+    expect(payload.next[0].command).toContain('--password');
+    expect(
+      fetch.mock.calls.filter(
+        ([, opts]) => opts?.method && opts.method !== 'GET'
+      )
+    ).toEqual([]);
+  });
+
+  it('omits --deployment-type from the interactive next step when not given', async () => {
+    useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'protection',
+      'enable',
+      'my-project',
+      '--password',
+      '--non-interactive=true'
+    );
+    expect(await project(client)).toBe(1);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.next[0].command).not.toContain('--deployment-type');
+    expect(payload.next[0].command).not.toContain('--vercel-authentication');
+  });
+
   it('can disable Password Protection in non-interactive mode', async () => {
     useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
     const fetch = vi.spyOn(client, 'fetch');
