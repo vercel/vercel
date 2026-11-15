@@ -689,7 +689,7 @@ const protectionToggleOptions = [
     type: String,
     argument: 'TYPE',
     description:
-      'When enabling --sso or --password, which deployments to protect: standard (Standard Protection), all (All Deployments), preview (legacy Pre-Production Deployments), or legacy-standard (legacy Standard Protection) (default: legacy-standard)',
+      'When enabling --sso or --password, which deployments to protect: standard (Standard Protection), all (All Deployments), preview (legacy Pre-Production Deployments), or legacy-standard (legacy Standard Protection) (default: standard for --sso, legacy-standard for --password)',
     deprecated: false,
   },
   {
@@ -770,10 +770,6 @@ export const protectionEnableSubcommand = {
     },
     {
       name: 'Enable Vercel Authentication with Standard Protection',
-      value: `${packageName} project protection enable my-app --sso --deployment-type standard`,
-    },
-    {
-      name: 'Enable Vercel Authentication (legacy Standard Protection)',
       value: `${packageName} project protection enable my-app --sso`,
     },
     {

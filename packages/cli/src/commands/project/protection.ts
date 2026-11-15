@@ -27,12 +27,13 @@ const PROTECTION_ACTIONS = ['enable', 'disable'] as const;
 type ProtectionAction = (typeof PROTECTION_ACTIONS)[number];
 const DEFAULT_SKEW_PROTECTION_MAX_AGE = 2592000;
 const ENABLED_DEPLOYMENT_TYPE = 'prod_deployment_urls_and_all_previews';
+const STANDARD_DEPLOYMENT_TYPE = 'all_except_custom_domains';
 const MAX_PROTECTION_PASSWORD_LENGTH = 72;
 
 // `--deployment-type` values, mapped to the API's `deploymentType` field on
 // `ssoProtection` and `passwordProtection`.
 const DEPLOYMENT_TYPES = {
-  standard: 'all_except_custom_domains',
+  standard: STANDARD_DEPLOYMENT_TYPE,
   all: 'all',
   preview: 'preview',
   'legacy-standard': ENABLED_DEPLOYMENT_TYPE,
@@ -368,7 +369,11 @@ export default async function protection(
       return 2;
     }
   }
-  const enabledDeploymentType =
+  // Vercel Authentication defaults to current Standard Protection. Password
+  // Protection keeps the legacy default.
+  const ssoEnabledDeploymentType =
+    requestedDeploymentType ?? STANDARD_DEPLOYMENT_TYPE;
+  const passwordEnabledDeploymentType =
     requestedDeploymentType ?? ENABLED_DEPLOYMENT_TYPE;
   const protectionPasswordFlag = parsedArgs.flags['--protection-password'] as
     | string
@@ -663,13 +668,15 @@ export default async function protection(
     const patchBody: JSONObject = {};
     if (ssoSelected) {
       patchBody.ssoProtection =
-        action === 'enable' ? { deploymentType: enabledDeploymentType } : null;
+        action === 'enable'
+          ? { deploymentType: ssoEnabledDeploymentType }
+          : null;
     }
     if (passwordSelected) {
       patchBody.passwordProtection =
         action === 'enable'
           ? {
-              deploymentType: enabledDeploymentType,
+              deploymentType: passwordEnabledDeploymentType,
               ...(protectionPassword ? { password: protectionPassword } : {}),
             }
           : null;
@@ -704,19 +711,18 @@ export default async function protection(
       action === 'enable' &&
       ssoSelected &&
       previousSsoDeploymentType &&
-      previousSsoDeploymentType !== enabledDeploymentType
+      previousSsoDeploymentType !== ssoEnabledDeploymentType
         ? previousSsoDeploymentType
         : undefined;
     const passwordChangedFrom =
       action === 'enable' &&
       passwordSelected &&
       previousPasswordDeploymentType &&
-      previousPasswordDeploymentType !== enabledDeploymentType
+      previousPasswordDeploymentType !== passwordEnabledDeploymentType
         ? previousPasswordDeploymentType
         : undefined;
 
     if (preferJson) {
-      const enabledName = deploymentTypeName(enabledDeploymentType);
       client.stdout.write(
         `${JSON.stringify(
           {
@@ -726,7 +732,9 @@ export default async function protection(
             ssoProtection: ssoSelected ? action === 'enable' : undefined,
             ...(action === 'enable' && ssoSelected
               ? {
-                  ssoDeploymentType: enabledName,
+                  ssoDeploymentType: deploymentTypeName(
+                    ssoEnabledDeploymentType
+                  ),
                   ...(ssoChangedFrom
                     ? {
                         previousSsoDeploymentType:
@@ -740,7 +748,9 @@ export default async function protection(
               : undefined,
             ...(action === 'enable' && passwordSelected
               ? {
-                  passwordDeploymentType: enabledName,
+                  passwordDeploymentType: deploymentTypeName(
+                    passwordEnabledDeploymentType
+                  ),
                   ...(passwordChangedFrom
                     ? {
                         previousPasswordDeploymentType:
@@ -770,20 +780,39 @@ export default async function protection(
       return 0;
     }
 
-    for (const [label, from] of [
-      ['Vercel Authentication', ssoChangedFrom],
-      ['Password Protection', passwordChangedFrom],
+    for (const [label, from, to] of [
+      ['Vercel Authentication', ssoChangedFrom, ssoEnabledDeploymentType],
+      [
+        'Password Protection',
+        passwordChangedFrom,
+        passwordEnabledDeploymentType,
+      ],
     ] as const) {
       if (!from) continue;
       output.warning(
-        `${label} changed from ${deploymentTypeLabel(from)} to ${deploymentTypeLabel(enabledDeploymentType)}. To restore it, rerun with \`--deployment-type ${deploymentTypeName(from)}\`.`
+        `${label} changed from ${deploymentTypeLabel(from)} to ${deploymentTypeLabel(to)}. To restore it, rerun with \`--deployment-type ${deploymentTypeName(from)}\`.`
       );
     }
 
-    const coverage =
-      action === 'enable' && (ssoSelected || passwordSelected)
-        ? ` (${deploymentTypeLabel(enabledDeploymentType)})`
-        : '';
+    let coverage = '';
+    if (action === 'enable') {
+      const parts: string[] = [];
+      if (ssoSelected) {
+        parts.push(
+          passwordSelected
+            ? `Vercel Authentication: ${deploymentTypeLabel(ssoEnabledDeploymentType)}`
+            : deploymentTypeLabel(ssoEnabledDeploymentType)
+        );
+      }
+      if (passwordSelected) {
+        parts.push(
+          ssoSelected
+            ? `Password Protection: ${deploymentTypeLabel(passwordEnabledDeploymentType)}`
+            : deploymentTypeLabel(passwordEnabledDeploymentType)
+        );
+      }
+      coverage = parts.length ? ` (${parts.join(', ')})` : '';
+    }
     output.log(
       `${chalk.bold('Deployment protection')} ${action === 'enable' ? 'enabled' : 'disabled'} for ${chalk.cyan(project.name)}${coverage}`
     );
