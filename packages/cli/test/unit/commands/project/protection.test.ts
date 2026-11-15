@@ -1284,3 +1284,38 @@ describe('project protection deprecated option names', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe('bare project protection keeps its existing bypass output', () => {
+  const SECRET = 'bypass-secret-abcdefghijklmnopqrstuvwxyz';
+
+  function useProjectWithBypass() {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      protectionBypass: {
+        [SECRET]: {
+          createdAt: 1700000000000,
+          createdBy: 'user_123',
+          scope: 'automation-bypass',
+        },
+      },
+    } as typeof defaultProject);
+  }
+
+  it('still includes protectionBypass in JSON', async () => {
+    useProjectWithBypass();
+    client.setArgv('project', 'protection', 'my-project', '--json');
+    expect(await project(client)).toBe(0);
+    const out = JSON.parse(client.stdout.getFullOutput());
+    expect(Object.keys(out.protectionBypass)).toEqual([SECRET]);
+    expect(out).not.toHaveProperty('protectionBypassSecrets');
+  });
+
+  it('still prints protectionBypass in human output', async () => {
+    useProjectWithBypass();
+    client.setArgv('project', 'protection', 'my-project');
+    expect(await project(client)).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain('protectionBypass:');
+  });
+});

@@ -141,7 +141,7 @@ const PROTECTION_KEYS = [
 
 /**
  * The bypass secrets without the secrets themselves. `protectionBypass` is
- * keyed by the secret value, so it's never printed; only each entry's
+ * keyed by the secret value, so `status` never prints it; only each entry's
  * non-secret metadata is.
  */
 function summarizeProtectionBypass(
@@ -857,9 +857,16 @@ export default async function protection(
 
   const ssoDeploymentType = getDeploymentType(raw.ssoProtection);
   const passwordDeploymentType = getDeploymentType(raw.passwordProtection);
-  const protectionBypassSecrets = summarizeProtectionBypass(
-    raw.protectionBypass
-  );
+  // `status` never prints bypass secrets: `protectionBypass` is keyed by the
+  // secret value, so only each entry's metadata is shown. Bare
+  // `project protection [name]` keeps printing the raw field so existing
+  // scripts behave the same.
+  let protectionBypassSecrets: Array<Record<string, unknown>> | undefined;
+  if (statusMode) {
+    protectionBypassSecrets = summarizeProtectionBypass(raw.protectionBypass);
+  } else if ('protectionBypass' in raw) {
+    slice.protectionBypass = raw.protectionBypass;
+  }
 
   if (preferJson) {
     client.stdout.write(
