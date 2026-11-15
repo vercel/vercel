@@ -1124,3 +1124,49 @@ describe('project protection --deployment-type and status', () => {
     );
   });
 });
+
+describe('project protection status never prints bypass secrets', () => {
+  const SECRET = 'bypass-secret-abcdefghijklmnopqrstuvwxyz';
+
+  function useProjectWithBypass() {
+    useProject({
+      ...defaultProject,
+      id: 'prj_123',
+      name: 'my-project',
+      protectionBypass: {
+        [SECRET]: {
+          createdAt: 1700000000000,
+          createdBy: 'user_123',
+          scope: 'automation-bypass',
+        },
+      },
+    } as typeof defaultProject);
+  }
+
+  it('omits secrets from JSON and keeps non-secret metadata', async () => {
+    useProjectWithBypass();
+    client.setArgv('project', 'protection', 'status', 'my-project', '--json');
+    expect(await project(client)).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).not.toContain(SECRET);
+    const out = JSON.parse(stdout);
+    expect(out).not.toHaveProperty('protectionBypass');
+    expect(out.protectionBypassSecrets).toEqual([
+      {
+        scope: 'automation-bypass',
+        createdAt: 1700000000000,
+        createdBy: 'user_123',
+      },
+    ]);
+  });
+
+  it('summarizes bypass secrets in human output without the secret', async () => {
+    useProjectWithBypass();
+    client.setArgv('project', 'protection', 'status', 'my-project');
+    expect(await project(client)).toBe(0);
+    const stderr = client.stderr.getFullOutput();
+    expect(stderr).toContain('Protection bypass: 1 secret (automation-bypass)');
+    expect(stderr).not.toContain(SECRET);
+    expect(client.stdout.getFullOutput()).not.toContain(SECRET);
+  });
+});

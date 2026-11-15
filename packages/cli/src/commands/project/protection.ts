@@ -132,8 +132,31 @@ const PROTECTION_KEYS = [
   'skewProtectionMaxAge',
   'customerSupportCodeVisibility',
   'gitForkProtection',
-  'protectionBypass',
 ] as const;
+
+/**
+ * The bypass secrets without the secrets themselves. `protectionBypass` is
+ * keyed by the secret value, so it's never printed; only each entry's
+ * non-secret metadata is.
+ */
+function summarizeProtectionBypass(
+  value: unknown
+): Array<Record<string, unknown>> | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  return Object.values(value as Record<string, unknown>).map(entry => {
+    const { scope, createdAt, createdBy, integrationId, configurationId } =
+      (entry ?? {}) as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries({
+        scope,
+        createdAt,
+        createdBy,
+        integrationId,
+        configurationId,
+      }).filter(([, v]) => v !== undefined)
+    );
+  });
+}
 
 function isProtectionAction(v: string | undefined): v is ProtectionAction {
   return !!v && (PROTECTION_ACTIONS as readonly string[]).includes(v);
@@ -800,6 +823,9 @@ export default async function protection(
 
   const ssoDeploymentType = getDeploymentType(raw.ssoProtection);
   const passwordDeploymentType = getDeploymentType(raw.passwordProtection);
+  const protectionBypassSecrets = summarizeProtectionBypass(
+    raw.protectionBypass
+  );
 
   if (preferJson) {
     client.stdout.write(
@@ -808,6 +834,7 @@ export default async function protection(
           projectId: project.id,
           name: project.name,
           ...slice,
+          ...(protectionBypassSecrets ? { protectionBypassSecrets } : {}),
           deploymentTypes: {
             ssoProtection: ssoDeploymentType
               ? deploymentTypeName(ssoDeploymentType)
@@ -842,6 +869,19 @@ export default async function protection(
   );
   for (const [k, v] of rest) {
     output.log(`${chalk.cyan(`${k}:`)} ${JSON.stringify(v)}`);
+  }
+  if (protectionBypassSecrets) {
+    const scopes = [
+      ...new Set(protectionBypassSecrets.map(s => String(s.scope))),
+    ];
+    const count = protectionBypassSecrets.length;
+    output.log(
+      `${chalk.cyan('Protection bypass:')} ${
+        count === 0
+          ? 'None'
+          : `${count} ${count === 1 ? 'secret' : 'secrets'} (${scopes.join(', ')})`
+      }`
+    );
   }
   return 0;
 }
