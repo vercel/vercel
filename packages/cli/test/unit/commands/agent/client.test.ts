@@ -131,7 +131,7 @@ describe('runTurn', () => {
       type: 'message',
       teamId: 'team_1',
       planMode: true,
-      surface: 'dashboard',
+      surface: 'cli',
       userContext: '{"scope":"acme"}',
       messages: [
         {

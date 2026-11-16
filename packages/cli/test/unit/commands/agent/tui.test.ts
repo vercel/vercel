@@ -377,7 +377,7 @@ describe('chat', () => {
     chat.press('return');
     await waitFor(() => chat.frame().includes('I can answer Vercel questions'));
     expect(chat.posts[0]).toMatchObject({
-      surface: 'dashboard',
+      surface: 'cli',
       messages: [
         {
           parts: [{ text: 'what can you do?' }],

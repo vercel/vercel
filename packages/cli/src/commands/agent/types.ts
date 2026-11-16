@@ -56,7 +56,7 @@ export interface SessionMessageRequest {
   planMode: boolean;
   messages: AgentMessage[];
   userContext?: string;
-  surface?: 'dashboard';
+  surface?: 'cli';
 }
 
 export interface SessionDetails {

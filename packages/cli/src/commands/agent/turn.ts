@@ -90,7 +90,7 @@ export async function runTurn(options: TurnOptions): Promise<TurnResult> {
       ...(options.userContext && {
         userContext: JSON.stringify(options.userContext),
       }),
-      ...(options.isNew && { surface: 'dashboard' as const }),
+      ...(options.isNew && { surface: 'cli' as const }),
     },
     options.signal
   );
