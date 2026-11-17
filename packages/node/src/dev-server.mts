@@ -174,7 +174,8 @@ async function onDevRequest(
     if (staticPath) {
       try {
         const content = await readFile(staticPath);
-        const ext = extname(staticPath);
+        const url = new URL(req.url, 'http://localhost');
+        const ext = extname(url.pathname);
         const mimeType = contentType(ext) || 'application/octet-stream';
 
         res.setHeader('Content-Type', mimeType);
