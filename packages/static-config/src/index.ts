@@ -377,7 +377,7 @@ function getConfigNode(sourceFile: SourceFile) {
 
 function getTsMorphValue(valueNode: Node): unknown {
   if (Node.isStringLiteral(valueNode)) {
-    return eval(valueNode.getText());
+    return valueNode.getLiteralValue();
   }
   if (Node.isNumericLiteral(valueNode)) return Number(valueNode.getText());
   if (Node.isTrueLiteral(valueNode)) return true;
@@ -401,7 +401,14 @@ function getTsMorphObject(obj: ObjectLiteralExpression): unknown {
   for (const prop of obj.getProperties()) {
     if (!Node.isPropertyAssignment(prop)) continue;
     const [nameNode, _colon, valueNode] = prop.getChildren();
-    result[nameNode.getText()] = getTsMorphValue(valueNode);
+    const key = nameNode.getText();
+    if (key === '__proto__') continue;
+    Object.defineProperty(result, key, {
+      value: getTsMorphValue(valueNode),
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
   return result;
 }

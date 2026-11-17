@@ -193,4 +193,19 @@ describe('getConfig()', () => {
     expect(err.message).toMatch(/^Invalid data:/);
     expect(err.message).toContain('runtime');
   });
+
+  it('ignores __proto__ properties in ts-morph fallback without polluting prototype', () => {
+    const sourcePath = join(tempDir, `fixture-${fixtureId++}.ts`);
+    writeFileSync(
+      sourcePath,
+      `export const config = { 123: 'value', __proto__: { polluted: true } }`
+    );
+    const parsed = getConfig(null, sourcePath, {
+      type: 'object',
+      additionalProperties: true,
+    } as const) as Record<string, unknown>;
+    expect(parsed).toEqual({ 123: 'value' });
+    expect((parsed as { polluted?: boolean }).polluted).toBeUndefined();
+    expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
+  });
 });
