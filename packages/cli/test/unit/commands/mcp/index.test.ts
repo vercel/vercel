@@ -1,18 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { execFileSync } from 'child_process';
+import execa from 'execa';
 import { EventEmitter } from 'events';
 import open from 'open';
 import { client } from '../../../mocks/client';
 import mcpCommand from '../../../../src/commands/mcp';
 import setupMcp from '../../../../src/commands/mcp/mcp';
 
-vi.mock('child_process', async importOriginal => {
-  const actual = await importOriginal<typeof import('child_process')>();
-  return {
-    ...actual,
-    execFileSync: vi.fn(),
-  };
-});
+vi.mock('execa', () => ({
+  default: vi.fn(),
+}));
 
 vi.mock('open', () => ({
   default: vi.fn(),
@@ -122,36 +118,35 @@ describe('mcp', () => {
     });
   });
 
-  it('uses execFileSync without a shell for Claude Code setup', async () => {
-    vi.mocked(execFileSync).mockReturnValue('');
+  it('uses execa without a shell for Claude Code setup', async () => {
+    vi.mocked(execa).mockResolvedValue({ stdout: '' } as any);
     client.nonInteractive = true;
 
     const code = await setupMcp(client, { clients: ['Claude Code'] });
     expect(code).toBe(0);
-    expect(execFileSync).toHaveBeenCalledWith(
+    expect(execa).toHaveBeenCalledWith(
       'claude',
       ['mcp', 'add', '--transport', 'http', 'vercel', 'https://mcp.vercel.com'],
-      { stdio: 'pipe', encoding: 'utf8' }
+      { stdio: 'pipe' }
     );
   });
 
-  it('opens VS Code one-click installer via open() and checks extensions via execFileSync', async () => {
-    vi.mocked(execFileSync).mockReturnValue('github.copilot\n');
+  it('opens VS Code one-click installer via open() and checks extensions via execa', async () => {
+    vi.mocked(execa).mockResolvedValue({ stdout: 'github.copilot\n' } as any);
     vi.mocked(open).mockResolvedValue({} as any);
     client.nonInteractive = true;
 
     const code = await setupMcp(client, { clients: ['VS Code with Copilot'] });
     expect(code).toBe(0);
-    expect(execFileSync).toHaveBeenCalledWith('code', ['--list-extensions'], {
+    expect(execa).toHaveBeenCalledWith('code', ['--list-extensions'], {
       stdio: 'pipe',
-      encoding: 'utf8',
     });
     expect(open).toHaveBeenCalledTimes(1);
     expect(vi.mocked(open).mock.calls[0][0]).toMatch(/^vscode:mcp\/install\?/);
   });
 
   it('reports failure when the deep-link launcher exits with non-zero code', async () => {
-    vi.mocked(execFileSync).mockReturnValue('github.copilot\n');
+    vi.mocked(execa).mockResolvedValue({ stdout: 'github.copilot\n' } as any);
     const fakeChild = new EventEmitter();
     vi.mocked(open).mockImplementation(async () => {
       setTimeout(() => fakeChild.emit('close', 1), 0);

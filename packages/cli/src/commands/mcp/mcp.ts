@@ -1,6 +1,6 @@
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import { execFileSync } from 'child_process';
+import execa from 'execa';
 import { existsSync } from 'fs';
 import open from 'open';
 import { getLinkedProject } from '../../util/projects/link';
@@ -23,15 +23,15 @@ function getAvailableClients(): string[] {
   ];
 }
 
-function safeExecFileSync(
+async function safeExec(
   file: string,
   args: string[] = []
-): string | { error: string; stderr: string } {
+): Promise<string | { error: string; stderr: string }> {
   try {
-    return execFileSync(file, args, {
+    const { stdout } = await execa(file, args, {
       stdio: 'pipe',
-      encoding: 'utf8',
     });
+    return stdout;
   } catch (error: any) {
     return { error: error.message, stderr: error.stderr?.toString() || '' };
   }
@@ -205,7 +205,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         ? `vercel-${projectInfo.projectName}`
         : 'vercel';
 
-      const result = safeExecFileSync('claude', [
+      const result = await safeExec('claude', [
         'mcp',
         'add',
         '--transport',
@@ -276,10 +276,10 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       const cursorInstalled =
         process.platform === 'darwin'
           ? existsSync('/Applications/Cursor.app')
-          : typeof safeExecFileSync(
+          : typeof (await safeExec(
               process.platform === 'win32' ? 'where' : 'which',
               ['cursor']
-            ) === 'string';
+            )) === 'string';
 
       if (!cursorInstalled) {
         if (!client.nonInteractive) {
@@ -391,7 +391,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       }
     } else if (clientName === 'VS Code with Copilot') {
       // Check if GitHub Copilot is installed
-      const extensionsResult = safeExecFileSync('code', ['--list-extensions']);
+      const extensionsResult = await safeExec('code', ['--list-extensions']);
       const copilotInstalled =
         typeof extensionsResult === 'string' &&
         /copilot/i.test(extensionsResult);
