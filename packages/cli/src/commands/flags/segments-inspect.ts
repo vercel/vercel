@@ -6,6 +6,7 @@ import { getCommandName } from '../../util/pkg-name';
 import { getFlagSettings } from '../../util/flags/get-flags';
 import { getSegment } from '../../util/flags/segments';
 import { printSegmentDetails } from '../../util/flags/print-segment-details';
+import { getSegmentDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { formatProject } from '../../util/projects/format-project';
 import { FlagsSegmentsInspectTelemetryClient } from '../../util/telemetry/commands/flags/segments';
@@ -75,11 +76,22 @@ export default async function segmentsInspect(
     output.stopSpinner();
 
     if (json) {
-      client.stdout.write(`${JSON.stringify({ segment }, null, 2)}\n`);
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            segment,
+            url: getSegmentDashboardUrl(org.slug, project.name, segment.slug),
+          },
+          null,
+          2
+        )}\n`
+      );
     } else {
       printSegmentDetails({
         segment,
         projectSlugLink,
+        orgSlug: org.slug,
+        projectName: project.name,
         settings,
       });
     }

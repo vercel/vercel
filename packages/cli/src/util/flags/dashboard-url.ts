@@ -18,3 +18,14 @@ export function getFlagsDashboardUrl(
 ): string {
   return `https://vercel.com/${orgSlug}/${projectName}/flags`;
 }
+
+/**
+ * Generate a dashboard URL for a specific segment
+ */
+export function getSegmentDashboardUrl(
+  orgSlug: string,
+  projectName: string,
+  segmentSlug: string
+): string {
+  return `https://vercel.com/${orgSlug}/${projectName}/flags/segments/${encodeURIComponent(segmentSlug)}`;
+}

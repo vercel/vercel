@@ -29,6 +29,7 @@ import {
   coerceTimestampSegmentData,
 } from '../../util/flags/timestamp';
 import { printSegmentDetails } from '../../util/flags/print-segment-details';
+import { getSegmentDashboardUrl } from '../../util/flags/dashboard-url';
 import output from '../../output-manager';
 import { formatProject } from '../../util/projects/format-project';
 import { FlagsSegmentsUpdateTelemetryClient } from '../../util/telemetry/commands/flags/segments';
@@ -211,7 +212,16 @@ export default async function segmentsUpdate(
     output.stopSpinner();
 
     if (json) {
-      client.stdout.write(`${JSON.stringify({ segment }, null, 2)}\n`);
+      client.stdout.write(
+        `${JSON.stringify(
+          {
+            segment,
+            url: getSegmentDashboardUrl(org.slug, project.name, segment.slug),
+          },
+          null,
+          2
+        )}\n`
+      );
       return 0;
     }
 
@@ -219,6 +229,8 @@ export default async function segmentsUpdate(
     printSegmentDetails({
       segment,
       projectSlugLink,
+      orgSlug: org.slug,
+      projectName: project.name,
       showTimestamps: false,
       settings,
     });

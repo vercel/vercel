@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
 import formatDate from '../format-date';
+import { getSegmentDashboardUrl } from './dashboard-url';
 import { formatFlagConditionComparator } from './comparators';
 import { getFlagAttributeType } from './attribute-types';
 import { formatTimestampRhs } from './timestamp';
@@ -16,6 +17,8 @@ import type {
 interface PrintSegmentDetailsOptions {
   segment: Segment;
   projectSlugLink: string;
+  orgSlug: string;
+  projectName: string;
   showTimestamps?: boolean;
   settings?: FlagSettings;
 }
@@ -23,12 +26,21 @@ interface PrintSegmentDetailsOptions {
 export function printSegmentDetails({
   segment,
   projectSlugLink,
+  orgSlug,
+  projectName,
   showTimestamps = true,
   settings,
 }: PrintSegmentDetailsOptions) {
+  const dashboardUrl = getSegmentDashboardUrl(
+    orgSlug,
+    projectName,
+    segment.slug
+  );
+
   output.log(
     `\nFeature flag segment ${chalk.bold(segment.slug)} for ${projectSlugLink}\n`
   );
+  output.print(`  ${chalk.cyan(dashboardUrl)}\n\n`);
 
   output.print(`  ${chalk.dim('ID:')}           ${segment.id}\n`);
   output.print(`  ${chalk.dim('Label:')}        ${segment.label}\n`);

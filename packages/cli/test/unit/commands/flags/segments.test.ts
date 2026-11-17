@@ -157,6 +157,17 @@ describe('flags segments', () => {
       expect(client.stderr.getFullOutput()).toContain('rule_plan');
     });
 
+    it('prints the segment dashboard URL', async () => {
+      client.setArgv('flags', 'segments', 'inspect', 'beta-users');
+
+      const exitCode = await flags(client);
+
+      expect(exitCode).toEqual(0);
+      expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+        /https:\/\/vercel\.com\/[^/\s]+\/vercel-flags-test\/flags\/segments\/beta-users/
+      );
+    });
+
     it('prints segment JSON', async () => {
       client.setArgv('flags', 'segments', 'inspect', 'beta-users', '--json');
 
@@ -165,6 +176,9 @@ describe('flags segments', () => {
       expect(exitCode).toEqual(0);
       const parsed = JSON.parse(client.stdout.getFullOutput());
       expect(parsed.segment.slug).toEqual('beta-users');
+      expect(parsed.url).toMatch(
+        /^https:\/\/vercel\.com\/[^/]+\/vercel-flags-test\/flags\/segments\/beta-users$/
+      );
       expect(parsed.segment.data.include.user.id[0]).toMatchObject({
         value: 'user_123',
         note: 'founder',
@@ -230,6 +244,9 @@ describe('flags segments', () => {
         cmp: 'eq',
         rhs: 'enterprise',
       });
+      expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+        /https:\/\/vercel\.com\/[^/\s]+\/vercel-flags-test\/flags\/segments\/enterprise-users/
+      );
     });
 
     it('creates a segment from full data JSON', async () => {
@@ -250,6 +267,9 @@ describe('flags segments', () => {
       expect(exitCode).toEqual(0);
       const parsed = JSON.parse(client.stdout.getFullOutput());
       expect(parsed.segment.slug).toEqual('staff-allowlist');
+      expect(parsed.url).toMatch(
+        /^https:\/\/vercel\.com\/[^/]+\/vercel-flags-test\/flags\/segments\/staff-allowlist$/
+      );
       expect(parsed.segment.data.include.user.email[0]).toMatchObject({
         value: 'me@company.com',
       });
