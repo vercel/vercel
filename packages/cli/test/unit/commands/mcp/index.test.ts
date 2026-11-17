@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { execFileSync } from 'child_process';
+import { EventEmitter } from 'events';
 import open from 'open';
 import { client } from '../../../mocks/client';
 import mcpCommand from '../../../../src/commands/mcp';
@@ -147,5 +148,22 @@ describe('mcp', () => {
     });
     expect(open).toHaveBeenCalledTimes(1);
     expect(vi.mocked(open).mock.calls[0][0]).toMatch(/^vscode:mcp\/install\?/);
+  });
+
+  it('reports failure when the deep-link launcher exits with non-zero code', async () => {
+    vi.mocked(execFileSync).mockReturnValue('github.copilot\n');
+    const fakeChild = new EventEmitter();
+    vi.mocked(open).mockImplementation(async () => {
+      setTimeout(() => fakeChild.emit('close', 1), 0);
+      return fakeChild as any;
+    });
+    client.nonInteractive = true;
+
+    const code = await setupMcp(client, { clients: ['VS Code with Copilot'] });
+    expect(code).toBe(0);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.summary).toContain(
+      '❌ VS Code: Failed to open one-click installer'
+    );
   });
 });

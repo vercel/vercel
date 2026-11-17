@@ -37,6 +37,23 @@ function safeExecFileSync(
   }
 }
 
+async function openUrl(url: string): Promise<void> {
+  const subprocess = await open(url);
+  if (typeof subprocess?.once !== 'function') {
+    return;
+  }
+  await new Promise<void>((resolve, reject) => {
+    subprocess.once('error', reject);
+    subprocess.once('close', code => {
+      if (code === 0 || code === null) {
+        resolve();
+      } else {
+        reject(new Error(`Launcher exited with code ${code}`));
+      }
+    });
+  });
+}
+
 async function getProjectSpecificUrl(
   client: Client
 ): Promise<{ url: string; projectName: string } | null> {
@@ -348,7 +365,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
 
       // Try to open the one-click installer
       try {
-        await open(oneClickUrl);
+        await openUrl(oneClickUrl);
 
         summary.push('✅ Cursor: One-click installer opened');
         if (!client.nonInteractive) {
@@ -465,7 +482,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
 
       try {
         // Try to open the one-click installer
-        await open(oneClickUrl);
+        await openUrl(oneClickUrl);
 
         summary.push('✅ VS Code: One-click installer opened');
         if (!client.nonInteractive) {
