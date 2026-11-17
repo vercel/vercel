@@ -182,7 +182,7 @@ export async function getTokenResponse(
 ): Promise<ConnectTokenResponse> {
   const requestParams = normalizeTokenParams(params);
   const bufferMs = requestParams.validityBufferMs ?? DEFAULT_VALIDITY_BUFFER_MS;
-  const cacheKey = tokenCacheKey(connector, requestParams);
+  const cacheKey = tokenCacheKey(connector, requestParams, options);
 
   if (options?.forceRefresh) {
     cache.delete(cacheKey);
@@ -217,7 +217,7 @@ export async function getTokenResponse(
     throw await createConnectErrorFromResponse(response, 'Failed to get token');
   }
 
-  const data: ConnectTokenResponse = await response.json();
+  const data = await readTokenResponse(response);
 
   if (cache.size >= MAX_CACHE_SIZE) {
     evictLru();
@@ -275,15 +275,29 @@ export async function revokeToken(
  * round trip on every call the way {@link ConnectOptions.forceRefresh}
  * does.
  *
- * The cache key is derived from `connector` plus every field of `params`,
- * so pass the same `params` used for the original {@link getTokenResponse}
- * call. No-op when no matching entry exists.
+ * The cache key is derived from `connector`, every field of `params`, and
+ * the explicit {@link ConnectOptions.vercelToken} when one was passed, so
+ * pass the same `params` used for the original {@link getTokenResponse}
+ * call. Pass `options.vercelToken` to drop only the entry fetched with that
+ * credential; omit it to drop the matching entry for every credential.
+ * No-op when no matching entry exists.
  */
 export function deleteTokenCacheEntry(
   connector: string,
-  params: ConnectTokenParams
+  params: ConnectTokenParams,
+  options?: Pick<ConnectOptions, 'vercelToken'>
 ): void {
-  cache.delete(tokenCacheKey(connector, normalizeTokenParams(params)));
+  const requestParams = normalizeTokenParams(params);
+  if (options?.vercelToken !== undefined) {
+    cache.delete(tokenCacheKey(connector, requestParams, options));
+    return;
+  }
+  const prefix = tokenRequestKey(connector, requestParams);
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) {
+      cache.delete(key);
+    }
+  }
 }
 
 const DEFAULT_VALIDITY_BUFFER_MS = 30_000;
@@ -297,12 +311,59 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 
 /**
- * Cache key for a `(connector, params)` pair. Stable across calls with
- * equal arguments so {@link getTokenResponse} and
+ * Cache key for a `(connector, params, credential)` triple. Stable across
+ * calls with equal arguments so {@link getTokenResponse} and
  * {@link deleteTokenCacheEntry} address the same entry.
+ *
+ * An explicit `vercelToken` is part of the key: one process can call
+ * Connect for several teams or projects, and a connector UID such as
+ * `oauth/linear` with the same subject resolves to a different grant for
+ * each of them. Calls that use the ambient OIDC token share one partition,
+ * since a deployment's OIDC identity does not change between calls.
  */
-function tokenCacheKey(connector: string, params: ConnectTokenParams): string {
-  return JSON.stringify({ connector, ...params });
+function tokenCacheKey(
+  connector: string,
+  params: ConnectTokenParams,
+  options?: Pick<ConnectOptions, 'vercelToken'>
+): string {
+  return (
+    tokenRequestKey(connector, params) +
+    JSON.stringify({ vercelToken: options?.vercelToken ?? null })
+  );
+}
+
+/** The part of {@link tokenCacheKey} derived from the request itself. */
+function tokenRequestKey(
+  connector: string,
+  params: ConnectTokenParams
+): string {
+  return `${JSON.stringify({ connector, ...params })}\n`;
+}
+
+async function readTokenResponse(
+  response: Response
+): Promise<ConnectTokenResponse> {
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    throw new ConnectError(
+      `Failed to get token: ${response.status} response is not valid JSON`,
+      { status: response.status, statusText: response.statusText }
+    );
+  }
+  if (
+    !isRecord(data) ||
+    typeof data.token !== 'string' ||
+    typeof data.expiresAt !== 'number' ||
+    !Number.isFinite(data.expiresAt)
+  ) {
+    throw new ConnectError(
+      `Failed to get token: ${response.status} response is missing token or expiresAt`,
+      { status: response.status, statusText: response.statusText }
+    );
+  }
+  return data as unknown as ConnectTokenResponse;
 }
 
 function evictLru(): void {

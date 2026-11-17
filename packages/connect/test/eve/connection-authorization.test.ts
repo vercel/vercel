@@ -315,6 +315,39 @@ describe('connect() adapter evict', () => {
     vi.restoreAllMocks();
   });
 
+  it('keeps tokens for different Vercel credentials apart and evicts only its own', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonTokenResponse('tok_team_a'))
+      .mockResolvedValueOnce(jsonTokenResponse('tok_team_b'))
+      .mockResolvedValueOnce(jsonTokenResponse('tok_team_a_fresh'));
+    type EvictableDefinition = InteractiveAuthorizationDefinition & {
+      readonly evict: (opts: {
+        readonly principal: ConnectionPrincipal;
+        readonly connection?: EveConnectionAuthorizationContext;
+      }) => Promise<void>;
+    };
+    const teamA = connect({
+      connector: 'oauth/connection-auth-evict-teams',
+      autoProvision: false,
+      connectOptions: { vercelToken: 'team_a_oidc' },
+    }) as EvictableDefinition;
+    const teamB = connect({
+      connector: 'oauth/connection-auth-evict-teams',
+      autoProvision: false,
+      connectOptions: { vercelToken: 'team_b_oidc' },
+    }) as EvictableDefinition;
+    const args = { principal: PRINCIPAL, connection: CONNECTION };
+
+    expect((await teamA.getToken(args)).token).toBe('tok_team_a');
+    expect((await teamB.getToken(args)).token).toBe('tok_team_b');
+
+    await teamA.evict(args);
+
+    expect((await teamA.getToken(args)).token).toBe('tok_team_a_fresh');
+    expect((await teamB.getToken(args)).token).toBe('tok_team_b');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it('purges the connector token cache so the next getToken re-fetches', async () => {
     fetchMock
       .mockResolvedValueOnce(jsonTokenResponse('tok_stale'))

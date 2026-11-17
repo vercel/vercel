@@ -480,7 +480,7 @@ function makeEvict(
         // gone even when the server-side revoke failed.
       }
     }
-    deleteTokenCacheEntry(options.connector, params);
+    deleteTokenCacheEntry(options.connector, params, options.connectOptions);
   };
 }
 
