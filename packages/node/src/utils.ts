@@ -1,6 +1,7 @@
 import { debug, streamToBuffer } from '@vercel/build-utils';
+import { realpath, stat } from 'fs/promises';
 import type { IncomingMessage } from 'http';
-import { extname } from 'path';
+import { extname, isAbsolute, relative, resolve } from 'path';
 export {
   getRegExpFromMatchers,
   resolveMiddlewareMatcher,
@@ -158,4 +159,56 @@ export async function serializeBody(
   return request.method !== 'GET' && request.method !== 'HEAD'
     ? await streamToBuffer(request)
     : undefined;
+}
+
+function isWithinRoot(root: string, target: string): boolean {
+  const rel = relative(root, target);
+  return Boolean(rel) && !rel.startsWith('..') && !isAbsolute(rel);
+}
+
+/**
+ * Safely resolves a request URL to a regular file inside `publicDir`,
+ * preventing path traversal and symlink escapes.
+ */
+export async function resolvePublicFilePath(
+  cwd: string,
+  publicDir: string,
+  requestUrl: string
+): Promise<string | null> {
+  let pathname: string;
+  try {
+    const url = new URL(requestUrl, 'http://localhost');
+    pathname = decodeURIComponent(url.pathname);
+  } catch {
+    return null;
+  }
+
+  if (pathname.includes('\0')) {
+    return null;
+  }
+
+  const relativeRequestPath = pathname.replace(/^\/+/, '');
+  if (!relativeRequestPath) {
+    return null;
+  }
+
+  const publicRoot = resolve(cwd, publicDir);
+  const candidatePath = resolve(publicRoot, relativeRequestPath);
+  if (!isWithinRoot(publicRoot, candidatePath)) {
+    return null;
+  }
+
+  try {
+    const [realPublicRoot, realCandidatePath] = await Promise.all([
+      realpath(publicRoot),
+      realpath(candidatePath),
+    ]);
+    if (!isWithinRoot(realPublicRoot, realCandidatePath)) {
+      return null;
+    }
+    const fileStat = await stat(realCandidatePath);
+    return fileStat.isFile() ? realCandidatePath : null;
+  } catch {
+    return null;
+  }
 }

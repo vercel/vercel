@@ -5,12 +5,13 @@ if (!entrypoint) {
   throw new Error('`VERCEL_DEV_ENTRYPOINT` must be defined');
 }
 
-import { join } from 'path';
+import { extname, join } from 'path';
 import type { Headers } from 'undici';
 import type { VercelProxyResponse } from './types.js';
 import { Config, getLambdaOptionsFromFunction } from '@vercel/build-utils';
 import { createEdgeEventHandler } from './edge-functions/edge-handler.mjs';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { contentType } from 'mime-types';
 import {
   createServerlessEventHandler,
   HTTP_METHODS,
@@ -19,6 +20,7 @@ import {
   isEdgeRuntime,
   logError,
   resolveMiddlewareRuntime,
+  resolvePublicFilePath,
   validateConfiguredRuntime,
 } from './utils.js';
 import { init, parse as parseEsm } from 'es-module-lexer';
@@ -163,20 +165,16 @@ async function onDevRequest(
   // Check for static files in public directory first
   const publicDir = process.env.VERCEL_DEV_PUBLIC_DIR;
   if (publicDir && req.url) {
-    const { join } = await import('path');
-    const { existsSync, statSync } = await import('fs');
-    const { readFile } = await import('fs/promises');
+    const staticPath = await resolvePublicFilePath(
+      process.cwd(),
+      publicDir,
+      req.url
+    );
 
-    const staticPath = join(process.cwd(), publicDir, req.url);
-
-    if (existsSync(staticPath) && statSync(staticPath).isFile()) {
+    if (staticPath) {
       try {
         const content = await readFile(staticPath);
-        const { extname } = await import('path');
-        const { contentType } = await import('mime-types');
-
-        const url = new URL(req.url || '/', 'http://localhost');
-        const ext = extname(url.pathname);
+        const ext = extname(staticPath);
         const mimeType = contentType(ext) || 'application/octet-stream';
 
         res.setHeader('Content-Type', mimeType);
@@ -184,7 +182,7 @@ async function onDevRequest(
         res.statusCode = 200;
         res.end(content);
         return;
-      } catch (error) {
+      } catch (_error) {
         // If there's an error reading the static file, fall through to the main handler
       }
     }
