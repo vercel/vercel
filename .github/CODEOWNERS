@@ -2,62 +2,62 @@
 # https://help.github.com/en/articles/about-code-owners
 
 # Restricted Paths
-*                                        @vercel/ci-cd
-/.github/workflows                       @vercel/ci-cd @ijjk
-/packages/fs-detectors                   @vercel/ci-cd @vercel/team-python @agadzik
-/packages/next                           @vercel/ci-cd @timneutkens @ijjk @ztanner @huozhi
-/packages/routing-utils                  @vercel/ci-cd @ijjk
-/packages/static-build                   @vercel/ci-cd
-/packages/edge                           @vercel/ci-cd @vercel/compute
-/packages/functions                      @vercel/ci-cd @vercel/compute @vercel/edge-content
-/packages/go                             @vercel/ci-cd @vercel/team-python
-/internals/ipc-proxy                     @vercel/ci-cd @vercel/team-python
-/packages/ruby                           @vercel/ci-cd @vercel/team-python
-/packages/rust                           @vercel/ci-cd @vercel/team-python @vercel/compute @ecklf
-/crates                                  @vercel/ci-cd @vercel/compute @ecklf
-/Cargo.*                                 @vercel/ci-cd @vercel/compute @ecklf
-/packages/firewall                       @vercel/ci-cd @cramforce @sueplex @quuu @ctgowrie
-/packages/mcp-adapter                    @vercel/ci-cd @cramforce @quuu
-/examples/create-react-app               @vercel/ci-cd @Timer
-/examples/nextjs                         @vercel/ci-cd @ijjk @ztanner @huozhi
-/packages/node                           @vercel/ci-cd
-/packages/related-projects               @vercel/ci-cd @mknichel
-/packages/oidc                           @vercel/ci-cd @vercel/identity-and-access-management
-/packages/oidc-aws-credentials-provider  @vercel/ci-cd @vercel/identity-and-access-management
-/packages/config                         @vercel/ci-cd @MatthewStanciu
-/packages/cli/                           @vercel/ci-cd @vercel/vercel-cli-approvers
-/packages/cli/test/unit/commands/build/emit-flags-definitions.test.ts @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/flags
-/packages/cli/src/commands/install/       @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/src/commands/integration/  @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/src/commands/integration-resource/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/src/commands/flags         @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/flags
-/packages/cli/src/commands/login         @vercel/ci-cd @vercel/identity-and-access-management
-/packages/cli/src/commands/logout        @vercel/ci-cd @vercel/identity-and-access-management
-/packages/cli/src/commands/teams         @vercel/ci-cd @vercel/identity-and-access-management
-/packages/cli/src/util/login             @vercel/ci-cd @vercel/identity-and-access-management
-/packages/cli/src/util/teams             @vercel/ci-cd @vercel/identity-and-access-management
-/packages/cli/test/unit/util/login       @vercel/ci-cd @vercel/identity-and-access-management
-/packages/cli/src/util/integration/      @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/src/util/integration-resource/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/src/util/telemetry/commands/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/test/mocks/integration.ts  @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/test/unit/commands/install/      @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/test/unit/commands/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/test/unit/commands/integration-resource/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli/test/unit/util/integration/ @vercel/ci-cd @vercel/vercel-cli-approvers @vercel/marketplace
-/packages/cli-auth/                      @vercel/ci-cd @vercel/vercel-cli-approvers
-/packages/client/                        @vercel/ci-cd @vercel/vercel-cli-approvers
-/packages/frameworks/                    @vercel/ci-cd @vercel/vercel-cli-approvers
-/packages/error-utils/                   @vercel/ci-cd @vercel/vercel-cli-approvers
-/packages/detect-agent/                  @vercel/ci-cd @vercel/vercel-cli-approvers
-/packages/passport/                      @vercel/ci-cd @vercel/vercel-cli-approvers @quuu @kitfoster @emeraldsanto 
-/skills/vercel-cli/                      @vercel/ci-cd @vercel/vercel-cli-approvers
-/packages/connect/                       @vercel/ci-cd @vercel/marketplace
-/packages/python*                        @vercel/ci-cd @vercel/team-python
-/python                                  @vercel/ci-cd @vercel/team-python
-/uv.lock                                 @vercel/ci-cd @vercel/team-python
-/.github/workflows/*python*.yml          @vercel/ci-cd @vercel/team-python
-/.claude/skills/vercel-runtime-*         @vercel/ci-cd @vercel/compute
+*                                        @vercel/adlc
+/.github/workflows                       @vercel/adlc @ijjk
+/packages/fs-detectors                   @vercel/adlc @vercel/team-python @agadzik
+/packages/next                           @vercel/adlc @timneutkens @ijjk @ztanner @huozhi
+/packages/routing-utils                  @vercel/adlc @ijjk
+/packages/static-build                   @vercel/adlc
+/packages/edge                           @vercel/adlc @vercel/compute
+/packages/functions                      @vercel/adlc @vercel/compute @vercel/edge-content
+/packages/go                             @vercel/adlc @vercel/team-python
+/internals/ipc-proxy                     @vercel/adlc @vercel/team-python
+/packages/ruby                           @vercel/adlc @vercel/team-python
+/packages/rust                           @vercel/adlc @vercel/team-python @vercel/compute @ecklf
+/crates                                  @vercel/adlc @vercel/compute @ecklf
+/Cargo.*                                 @vercel/adlc @vercel/compute @ecklf
+/packages/firewall                       @vercel/adlc @cramforce @sueplex @quuu @ctgowrie
+/packages/mcp-adapter                    @vercel/adlc @cramforce @quuu
+/examples/create-react-app               @vercel/adlc @Timer
+/examples/nextjs                         @vercel/adlc @ijjk @ztanner @huozhi
+/packages/node                           @vercel/adlc
+/packages/related-projects               @vercel/adlc @mknichel
+/packages/oidc                           @vercel/adlc @vercel/identity-and-access-management
+/packages/oidc-aws-credentials-provider  @vercel/adlc @vercel/identity-and-access-management
+/packages/config                         @vercel/adlc @MatthewStanciu
+/packages/cli/                           @vercel/adlc @vercel/vercel-cli-approvers
+/packages/cli/test/unit/commands/build/emit-flags-definitions.test.ts @vercel/adlc @vercel/vercel-cli-approvers @vercel/flags
+/packages/cli/src/commands/install/       @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/src/commands/integration/  @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/src/commands/integration-resource/ @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/src/commands/flags         @vercel/adlc @vercel/vercel-cli-approvers @vercel/flags
+/packages/cli/src/commands/login         @vercel/adlc @vercel/identity-and-access-management
+/packages/cli/src/commands/logout        @vercel/adlc @vercel/identity-and-access-management
+/packages/cli/src/commands/teams         @vercel/adlc @vercel/identity-and-access-management
+/packages/cli/src/util/login             @vercel/adlc @vercel/identity-and-access-management
+/packages/cli/src/util/teams             @vercel/adlc @vercel/identity-and-access-management
+/packages/cli/test/unit/util/login       @vercel/adlc @vercel/identity-and-access-management
+/packages/cli/src/util/integration/      @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/src/util/integration-resource/ @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/src/util/telemetry/commands/integration/ @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/mocks/integration.ts  @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/unit/commands/install/      @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/unit/commands/integration/ @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/unit/commands/integration-resource/ @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli/test/unit/util/integration/ @vercel/adlc @vercel/vercel-cli-approvers @vercel/marketplace
+/packages/cli-auth/                      @vercel/adlc @vercel/vercel-cli-approvers
+/packages/client/                        @vercel/adlc @vercel/vercel-cli-approvers
+/packages/frameworks/                    @vercel/adlc @vercel/vercel-cli-approvers
+/packages/error-utils/                   @vercel/adlc @vercel/vercel-cli-approvers
+/packages/detect-agent/                  @vercel/adlc @vercel/vercel-cli-approvers
+/packages/passport/                      @vercel/adlc @vercel/vercel-cli-approvers @quuu @kitfoster @emeraldsanto 
+/skills/vercel-cli/                      @vercel/adlc @vercel/vercel-cli-approvers
+/packages/connect/                       @vercel/adlc @vercel/marketplace
+/packages/python*                        @vercel/adlc @vercel/team-python
+/python                                  @vercel/adlc @vercel/team-python
+/uv.lock                                 @vercel/adlc @vercel/team-python
+/.github/workflows/*python*.yml          @vercel/adlc @vercel/team-python
+/.claude/skills/vercel-runtime-*         @vercel/adlc @vercel/compute
 
 # Unrestricted Paths
 # These paths are updated by the changeset CLI for "Version Packages" pull requests
