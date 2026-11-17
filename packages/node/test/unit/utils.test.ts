@@ -1,9 +1,20 @@
-import { describe, expect, test } from 'vitest';
+import {
+  mkdtempSync,
+  mkdirSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { afterAll, describe, expect, test } from 'vitest';
 import {
   entrypointToOutputPath,
   MIDDLEWARE_NODEJS_DEFAULT_ENV,
   MIDDLEWARE_NODEJS_DEFAULT_SINCE,
   resolveMiddlewareRuntime,
+  resolvePublicFilePath,
 } from '../../src/utils';
 
 describe('entrypointToOutputPath()', () => {
@@ -135,5 +146,73 @@ describe('resolveMiddlewareRuntime()', () => {
         env,
       })
     ).toEqual({ runtime: expected, reason });
+  });
+});
+
+describe('resolvePublicFilePath()', () => {
+  const rootDir = realpathSync(
+    mkdtempSync(join(tmpdir(), 'vercel-node-public-'))
+  );
+  const publicDir = join(rootDir, 'public');
+  mkdirSync(join(publicDir, 'nested'), { recursive: true });
+  writeFileSync(join(publicDir, 'hello.txt'), 'hello');
+  writeFileSync(join(publicDir, 'my file.txt'), 'spaced');
+  writeFileSync(join(publicDir, 'nested', 'app.js'), 'console.log(1);');
+  writeFileSync(join(rootDir, 'secret.txt'), 'top-secret');
+  symlinkSync(join(rootDir, 'secret.txt'), join(publicDir, 'leak.txt'));
+
+  afterAll(() => {
+    rmSync(rootDir, { recursive: true, force: true });
+  });
+
+  test('resolves a regular file inside publicDir', async () => {
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/hello.txt')
+    ).resolves.toBe(join(publicDir, 'hello.txt'));
+  });
+
+  test('strips query strings and decodes URL-encoded characters', async () => {
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/hello.txt?v=123')
+    ).resolves.toBe(join(publicDir, 'hello.txt'));
+
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/my%20file.txt?dl=1')
+    ).resolves.toBe(join(publicDir, 'my file.txt'));
+  });
+
+  test('blocks path traversal attempts', async () => {
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/../secret.txt')
+    ).resolves.toBeNull();
+
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/%2e%2e/secret.txt')
+    ).resolves.toBeNull();
+
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/nested/../../secret.txt')
+    ).resolves.toBeNull();
+  });
+
+  test('blocks symlink escapes outside publicDir', async () => {
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/leak.txt')
+    ).resolves.toBeNull();
+  });
+
+  test('returns null for directories, root, missing files, and null bytes', async () => {
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/')
+    ).resolves.toBeNull();
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/nested')
+    ).resolves.toBeNull();
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/missing.txt')
+    ).resolves.toBeNull();
+    await expect(
+      resolvePublicFilePath(rootDir, 'public', '/hello.txt%00.png')
+    ).resolves.toBeNull();
   });
 });
