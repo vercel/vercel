@@ -42,6 +42,7 @@ async function openUrl(url: string): Promise<void> {
   if (typeof subprocess?.once !== 'function') {
     return;
   }
+  subprocess.ref?.();
   await new Promise<void>((resolve, reject) => {
     subprocess.once('error', reject);
     subprocess.once('close', code => {
