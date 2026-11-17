@@ -1,11 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import execa from 'execa';
+import { EventEmitter } from 'events';
+import open from 'open';
 import { client } from '../../../mocks/client';
 import mcpCommand from '../../../../src/commands/mcp';
 import setupMcp from '../../../../src/commands/mcp/mcp';
 
+vi.mock('execa', () => ({
+  default: vi.fn(),
+}));
+
+vi.mock('open', () => ({
+  default: vi.fn(),
+}));
+
 describe('mcp', () => {
   beforeEach(() => {
     client.reset();
+    vi.clearAllMocks();
   });
 
   it.each([
@@ -104,5 +116,49 @@ describe('mcp', () => {
       expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Invalid client(s): Foo');
     });
+  });
+
+  it('uses execa without a shell for Claude Code setup', async () => {
+    vi.mocked(execa).mockResolvedValue({ stdout: '' } as any);
+    client.nonInteractive = true;
+
+    const code = await setupMcp(client, { clients: ['Claude Code'] });
+    expect(code).toBe(0);
+    expect(execa).toHaveBeenCalledWith(
+      'claude',
+      ['mcp', 'add', '--transport', 'http', 'vercel', 'https://mcp.vercel.com'],
+      { stdio: 'pipe' }
+    );
+  });
+
+  it('opens VS Code one-click installer via open() and checks extensions via execa', async () => {
+    vi.mocked(execa).mockResolvedValue({ stdout: 'github.copilot\n' } as any);
+    vi.mocked(open).mockResolvedValue({} as any);
+    client.nonInteractive = true;
+
+    const code = await setupMcp(client, { clients: ['VS Code with Copilot'] });
+    expect(code).toBe(0);
+    expect(execa).toHaveBeenCalledWith('code', ['--list-extensions'], {
+      stdio: 'pipe',
+    });
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(open).mock.calls[0][0]).toMatch(/^vscode:mcp\/install\?/);
+  });
+
+  it('reports failure when the deep-link launcher exits with non-zero code', async () => {
+    vi.mocked(execa).mockResolvedValue({ stdout: 'github.copilot\n' } as any);
+    const fakeChild = new EventEmitter();
+    vi.mocked(open).mockImplementation(async () => {
+      setTimeout(() => fakeChild.emit('close', 1), 0);
+      return fakeChild as any;
+    });
+    client.nonInteractive = true;
+
+    const code = await setupMcp(client, { clients: ['VS Code with Copilot'] });
+    expect(code).toBe(0);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.summary).toContain(
+      '❌ VS Code: Failed to open one-click installer'
+    );
   });
 });
