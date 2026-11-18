@@ -1,0 +1,144 @@
+import { describe, expect, it } from 'vitest';
+import {
+  ENDPOINT_URL,
+  expectTeamScoped,
+  run,
+  savedConfig,
+  secretMetadata,
+  stderr,
+  stderrJson,
+  stdoutJson,
+  useInferenceHooksApi,
+} from './inference-hooks-helpers';
+
+describe('ai-gateway inference-hooks enable', () => {
+  it('saves the config with enabled turned on and keeps the headers', async () => {
+    const requests = useInferenceHooksApi({
+      getConfig: () => ({ body: savedConfig }),
+      getSecret: () => ({ body: secretMetadata }),
+      putConfig: body => ({ body: { ...savedConfig, ...body } }),
+    });
+
+    expect(await run('enable')).toBe(0);
+
+    const put = requests.find(r => r.method === 'PUT');
+    expect(put?.body).toEqual({
+      endpointUrl: ENDPOINT_URL,
+      enabled: true,
+      mode: 'shadow',
+      failureMode: 'open',
+      timeoutMs: 5000,
+      rolloutPercent: 100,
+    });
+    expectTeamScoped(requests);
+    expect(stderr()).toMatch(/Enabled\s+inference hooks/);
+    expect(stderr()).not.toContain('signing secret');
+  });
+
+  it('is a no-op when already enabled', async () => {
+    const requests = useInferenceHooksApi({
+      getConfig: () => ({ body: { ...savedConfig, enabled: true } }),
+      getSecret: () => ({ body: secretMetadata }),
+    });
+
+    expect(await run('enable', '--json')).toBe(0);
+
+    expect(stdoutJson().outcome).toBe('unchanged');
+    expect(requests.some(r => r.method === 'PUT')).toBe(false);
+  });
+
+  it('warns when there is no signing secret', async () => {
+    useInferenceHooksApi({
+      getConfig: () => ({
+        body: { ...savedConfig, mode: 'enforce', failureMode: 'closed' },
+      }),
+      getSecret: () => ({ body: { exists: false } }),
+      putConfig: body => ({ body: { ...savedConfig, ...body } }),
+    });
+
+    expect(await run('enable')).toBe(0);
+
+    expect(stderr()).toContain(
+      "This team has no signing secret, so requests aren't sent to the endpoint. In enforce mode with failure mode closed, they fail until one exists."
+    );
+    expect(stderr()).toContain(
+      'vercel ai-gateway inference-hooks signing-secret create'
+    );
+  });
+
+  it('puts the missing-secret warning in the JSON document', async () => {
+    useInferenceHooksApi({
+      getConfig: () => ({ body: savedConfig }),
+      getSecret: () => ({ body: { exists: false } }),
+      putConfig: body => ({ body: { ...savedConfig, ...body } }),
+    });
+
+    expect(await run('enable', '--json')).toBe(0);
+
+    const result = stdoutJson();
+    expect(result.outcome).toBe('enabled');
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ reason: 'signing_secret_missing' }),
+    ]);
+    expect(stderr()).toBe('');
+  });
+
+  it('fails when nothing is set up', async () => {
+    const requests = useInferenceHooksApi({
+      getConfig: () => ({ body: { configured: false } }),
+      getSecret: () => ({ body: { exists: false } }),
+    });
+
+    expect(await run('enable', '--json')).toBe(1);
+
+    expect(stderrJson()).toMatchObject({
+      reason: 'not_found',
+      message: "Can't enable inference hooks. None are set up for this team.",
+    });
+    expect(requests.some(r => r.method === 'PUT')).toBe(false);
+  });
+
+  it('does not retry a write that failed with a 5xx', async () => {
+    const requests = useInferenceHooksApi({
+      getConfig: () => ({ body: savedConfig }),
+      getSecret: () => ({ body: secretMetadata }),
+      putConfig: () => ({ status: 503, body: { error: { message: 'down' } } }),
+    });
+
+    expect(await run('enable')).toBe(1);
+
+    expect(requests.filter(r => r.method === 'PUT')).toHaveLength(1);
+    expect(stderr()).toContain(
+      "Can't confirm whether inference hooks were enabled."
+    );
+    expect(stderr()).toContain('vercel ai-gateway inference-hooks status');
+  });
+});
+
+describe('ai-gateway inference-hooks disable', () => {
+  it('saves the config with enabled turned off', async () => {
+    const requests = useInferenceHooksApi({
+      getConfig: () => ({ body: { ...savedConfig, enabled: true } }),
+      putConfig: body => ({ body: { ...savedConfig, ...body } }),
+    });
+
+    expect(await run('disable', '--json')).toBe(0);
+
+    expect(requests.find(r => r.method === 'PUT')?.body).toMatchObject({
+      enabled: false,
+    });
+    expect(requests.some(r => r.path.endsWith('/signing-secret'))).toBe(false);
+    expect(stdoutJson()).toMatchObject({
+      inferenceHooks: { enabled: false },
+      outcome: 'disabled',
+    });
+  });
+
+  it('is a no-op when already disabled', async () => {
+    useInferenceHooksApi({ getConfig: () => ({ body: savedConfig }) });
+
+    expect(await run('disable')).toBe(0);
+
+    expect(stderr()).toContain('Inference hooks are already disabled.');
+  });
+});

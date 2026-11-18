@@ -1352,6 +1352,309 @@ export const virtualModelsSubcommand = {
   examples: [],
 } as const;
 
+const inferenceHooksTimeoutOption = {
+  name: 'timeout-ms',
+  shorthand: null,
+  type: Number,
+  argument: 'NUMBER',
+  deprecated: false,
+  description:
+    'Milliseconds to wait for a verdict, 1 to 10000. A new configuration uses 5000',
+} as const;
+
+const inferenceHooksHeaderOption = {
+  name: 'header',
+  shorthand: null,
+  type: [String],
+  argument: 'KEY:VALUE',
+  deprecated: false,
+  description:
+    'Header to send with each request, repeatable; replaces the stored headers',
+} as const;
+
+export const inferenceHooksStatusSubcommand = {
+  name: 'status',
+  aliases: [],
+  description:
+    'Show the inference hooks configuration, its header names, and whether a signing secret exists',
+  summary: 'Show the configuration and signing secret',
+  arguments: [],
+  options: [jsonOption],
+  examples: [
+    {
+      name: 'Show the configuration',
+      value: `${packageName} ai-gateway inference-hooks status`,
+    },
+  ],
+} as const;
+
+export const inferenceHooksSetSubcommand = {
+  name: 'set',
+  aliases: [],
+  description:
+    'Create or update the inference hooks configuration. Options you leave out keep their current values. A new configuration starts disabled',
+  summary: 'Create or update the configuration',
+  arguments: [],
+  options: [
+    {
+      name: 'endpoint-url',
+      shorthand: null,
+      type: String,
+      argument: 'URL',
+      deprecated: false,
+      description:
+        'HTTPS URL of the server that reviews requests. Required for a new configuration. Changing it clears the stored headers',
+    },
+    {
+      name: 'mode',
+      shorthand: null,
+      type: String,
+      argument: 'MODE',
+      deprecated: false,
+      description:
+        'shadow records verdicts and never blocks; enforce blocks denied requests. A new configuration starts in shadow',
+    },
+    {
+      name: 'failure-mode',
+      shorthand: null,
+      type: String,
+      argument: 'MODE',
+      deprecated: false,
+      description:
+        'What enforce mode does when the endpoint fails: open lets the request through, closed blocks it. A new configuration starts open',
+    },
+    inferenceHooksTimeoutOption,
+    {
+      name: 'rollout-percent',
+      shorthand: null,
+      type: Number,
+      argument: 'PERCENT',
+      deprecated: false,
+      description:
+        'Share of requests to send to the endpoint, 0 to 100. A new configuration uses 100',
+    },
+    inferenceHooksHeaderOption,
+    {
+      name: 'clear-headers',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Remove every stored header',
+    },
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Point inference hooks at your server, with an API key header',
+      placeholders: ['<API_KEY>'],
+      value: `${packageName} ai-gateway inference-hooks set --endpoint-url https://security.example.com/hook --header "x-api-key: <API_KEY>"`,
+    },
+    {
+      name: 'Block denied requests, and requests the endpoint fails to answer',
+      value: `${packageName} ai-gateway inference-hooks set --mode enforce --failure-mode closed`,
+    },
+  ],
+  helpSections: [
+    {
+      title: 'Notes',
+      body: [
+        'Header values are stored encrypted and never shown again. Without --header or --clear-headers, the stored headers are kept, unless --endpoint-url changes the URL: that clears them, so pass them again with --header.',
+      ],
+    },
+  ],
+} as const;
+
+export const inferenceHooksEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description: 'Turn on inference hooks with the saved configuration',
+  arguments: [],
+  options: [jsonOption],
+  examples: [
+    {
+      name: 'Turn on inference hooks',
+      value: `${packageName} ai-gateway inference-hooks enable`,
+    },
+  ],
+} as const;
+
+export const inferenceHooksDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description:
+    'Turn off inference hooks, keeping the configuration and its headers',
+  summary: 'Turn off inference hooks',
+  arguments: [],
+  options: [jsonOption],
+  examples: [
+    {
+      name: 'Turn off inference hooks',
+      value: `${packageName} ai-gateway inference-hooks disable`,
+    },
+  ],
+} as const;
+
+export const inferenceHooksRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description:
+    'Remove the inference hooks configuration and its stored headers. The signing secret is kept',
+  summary: 'Remove the configuration and its stored headers',
+  arguments: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Remove without asking for confirmation',
+    },
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Remove the configuration',
+      value: `${packageName} ai-gateway inference-hooks remove`,
+    },
+    {
+      name: 'Remove it in a script, after a person approves',
+      value: `${packageName} ai-gateway inference-hooks remove --yes`,
+    },
+  ],
+} as const;
+
+export const inferenceHooksSigningSecretCreateSubcommand = {
+  name: 'create',
+  aliases: [],
+  description:
+    'Create the secret that signs inference hook requests, and print it once',
+  summary: 'Create the signing secret',
+  arguments: [],
+  options: [jsonOption],
+  examples: [
+    {
+      name: 'Create the signing secret',
+      value: `${packageName} ai-gateway inference-hooks signing-secret create`,
+    },
+  ],
+  helpSections: [
+    {
+      title: 'Notes',
+      body: [
+        'The secret is printed alone on stdout, and only once. Save it where your server can read it.',
+      ],
+    },
+  ],
+} as const;
+
+export const inferenceHooksSigningSecretRotateSubcommand = {
+  name: 'rotate',
+  aliases: [],
+  description:
+    'Replace the signing secret and print the new one once. The current secret stops working at once',
+  summary: 'Replace the signing secret',
+  descriptionTone: 'normal',
+  arguments: [],
+  options: [
+    {
+      ...yesOption,
+      description: 'Rotate without asking for confirmation',
+    },
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Rotate the signing secret',
+      value: `${packageName} ai-gateway inference-hooks signing-secret rotate`,
+    },
+    {
+      name: 'Rotate it in a script, after a person approves',
+      value: `${packageName} ai-gateway inference-hooks signing-secret rotate --yes`,
+    },
+  ],
+} as const;
+
+export const inferenceHooksSigningSecretSubcommand = {
+  name: 'signing-secret',
+  aliases: [],
+  description: 'Manage the secret that signs inference hook requests',
+  arguments: [],
+  subcommands: [
+    inferenceHooksSigningSecretCreateSubcommand,
+    inferenceHooksSigningSecretRotateSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const inferenceHooksTestSubcommand = {
+  name: 'test',
+  aliases: [],
+  description:
+    'Send one signed test request to an endpoint and report its verdict',
+  summary: 'Test an endpoint and report its verdict',
+  arguments: [],
+  options: [
+    {
+      name: 'endpoint-url',
+      shorthand: null,
+      type: String,
+      argument: 'URL',
+      deprecated: false,
+      description: 'Endpoint to test (default: the saved endpoint URL)',
+    },
+    {
+      ...inferenceHooksTimeoutOption,
+      description:
+        'Milliseconds to wait for the verdict, 1 to 10000 (default: the saved timeout, or 5000)',
+    },
+    {
+      ...inferenceHooksHeaderOption,
+      description: 'Header to send with the test request, repeatable',
+    },
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Test the saved endpoint, passing the header it needs',
+      placeholders: ['<API_KEY>'],
+      value: `${packageName} ai-gateway inference-hooks test --header "x-api-key: <API_KEY>"`,
+    },
+    {
+      name: 'Test an endpoint before saving it',
+      value: `${packageName} ai-gateway inference-hooks test --endpoint-url https://security.example.com/hook`,
+    },
+  ],
+  helpSections: [
+    {
+      title: 'Notes',
+      body: [
+        "Stored header values can't be read back, so a test never sends them. Pass each header the endpoint needs with --header.",
+        'The command exits 1 when the test fails. Each team can run 10 tests a minute.',
+      ],
+    },
+  ],
+} as const;
+
+export const inferenceHooksSubcommand = {
+  name: 'inference-hooks',
+  aliases: [],
+  description:
+    'Manage AI Gateway inference hooks, which send requests to your own server for an allow or deny verdict before they reach a model',
+  summary: 'Manage inference hooks',
+  // Hidden until the feature is generally available.
+  hidden: true,
+  arguments: [],
+  subcommands: [
+    inferenceHooksStatusSubcommand,
+    inferenceHooksSetSubcommand,
+    inferenceHooksEnableSubcommand,
+    inferenceHooksDisableSubcommand,
+    inferenceHooksRemoveSubcommand,
+    inferenceHooksSigningSecretSubcommand,
+    inferenceHooksTestSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const aiGatewayCommand = {
   name: 'ai-gateway',
   aliases: [],
@@ -1366,6 +1669,7 @@ export const aiGatewayCommand = {
     codingAgentsSubcommand,
     modelsSubcommand,
     leaderboardSubcommand,
+    inferenceHooksSubcommand,
   ],
   options: [],
   examples: [],
