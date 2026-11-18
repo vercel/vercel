@@ -151,9 +151,42 @@ describe('ai-gateway inference-hooks test', () => {
     });
   });
 
+  it('maps a 503 by its code', async () => {
+    useInferenceHooksApi({
+      postTest: () => apiError(503, 'rate_limit_unavailable', 'limiter down'),
+    });
+
+    expect(await run('test', '--endpoint-url', OTHER_URL)).toBe(1);
+
+    expect(stderr()).toContain(
+      "Failed to run the connection test. The connection test's rate limiter is unavailable."
+    );
+    expect(stderr()).not.toContain('limiter down');
+  });
+
+  it('strips control characters from what the endpoint returned', async () => {
+    useInferenceHooksApi({
+      postTest: () => ({
+        body: {
+          ok: true,
+          action: 'deny',
+          latencyMs: 5,
+          denyReason: 'Blocked\u001b[31m by\u0007 policy\nnext',
+          referenceId: 'ref\u001b]0;x\u0007_1',
+        },
+      }),
+    });
+
+    expect(await run('test', '--endpoint-url', OTHER_URL)).toBe(0);
+
+    expect(stdout()).not.toMatch(/[\u0000-\u0008\u000b-\u001f\u007f]/);
+    expect(stdout()).toContain('Endpoint: Blocked by policy\\nnext');
+  });
+
   it('does not retry a test that failed with a 5xx', async () => {
     const requests = useInferenceHooksApi({
-      postTest: () => ({ status: 502, body: { error: { message: 'x' } } }),
+      postTest: () =>
+        apiError(502, 'inference_hook_test_unavailable', 'retry later'),
     });
 
     expect(await run('test', '--endpoint-url', OTHER_URL)).toBe(1);

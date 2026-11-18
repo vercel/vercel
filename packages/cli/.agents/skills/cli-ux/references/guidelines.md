@@ -722,7 +722,7 @@ A bug report link never includes argv values, paths, or tokens, and the `Error` 
 
 - A warning is a nonfatal condition that needs attention; routine information isn't one. It uses the `!` gutter through `output.warning()` (`src/util/output/create-output.ts`), states the consequence, and gives the fix: inline when it's a short sentence (`Use --json.`), otherwise in the [recovery layout](#anatomy).
 - A deprecation warning names the replacement and prints at most once per run: `! --format json is deprecated. Use --json.` A deprecated command name warns through `warnDeprecatedSubcommand()` (`src/util/warn-deprecated-subcommand.ts`): ``! `vercel webhooks get` is deprecated. Use `vercel webhooks inspect`.``
-- Warning reasons: `deprecated`, `usage_threshold`, `usage_overage`, `stream_gap`, `link_team_mismatch`, `link_tracked`, `link_pin_mismatch`, `insecure_version`, `limit_clamped`, `env_file_tracked`, `env_var_skipped`, `port_fallback`, and `secret_not_returned`. Add new ones to `AGENT_REASON`.
+- Warning reasons: `deprecated`, `usage_threshold`, `usage_overage`, `stream_gap`, `link_team_mismatch`, `link_tracked`, `link_pin_mismatch`, `insecure_version`, `limit_clamped`, `env_file_tracked`, `env_var_skipped`, `port_fallback`, `secret_not_returned`, `headers_cleared`, `signing_secret_missing`, and `stored_headers_not_sent`. Add new ones to `AGENT_REASON`.
 - Human mode prints warnings on stderr. With `--json` they go in the document's `warnings` array, or as `type: "warning"` lines in JSONL.
 - NEVER print both a warning and an error for the same condition.
 - **Usage thresholds**, each with the command to raise the limit or upgrade:

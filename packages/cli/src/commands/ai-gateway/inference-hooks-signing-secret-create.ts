@@ -24,9 +24,18 @@ import {
 
 const PATH = `${GROUP} signing-secret create`;
 
+function isIssuedSigningSecret(value: unknown): value is IssuedSigningSecret {
+  const issued = value as Partial<IssuedSigningSecret> | null;
+  return (
+    typeof issued?.signingSecret === 'string' &&
+    issued.signingSecret.length > 0 &&
+    typeof issued.secretId === 'string'
+  );
+}
+
 /**
  * Sends the create or rotate request. A response that isn't an API error can
- * still hold the secret (an unparseable body), so its message is never shown.
+ * still hold the secret (an unparseable body), so its text is never shown.
  */
 export async function requestSigningSecret(
   client: Client,
@@ -35,8 +44,18 @@ export async function requestSigningSecret(
 ): Promise<IssuedSigningSecret | number> {
   const rotate = expectedSecretId !== null;
   const outcome = `the signing secret was ${rotate ? 'rotated' : 'created'}`;
+  // If the request landed, its secret is lost: only a new rotation gets a
+  // value to save.
+  const unknownNext = [
+    { command: 'status', when: 'Check whether a signing secret exists' },
+    {
+      command: 'signing-secret rotate',
+      when: 'If one exists, rotate it to get a value you can save',
+    },
+  ];
+  let issued: unknown;
   try {
-    return await issueSigningSecret(client, expectedSecretId);
+    issued = await issueSigningSecret(client, expectedSecretId);
   } catch (err) {
     if (isAPIError(err) && err.status === 409) {
       return fail(
@@ -64,20 +83,24 @@ export async function requestSigningSecret(
             }
       );
     }
-    if (isAPIError(err)) {
-      return handleApiError(client, json, err, {
-        action: `${rotate ? 'rotate' : 'create'} the signing secret`,
-        unknownOutcome: outcome,
-      });
-    }
+    return handleApiError(client, json, err, {
+      action: `${rotate ? 'rotate' : 'create'} the signing secret`,
+      unknownOutcome: outcome,
+      unknownNext,
+      unknownOnUnreadableBody: true,
+    });
+  }
+  // A 2xx that isn't the expected JSON comes back as a raw response or null.
+  if (!isIssuedSigningSecret(issued)) {
     return fail(client, json, {
       reason: AGENT_REASON.UNKNOWN_OUTCOME,
       message: `Can't confirm whether ${outcome}. The response couldn't be read.`,
-      next: [{ command: 'status', when: 'Check the current signing secret' }],
+      next: unknownNext,
       retryable: false,
       data: { remote: 'unknown' },
     });
   }
+  return { ...issued, rotated: rotate };
 }
 
 /**
@@ -95,6 +118,7 @@ export function deliverSigningSecret(
   if (json) {
     return printJson(client, {
       signingSecret: {
+        exists: true,
         secretId: issued.secretId,
         createdAt: issued.createdAt,
         rotatedAt: issued.rotatedAt,

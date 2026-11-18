@@ -16,6 +16,7 @@ import { remoteText } from '../../util/output/remote-text';
 import { AiGatewayInferenceHooksSetTelemetryClient } from '../../util/telemetry/commands/ai-gateway/inference-hooks';
 import { inferenceHooksSetSubcommand } from './command';
 import {
+  confirmOrFail,
   fail,
   formatConfigRows,
   groupCommand,
@@ -36,8 +37,6 @@ import {
 } from './inference-hooks-shared';
 
 const PATH = `${GROUP} set`;
-
-export const HEADERS_CLEARED_REASON = 'headers_cleared';
 
 export default async function set(
   client: Client,
@@ -172,8 +171,53 @@ export default async function set(
       ? (current.headers?.names ?? [])
       : [];
   if (clearedNames.length) {
+    // The values can't be read back, so deleting them needs consent; passing
+    // --header or --clear-headers already states the intent.
+    const one = clearedNames.length === 1;
+    const count = `${clearedNames.length} stored ${
+      clearedNames.length === 1 ? 'header' : 'headers'
+    }`;
+    const consent = await confirmOrFail(client, json, {
+      yes: Boolean(flags['--yes']),
+      preview: [
+        formatAlignedLabel(
+          'Endpoint URL',
+          remoteText(current.configured ? current.endpointUrl : '')
+        ),
+        formatAlignedLabel('New URL', remoteText(given.endpointUrl ?? '')),
+        formatAlignedLabel('Headers', clearedNames.map(remoteText).join(', ')),
+        '',
+        `  Changing the endpoint URL deletes ${count}. ${
+          one ? "Its value can't" : "Their values can't"
+        } be read back.`,
+        '  Some effects cannot be undone.',
+      ],
+      question: `Change the endpoint URL and delete ${count}?`,
+      action: 'change the endpoint URL',
+      consequence: `${count} ${one ? 'is' : 'are'} deleted`,
+      effects: [
+        'Change the endpoint URL',
+        `Delete ${count}: ${clearedNames.map(remoteText).join(', ')}`,
+      ],
+      // argv holds the URL, which can carry a token, so it isn't echoed.
+      next: [
+        {
+          command: 'set --endpoint-url <URL> --header <KEY:VALUE>',
+          when: 'Pass the headers the new endpoint needs, with your other options',
+          placeholders: ['<URL>', '<KEY:VALUE>'],
+        },
+        {
+          // groupCommand drops a carried-over --yes, so it's added here.
+          command: `${groupCommand(client, 'set --endpoint-url <URL>')} --yes`,
+          when: `Or, only after a person approves: ${count} ${one ? 'is' : 'are'} deleted`,
+          placeholders: ['<URL>'],
+          full: true,
+        },
+      ],
+    });
+    if (consent !== true) return consent;
     warnings.push({
-      reason: HEADERS_CLEARED_REASON,
+      reason: AGENT_REASON.HEADERS_CLEARED,
       message: `The endpoint URL changed, so the stored headers were cleared: ${clearedNames
         .map(remoteText)
         .join(', ')}. Pass them again with --header.`,
@@ -213,7 +257,8 @@ export default async function set(
   if (saved.configured) {
     output.print(`${formatConfigRows(saved).join('\n')}\n`);
   }
-  printWarnings(warnings);
+  // After a prompt, the preview already said which headers were deleted.
+  if (flags['--yes']) printWarnings(warnings);
   if (saved.configured && !saved.enabled) {
     printSteps(client, [
       { command: 'enable', when: 'Turn on inference hooks' },

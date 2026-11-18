@@ -55,10 +55,10 @@ export default async function status(
   let config: InferenceHooksConfig;
   let secret: SigningSecretMetadata;
   try {
-    [config, secret] = await Promise.all([
-      getInferenceHooksConfig(client),
-      getSigningSecretMetadata(client),
-    ]);
+    // One after the other: a read that is still retrying would keep the
+    // command running after the other one already failed.
+    config = await getInferenceHooksConfig(client);
+    secret = await getSigningSecretMetadata(client);
   } catch (err) {
     return handleApiError(client, json, err, {
       action: 'read the inference hooks configuration',

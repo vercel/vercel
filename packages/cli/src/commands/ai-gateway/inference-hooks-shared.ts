@@ -218,7 +218,9 @@ export async function requireTeam(
   path: string
 ): Promise<true | number> {
   if (json) {
-    if (await client.resolveCurrentTeam()) return true;
+    // `ask: false`: an agent run with several teams leaves the team unchosen
+    // instead of stopping with the shared prompt's own error document.
+    if (await client.resolveCurrentTeam({ ask: false })) return true;
     return fail(
       client,
       json,
@@ -385,6 +387,8 @@ export async function confirmOrFail(
     /** What happens, for the agent's `when`, in lowercase. */
     consequence: string;
     effects: string[];
+    /** Replaces the rerun-with-`--yes` step, when argv can't be echoed. */
+    next?: NextStep[];
   }
 ): Promise<true | number> {
   if (opts.yes) return true;
@@ -395,7 +399,7 @@ export async function confirmOrFail(
       {
         reason: AGENT_REASON.CONFIRMATION_REQUIRED,
         message: `Can't ${opts.action} without confirmation in non-interactive mode.`,
-        next: [
+        next: opts.next ?? [
           {
             command: buildCommandWithYes(client.argv),
             when: `Only after a person approves: ${opts.consequence}`,
@@ -436,14 +440,74 @@ export interface ApiFailureContext {
    */
   carriesSecret?: boolean;
   /**
-   * What a 5xx leaves unknown on a write, such as `the signing secret was
-   * rotated`. Reads leave it unset.
+   * What a 5xx or a lost connection leaves unknown on a write, such as `the
+   * signing secret was rotated`. Reads leave it unset.
    */
   unknownOutcome?: string;
-  /** The cause shown for a 5xx on a read, per status. */
-  serverCause?: (status: number) => string | undefined;
+  /** Recovery for an unknown outcome (default: `status`). */
+  unknownNext?: NextStep[];
+  /**
+   * A 2xx body that fails to parse leaves the outcome unknown. Its error text
+   * is never shown: the body may hold a secret.
+   */
+  unknownOnUnreadableBody?: boolean;
+  /**
+   * The request body came from the saved config, not from options, so a 400
+   * is an operational failure (exit 1), not a usage error.
+   */
+  savedInput?: boolean;
+  /** The cause shown for a 5xx on a read, by status and API code. */
+  serverCause?: (status: number, code: unknown) => string | undefined;
   /** An extra detail row for a 429. */
   rateLimitDetail?: string;
+}
+
+function apiHost(client: Client): string {
+  try {
+    return new URL(client.apiUrl).host;
+  } catch {
+    return 'the Vercel API';
+  }
+}
+
+/**
+ * Reports a write whose request may have been sent but got no API response.
+ * Returns undefined when the error isn't one to report here.
+ */
+function handleLostWrite(
+  client: Client,
+  json: boolean,
+  err: unknown,
+  context: ApiFailureContext
+): number | undefined {
+  const unknownOutcome = context.unknownOutcome;
+  if (!unknownOutcome) return undefined;
+  const network =
+    isNetworkError(err) ||
+    (err instanceof Error &&
+      (err.name === 'AbortError' || err.name === 'TimeoutError'));
+  if (network && neverConnected(err)) {
+    return fail(client, json, {
+      reason: AGENT_REASON.NETWORK_ERROR,
+      message: `Couldn't reach ${apiHost(client)}. Nothing was changed.`,
+    });
+  }
+  const unreadable =
+    context.unknownOnUnreadableBody && err instanceof SyntaxError;
+  if (!network && !unreadable) return undefined;
+  return fail(client, json, {
+    reason: AGENT_REASON.UNKNOWN_OUTCOME,
+    message: `Can't confirm whether ${unknownOutcome}. ${
+      network
+        ? 'The connection failed before a response arrived.'
+        : "The response couldn't be read."
+    }`,
+    next: context.unknownNext ?? [
+      { command: 'status', when: 'Check the current state' },
+    ],
+    retryable: false,
+    data: { remote: 'unknown' },
+  });
 }
 
 /**
@@ -457,7 +521,11 @@ export function handleApiError(
   err: unknown,
   context: ApiFailureContext
 ): number {
-  if (!isAPIError(err)) throw err;
+  if (!isAPIError(err)) {
+    const lost = handleLostWrite(client, json, err, context);
+    if (lost !== undefined) return lost;
+    throw err;
+  }
   const { action } = context;
   const status = err.status;
   const remote =
@@ -491,9 +559,19 @@ export function handleApiError(
     return fail(client, json, {
       reason: AGENT_REASON.NOT_FOUND,
       message: `Can't ${action}. AI Gateway isn't set up for this team yet.`,
-      recovery:
-        'Send a request through AI Gateway, or save its settings in the dashboard, then run the command again.',
     });
+  }
+  if (status === 400 && context.savedInput) {
+    return fail(
+      client,
+      json,
+      withRemote({
+        reason: AGENT_REASON.API_ERROR,
+        message: `Failed to ${action}. The API rejected the saved configuration.`,
+        data: { httpStatus: status },
+      }),
+      1
+    );
   }
   if (status === 400) {
     if (err.code === 'invalid_inference_hooks_endpoint_url') {
@@ -552,14 +630,16 @@ export function handleApiError(
     return fail(client, json, {
       reason: AGENT_REASON.UNKNOWN_OUTCOME,
       message: `Can't confirm whether ${context.unknownOutcome}. The Vercel API returned a server error.`,
-      next: [{ command: 'status', when: 'Check the current state' }],
+      next: context.unknownNext ?? [
+        { command: 'status', when: 'Check the current state' },
+      ],
       retryable: false,
       data: { httpStatus: status, remote: 'unknown' },
     });
   }
   const cause =
     status >= 500
-      ? (context.serverCause?.(status) ??
+      ? (context.serverCause?.(status, err.code) ??
         'The Vercel API returned a server error.')
       : undefined;
   return fail(
@@ -584,6 +664,26 @@ const NETWORK_ERROR_CODES = new Set([
   'UND_ERR_SOCKET',
 ]);
 
+// Codes for a connection that was never made, so no request reached the API.
+const CONNECT_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'UND_ERR_CONNECT_TIMEOUT',
+]);
+
+function errorCodes(err: unknown): string[] {
+  const code = (err as { code?: unknown }).code;
+  const cause = (err as { cause?: { code?: unknown } }).cause;
+  return [code, cause?.code].filter(
+    (value): value is string => typeof value === 'string'
+  );
+}
+
+function neverConnected(err: unknown): boolean {
+  return errorCodes(err).some(code => CONNECT_ERROR_CODES.has(code));
+}
+
 function isNetworkError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const code = (err as { code?: unknown }).code;
@@ -607,13 +707,9 @@ export function handleUnexpectedError(
 ): number {
   output.stopSpinner();
   if (isNetworkError(err)) {
-    let host = 'the Vercel API';
-    try {
-      host = new URL(client.apiUrl).host;
-    } catch {}
     return fail(client, json, {
       reason: AGENT_REASON.NETWORK_ERROR,
-      message: `Couldn't reach ${host}. The connection failed.`,
+      message: `Couldn't reach ${apiHost(client)}. The connection failed.`,
       next: [{ command: 'status', when: 'Check the current state' }],
     });
   }

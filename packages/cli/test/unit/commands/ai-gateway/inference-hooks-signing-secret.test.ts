@@ -72,6 +72,7 @@ describe('ai-gateway inference-hooks signing-secret create', () => {
 
     expect(stdoutJson()).toMatchObject({
       signingSecret: {
+        exists: true,
         secretId: secretMetadata.secretId,
         createdAt: secretMetadata.createdAt,
         rotatedAt: null,
@@ -117,11 +118,57 @@ describe('ai-gateway inference-hooks signing-secret create', () => {
     expect(await run('signing-secret', 'create', '--json')).toBe(1);
 
     expect(requests).toHaveLength(1);
-    expect(stderrJson()).toMatchObject({
+    const error = stderrJson();
+    expect(error).toMatchObject({
       reason: 'unknown_outcome',
       message:
         "Can't confirm whether the signing secret was created. The Vercel API returned a server error.",
     });
+    expect(error.next.map((step: any) => step.command)).toEqual([
+      'vercel ai-gateway inference-hooks status',
+      'vercel ai-gateway inference-hooks signing-secret rotate',
+    ]);
+  });
+
+  it('treats a 2xx that is not JSON as an unknown outcome', async () => {
+    useInferenceHooksApi({
+      postSecret: () => ({ status: 201, text: SIGNING_SECRET }),
+    });
+
+    expect(await run('signing-secret', 'create')).toBe(1);
+
+    expect(stdout()).toBe('');
+    expect(stderr()).not.toContain(SIGNING_SECRET);
+    expect(stderr()).not.toContain('undefined');
+    expect(stderr()).toContain(
+      "Can't confirm whether the signing secret was created. The response couldn't be read."
+    );
+    expect(stderr()).toContain(
+      'vercel ai-gateway inference-hooks signing-secret rotate'
+    );
+  });
+
+  it('treats a 2xx with no content type as an unknown outcome', async () => {
+    useInferenceHooksApi({ postSecret: () => ({ status: 201 }) });
+
+    expect(await run('signing-secret', 'create', '--json')).toBe(1);
+
+    expect(stdout()).toBe('');
+    expect(stderrJson()).toMatchObject({
+      reason: 'unknown_outcome',
+      retryable: false,
+    });
+  });
+
+  it('treats JSON without a secret as an unknown outcome', async () => {
+    useInferenceHooksApi({
+      postSecret: () => ({ status: 201, body: { secretId: 'c0ffee' } }),
+    });
+
+    expect(await run('signing-secret', 'create', '--json')).toBe(1);
+
+    expect(stdout()).toBe('');
+    expect(stderrJson().reason).toBe('unknown_outcome');
   });
 });
 
@@ -215,6 +262,21 @@ describe('ai-gateway inference-hooks signing-secret rotate', () => {
       'vercel ai-gateway inference-hooks signing-secret create'
     );
     expect(requests.some(r => r.method === 'POST')).toBe(false);
+  });
+
+  it('treats a rotate response that is not JSON as an unknown outcome', async () => {
+    useInferenceHooksApi({
+      getSecret: () => ({ body: secretMetadata }),
+      postSecret: () => ({ status: 200, text: SIGNING_SECRET }),
+    });
+
+    expect(await run('signing-secret', 'rotate', '--yes')).toBe(1);
+
+    expect(stdout()).toBe('');
+    expect(stderr()).not.toContain(SIGNING_SECRET);
+    expect(stderr()).toContain(
+      "Can't confirm whether the signing secret was rotated."
+    );
   });
 
   it('does not retry a rotate that failed with a 5xx', async () => {

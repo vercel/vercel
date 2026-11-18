@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  apiError,
   ENDPOINT_URL,
   expectTeamScoped,
   run,
@@ -112,6 +113,35 @@ describe('ai-gateway inference-hooks enable', () => {
       "Can't confirm whether inference hooks were enabled."
     );
     expect(stderr()).toContain('vercel ai-gateway inference-hooks status');
+  });
+});
+
+describe('ai-gateway inference-hooks enable, API errors', () => {
+  it('exits 1 when the API rejects the saved configuration', async () => {
+    useInferenceHooksApi({
+      getConfig: () => ({ body: savedConfig }),
+      getSecret: () => ({ body: secretMetadata }),
+      putConfig: () => apiError(400, 'bad_request', 'invalid entry'),
+    });
+
+    expect(await run('enable', '--json')).toBe(1);
+
+    expect(stderrJson()).toMatchObject({
+      reason: 'api_error',
+      message:
+        'Failed to enable inference hooks. The API rejected the saved configuration.',
+    });
+  });
+
+  it('stops after the first read fails', async () => {
+    const requests = useInferenceHooksApi({
+      getConfig: () => apiError(403, 'forbidden'),
+      getSecret: () => ({ body: secretMetadata }),
+    });
+
+    expect(await run('enable', '--json')).toBe(1);
+
+    expect(requests.map(r => r.path)).toEqual(['/ai-gateway/inference-hooks']);
   });
 });
 

@@ -31,8 +31,6 @@ import {
 
 const PATH = `${GROUP} test`;
 
-export const STORED_HEADERS_NOT_SENT_REASON = 'stored_headers_not_sent';
-
 /** Why a test failed, in CLI words. An unknown `failure` is shown as is. */
 const FAILURES: Record<string, string> = {
   not_enabled: "Inference hooks aren't available for this team yet.",
@@ -141,7 +139,7 @@ export default async function test(
     const stored = config.headers?.names ?? [];
     if (stored.length && !headers?.length) {
       warnings.push({
-        reason: STORED_HEADERS_NOT_SENT_REASON,
+        reason: AGENT_REASON.STORED_HEADERS_NOT_SENT,
         message: `A test doesn't send stored headers. Pass the ones the endpoint needs with --header: ${stored
           .map(remoteText)
           .join(', ')}.`,
@@ -161,13 +159,17 @@ export default async function test(
     return handleApiError(client, json, err, {
       action: 'run the connection test',
       carriesSecret: Boolean(headers?.length),
-      rateLimitDetail: 'Each team can run 10 connection tests a minute.',
-      serverCause: status =>
-        status === 502
+      rateLimitDetail: 'Connection tests are rate limited per team.',
+      serverCause: (status, code) =>
+        code === 'inference_hook_test_unavailable'
           ? "AI Gateway couldn't run it."
-          : status === 503
-            ? 'The connection test is unavailable.'
-            : undefined,
+          : code === 'rate_limit_unavailable'
+            ? "The connection test's rate limiter is unavailable."
+            : status === 502
+              ? "AI Gateway couldn't run it."
+              : status === 503
+                ? 'The connection test is unavailable.'
+                : undefined,
     });
   }
   output.stopSpinner();

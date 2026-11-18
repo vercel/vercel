@@ -52,7 +52,13 @@ export function useInferenceHooksApi(
       | 'getSecret'
       | 'postSecret'
       | 'postTest',
-      (body: any) => { status?: number; body?: unknown; headers?: object }
+      (body: any) => {
+        status?: number;
+        body?: unknown;
+        /** A non-JSON body, sent as text/plain. */
+        text?: string;
+        headers?: object;
+      }
     >
   >
 ): RecordedRequest[] {
@@ -74,7 +80,9 @@ export function useInferenceHooksApi(
       res.setHeader(key, value);
     }
     res.status(result.status ?? 200);
-    if (result.body === undefined) {
+    if (result.text !== undefined) {
+      res.type('text/plain').send(result.text);
+    } else if (result.body === undefined) {
       res.end();
     } else {
       res.json(result.body);

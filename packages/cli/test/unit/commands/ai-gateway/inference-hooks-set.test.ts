@@ -197,11 +197,117 @@ describe('ai-gateway inference-hooks set', () => {
       }),
     });
 
-    expect(await run('set', '--endpoint-url', NEW_URL)).toBe(0);
+    expect(await run('set', '--endpoint-url', NEW_URL, '--yes')).toBe(0);
 
     expect(stderr()).toContain(
       'The endpoint URL changed, so the stored headers were cleared: x-api-key. Pass them again with --header.'
     );
+  });
+
+  describe('a URL change that deletes stored headers', () => {
+    function useUrlChange() {
+      return useInferenceHooksApi({
+        getConfig: () => ({ body: savedConfig }),
+        putConfig: echoPut,
+      });
+    }
+
+    it('previews the deletion and saves after confirming', async () => {
+      const requests = useUrlChange();
+
+      const exitCode = run('set', '--endpoint-url', NEW_URL);
+      await expect(client.stderr).toOutput(
+        'Change the endpoint URL and delete 1 stored header?'
+      );
+      client.stdin.write('y\n');
+
+      expect(await exitCode).toBe(0);
+      expect(stderr()).toMatch(/Headers\s+x-api-key/);
+      expect(stderr()).toContain('Some effects cannot be undone.');
+      expect(requests.filter(r => r.method === 'PUT')).toHaveLength(1);
+    });
+
+    it('changes nothing when the prompt is declined', async () => {
+      const requests = useUrlChange();
+
+      const exitCode = run('set', '--endpoint-url', NEW_URL);
+      await expect(client.stderr).toOutput(
+        'Change the endpoint URL and delete 1 stored header?'
+      );
+      client.stdin.write('n\n');
+
+      expect(await exitCode).toBe(130);
+      expect(stderr()).toContain('Canceled. Nothing was changed.');
+      expect(requests.some(r => r.method === 'PUT')).toBe(false);
+    });
+
+    it('needs --yes without a terminal, and suggests --header', async () => {
+      client.stdin.isTTY = false;
+      const requests = useUrlChange();
+
+      expect(await run('set', '--endpoint-url', NEW_URL, '--json')).toBe(2);
+
+      const error = stderrJson();
+      expect(error).toMatchObject({
+        status: 'action_required',
+        reason: 'confirmation_required',
+        userActionRequired: true,
+        data: {
+          effects: [
+            'Change the endpoint URL',
+            'Delete 1 stored header: x-api-key',
+          ],
+        },
+      });
+      expect(error.next.map((step: any) => step.command)).toEqual([
+        'vercel ai-gateway inference-hooks set --endpoint-url <URL> --header <KEY:VALUE>',
+        'vercel ai-gateway inference-hooks set --endpoint-url <URL> --yes',
+      ]);
+      expect(stderr()).not.toContain(NEW_URL);
+      expect(requests.some(r => r.method === 'PUT')).toBe(false);
+    });
+
+    it('saves with --yes', async () => {
+      const requests = useUrlChange();
+
+      expect(await run('set', '--endpoint-url', NEW_URL, '--yes')).toBe(0);
+
+      expect(requests.find(r => r.method === 'PUT')?.body).toMatchObject({
+        endpointUrl: NEW_URL,
+      });
+      expect(requests.find(r => r.method === 'PUT')?.body).not.toHaveProperty(
+        'headers'
+      );
+    });
+
+    it('needs no confirmation with --header', async () => {
+      const requests = useUrlChange();
+
+      expect(
+        await run(
+          'set',
+          '--endpoint-url',
+          NEW_URL,
+          '--header',
+          `x-api-key: ${HEADER_VALUE}`
+        )
+      ).toBe(0);
+
+      expect(requests.filter(r => r.method === 'PUT')).toHaveLength(1);
+      expect(stderr()).not.toContain('Change the endpoint URL');
+    });
+
+    it('needs no confirmation with --clear-headers', async () => {
+      const requests = useUrlChange();
+
+      expect(
+        await run('set', '--endpoint-url', NEW_URL, '--clear-headers')
+      ).toBe(0);
+
+      expect(requests.find(r => r.method === 'PUT')?.body).toMatchObject({
+        headers: [],
+      });
+    });
   });
 
   it('puts the cleared-headers warning in the JSON document', async () => {
@@ -210,7 +316,9 @@ describe('ai-gateway inference-hooks set', () => {
       putConfig: echoPut,
     });
 
-    expect(await run('set', '--endpoint-url', NEW_URL, '--json')).toBe(0);
+    expect(await run('set', '--endpoint-url', NEW_URL, '--yes', '--json')).toBe(
+      0
+    );
 
     expect(stdoutJson().warnings).toEqual([
       expect.objectContaining({ reason: 'headers_cleared' }),
@@ -236,7 +344,8 @@ describe('ai-gateway inference-hooks set', () => {
         '--timeout-ms',
         '2000',
         '--rollout-percent',
-        '50'
+        '50',
+        '--yes'
       )
     ).toBe(0);
 
@@ -248,6 +357,7 @@ describe('ai-gateway inference-hooks set', () => {
       { key: 'option:failure-mode', value: 'closed' },
       { key: 'option:timeout-ms', value: '[REDACTED]' },
       { key: 'option:rollout-percent', value: '[REDACTED]' },
+      { key: 'flag:yes', value: 'TRUE' },
     ]);
   });
 
@@ -275,7 +385,7 @@ describe('ai-gateway inference-hooks set', () => {
           apiError(400, 'invalid_inference_hooks_endpoint_url', 'bad url'),
       });
 
-      expect(await run('set', '--endpoint-url', NEW_URL)).toBe(2);
+      expect(await run('set', '--endpoint-url', NEW_URL, '--yes')).toBe(2);
 
       expect(stderr()).toContain(
         "Can't save the inference hooks configuration. AI Gateway doesn't accept this endpoint URL."

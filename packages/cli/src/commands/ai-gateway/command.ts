@@ -1442,6 +1442,11 @@ export const inferenceHooksSetSubcommand = {
       description: 'Remove every stored header',
     },
     jsonOption,
+    {
+      ...yesOption,
+      description:
+        'Delete the stored headers without asking when --endpoint-url changes the URL',
+    },
   ],
   examples: [
     {
@@ -1458,7 +1463,7 @@ export const inferenceHooksSetSubcommand = {
     {
       title: 'Notes',
       body: [
-        'Header values are stored encrypted and never shown again. Without --header or --clear-headers, the stored headers are kept, unless --endpoint-url changes the URL: that clears them, so pass them again with --header.',
+        'Header values are stored encrypted and never shown again. Without --header or --clear-headers, the stored headers are kept, unless --endpoint-url changes the URL: that deletes them, so the command asks first. Pass them again with --header, or confirm with --yes.',
       ],
     },
   ],
@@ -1627,7 +1632,7 @@ export const inferenceHooksTestSubcommand = {
       title: 'Notes',
       body: [
         "Stored header values can't be read back, so a test never sends them. Pass each header the endpoint needs with --header.",
-        'The command exits 1 when the test fails. Each team can run 10 tests a minute.',
+        'The command exits 1 when the test fails. Connection tests are rate limited per team.',
       ],
     },
   ],

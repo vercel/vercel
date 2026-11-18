@@ -32,8 +32,6 @@ import {
   type Warning,
 } from './inference-hooks-shared';
 
-export const SIGNING_SECRET_MISSING_REASON = 'signing_secret_missing';
-
 /** `enable` and `disable`: read the config, then save it with `enabled` changed. */
 export async function setEnabled(
   client: Client,
@@ -64,10 +62,12 @@ export async function setEnabled(
   let current: InferenceHooksConfig;
   let secret: SigningSecretMetadata | undefined;
   try {
-    [current, secret] = await Promise.all([
-      getInferenceHooksConfig(client),
-      enabled ? getSigningSecretMetadata(client) : undefined,
-    ]);
+    // One after the other, as in `status`: a failed read ends the command.
+    current = await getInferenceHooksConfig(client);
+    secret =
+      enabled && current.configured
+        ? await getSigningSecretMetadata(client)
+        : undefined;
   } catch (err) {
     return handleApiError(client, json, err, {
       action: 'read the inference hooks configuration',
@@ -92,7 +92,7 @@ export async function setEnabled(
   const warnings: Warning[] = [];
   if (enabled && secret && !secret.exists) {
     warnings.push({
-      reason: SIGNING_SECRET_MISSING_REASON,
+      reason: AGENT_REASON.SIGNING_SECRET_MISSING,
       message:
         current.mode === 'enforce' && current.failureMode === 'closed'
           ? "This team has no signing secret, so requests aren't sent to the endpoint. In enforce mode with failure mode closed, they fail until one exists."
@@ -150,6 +150,7 @@ export async function setEnabled(
     return handleApiError(client, json, err, {
       action: `${verb} inference hooks`,
       unknownOutcome: `inference hooks were ${verb}d`,
+      savedInput: true,
     });
   }
   output.stopSpinner();

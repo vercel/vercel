@@ -72,7 +72,7 @@ export default async function remove(
       '',
       '  Stops sending requests to this endpoint and deletes the stored headers.',
       '  The signing secret is kept.',
-      ...(headerNames.length ? ["  Some effects can't be undone."] : []),
+      ...(headerNames.length ? ['  Some effects cannot be undone.'] : []),
     ],
     question: 'Remove the inference hooks configuration?',
     action: 'remove the inference hooks configuration',

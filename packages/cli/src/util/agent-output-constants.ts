@@ -162,6 +162,12 @@ export const AGENT_REASON = {
   STREAM_GAP: 'stream_gap',
   /** A list couldn't be read in full, so some items may be missing */
   INCOMPLETE_RESULTS: 'incomplete_results',
+  /** An endpoint URL change deleted the stored inference hook headers */
+  HEADERS_CLEARED: 'headers_cleared',
+  /** Inference hooks are on, but no signing secret exists to sign requests */
+  SIGNING_SECRET_MISSING: 'signing_secret_missing',
+  /** A connection test doesn't send the stored inference hook headers */
+  STORED_HEADERS_NOT_SENT: 'stored_headers_not_sent',
 } as const;
 
 /**

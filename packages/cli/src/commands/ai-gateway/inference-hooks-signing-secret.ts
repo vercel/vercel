@@ -6,7 +6,7 @@ import { AiGatewayInferenceHooksSigningSecretTelemetryClient } from '../../util/
 import { getCommandAliases } from '..';
 import { printUnknownCommand } from '../print-command-help';
 import { inferenceHooksSigningSecretSubcommand } from './command';
-import { GROUP, routingFlags, usageError } from './inference-hooks-shared';
+import { GROUP, routingFlags } from './inference-hooks-shared';
 import create from './inference-hooks-signing-secret-create';
 import rotate from './inference-hooks-signing-secret-rotate';
 
@@ -48,18 +48,7 @@ export default async function signingSecret(
       telemetry.trackCliSubcommandRotate(subcommandOriginal);
       return rotate(client, selected.args);
     default:
-      if (!selected.command) {
-        return usageError(
-          client,
-          argv.includes('--json'),
-          `${GROUP} signing-secret`,
-          {
-            reason: 'missing_command',
-            message: `Can't run vercel ${GROUP} signing-secret without a subcommand.`,
-          }
-        );
-      }
-      printUnknownCommand(client, selected.command, [
+      printUnknownCommand(client, selected.command ?? '', [
         ...GROUP.split(' '),
         'signing-secret',
       ]);

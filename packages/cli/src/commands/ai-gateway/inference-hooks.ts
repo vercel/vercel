@@ -14,7 +14,6 @@ import {
   GROUP,
   handleUnexpectedError,
   routingFlags,
-  usageError,
 } from './inference-hooks-shared';
 import signingSecret from './inference-hooks-signing-secret';
 import status from './inference-hooks-status';
@@ -58,14 +57,9 @@ export default async function inferenceHooks(client: Client): Promise<number> {
     selected.command ? [selected.command] : [],
     COMMAND_CONFIG
   );
-  if (!selected.command) {
-    return usageError(client, selected.args.includes('--json'), GROUP, {
-      reason: 'missing_command',
-      message: `Can't run vercel ${GROUP} without a subcommand.`,
-    });
-  }
+  // The entry point answers a bare group with its help, so a command is here.
   if (typeof subcommand !== 'string') {
-    printUnknownCommand(client, selected.command, GROUP.split(' '));
+    printUnknownCommand(client, selected.command ?? '', GROUP.split(' '));
     return 2;
   }
 
