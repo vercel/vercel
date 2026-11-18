@@ -15,6 +15,7 @@ import {
   fail,
   GROUP,
   handleApiError,
+  INFERENCE_HOOKS_NOT_AVAILABLE,
   type NextStep,
   parseLeaf,
   printJson,
@@ -33,7 +34,7 @@ const PATH = `${GROUP} test`;
 
 /** Why a test failed, in CLI words. An unknown `failure` is shown as is. */
 const FAILURES: Record<string, string> = {
-  not_enabled: "Inference hooks aren't available for this team yet.",
+  not_enabled: INFERENCE_HOOKS_NOT_AVAILABLE,
   flag_unavailable:
     "AI Gateway couldn't check whether inference hooks are available for this team.",
   url_rejected: "AI Gateway doesn't accept this endpoint URL.",

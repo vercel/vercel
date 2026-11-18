@@ -102,6 +102,8 @@ export const AGENT_REASON = {
   INVALID_BUDGET: 'invalid_budget',
   /** Inference hooks can't be turned on before the team has a signing secret */
   SIGNING_SECRET_REQUIRED: 'signing_secret_required',
+  /** Inference hooks aren't available for the team yet */
+  INFERENCE_HOOKS_NOT_ENABLED: 'inference_hooks_not_enabled',
   INVALID_REFRESH_PERIOD: 'invalid_refresh_period',
   INVALID_EXPIRATION: 'invalid_expiration',
   INVALID_ALERT_THRESHOLDS: 'invalid_alert_thresholds',

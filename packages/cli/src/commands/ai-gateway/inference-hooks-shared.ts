@@ -431,6 +431,9 @@ export function maskSecretInCi(client: Client, secret: string): void {
   }
 }
 
+export const INFERENCE_HOOKS_NOT_AVAILABLE =
+  "Inference hooks aren't available for this team yet.";
+
 /** The step that unblocks turning inference hooks on. */
 export const CREATE_SECRET_STEP: NextStep = {
   command: 'signing-secret create',
@@ -566,6 +569,14 @@ export function handleApiError(
     err.code === 'inference_hooks_signing_secret_required'
   ) {
     return signingSecretRequired(client, json, action);
+  }
+  // Not a permission problem: the team doesn't have the feature. Worded like
+  // the connection test's `not_enabled` result.
+  if (status === 403 && err.code === 'inference_hooks_not_enabled') {
+    return fail(client, json, {
+      reason: AGENT_REASON.INFERENCE_HOOKS_NOT_ENABLED,
+      message: `Can't ${action}. ${INFERENCE_HOOKS_NOT_AVAILABLE}`,
+    });
   }
   if (status === 403) {
     return fail(

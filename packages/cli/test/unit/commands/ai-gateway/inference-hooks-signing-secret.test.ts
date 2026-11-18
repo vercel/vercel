@@ -110,6 +110,21 @@ describe('ai-gateway inference-hooks signing-secret create', () => {
     expect(stdout()).toBe('');
   });
 
+  it('says inference hooks are not available when the team lacks them', async () => {
+    useInferenceHooksApi({
+      postSecret: () => apiError(403, 'inference_hooks_not_enabled'),
+    });
+
+    expect(await run('signing-secret', 'create', '--json')).toBe(1);
+
+    expect(stderrJson()).toMatchObject({
+      reason: 'inference_hooks_not_enabled',
+      message:
+        "Can't create the signing secret. Inference hooks aren't available for this team yet.",
+    });
+    expect(stdout()).toBe('');
+  });
+
   it('does not retry a create that failed with a 5xx', async () => {
     const requests = useInferenceHooksApi({
       postSecret: () => ({ status: 500, body: { error: { message: 'x' } } }),

@@ -467,6 +467,56 @@ describe('ai-gateway inference-hooks set', () => {
       });
     });
 
+    it('says inference hooks are not available when the team lacks them', async () => {
+      useInferenceHooksApi({
+        getConfig: () => ({ body: savedConfig }),
+        putConfig: () =>
+          apiError(403, 'inference_hooks_not_enabled', 'feature off'),
+      });
+
+      expect(await run('set', '--mode', 'enforce')).toBe(1);
+
+      expect(stderr()).toContain(
+        "Can't save the inference hooks configuration. Inference hooks aren't available for this team yet."
+      );
+      expect(stderr()).not.toContain('permission');
+      expect(stderr()).not.toContain('feature off');
+    });
+
+    it('reports the unavailable feature in JSON', async () => {
+      useInferenceHooksApi({
+        getConfig: () => ({ body: savedConfig }),
+        putConfig: () =>
+          apiError(403, 'inference_hooks_not_enabled', 'feature off'),
+      });
+
+      expect(await run('set', '--mode', 'enforce', '--json')).toBe(1);
+
+      const error = stderrJson();
+      expect(error).toMatchObject({
+        status: 'error',
+        reason: 'inference_hooks_not_enabled',
+        message:
+          "Can't save the inference hooks configuration. Inference hooks aren't available for this team yet.",
+      });
+      expect(error.data?.remoteMessage).toBeUndefined();
+      expect(stdout()).toBe('');
+    });
+
+    it('keeps the permission message for a plain 403', async () => {
+      useInferenceHooksApi({
+        getConfig: () => ({ body: savedConfig }),
+        putConfig: () => apiError(403, 'forbidden', 'Not allowed'),
+      });
+
+      expect(await run('set', '--mode', 'enforce')).toBe(1);
+
+      expect(stderr()).toContain(
+        "You can't save the inference hooks configuration. It needs the AI Gateway Settings permission."
+      );
+      expect(stderr()).not.toContain("aren't available");
+    });
+
     it('says AI Gateway is not set up for a missing customer record', async () => {
       useInferenceHooksApi({
         getConfig: () => ({ body: { configured: false } }),
