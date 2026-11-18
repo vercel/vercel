@@ -30,6 +30,7 @@ import {
   compileCargoBinary,
   createRustEnv,
   getRustHostTargetTriple,
+  getDefaultArchitecture,
   getTargetTriple,
   resolveCompiledBinaryPath,
 } from './lib/compile';
@@ -86,7 +87,9 @@ async function buildHandler(options: BuildOptions): Promise<BuildResultVX> {
     sourceFile: entrypoint,
     config,
   });
-  const architecture = lambdaOptions?.architecture || 'x86_64';
+  const architecture =
+    lambdaOptions?.architecture ||
+    getDefaultArchitecture(crossCompilationEnabled);
   const targetTriple = getTargetTriple(architecture);
   const modeTarget = meta?.isDev
     ? await getRustHostTargetTriple(rustEnv)

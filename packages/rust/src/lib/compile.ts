@@ -92,6 +92,17 @@ export function resolveCompiledBinaryPath({
   return path.join(dir, variant, getExecutableName(binaryName));
 }
 
+// Without cross-compilation `cargo build` targets the build host, so the
+// function has to be declared with the host's architecture.
+export function getDefaultArchitecture(
+  crossCompilation: boolean
+): 'x86_64' | 'arm64' {
+  if (!crossCompilation && process.arch === 'arm64') {
+    return 'arm64';
+  }
+  return 'x86_64';
+}
+
 export function getTargetTriple(architecture: string): string {
   return architecture === 'arm64'
     ? 'aarch64-unknown-linux-gnu'

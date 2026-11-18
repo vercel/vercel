@@ -34,6 +34,7 @@ import {
   compileCargoBinary,
   createRustEnv,
   getRustHostTargetTriple,
+  getDefaultArchitecture,
   getTargetTriple,
   resolveCompiledBinaryPath,
   type RustEnv,
@@ -197,7 +198,8 @@ export async function buildStandaloneServer(
     sourceFile: entrypoint,
     config,
   });
-  const architecture = lambdaOptions?.architecture || 'x86_64';
+  const architecture =
+    lambdaOptions?.architecture || getDefaultArchitecture(crossCompilation);
   const targetTriple = getTargetTriple(architecture);
   const metadataTarget = options.meta?.isDev
     ? await getRustHostTargetTriple(rustEnv)
