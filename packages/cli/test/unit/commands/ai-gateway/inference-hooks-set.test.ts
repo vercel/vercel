@@ -446,6 +446,27 @@ describe('ai-gateway inference-hooks set', () => {
       });
     });
 
+    it('maps the API refusing to keep hooks on without a secret', async () => {
+      useInferenceHooksApi({
+        getConfig: () => ({ body: { ...savedConfig, enabled: true } }),
+        putConfig: () =>
+          apiError(409, 'inference_hooks_signing_secret_required', 'no secret'),
+      });
+
+      expect(await run('set', '--mode', 'enforce', '--json')).toBe(1);
+
+      expect(stderrJson()).toMatchObject({
+        reason: 'signing_secret_required',
+        message:
+          "Can't save the inference hooks configuration. This team needs a signing secret first.",
+        next: [
+          {
+            command: 'vercel ai-gateway inference-hooks signing-secret create',
+          },
+        ],
+      });
+    });
+
     it('says AI Gateway is not set up for a missing customer record', async () => {
       useInferenceHooksApi({
         getConfig: () => ({ body: { configured: false } }),

@@ -25,14 +25,15 @@ import {
   handleApiError,
   parseLeaf,
   printJson,
-  printSteps,
-  printWarnings,
   progress,
   requireTeam,
-  type Warning,
+  signingSecretRequired,
 } from './inference-hooks-shared';
 
-/** `enable` and `disable`: read the config, then save it with `enabled` changed. */
+/**
+ * `enable` and `disable`: read the config, then save it with `enabled`
+ * changed. `enable` checks for a signing secret first.
+ */
 export async function setEnabled(
   client: Client,
   argv: string[],
@@ -60,14 +61,8 @@ export async function setEnabled(
 
   progress(client, json, 'Fetching inference hooks…');
   let current: InferenceHooksConfig;
-  let secret: SigningSecretMetadata | undefined;
   try {
-    // One after the other, as in `status`: a failed read ends the command.
     current = await getInferenceHooksConfig(client);
-    secret =
-      enabled && current.configured
-        ? await getSigningSecretMetadata(client)
-        : undefined;
   } catch (err) {
     return handleApiError(client, json, err, {
       action: 'read the inference hooks configuration',
@@ -89,49 +84,34 @@ export async function setEnabled(
     });
   }
 
-  const warnings: Warning[] = [];
-  if (enabled && secret && !secret.exists) {
-    warnings.push({
-      reason: AGENT_REASON.SIGNING_SECRET_MISSING,
-      message:
-        current.mode === 'enforce' && current.failureMode === 'closed'
-          ? "This team has no signing secret, so requests aren't sent to the endpoint. In enforce mode with failure mode closed, they fail until one exists."
-          : "This team has no signing secret, so requests aren't sent to the endpoint until one exists.",
-    });
-  }
-
-  const createSecret = {
-    command: 'signing-secret create',
-    when: 'Create the signing secret',
-  };
-  const jsonNext = [
-    ...(warnings.length
-      ? [
-          {
-            command: groupCommand(client, createSecret.command),
-            when: createSecret.when,
-          },
-        ]
-      : []),
-    {
-      command: groupCommand(client, 'status'),
-      when: 'Check the configuration',
-    },
-  ];
-
   if (current.enabled === enabled) {
     if (json) {
       return printJson(client, {
         inferenceHooks: current,
         outcome: 'unchanged',
-        ...(warnings.length ? { warnings } : {}),
-        next: jsonNext,
+        next: [statusNext(client)],
       });
     }
     output.print(`  Inference hooks are already ${verb}d.\n`);
-    printWarnings(warnings);
-    printSteps(client, warnings.length ? [createSecret] : []);
     return 0;
+  }
+
+  // The API refuses to turn hooks on without a signing secret; say so before
+  // sending the write.
+  if (enabled) {
+    progress(client, json, 'Fetching signing secret…');
+    let secret: SigningSecretMetadata;
+    try {
+      secret = await getSigningSecretMetadata(client);
+    } catch (err) {
+      return handleApiError(client, json, err, {
+        action: 'read the signing secret',
+      });
+    }
+    output.stopSpinner();
+    if (!secret.exists) {
+      return signingSecretRequired(client, json, 'enable inference hooks');
+    }
   }
 
   progress(client, json, enabled ? 'Enabling…' : 'Disabling…');
@@ -159,8 +139,7 @@ export async function setEnabled(
     return printJson(client, {
       inferenceHooks: saved,
       outcome: `${verb}d`,
-      ...(warnings.length ? { warnings } : {}),
-      next: jsonNext,
+      next: [statusNext(client)],
     });
   }
 
@@ -170,9 +149,14 @@ export async function setEnabled(
   if (saved.configured) {
     output.print(`${formatConfigRows(saved).slice(1).join('\n')}\n`);
   }
-  printWarnings(warnings);
-  printSteps(client, warnings.length ? [createSecret] : []);
   return 0;
+}
+
+function statusNext(client: Client) {
+  return {
+    command: groupCommand(client, 'status'),
+    when: 'Check the configuration',
+  };
 }
 
 export default function enable(client: Client, argv: string[]) {

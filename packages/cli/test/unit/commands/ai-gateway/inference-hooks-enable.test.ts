@@ -8,6 +8,7 @@ import {
   secretMetadata,
   stderr,
   stderrJson,
+  stdout,
   stdoutJson,
   useInferenceHooksApi,
 } from './inference-hooks-helpers';
@@ -33,55 +34,102 @@ describe('ai-gateway inference-hooks enable', () => {
     });
     expectTeamScoped(requests);
     expect(stderr()).toMatch(/Enabled\s+inference hooks/);
-    expect(stderr()).not.toContain('signing secret');
+    expect(stderr()).not.toContain('needs a signing secret');
   });
 
   it('is a no-op when already enabled', async () => {
     const requests = useInferenceHooksApi({
       getConfig: () => ({ body: { ...savedConfig, enabled: true } }),
-      getSecret: () => ({ body: secretMetadata }),
     });
 
     expect(await run('enable', '--json')).toBe(0);
 
     expect(stdoutJson().outcome).toBe('unchanged');
-    expect(requests.some(r => r.method === 'PUT')).toBe(false);
+    expect(requests.map(r => `${r.method} ${r.path}`)).toEqual([
+      'GET /ai-gateway/inference-hooks',
+    ]);
   });
 
-  it('warns when there is no signing secret', async () => {
-    useInferenceHooksApi({
-      getConfig: () => ({
-        body: { ...savedConfig, mode: 'enforce', failureMode: 'closed' },
-      }),
-      getSecret: () => ({ body: { exists: false } }),
-      putConfig: body => ({ body: { ...savedConfig, ...body } }),
-    });
-
-    expect(await run('enable')).toBe(0);
-
-    expect(stderr()).toContain(
-      "This team has no signing secret, so requests aren't sent to the endpoint. In enforce mode with failure mode closed, they fail until one exists."
-    );
-    expect(stderr()).toContain(
-      'vercel ai-gateway inference-hooks signing-secret create'
-    );
-  });
-
-  it('puts the missing-secret warning in the JSON document', async () => {
-    useInferenceHooksApi({
+  it('fails before the write when there is no signing secret', async () => {
+    const requests = useInferenceHooksApi({
       getConfig: () => ({ body: savedConfig }),
       getSecret: () => ({ body: { exists: false } }),
       putConfig: body => ({ body: { ...savedConfig, ...body } }),
     });
 
-    expect(await run('enable', '--json')).toBe(0);
+    expect(await run('enable')).toBe(1);
 
-    const result = stdoutJson();
-    expect(result.outcome).toBe('enabled');
-    expect(result.warnings).toEqual([
-      expect.objectContaining({ reason: 'signing_secret_missing' }),
-    ]);
-    expect(stderr()).toBe('');
+    expect(stderr()).toContain(
+      "Can't enable inference hooks. This team needs a signing secret first."
+    );
+    expect(stderr()).toContain(
+      'vercel ai-gateway inference-hooks signing-secret create'
+    );
+    expect(stderr()).not.toContain('Enabled');
+    expect(requests.some(r => r.method === 'PUT')).toBe(false);
+  });
+
+  it('fails with signing_secret_required in JSON when there is no secret', async () => {
+    const requests = useInferenceHooksApi({
+      getConfig: () => ({ body: savedConfig }),
+      getSecret: () => ({ body: { exists: false } }),
+    });
+
+    expect(await run('enable', '--json')).toBe(1);
+
+    expect(stdout()).toBe('');
+    expect(stderrJson()).toMatchObject({
+      status: 'error',
+      reason: 'signing_secret_required',
+      message:
+        "Can't enable inference hooks. This team needs a signing secret first.",
+      next: [
+        {
+          command: 'vercel ai-gateway inference-hooks signing-secret create',
+        },
+      ],
+    });
+    expect(requests.some(r => r.method === 'PUT')).toBe(false);
+  });
+
+  it('maps the API refusing to enable without a secret', async () => {
+    const requests = useInferenceHooksApi({
+      getConfig: () => ({ body: savedConfig }),
+      getSecret: () => ({ body: secretMetadata }),
+      putConfig: () =>
+        apiError(409, 'inference_hooks_signing_secret_required', 'no secret'),
+    });
+
+    expect(await run('enable')).toBe(1);
+
+    expect(stderr()).toContain(
+      "Can't enable inference hooks. This team needs a signing secret first."
+    );
+    expect(stderr()).toContain(
+      'vercel ai-gateway inference-hooks signing-secret create'
+    );
+    expect(requests.filter(r => r.method === 'PUT')).toHaveLength(1);
+  });
+
+  it('maps the API refusal in JSON', async () => {
+    useInferenceHooksApi({
+      getConfig: () => ({ body: savedConfig }),
+      getSecret: () => ({ body: secretMetadata }),
+      putConfig: () =>
+        apiError(409, 'inference_hooks_signing_secret_required', 'no secret'),
+    });
+
+    expect(await run('enable', '--json')).toBe(1);
+
+    expect(stdout()).toBe('');
+    expect(stderrJson()).toMatchObject({
+      reason: 'signing_secret_required',
+      next: [
+        {
+          command: 'vercel ai-gateway inference-hooks signing-secret create',
+        },
+      ],
+    });
   });
 
   it('fails when nothing is set up', async () => {

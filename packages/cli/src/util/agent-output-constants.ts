@@ -100,6 +100,8 @@ export const AGENT_REASON = {
   INVALID_EVENT: 'invalid_event',
   // AI Gateway
   INVALID_BUDGET: 'invalid_budget',
+  /** Inference hooks can't be turned on before the team has a signing secret */
+  SIGNING_SECRET_REQUIRED: 'signing_secret_required',
   INVALID_REFRESH_PERIOD: 'invalid_refresh_period',
   INVALID_EXPIRATION: 'invalid_expiration',
   INVALID_ALERT_THRESHOLDS: 'invalid_alert_thresholds',
@@ -164,8 +166,6 @@ export const AGENT_REASON = {
   INCOMPLETE_RESULTS: 'incomplete_results',
   /** An endpoint URL change deleted the stored inference hook headers */
   HEADERS_CLEARED: 'headers_cleared',
-  /** Inference hooks are on, but no signing secret exists to sign requests */
-  SIGNING_SECRET_MISSING: 'signing_secret_missing',
   /** A connection test doesn't send the stored inference hook headers */
   STORED_HEADERS_NOT_SENT: 'stored_headers_not_sent',
 } as const;

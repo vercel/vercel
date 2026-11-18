@@ -1472,7 +1472,9 @@ export const inferenceHooksSetSubcommand = {
 export const inferenceHooksEnableSubcommand = {
   name: 'enable',
   aliases: [],
-  description: 'Turn on inference hooks with the saved configuration',
+  description:
+    'Turn on inference hooks with the saved configuration. The team needs a signing secret first',
+  summary: 'Turn on inference hooks',
   arguments: [],
   options: [jsonOption],
   examples: [

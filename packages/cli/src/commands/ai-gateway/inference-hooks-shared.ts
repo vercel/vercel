@@ -431,6 +431,25 @@ export function maskSecretInCi(client: Client, secret: string): void {
   }
 }
 
+/** The step that unblocks turning inference hooks on. */
+export const CREATE_SECRET_STEP: NextStep = {
+  command: 'signing-secret create',
+  when: 'Create the signing secret first',
+};
+
+/** Turning inference hooks on needs a signing secret. Exits 1. */
+export function signingSecretRequired(
+  client: Client,
+  json: boolean,
+  action: string
+): number {
+  return fail(client, json, {
+    reason: AGENT_REASON.SIGNING_SECRET_REQUIRED,
+    message: `Can't ${action}. This team needs a signing secret first.`,
+    next: [CREATE_SECRET_STEP],
+  });
+}
+
 export interface ApiFailureContext {
   /** The verb and object, such as `save the inference hooks configuration`. */
   action: string;
@@ -541,6 +560,13 @@ export function handleApiError(
         }
       : failure;
 
+  // Nothing was written: the API refuses to turn hooks on without a secret.
+  if (
+    status === 409 &&
+    err.code === 'inference_hooks_signing_secret_required'
+  ) {
+    return signingSecretRequired(client, json, action);
+  }
   if (status === 403) {
     return fail(
       client,
