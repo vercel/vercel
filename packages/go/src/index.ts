@@ -40,6 +40,7 @@ import {
   debug,
   cloneEnv,
   getProvidedRuntime,
+  getLambdaOptionsFromFunction,
   execCommand,
   getReportedServiceType,
 } from '@vercel/build-utils';
@@ -168,8 +169,14 @@ export async function build(options: BuildOptions): Promise<BuildResultVX> {
     functionRenames: [],
   };
 
+  const lambdaOptions = await getLambdaOptionsFromFunction({
+    sourceFile: entrypoint,
+    config,
+  });
+  const architecture = lambdaOptions?.architecture || 'x86_64';
+
   const env = cloneEnv(process.env, meta.env, {
-    GOARCH: 'amd64',
+    GOARCH: architecture === 'arm64' ? 'arm64' : 'amd64',
     GOOS: 'linux',
   });
 
@@ -319,6 +326,7 @@ export async function build(options: BuildOptions): Promise<BuildResultVX> {
       files: { ...(await glob('**', outDir)), ...includedFiles },
       handler: HANDLER_FILENAME,
       runtime,
+      architecture,
       runtimeLanguage: 'go',
       supportsWrapper: true,
       environment: {},
