@@ -13,13 +13,7 @@ import {
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
-import {
-  type AlertsScope,
-  resolveAlertsScope,
-  scopeFromLinkedProject,
-} from './resolve-alerts-scope';
-import { resolveRulesTeam } from '../monitors/parse-scope';
-import { getLinkedProject } from '../../util/projects/link';
+import { resolveGroupScope } from './resolve-group-scope';
 import formatDate from '../../util/format-date';
 import chalk from 'chalk';
 import {
@@ -620,7 +614,7 @@ export default async function inspect(
     );
   }
 
-  const scope = await resolveInspectScope(client, {
+  const scope = await resolveGroupScope(client, {
     project: parsedArgs.flags['--project'] as string | undefined,
     all: parsedArgs.flags['--all'] as boolean | undefined,
     jsonOutput: fr.jsonOutput,
@@ -697,30 +691,4 @@ export default async function inspect(
   } finally {
     output.stopSpinner();
   }
-}
-
-async function resolveInspectScope(
-  client: Client,
-  opts: {
-    project?: string;
-    all?: boolean;
-    jsonOutput: boolean;
-    command: string;
-  }
-): Promise<AlertsScope | number> {
-  if (opts.project || opts.all) {
-    return resolveAlertsScope(client, opts);
-  }
-
-  const linkedProject = await getLinkedProject(client);
-  if (linkedProject.status === 'error') {
-    return linkedProject.exitCode;
-  }
-  if (linkedProject.status === 'linked') {
-    return scopeFromLinkedProject(linkedProject);
-  }
-
-  // Alert group IDs are unique within a team, and the API looks them up by
-  // team alone, so an unlinked directory only needs a team scope.
-  return resolveRulesTeam(client, opts.jsonOutput);
 }

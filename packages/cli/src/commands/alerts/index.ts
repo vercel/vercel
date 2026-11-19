@@ -12,7 +12,17 @@ import {
   shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
 import { AGENT_REASON } from '../../util/agent-output-constants';
-import { alertsCommand, inspectSubcommand, listSubcommand } from './command';
+import {
+  acknowledgeSubcommand,
+  acknowledgedSubcommand,
+  alertsCommand,
+  inspectSubcommand,
+  listSubcommand,
+  muteSubcommand,
+  mutedSubcommand,
+  unacknowledgeSubcommand,
+  unmuteSubcommand,
+} from './command';
 import {
   findCommandIndex,
   normalizeHelpAlias,
@@ -25,6 +35,12 @@ import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand'
 const COMMAND_CONFIG = {
   inspect: getCommandAliases(inspectSubcommand),
   ls: getCommandAliases(listSubcommand),
+  acknowledged: getCommandAliases(acknowledgedSubcommand),
+  muted: getCommandAliases(mutedSubcommand),
+  acknowledge: getCommandAliases(acknowledgeSubcommand),
+  unacknowledge: getCommandAliases(unacknowledgeSubcommand),
+  mute: getCommandAliases(muteSubcommand),
+  unmute: getCommandAliases(unmuteSubcommand),
   rules: ['rules'],
 };
 
@@ -125,6 +141,26 @@ export default async function alerts(client: Client): Promise<number> {
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
       const inspectFn = (await import('./inspect')).default;
       return inspectFn(client, rawSubcommandArgs);
+    }
+    case 'acknowledged':
+    case 'muted': {
+      if (subcommand === 'acknowledged') {
+        telemetry.trackCliSubcommandAcknowledged(subcommandOriginal);
+      } else {
+        telemetry.trackCliSubcommandMuted(subcommandOriginal);
+      }
+      const listFn = (await import('./list')).default;
+      return listFn(client, telemetry, subcommand);
+    }
+    case 'acknowledge':
+    case 'unacknowledge':
+    case 'mute':
+    case 'unmute': {
+      const groupActionFn = (await import('./group-actions')).default;
+      return groupActionFn(client, rawSubcommandArgs, subcommand, {
+        telemetry,
+        subcommandOriginal,
+      });
     }
     case 'rules': {
       warnDeprecatedSubcommand(client, 'alerts rules', 'monitors');

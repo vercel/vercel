@@ -83,6 +83,31 @@ export interface Alert {
   formattedValues?: AlertFormattedValues;
 }
 
+export interface AlertActionOwner {
+  type: string;
+  id: string;
+  configurationId?: string;
+}
+
+export interface AlertAcknowledgeAction {
+  type: 'acknowledge';
+  owner: AlertActionOwner | null;
+  timestamp: number | null;
+}
+
+export interface AlertMutedAction {
+  type: 'muted';
+  ruleIds: string[];
+  owner: AlertActionOwner | null;
+  timestamp: number | null;
+  /** Unix milliseconds, or `null` when the mute lasts until it is removed. */
+  expiresAt: number | null;
+  detectionKeys: string[];
+  coverage: 'partial' | 'all';
+}
+
+export type AlertGroupAction = AlertAcknowledgeAction | AlertMutedAction;
+
 export interface AlertGroup {
   id?: string;
   teamId?: string;
@@ -100,6 +125,12 @@ export interface AlertGroup {
   relatedGroupIds?: string[];
   ai?: AlertAi;
   alerts?: Alert[];
+  /** Acknowledgement and source-group mute actions (v3 and v4 reads). */
+  actions?: AlertGroupAction[];
+  /** Legacy v3 acknowledgement field; `null` when not acknowledged. */
+  ack?: { owner?: AlertActionOwner | null; timestamp?: number | null } | null;
+  /** v4 only: send as `If-Match` when muting. */
+  revision?: string;
 }
 
 export interface AlertTypeConfig {

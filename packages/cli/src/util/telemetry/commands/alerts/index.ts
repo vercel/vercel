@@ -22,6 +22,52 @@ export class AlertsTelemetryClient
     });
   }
 
+  trackCliSubcommandAcknowledged(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'acknowledged', value: actual });
+  }
+
+  trackCliSubcommandMuted(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'muted', value: actual });
+  }
+
+  trackCliSubcommandAcknowledge(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'acknowledge', value: actual });
+  }
+
+  trackCliSubcommandUnacknowledge(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'unacknowledge', value: actual });
+  }
+
+  trackCliSubcommandMute(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'mute', value: actual });
+  }
+
+  trackCliSubcommandUnmute(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'unmute', value: actual });
+  }
+
+  trackCliArgumentGroup(v: string | undefined) {
+    if (v) {
+      this.trackCliArgument({ arg: 'group', value: this.redactedValue });
+    }
+  }
+
+  trackCliOptionDuration(v: string | undefined) {
+    if (v) {
+      const value = v.trim().toLowerCase();
+      this.trackCliOption({
+        option: 'duration',
+        value: /^[0-9a-z. ]{1,16}$/.test(value) ? value : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionDetection(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({ option: 'detection', value: this.redactedValue });
+    }
+  }
+
   trackCliOptionType(v: string[] | undefined) {
     if (v && v.length > 0) {
       this.trackCliOption({

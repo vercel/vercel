@@ -8,6 +8,58 @@ import {
 } from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
+const typeOption = {
+  name: 'type',
+  shorthand: null,
+  type: [String],
+  argument: 'TYPE',
+  deprecated: false,
+  description:
+    'Filter by alert type. Repeatable and comma-separated (for example --type usage_anomaly,error_anomaly).',
+} as const;
+
+const alertsProjectOption = {
+  ...projectOption,
+  shorthand: 'p',
+  description: 'Filter by project (overrides auto-detected linked project).',
+} as const;
+
+const allOption = {
+  name: 'all',
+  shorthand: 'a',
+  type: Boolean,
+  deprecated: false,
+  description: 'Show team-wide alerts (ignore linked project auto-scoping).',
+} as const;
+
+const aiOption = {
+  name: 'ai',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description:
+    'Print AI-focused sections (title, resolved time, summary, key findings) instead of table output.',
+} as const;
+
+const alertFilterOptions = [
+  typeOption,
+  alertsProjectOption,
+  allOption,
+] as const;
+
+const alertRangeOptions = [
+  {
+    ...sinceOption,
+    description: `${sinceOption.description} (default: 24h ago)`,
+  },
+  untilOption,
+  limitOption,
+  formatOption,
+  jsonOption,
+] as const;
+
+const groupArgument = { name: 'group', required: true } as const;
+
 export const listSubcommand = {
   name: 'ls',
   aliases: ['list'],
@@ -58,54 +110,146 @@ export const inspectSubcommand = {
   ],
 } as const;
 
+export const acknowledgedSubcommand = {
+  name: 'acknowledged',
+  aliases: [],
+  description: 'List acknowledged alert groups',
+  arguments: [],
+  options: [...alertFilterOptions, ...alertRangeOptions],
+  examples: [
+    {
+      name: 'List acknowledged alerts for the linked project',
+      value: `${packageName} alerts acknowledged`,
+    },
+    {
+      name: 'List acknowledged alerts across the team as JSON',
+      value: `${packageName} alerts acknowledged --all --json`,
+    },
+  ],
+} as const;
+
+export const mutedSubcommand = {
+  name: 'muted',
+  aliases: [],
+  description: 'List alert groups that have mutes created from them',
+  arguments: [],
+  options: [...alertFilterOptions, ...alertRangeOptions],
+  examples: [
+    {
+      name: 'List muted alerts for the linked project',
+      value: `${packageName} alerts muted`,
+    },
+    {
+      name: 'List muted alerts across the team from the last 7 days',
+      value: `${packageName} alerts muted --all --since 7d`,
+    },
+  ],
+} as const;
+
+export const acknowledgeSubcommand = {
+  name: 'acknowledge',
+  aliases: [],
+  description:
+    'Acknowledge an alert group. Acknowledging does not stop notifications; use `mute` for that.',
+  arguments: [groupArgument],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Acknowledge an alert group',
+      value: `${packageName} alerts acknowledge grp_abc123`,
+    },
+  ],
+} as const;
+
+export const unacknowledgeSubcommand = {
+  name: 'unacknowledge',
+  aliases: [],
+  description: 'Remove the acknowledgement from an alert group',
+  arguments: [groupArgument],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Unacknowledge an alert group',
+      value: `${packageName} alerts unacknowledge grp_abc123`,
+    },
+  ],
+} as const;
+
+export const muteSubcommand = {
+  name: 'mute',
+  aliases: [],
+  description:
+    "Mute an alert group's detections. Matching future detections in the project are suppressed, including in other alert groups.",
+  arguments: [groupArgument],
+  options: [
+    {
+      name: 'duration',
+      shorthand: null,
+      type: String,
+      argument: 'DURATION',
+      deprecated: false,
+      description:
+        'How long the mute lasts, from 1m to 365d (for example 1h, 8h, 7d), or `forever` (default: 24h)',
+    },
+    {
+      name: 'detection',
+      shorthand: null,
+      type: String,
+      argument: 'DETECTION',
+      deprecated: false,
+      description:
+        "Mute only this detection's pattern instead of every detection in the group",
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Mute an alert group for 24 hours',
+      value: `${packageName} alerts mute grp_abc123`,
+    },
+    {
+      name: 'Mute an alert group for 7 days',
+      value: `${packageName} alerts mute grp_abc123 --duration 7d`,
+    },
+    {
+      name: 'Mute an alert group until it is unmuted',
+      value: `${packageName} alerts mute grp_abc123 --duration forever`,
+    },
+  ],
+} as const;
+
+export const unmuteSubcommand = {
+  name: 'unmute',
+  aliases: [],
+  description: 'Remove every mute created from an alert group',
+  arguments: [groupArgument],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Unmute an alert group',
+      value: `${packageName} alerts unmute grp_abc123`,
+    },
+  ],
+} as const;
+
 export const alertsCommand = {
   name: 'alerts',
   aliases: [],
   description:
-    'List alert groups or inspect a group. To manage alert rules, see `vercel monitors`.',
+    'List alert groups, inspect, acknowledge, or mute them. To manage alert rules, see `vercel monitors`.',
   arguments: [],
-  subcommands: [listSubcommand, inspectSubcommand],
-  options: [
-    {
-      name: 'type',
-      shorthand: null,
-      type: [String],
-      argument: 'TYPE',
-      deprecated: false,
-      description:
-        'Filter by alert type. Repeatable and comma-separated (for example --type usage_anomaly,error_anomaly).',
-    },
-    {
-      ...projectOption,
-      shorthand: 'p',
-      description:
-        'Filter by project (overrides auto-detected linked project).',
-    },
-    {
-      name: 'all',
-      shorthand: 'a',
-      type: Boolean,
-      deprecated: false,
-      description:
-        'Show team-wide alerts (ignore linked project auto-scoping).',
-    },
-    {
-      name: 'ai',
-      shorthand: null,
-      type: Boolean,
-      deprecated: false,
-      description:
-        'Print AI-focused sections (title, resolved time, summary, key findings) instead of table output.',
-    },
-    {
-      ...sinceOption,
-      description: `${sinceOption.description} (default: 24h ago)`,
-    },
-    untilOption,
-    limitOption,
-    formatOption,
-    jsonOption,
+  subcommands: [
+    listSubcommand,
+    inspectSubcommand,
+    acknowledgedSubcommand,
+    mutedSubcommand,
+    acknowledgeSubcommand,
+    unacknowledgeSubcommand,
+    muteSubcommand,
+    unmuteSubcommand,
   ],
+  options: [...alertFilterOptions, aiOption, ...alertRangeOptions],
   examples: [
     {
       name: 'List alerts for the linked project',
@@ -126,6 +270,14 @@ export const alertsCommand = {
     {
       name: 'Custom time range',
       value: `${packageName} alerts --since 2026-03-01T00:00:00.000Z --until 2026-03-02T00:00:00.000Z`,
+    },
+    {
+      name: 'List acknowledged or muted alerts',
+      value: `${packageName} alerts acknowledged`,
+    },
+    {
+      name: 'Acknowledge or mute an alert group',
+      value: `${packageName} alerts mute grp_abc123 --duration 8h`,
     },
   ],
 } as const;

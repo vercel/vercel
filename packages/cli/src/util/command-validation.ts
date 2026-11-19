@@ -156,6 +156,7 @@ export function writeJsonError(
 const USAGE_ERROR_CODES: ReadonlySet<string> = new Set([
   'CONFLICTING_CONTENT',
   'INVALID_AGGREGATION',
+  'INVALID_DURATION',
   'INVALID_ARGUMENTS',
   'INVALID_ATTACHMENT',
   'INVALID_GRANULARITY',

@@ -5,7 +5,11 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import output from '../../output-manager';
-import { alertsCommand } from './command';
+import {
+  acknowledgedSubcommand,
+  alertsCommand,
+  mutedSubcommand,
+} from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import { isAPIError } from '../../util/errors-ts';
 import { type AlertsScope, resolveAlertsScope } from './resolve-alerts-scope';
@@ -36,6 +40,24 @@ import {
   renderAlertTable,
 } from './format';
 import type { AlertGroup } from './types';
+import {
+  getAcknowledgedAt,
+  getMuteCoverage,
+  getMuteExpiry,
+  isAcknowledged,
+  isMuted,
+} from './group-state';
+
+/**
+ * A filtered view of `GET /alerts/v3/groups`, selected by the
+ * `alerts acknowledged` and `alerts muted` subcommands.
+ */
+export type AlertsView = 'acknowledged' | 'muted';
+
+const VIEW_FILTERS: Record<AlertsView, (group: AlertGroup) => boolean> = {
+  acknowledged: isAcknowledged,
+  muted: isMuted,
+};
 
 interface ListFlags {
   '--type'?: string[];
@@ -188,11 +210,18 @@ function validationFailureForAgents(
   return handleValidationError(result, jsonOutput, client);
 }
 
-function printGroups(groups: AlertGroup[]) {
+function printGroups(groups: AlertGroup[], view?: AlertsView) {
   if (groups.length === 0) {
-    output.log('No alerts found.');
+    output.log(view ? `No ${view} alerts found.` : 'No alerts found.');
     return;
   }
+
+  const viewHeaders =
+    view === 'acknowledged'
+      ? ['Acknowledged At']
+      : view === 'muted'
+        ? ['Muted Until', 'Coverage']
+        : [];
 
   const headers = [
     'Title',
@@ -201,6 +230,7 @@ function printGroups(groups: AlertGroup[]) {
     'Type',
     'Status',
     'Alerts',
+    ...viewHeaders,
   ].map(h => chalk.cyan(h));
 
   const rows = [
@@ -214,6 +244,16 @@ function printGroups(groups: AlertGroup[]) {
       ];
 
       row.push(getStatus(group), getAlertsCount(group));
+
+      if (view === 'acknowledged') {
+        row.push(formatDate(getAcknowledgedAt(group)));
+      } else if (view === 'muted') {
+        const expiry = getMuteExpiry(group);
+        row.push(
+          expiry === null ? 'until unmuted' : formatDate(expiry),
+          getMuteCoverage(group) ?? '-'
+        );
+      }
 
       return row;
     }),
@@ -266,8 +306,23 @@ function trackTelemetry(
   telemetry.trackCliOptionFormat(flags['--format']);
 }
 
-function parseFlags(client: Client): ListFlags | number {
-  const flagsSpecification = getFlagsSpecification(alertsCommand.options);
+function getViewCommand(view: AlertsView | undefined) {
+  if (view === 'acknowledged') {
+    return acknowledgedSubcommand;
+  }
+  if (view === 'muted') {
+    return mutedSubcommand;
+  }
+  return alertsCommand;
+}
+
+function parseFlags(
+  client: Client,
+  view: AlertsView | undefined
+): ListFlags | number {
+  const flagsSpecification = getFlagsSpecification(
+    getViewCommand(view).options
+  );
 
   try {
     const parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
@@ -372,7 +427,8 @@ function resolveValidatedInputs(
 
 function buildAlertsQuery(
   scope: AlertsScope,
-  inputs: ValidatedInputs
+  inputs: ValidatedInputs,
+  view: AlertsView | undefined
 ): URLSearchParams {
   const query = new URLSearchParams({
     teamId: scope.teamId,
@@ -381,7 +437,8 @@ function buildAlertsQuery(
   if (scope.projectId) {
     query.set('projectId', scope.projectId);
   }
-  if (inputs.limit) {
+  // Views filter the groups locally, so the limit applies after filtering.
+  if (inputs.limit && !view) {
     query.set('limit', String(inputs.limit));
   }
   for (const type of inputs.types) {
@@ -404,9 +461,10 @@ function buildAlertsQuery(
 
 export default async function list(
   client: Client,
-  telemetry: AlertsTelemetryClient
+  telemetry: AlertsTelemetryClient,
+  view?: AlertsView
 ): Promise<number> {
-  const flags = parseFlags(client);
+  const flags = parseFlags(client, view);
   if (typeof flags === 'number') {
     return flags;
   }
@@ -434,14 +492,19 @@ export default async function list(
     return scope;
   }
 
-  const query = buildAlertsQuery(scope, validatedInputs);
+  const query = buildAlertsQuery(scope, validatedInputs, view);
 
   const requestPath = `/alerts/v3/groups?${query.toString()}`;
   output.debug(`Fetching alerts from ${requestPath}`);
 
   output.spinner('Fetching alerts...');
   try {
-    const groups = await client.fetch<AlertGroup[]>(requestPath);
+    const fetched = await client.fetch<AlertGroup[]>(requestPath);
+    const groups = view
+      ? fetched
+          .filter(VIEW_FILTERS[view])
+          .slice(0, validatedInputs.limit ?? fetched.length)
+      : fetched;
 
     if (jsonOutput) {
       client.stdout.write(`${JSON.stringify({ groups }, null, 2)}\n`);
@@ -449,7 +512,7 @@ export default async function list(
       if (flags['--ai']) {
         printAiSections(groups);
       } else {
-        printGroups(groups);
+        printGroups(groups, view);
       }
     }
     return 0;
