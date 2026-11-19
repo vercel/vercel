@@ -61,4 +61,11 @@ export class AiGatewayTelemetryClient
       value: actual,
     });
   }
+
+  trackCliSubcommandInferenceHooks(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'inference-hooks',
+      value: actual,
+    });
+  }
 }

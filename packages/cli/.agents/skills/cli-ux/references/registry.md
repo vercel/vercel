@@ -96,6 +96,7 @@ Use these terms in help, prompts, output, and errors. They define human meaning;
 | KMS issuer / key / grant              | Signing identity / key version / project permission                                 | ID                      | certificate, secret                           |
 | Container repository / image / tag    | Vercel Container Registry objects                                                   | name / digest / tag     | repo                                          |
 | AI Gateway API Key / virtual model    | Gateway credential / model alias                                                    | ID / slug               | token, gateway token                          |
+| Inference hooks / signing secret      | Requests sent to the team's server for a verdict / the secret that signs them       | team / none             | webhook, guardrail, hook secret               |
 | Vercel Token Pass                     | Team credits for Token Pass models; API keys opt in at creation with `--token-pass` | team                    | gateway token pass                            |
 
 ### Observability, billing, and collaboration
@@ -161,6 +162,7 @@ A command's last segment is a verb from these tables, or a view leaf below. A ne
 | `move`               | Change a resource's position in an ordered list (`firewall rules move`)                                                                                                        | `reorder`                                                                 |
 | `status`             | Read the current state of a singleton feature or operation that has no ID                                                                                                      | `inspect` (when there's an ID)                                            |
 | `check`              | Run checks and report each result (`security check`, `cli versions check`)                                                                                                     | `verify` (for checks)                                                     |
+| `test`               | Send one sample request to an endpoint the user runs and report its answer (`ai-gateway inference-hooks test`); unlike `check`, it acts on that endpoint                       | `ping`, `try`; `check` (for a request to the user's endpoint)             |
 | `search`             | Find items by query (`domains search`, `traces search`, `help search`)                                                                                                         | `find`, `lookup`                                                          |
 
 - `create` or `add` depends on how the object is managed, never on its ID, nesting depth, or the word "rule". A webhook has its own lifecycle, so it uses `create`; firewall rules and flag targeting rules are entries in a configuration, so they use `add`: `vercel webhooks create`, `vercel firewall rules add`, `vercel flags rules add <FLAG>`.
@@ -248,7 +250,7 @@ Name the same identity the same way everywhere. Positionals and value hints use 
 
 `--request-id` is the one `-id` exception: a request has no name.
 
-Common value hints: `<NUMBER>`, `<TIME>` (ISO 8601 or relative), `<DURATION>` (`30s`, `5m`), `<PATH>`, `<FILE>`, `<DIR>`, `<URL>`, `<KEY=VALUE>`, `<CURSOR>`, `<TEXT>`, `<USD>`, `<PERCENT>`, `<JSON>`, `<NAME>`, `<VALUE>`, `<TYPE>`, `<FIELDS>`, `<PORT>`, `<LABEL>`. NEVER `<String>`, `<N>`, `<COUNT>`, `<MS>`, `<Boolean>`, or any hint that isn't listed here or named for a noun.
+Common value hints: `<NUMBER>`, `<TIME>` (ISO 8601 or relative), `<DURATION>` (`30s`, `5m`), `<PATH>`, `<FILE>`, `<DIR>`, `<URL>`, `<KEY=VALUE>`, `<KEY:VALUE>` (a header), `<CURSOR>`, `<TEXT>`, `<USD>`, `<PERCENT>`, `<JSON>`, `<NAME>`, `<VALUE>`, `<TYPE>`, `<FIELDS>`, `<PORT>`, `<LABEL>`. NEVER `<String>`, `<N>`, `<COUNT>`, `<MS>`, `<Boolean>`, or any hint that isn't listed here or named for a noun.
 
 ## 4. Standard options
 
@@ -406,13 +408,14 @@ Every public command in the target CLI. **Kind** follows [grammar](guidelines.md
 
 ### Hidden and experimental
 
-| Command                     | State        | Notes                                                |
-| --------------------------- | ------------ | ---------------------------------------------------- |
-| `experiments`               | experimental | Gated; follows the flags verbs                       |
-| `cli builders` (`builders`) | hidden       | Native Builder cache; `preinstall`                   |
-| `cli telemetry flush`       | hidden       | Internal                                             |
-| `flags stale`               | hidden       |                                                      |
-| `alerts rules`              | hidden       | Old name of `monitors`; prints a deprecation warning |
+| Command                      | State        | Notes                                                                                                                                   |
+| ---------------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `experiments`                | experimental | Gated; follows the flags verbs                                                                                                          |
+| `cli builders` (`builders`)  | hidden       | Native Builder cache; `preinstall`                                                                                                      |
+| `cli telemetry flush`        | hidden       | Internal                                                                                                                                |
+| `flags stale`                | hidden       |                                                                                                                                         |
+| `alerts rules`               | hidden       | Old name of `monitors`; prints a deprecation warning                                                                                    |
+| `ai-gateway inference-hooks` | hidden       | `status`, `set`, `enable`, `disable`, `remove` (`rm`), `test`; `signing-secret create\|rotate`. Listed in help once generally available |
 
 Groups whose meaning overlaps are resolved by these rules: Spend Management budgets live in `billing budgets` (team) and `ai-gateway budgets` (gateway monthly spend limits), and each help page names the other; budget alerts (`billing budgets alerts`) are Spend Management thresholds reached, `alerts` are observability alerts, and `budgets alerts` help names `vercel alerts`; `crons` are config-defined, `schedules` are API-managed; `env` manages environment variables and `environments` manages custom environments; `storage` is the cross-product view, while `blob` and `global-config` manage their own stores.
 

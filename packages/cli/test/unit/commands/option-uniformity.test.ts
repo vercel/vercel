@@ -786,6 +786,9 @@ const MISSING_JSON_EXCEPTIONS = [
   'ai-gateway leaderboard labs',
   'ai-gateway leaderboard apps',
   'ai-gateway leaderboard providers',
+  // Command groups; JSON output belongs to their subcommands.
+  'ai-gateway inference-hooks',
+  'ai-gateway inference-hooks signing-secret',
   'alerts ls',
   'alias',
   'alias remove',

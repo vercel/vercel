@@ -100,6 +100,10 @@ export const AGENT_REASON = {
   INVALID_EVENT: 'invalid_event',
   // AI Gateway
   INVALID_BUDGET: 'invalid_budget',
+  /** Inference hooks can't be turned on before the team has a signing secret */
+  SIGNING_SECRET_REQUIRED: 'signing_secret_required',
+  /** Inference hooks aren't available for the team yet */
+  INFERENCE_HOOKS_NOT_ENABLED: 'inference_hooks_not_enabled',
   INVALID_REFRESH_PERIOD: 'invalid_refresh_period',
   INVALID_EXPIRATION: 'invalid_expiration',
   INVALID_ALERT_THRESHOLDS: 'invalid_alert_thresholds',
@@ -162,6 +166,10 @@ export const AGENT_REASON = {
   STREAM_GAP: 'stream_gap',
   /** A list couldn't be read in full, so some items may be missing */
   INCOMPLETE_RESULTS: 'incomplete_results',
+  /** An endpoint URL change deleted the stored inference hook headers */
+  HEADERS_CLEARED: 'headers_cleared',
+  /** A connection test doesn't send the stored inference hook headers */
+  STORED_HEADERS_NOT_SENT: 'stored_headers_not_sent',
 } as const;
 
 /**

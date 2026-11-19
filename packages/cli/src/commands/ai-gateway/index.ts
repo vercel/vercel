@@ -10,6 +10,7 @@ import codingAgents from './coding-agents';
 import setup from './coding-agents-setup';
 import models from './models';
 import leaderboard from './leaderboard';
+import inferenceHooks from './inference-hooks';
 import {
   aiGatewayCommand,
   apiKeysSubcommand,
@@ -20,6 +21,7 @@ import {
   setupSubcommand,
   modelsSubcommand,
   leaderboardSubcommand,
+  inferenceHooksSubcommand,
 } from './command';
 import { help } from '../help';
 import { getCommandAliases } from '..';
@@ -36,6 +38,7 @@ const COMMAND_CONFIG = {
   setup: getCommandAliases(setupSubcommand),
   models: getCommandAliases(modelsSubcommand),
   leaderboard: getCommandAliases(leaderboardSubcommand),
+  'inference-hooks': getCommandAliases(inferenceHooksSubcommand),
 };
 
 export default async function main(client: Client) {
@@ -110,6 +113,9 @@ export default async function main(client: Client) {
     case 'leaderboard':
       telemetry.trackCliSubcommandLeaderboard(subcommandOriginal);
       return leaderboard(client);
+    case 'inference-hooks':
+      telemetry.trackCliSubcommandInferenceHooks(subcommandOriginal);
+      return inferenceHooks(client);
     default:
       if (needHelp) {
         telemetry.trackCliFlagHelp('ai-gateway', subcommandOriginal);
