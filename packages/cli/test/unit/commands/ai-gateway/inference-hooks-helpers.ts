@@ -4,6 +4,8 @@ import { client } from '../../../mocks/client';
 export const TEAM_ID = 'team_acme';
 export const ENDPOINT_URL = 'https://security.example.com/hook';
 export const HEADER_VALUE = 'test-header-value-123';
+// Test fixture: a made-up value in the API's secret format, used only by these
+// tests and never issued or sent anywhere.
 export const SIGNING_SECRET = 'whsec_dGVzdC1zaWduaW5nLXNlY3JldC12YWx1ZQ==';
 
 export const savedConfig = {
