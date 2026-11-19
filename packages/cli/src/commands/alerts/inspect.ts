@@ -14,6 +14,12 @@ import {
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
 import { resolveGroupScope } from './resolve-group-scope';
+import {
+  getAcknowledgedAt,
+  getMuteCoverage,
+  getMuteExpiry,
+  isAcknowledged,
+} from './group-state';
 import formatDate from '../../util/format-date';
 import chalk from 'chalk';
 import {
@@ -476,6 +482,30 @@ function renderAlert(alert: Alert, index: number, totalAlerts: number): string {
   ].join('\n');
 }
 
+/** Acknowledgement and mute rows, shown only when the group has them. */
+function getGroupActionRows(group: AlertGroup): string[][] {
+  const rows: string[][] = [];
+  if (isAcknowledged(group)) {
+    const acknowledgedAt = getAcknowledgedAt(group);
+    rows.push([
+      'Acknowledged',
+      acknowledgedAt === undefined ? 'yes' : formatDate(acknowledgedAt),
+    ]);
+  }
+  const muteExpiry = getMuteExpiry(group);
+  if (muteExpiry !== undefined) {
+    const until =
+      muteExpiry === null ? 'until unmuted' : `until ${formatDate(muteExpiry)}`;
+    rows.push([
+      'Muted',
+      getMuteCoverage(group) === 'partial'
+        ? `some detections, ${until}`
+        : until,
+    ]);
+  }
+  return rows;
+}
+
 function printAlertGroup(group: AlertGroup, groupId: string) {
   const alerts = group.alerts ?? [];
   const singleAlert = alerts.length === 1 ? alerts[0] : undefined;
@@ -493,6 +523,7 @@ function printAlertGroup(group: AlertGroup, groupId: string) {
       ? [['Resolved At', formatDate(singleAlertResolvedAt)]]
       : []),
     ['Alerts', String(alerts.length)],
+    ...getGroupActionRows(group),
     ...(singleAlert?.id ? [['Alert id', singleAlert.id]] : []),
     ...(singleAlertRuleIds.length > 0
       ? [

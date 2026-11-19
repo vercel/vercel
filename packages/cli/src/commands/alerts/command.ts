@@ -2,6 +2,7 @@ import {
   formatOption,
   jsonOption,
   limitOption,
+  nextCursorOption,
   projectOption,
   sinceOption,
   untilOption,
@@ -54,6 +55,20 @@ const alertRangeOptions = [
   },
   untilOption,
   limitOption,
+  formatOption,
+  jsonOption,
+] as const;
+
+/** Options for the `acknowledged` and `muted` lists, which page with `--next`. */
+const alertViewOptions = [
+  ...alertFilterOptions,
+  {
+    ...sinceOption,
+    description: `${sinceOption.description}. Matches groups by their latest event (default: the last 3 months)`,
+  },
+  untilOption,
+  limitOption,
+  nextCursorOption,
   formatOption,
   jsonOption,
 ] as const;
@@ -113,9 +128,9 @@ export const inspectSubcommand = {
 export const acknowledgedSubcommand = {
   name: 'acknowledged',
   aliases: [],
-  description: 'List acknowledged alert groups',
+  description: 'List acknowledged alert groups, newest event first',
   arguments: [],
-  options: [...alertFilterOptions, ...alertRangeOptions],
+  options: alertViewOptions,
   examples: [
     {
       name: 'List acknowledged alerts for the linked project',
@@ -131,9 +146,10 @@ export const acknowledgedSubcommand = {
 export const mutedSubcommand = {
   name: 'muted',
   aliases: [],
-  description: 'List alert groups that have mutes created from them',
+  description:
+    'List alert groups that have mutes created from them, newest event first',
   arguments: [],
-  options: [...alertFilterOptions, ...alertRangeOptions],
+  options: alertViewOptions,
   examples: [
     {
       name: 'List muted alerts for the linked project',
@@ -189,7 +205,7 @@ export const muteSubcommand = {
       argument: 'DURATION',
       deprecated: false,
       description:
-        'How long the mute lasts, from 1m to 365d (for example 1h, 8h, 7d), or `forever` (default: 24h)',
+        'How long the mute lasts, from 1m to 365d (for example 1h, 8h, 7d), or `forever` (default: 24h). Running it on a muted group changes how long the existing mutes last.',
     },
     {
       name: 'detection',

@@ -144,13 +144,11 @@ export default async function alerts(client: Client): Promise<number> {
     }
     case 'acknowledged':
     case 'muted': {
-      if (subcommand === 'acknowledged') {
-        telemetry.trackCliSubcommandAcknowledged(subcommandOriginal);
-      } else {
-        telemetry.trackCliSubcommandMuted(subcommandOriginal);
-      }
-      const listFn = (await import('./list')).default;
-      return listFn(client, telemetry, subcommand);
+      const viewFn = (await import('./views')).default;
+      return viewFn(client, rawSubcommandArgs, subcommand, {
+        telemetry,
+        subcommandOriginal,
+      });
     }
     case 'acknowledge':
     case 'unacknowledge':

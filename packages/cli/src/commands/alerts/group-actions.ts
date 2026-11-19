@@ -24,7 +24,7 @@ import {
 } from './command';
 import { resolveGroupScope } from './resolve-group-scope';
 import { getGroupTitle } from './format';
-import { getMuteExpiry, getMuteRuleIds, isAcknowledged } from './group-state';
+import { getMuteCoverage, getMuteRuleIds, isAcknowledged } from './group-state';
 import type { AlertGroup } from './types';
 import type { AlertsTelemetryClient } from '../../util/telemetry/commands/alerts';
 
@@ -44,8 +44,23 @@ const SUBCOMMANDS = {
 const DEFAULT_MUTE_DURATION = '24h';
 const MIN_MUTE_MS = 60 * 1000;
 const MAX_MUTE_MS = 365 * 24 * 60 * 60 * 1000;
-/** `PATCH` accepts at most 100 rule IDs per `unmute`. */
+/** `PATCH` accepts at most 100 rule IDs per `unmute` or `updateMute`. */
 const MAX_RULE_IDS_PER_REQUEST = 100;
+/**
+ * Kept between the requested expiry and the API's 1m–365d bounds, which it
+ * checks against its own clock when the request arrives.
+ */
+const EXPIRY_SLACK_MS = 10 * 1000;
+
+/** The request that failed, so its error can say what may already be done. */
+type RequestPhase = 'read' | 'ack' | 'mute' | 'updateMute' | 'unmute';
+
+interface FailureContext {
+  verb: GroupActionVerb;
+  phase: RequestPhase;
+  /** For batched requests: how many rule IDs were already handled. */
+  progress?: { done: number; total: number };
+}
 
 interface GroupActionFlags {
   '--duration'?: string;
@@ -54,11 +69,45 @@ interface GroupActionFlags {
   '--json'?: boolean;
 }
 
+interface MuteRule {
+  ruleId: string;
+  expiresAt?: number | null;
+  [key: string]: unknown;
+}
+
 interface PatchResponse {
   type: 'ack' | 'mute' | 'unmute' | 'updateMute';
   group: AlertGroup;
-  mutes?: unknown[];
+  mutes?: MuteRule[];
   removedRuleIds?: string[];
+}
+
+/**
+ * The `expiresAt` to send for a duration: kept inside the API's bounds with
+ * some slack, and on a whole second, which is how the API stores it. Mutes
+ * with the same group, target, and expiry are reused, so a whole second lets
+ * a mute match the expiry just set on existing mutes.
+ */
+export function getMuteExpiresAt(
+  durationMs: number | null,
+  now = Date.now()
+): number | null {
+  if (durationMs === null) {
+    return null;
+  }
+  const clamped = Math.min(
+    Math.max(durationMs, MIN_MUTE_MS + EXPIRY_SLACK_MS),
+    MAX_MUTE_MS - EXPIRY_SLACK_MS
+  );
+  return Math.ceil((now + clamped) / 1000) * 1000;
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
 }
 
 function usageError(
@@ -125,24 +174,41 @@ function groupPath(groupId: string, teamId: string): string {
 function handleApiError(
   client: Client,
   jsonOutput: boolean,
-  verb: GroupActionVerb,
   groupId: string,
-  err: { status: number; code?: string; serverMessage?: string }
+  err: { status: number; code?: string; serverMessage?: string },
+  { verb, phase, progress }: FailureContext
 ): number {
-  const message =
+  const inspectCommand = `${packageName} alerts inspect ${groupId}`;
+  const changesMutes =
+    phase === 'mute' || phase === 'updateMute' || phase === 'unmute';
+  // The request may have been applied before the error, so repeating it could
+  // apply it twice.
+  const outcomeUnknown =
+    changesMutes && (err.status === 409 || err.status >= 500);
+  let message =
     err.status === 403
       ? `You don't have permission to ${verb} alert group ${groupId}. ${
           verb === 'mute' || verb === 'unmute'
             ? 'Muting needs permission to manage alert rules in the project.'
             : 'Acknowledging needs permission to update alerts.'
         }`
-      : err.status === 404
-        ? `Alert group ${groupId} was not found in this team.`
-        : err.status === 409
-          ? `Alert group ${groupId} is already being updated. Try again in a moment.`
-          : err.status === 412
-            ? `Alert group ${groupId} changed while it was being muted. Run the command again.`
-            : err.serverMessage || `API error (${err.status}).`;
+      : err.status === 404 && (phase === 'unmute' || phase === 'updateMute')
+        ? `Some mutes on alert group ${groupId} were already removed or have expired. Run \`${inspectCommand}\` to see its current mutes.`
+        : err.status === 404
+          ? `Alert group ${groupId} was not found in this team.`
+          : err.status === 409 && changesMutes
+            ? `A mute change for alert group ${groupId} is still in progress. Run \`${inspectCommand}\` before running this again, so it isn't applied twice.`
+            : err.status === 409
+              ? `Alert group ${groupId} is already being updated. Try again in a moment.`
+              : err.status === 412
+                ? `Alert group ${groupId} changed while it was being muted. Run the command again.`
+                : outcomeUnknown
+                  ? `The alerts API failed (${err.status}), and the change may have been applied. Run \`${inspectCommand}\` before running this again.`
+                  : err.serverMessage || `API error (${err.status}).`;
+  if (progress && progress.done > 0) {
+    const verbed = phase === 'unmute' ? 'removed' : 'updated';
+    message += ` ${progress.done} of ${progress.total} mutes were already ${verbed}.`;
+  }
   const reason =
     err.status === 401
       ? 'not_authorized'
@@ -153,13 +219,21 @@ function handleApiError(
           : err.status === 429
             ? 'rate_limited'
             : AGENT_REASON.API_ERROR;
+  const inspectStep = {
+    command: buildCommandWithGlobalFlags(
+      client.argv,
+      `alerts inspect ${groupId}`
+    ),
+    when: 'Check the alert group before retrying',
+  };
   outputAgentError(
     client,
     {
       status: 'error',
       reason,
       message,
-      ...(err.status === 403 || err.status === 404
+      ...(err.status === 403 ||
+      (err.status === 404 && phase !== 'unmute' && phase !== 'updateMute')
         ? {
             hint: 'Confirm team scope; use --scope <team-slug> if the group belongs to another team.',
             next: [
@@ -167,16 +241,12 @@ function handleApiError(
                 command: buildCommandWithGlobalFlags(client.argv, 'whoami'),
                 when: 'See current user and team',
               },
-              {
-                command: buildCommandWithGlobalFlags(
-                  client.argv,
-                  `alerts inspect ${groupId}`
-                ),
-                when: 'Check the alert group',
-              },
+              inspectStep,
             ],
           }
-        : {}),
+        : outcomeUnknown || err.status === 404
+          ? { next: [inspectStep] }
+          : {}),
     },
     1
   );
@@ -351,6 +421,7 @@ export default async function groupAction(
   const path = groupPath(groupId, scope.teamId);
   const showProgress = !jsonOutput && !client.nonInteractive;
 
+  const failure: FailureContext = { verb, phase: 'read' };
   try {
     if (showProgress) output.spinner('Fetching alert group…');
     const current = await client.fetch<AlertGroup>(path);
@@ -375,6 +446,7 @@ export default async function groupAction(
           ack ? 'Acknowledging alert group…' : 'Unacknowledging alert group…'
         );
       }
+      failure.phase = 'ack';
       const result = await client.fetch<PatchResponse>(path, {
         method: 'PATCH',
         body: { type: 'ack', ack },
@@ -397,44 +469,109 @@ export default async function groupAction(
     }
 
     if (verb === 'mute') {
-      if (!current.revision) {
-        return outputError(
-          client,
-          jsonOutput,
-          'API_ERROR',
-          `The API did not return a revision for alert group ${id}, so it can't be muted.`
-        );
-      }
       const detection = flags['--detection']?.trim();
-      if (showProgress) output.spinner('Muting alert group…');
-      const result = await client.fetch<PatchResponse>(path, {
-        method: 'PATCH',
-        headers: {
-          'If-Match': current.revision,
-          // Reused on retries so a request that already succeeded is replayed
-          // instead of creating its mutes again.
-          'Idempotency-Key': randomUUID(),
-        },
-        body: {
-          type: 'mute',
-          expiresAt: muteMs === null ? null : Date.now() + muteMs,
-          ...(detection ? { detectionId: detection } : {}),
-        },
-      });
+      const expiresAt = getMuteExpiresAt(muteMs);
+      // Mutes already created from this group get the new expiry, so muting
+      // again changes how long the group stays muted instead of leaving the
+      // earlier, shorter mutes in charge.
+      const existingRuleIds = detection ? [] : getMuteRuleIds(current);
+      const mutesById = new Map<string, MuteRule>();
+      let group = current;
+
+      if (existingRuleIds.length > 0) {
+        if (showProgress) output.spinner('Updating mutes…');
+        failure.phase = 'updateMute';
+        failure.progress = { done: 0, total: existingRuleIds.length };
+        for (const ruleIds of chunk(
+          existingRuleIds,
+          MAX_RULE_IDS_PER_REQUEST
+        )) {
+          const result = await client.fetch<PatchResponse>(path, {
+            method: 'PATCH',
+            body: { type: 'updateMute', ruleIds, expiresAt },
+          });
+          for (const mute of result.mutes ?? []) {
+            mutesById.set(mute.ruleId, mute);
+          }
+          group = result.group ?? group;
+          failure.progress.done += ruleIds.length;
+        }
+        // Left set, so a failed mute below still reports these updates.
+      }
+
+      // Create mutes for the detections the existing ones don't cover. Those
+      // the existing mutes already target are reused, since they now have the
+      // same expiry.
+      const createsMutes =
+        Boolean(detection) ||
+        existingRuleIds.length === 0 ||
+        getMuteCoverage(current) !== 'all';
+      if (createsMutes) {
+        const revision = group.revision ?? current.revision;
+        if (!revision) {
+          return outputError(
+            client,
+            jsonOutput,
+            'API_ERROR',
+            `The API did not return a revision for alert group ${id}, so it can't be muted.`
+          );
+        }
+        if (showProgress) output.spinner('Muting alert group…');
+        failure.phase = 'mute';
+        const result = await client.fetch<PatchResponse>(path, {
+          method: 'PATCH',
+          headers: {
+            'If-Match': revision,
+            // Reused on retries so a request that already succeeded is replayed
+            // instead of creating its mutes again.
+            'Idempotency-Key': randomUUID(),
+          },
+          body: {
+            type: 'mute',
+            expiresAt,
+            ...(detection ? { detectionId: detection } : {}),
+          },
+          // Safe to retry: the same key replays the first result.
+          retry: { retries: 3 },
+        });
+        for (const mute of result.mutes ?? []) {
+          mutesById.set(mute.ruleId, mute);
+        }
+        group = result.group ?? group;
+      }
       output.stopSpinner();
+
+      const mutes = [...mutesById.values()];
+      const outcome = createsMutes ? 'muted' : 'updated';
       if (jsonOutput) {
         return printJson(client, {
-          group: result.group,
-          mutes: result.mutes ?? [],
-          outcome: 'muted',
+          group,
+          mutes,
+          outcome,
           next: inspectNext(client, id),
         });
       }
-      printAlignedLabel('Muted', id, { gutter: '✓' });
-      printAlignedLabel('Title', getGroupTitle(result.group ?? current));
-      printAlignedLabel('Until', formatExpiry(getMuteExpiry(result.group)));
+      // The receipt shows the expiry of the mutes this command set, not the
+      // earliest expiry on the group, which can include unrelated mutes.
+      const returnedExpiry = mutes.find(
+        mute => mute.expiresAt !== undefined
+      )?.expiresAt;
+      printAlignedLabel(createsMutes ? 'Muted' : 'Mute updated', id, {
+        gutter: '✓',
+      });
+      printAlignedLabel('Title', getGroupTitle(group));
+      printAlignedLabel(
+        'Until',
+        formatExpiry(returnedExpiry !== undefined ? returnedExpiry : expiresAt)
+      );
       if (detection) {
         printAlignedLabel('Detection', detection);
+      }
+      if (existingRuleIds.length > 0) {
+        printAlignedLabel(
+          'Updated',
+          `${existingRuleIds.length} existing ${existingRuleIds.length === 1 ? 'mute' : 'mutes'}`
+        );
       }
       output.print(
         '\n  Matching future detections in the project are suppressed, including in other alert groups.\n'
@@ -461,29 +598,33 @@ export default async function groupAction(
     }
 
     if (showProgress) output.spinner('Unmuting alert group…');
-    let result: PatchResponse | undefined;
+    failure.phase = 'unmute';
+    failure.progress = { done: 0, total: ruleIds.length };
+    let group = current;
     const removedRuleIds: string[] = [];
-    for (let i = 0; i < ruleIds.length; i += MAX_RULE_IDS_PER_REQUEST) {
-      result = await client.fetch<PatchResponse>(path, {
+    for (const batch of chunk(ruleIds, MAX_RULE_IDS_PER_REQUEST)) {
+      // Not retried: a retry after a removal that landed would fail with 404
+      // because its rules no longer exist.
+      const result = await client.fetch<PatchResponse>(path, {
         method: 'PATCH',
-        body: {
-          type: 'unmute',
-          ruleIds: ruleIds.slice(i, i + MAX_RULE_IDS_PER_REQUEST),
-        },
+        body: { type: 'unmute', ruleIds: batch },
+        retry: { retries: 0 },
       });
-      removedRuleIds.push(...(result.removedRuleIds ?? []));
+      removedRuleIds.push(...(result.removedRuleIds ?? batch));
+      group = result.group ?? group;
+      failure.progress.done = removedRuleIds.length;
     }
     output.stopSpinner();
     if (jsonOutput) {
       return printJson(client, {
-        group: result?.group,
+        group,
         removedRuleIds,
         outcome: 'unmuted',
         next: inspectNext(client, id),
       });
     }
     printAlignedLabel('Unmuted', id, { gutter: '✓' });
-    printAlignedLabel('Title', getGroupTitle(result?.group ?? current));
+    printAlignedLabel('Title', getGroupTitle(group));
     printAlignedLabel(
       'Removed',
       `${removedRuleIds.length} ${removedRuleIds.length === 1 ? 'mute' : 'mutes'}`
@@ -493,7 +634,7 @@ export default async function groupAction(
   } catch (err) {
     output.stopSpinner();
     if (isAPIError(err)) {
-      return handleApiError(client, jsonOutput, verb, groupId, err);
+      return handleApiError(client, jsonOutput, groupId, err, failure);
     }
     throw err;
   }

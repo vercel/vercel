@@ -116,6 +116,12 @@ export class AlertsTelemetryClient
     }
   }
 
+  trackCliOptionNext(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({ option: 'next', value: this.redactedValue });
+    }
+  }
+
   trackCliFlagJson(json: boolean | undefined) {
     if (json) {
       this.trackCliFlag('json');
