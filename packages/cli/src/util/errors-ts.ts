@@ -69,6 +69,42 @@ export function parseRetryAfterHeaderAsMillis(
   return Math.max(retryAfterMs, 0);
 }
 
+/**
+ * The rate limit hint the API attaches to a rate limited error payload, e.g.
+ * `{ total: 100, remaining: 0, reset: 1571432075, resetMs: 1571432075563 }`.
+ * `reset` is a Unix timestamp in *seconds*, `resetMs` is the same instant in
+ * milliseconds and is not always present.
+ */
+export interface RateLimitNotice {
+  total?: number;
+  remaining?: number;
+  reset?: number;
+  resetMs?: number;
+}
+
+/**
+ * Returns the instant the rate limit window resets, as milliseconds since the
+ * epoch, so it can be rendered as-is instead of being re-derived. Returns
+ * `undefined` when the API didn't send a usable value, so callers can fall
+ * back to a generic message rather than printing a bogus timestamp.
+ */
+export function parseRateLimitResetAsMillis(
+  limit: RateLimitNotice | undefined | null
+): number | undefined {
+  if (!limit) return undefined;
+  const { reset, resetMs } = limit;
+  // Prefer the millisecond value when the API sends it, otherwise convert the
+  // seconds-based `reset` field. Mixing the two units up is what previously
+  // produced nonsensical "retry in -19703 days" messages.
+  if (typeof resetMs === 'number' && Number.isFinite(resetMs) && resetMs > 0) {
+    return resetMs;
+  }
+  if (typeof reset === 'number' && Number.isFinite(reset) && reset > 0) {
+    return reset * 1000;
+  }
+  return undefined;
+}
+
 export function isAPIError(v: unknown): v is APIError {
   return isError(v) && 'status' in v;
 }
