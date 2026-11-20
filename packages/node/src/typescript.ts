@@ -281,14 +281,35 @@ function registerNativeCompiler(
     );
   }
 
+  /**
+   * Creates the directory holding the temporary `tsconfig.json`.
+   *
+   * TypeScript resolves the default `typeRoots` (`node_modules/@types`,
+   * walking up through every parent directory) relative to the directory of
+   * the config passed to `--project`. The temporary config therefore has to
+   * live next to the project config, not in the OS temp directory, otherwise
+   * `types: ["node"]` fails with TS2688. If that directory is not writable we
+   * fall back to the OS temp directory.
+   */
+  async function createTempDirectory(baseDirectory: string) {
+    try {
+      return await mkdtemp(join(baseDirectory, '.vercel-typescript-'));
+    } catch (error) {
+      debug('Failed to create temp directory in project', error);
+      return await mkdtemp(join(tmpdir(), 'vercel-typescript-'));
+    }
+  }
+
   async function emit() {
-    const tempPath = await mkdtemp(join(tmpdir(), 'vercel-typescript-'));
-    const outDir = join(tempPath, 'output');
-    const tempConfigFile = join(tempPath, 'tsconfig.json');
     const [resolvedCompilerPath, resolvedConfigFile] = await Promise.all([
       compilerPath,
       configFile,
     ]);
+    const tempPath = await createTempDirectory(
+      resolvedConfigFile ? dirname(resolvedConfigFile) : rootDir
+    );
+    const outDir = join(tempPath, 'output');
+    const tempConfigFile = join(tempPath, 'tsconfig.json');
     const compilerOptions = {
       ...(resolvedConfigFile
         ? undefined
