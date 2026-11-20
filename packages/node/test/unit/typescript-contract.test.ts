@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest';
+import { readdir } from 'fs/promises';
 import { join } from 'path';
 import type { NodejsLambda } from '@vercel/build-utils';
 import { build } from '../../src';
@@ -221,5 +222,109 @@ describe('TypeScript build compatibility contract', () => {
     // Characterize the current behavior: TypeScript resolves the alias for
     // diagnostics, but NFT does not trace tsconfig path aliases into the Lambda.
     expect(files['packages/shared/src/index.js']).toBeUndefined();
+  });
+
+  // Minimal stand-in for the TypeScript 7 native compiler. Like `tsc`, it
+  // resolves the default `types` lookup by walking up from the directory of
+  // the `--project` config, and fails with TS2688 if `@types/node` is not
+  // found on the way.
+  const fakeNativeCompiler = `
+    const fs = require('fs');
+    const path = require('path');
+    const project = process.argv[process.argv.indexOf('--project') + 1];
+    const config = JSON.parse(fs.readFileSync(project, 'utf8'));
+    const base = JSON.parse(fs.readFileSync(config.extends, 'utf8'));
+    let found = false;
+    if ((base.compilerOptions.types || []).includes('node')) {
+      let dir = path.dirname(project);
+      while (true) {
+        if (fs.existsSync(path.join(dir, 'node_modules/@types/node'))) {
+          found = true;
+          break;
+        }
+        const parent = path.dirname(dir);
+        if (parent === dir) break;
+        dir = parent;
+      }
+      if (!found) {
+        console.error("error TS2688: Cannot find type definition file for 'node'.");
+        process.exit(1);
+      }
+    }
+    const { outDir, rootDir } = config.compilerOptions;
+    for (const file of config.files) {
+      const out = path.join(outDir, path.relative(rootDir, file)).slice(0, -3) + '.js';
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      fs.writeFileSync(out, 'exports.default = () => {};');
+      fs.writeFileSync(out + '.map', JSON.stringify({
+        version: 3,
+        file: path.basename(out),
+        sources: [path.relative(path.dirname(out), file)],
+        names: [],
+        mappings: '',
+      }));
+    }
+  `;
+
+  const nativeCompilerFiles = {
+    'node_modules/typescript/package.json': JSON.stringify({
+      name: 'typescript',
+      version: '7.0.2',
+      main: 'index.js',
+      bin: { tsc: 'bin/tsc.js' },
+    }),
+    'node_modules/typescript/index.js': `exports.version = '7.0.2';`,
+    'node_modules/typescript/bin/tsc.js': fakeNativeCompiler,
+    'tsconfig.json': JSON.stringify({
+      compilerOptions: {
+        module: 'NodeNext',
+        moduleResolution: 'NodeNext',
+        types: ['node'],
+      },
+    }),
+    'api/index.ts': `export default () => {};`,
+  };
+
+  test.each([
+    {
+      name: "the project's own node_modules",
+      typesPath: 'node_modules/@types/node/index.d.ts',
+    },
+    {
+      name: 'a hoisted workspace root node_modules',
+      typesPath: '../node_modules/@types/node/index.d.ts',
+      workPathPrefix: 'packages/app',
+    },
+  ])('resolves types: ["node"] with the TypeScript 7 compiler from $name', async ({
+    typesPath,
+    workPathPrefix,
+  }) => {
+    process.env.EXPERIMENTAL_NODE_TYPESCRIPT_ERRORS = '1';
+    const filesystem = await prepareFilesystem(
+      {
+        ...nativeCompilerFiles,
+        [typesPath]: 'export {};',
+      },
+      'vercel-node-ts7',
+      workPathPrefix
+    );
+
+    const result = await build({
+      ...filesystem,
+      entrypoint: 'api/index.ts',
+      config: {},
+      meta: { skipDownload: true },
+    });
+
+    const outputs = Object.keys(
+      normalizeFiles((result.output as NodejsLambda).files)
+    );
+    expect(outputs.some(file => file.endsWith('api/index.js'))).toBe(true);
+    // The temporary config directory must not be left behind in the project.
+    expect(
+      (await readdir(filesystem.workPath)).filter(entry =>
+        entry.startsWith('.vercel-typescript-')
+      )
+    ).toEqual([]);
   });
 });
