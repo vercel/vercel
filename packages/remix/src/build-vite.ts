@@ -795,7 +795,7 @@ function createEdgeFunction({
   });
 }
 
-function createNodeFunction({
+export function createNodeFunction({
   files,
   handler,
   config,
@@ -823,6 +823,7 @@ function createNodeFunction({
     regions: config.regions,
     memory: config.memory,
     maxDuration: config.maxDuration,
+    supportsCancellation: config.supportsCancellation,
     useWebApi,
     framework: {
       slug: frameworkSlug,
