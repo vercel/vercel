@@ -305,9 +305,7 @@ export function attachDatabasePool(dbPool: DbPool) {
   if (
     'on' in dbPool &&
     dbPool.on &&
-    'options' in dbPool &&
-    dbPool.options &&
-    'socket' in dbPool.options
+    (('options' in dbPool && dbPool.options && 'socket' in dbPool.options) || 'status' in dbPool)
   ) {
     const redisPool = dbPool as RedisPool;
     redisPool.on!('end', () => {
