@@ -109,6 +109,48 @@ const BUNDLED_SERVER_NEXT_VERSION = 'v13.5.4';
 const BUNDLED_SERVER_NEXT_PATH =
   'next/dist/compiled/next-server/server.runtime.prod.js';
 
+/**
+ * Resolve the project directory from the required-server-files manifest.
+ *
+ * `relativeAppDir` is preferred over the absolute `appDir` because cached
+ * builds can be restored in a different context where the absolute path is
+ * stale (#9555).  However, `relativeAppDir` is expected to be relative to
+ * `baseDir` (the repo root).  Some Next.js versions (notably 16+) compute
+ * it relative to the detected monorepo/workspace root instead, which can
+ * drop intermediate path segments for multi-segment Root Directory values
+ * (e.g. `clients/admin-ui` → `admin-ui`).
+ *
+ * We resolve against `baseDir` first and verify the path exists on disk.
+ * If it doesn't, we fall back to `appDir` or `entryPath`.
+ */
+async function resolveProjectDir({
+  baseDir,
+  entryPath,
+  relativeAppDir,
+  appDir,
+}: {
+  baseDir: string;
+  entryPath: string;
+  relativeAppDir?: string;
+  appDir?: string;
+}): Promise<string> {
+  if (relativeAppDir) {
+    const resolved = path.join(baseDir, relativeAppDir);
+    const exists = await fs
+      .access(resolved)
+      .then(() => true)
+      .catch(() => false);
+
+    if (exists) {
+      return resolved;
+    }
+    debug(
+      `Resolved projectDir "${resolved}" does not exist, falling back to appDir or entryPath`
+    );
+  }
+  return appDir || entryPath;
+}
+
 export async function serverBuild({
   dynamicPages,
   pagesDir,
@@ -242,9 +284,12 @@ export async function serverBuild({
     nextVersion,
     EMPTY_ALLOW_QUERY_FOR_PRERENDERED_VERSION
   );
-  const projectDir = requiredServerFilesManifest.relativeAppDir
-    ? path.join(baseDir, requiredServerFilesManifest.relativeAppDir)
-    : requiredServerFilesManifest.appDir || entryPath;
+  const projectDir = await resolveProjectDir({
+    baseDir,
+    entryPath,
+    relativeAppDir: requiredServerFilesManifest.relativeAppDir,
+    appDir: requiredServerFilesManifest.appDir,
+  });
 
   // allow looking up original route from normalized route
   const inversedAppPathManifest: Record<string, string> = {};
