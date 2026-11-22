@@ -75,12 +75,52 @@ class TestWorkerBootstrapBridge(unittest.TestCase):
             patch.object(vwr, "_bootstrap_celery_worker_app", return_value=None),
             patch.object(vwr, "_bootstrap_dramatiq_worker_app", return_value=None),
             patch.object(vwr, "_bootstrap_django_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_apscheduler_worker_app", return_value=None),
             patch.object(vwr, "has_subscriptions", return_value=True),
             patch.object(vwr, "get_generic_asgi_app", return_value=expected_app),
         ):
             app = vwr._resolve_worker_service_app(types.SimpleNamespace())
 
         self.assertIs(app, expected_app)
+
+    def test_resolve_worker_service_app_uses_apscheduler(self) -> None:
+        expected_app = object()
+
+        with (
+            patch.object(vwr, "_bootstrap_celery_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_dramatiq_worker_app", return_value=None),
+            patch.object(vwr, "_bootstrap_django_worker_app", return_value=None),
+            patch.object(
+                vwr,
+                "_bootstrap_apscheduler_worker_app",
+                return_value=expected_app,
+            ),
+        ):
+            app = vwr._resolve_worker_service_app(types.SimpleNamespace())
+
+        self.assertIs(app, expected_app)
+
+    def test_find_apscheduler_scheduler_rejects_multiple_exports(self) -> None:
+        scheduler_a = object()
+        scheduler_b = object()
+        module = types.SimpleNamespace(a=scheduler_a, b=scheduler_b)
+
+        def is_scheduler(candidate: object) -> bool:
+            return candidate in {scheduler_a, scheduler_b}
+
+        with (
+            patch.object(vwr, "APSCHEDULER_AVAILABLE", True),
+            patch.object(
+                vwr,
+                "is_vercel_apscheduler_scheduler",
+                side_effect=is_scheduler,
+            ),
+            self.assertRaisesRegex(
+                RuntimeError,
+                "Found multiple exported VercelQueueScheduler instances",
+            ),
+        ):
+            vwr._find_apscheduler_scheduler(module)
 
     def test_bootstrap_worker_service_app_wraps_framework_errors(self) -> None:
         with (
