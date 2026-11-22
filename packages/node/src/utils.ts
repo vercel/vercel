@@ -109,7 +109,7 @@ export const MIDDLEWARE_NODEJS_DEFAULT_ENV =
 export const MIDDLEWARE_NODEJS_DEFAULT_SINCE = new Date('2026-09-01T00:00:00Z');
 
 export const edgeMiddlewareDeprecationWarning = (entrypoint: string) =>
-  `Warning: ${entrypoint} uses the deprecated "edge" runtime. Migrate to the Node.js runtime for better performance and reliability by exporting \`const config = { runtime: 'nodejs' }\`. Learn more: https://vercel.com/docs/routing-middleware#runtime-options`;
+  `${entrypoint} uses the deprecated "edge" runtime. Migrate to the Node.js runtime for better performance and reliability by exporting \`const config = { runtime: 'nodejs' }\`. Learn more: https://vercel.com/docs/routing-middleware#runtime-options`;
 
 /**
  * `middleware.[jt]s` defaults to edge. Projects created on or after

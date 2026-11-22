@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import execa from 'execa';
 import { errorToString } from '@vercel/error-utils';
+import type { Project } from '@vercel-internals/types';
 import open from 'open';
 import output from '../../output-manager';
 import type Client from '../../util/client';
@@ -19,6 +20,11 @@ import {
 import { runClaimForResource } from '../integration-resource/claim';
 import { getResources } from '../../util/integration-resource/get-resources';
 import { packageName } from '../../util/pkg-name';
+import {
+  buildCommandWithGlobalFlags,
+  outputActionRequired,
+} from '../../util/agent-output';
+import { AGENT_REASON } from '../../util/agent-output-constants';
 import type {
   AcceptedPolicies,
   AutoProvisionedResponse,
@@ -32,6 +38,7 @@ import {
   getLinkedProjectField,
   postProvisionSetup,
   type PostProvisionOptions,
+  validateEnvironments,
 } from '../../util/integration/post-provision-setup';
 import { IntegrationAddTelemetryClient } from '../../util/telemetry/commands/integration/add';
 import {
@@ -44,6 +51,10 @@ import {
   mergeMetadataSchemas,
 } from '../../util/integration/format-schema-help';
 import type { Metadata } from '../../util/integration/types';
+import { getLinkedProject } from '../../util/projects/link';
+import { resolveProjectEnvironments } from '../../util/integration/resolve-project-environments';
+import type { IntegrationAddFlags } from './command';
+import type { DeprecatedOptionWarning } from '../../util/renamed-option';
 
 interface AddAutoProvisionOptions extends PostProvisionOptions {
   metadata?: string[];
@@ -54,6 +65,10 @@ interface AddAutoProvisionOptions extends PostProvisionOptions {
   asJson?: boolean;
   claim?: boolean;
   noClaim?: boolean;
+  /** The flags as typed, so telemetry keeps a key per renamed option name. */
+  flags?: IntegrationAddFlags;
+  /** Deprecation warnings for renamed options, for the JSON result. */
+  deprecations?: ReadonlyArray<DeprecatedOptionWarning | undefined>;
 }
 
 export async function addAutoProvision(
@@ -69,11 +84,14 @@ export async function addAutoProvision(
     },
   });
   telemetry.trackCliOptionName(resourceNameArg);
-  telemetry.trackCliOptionMetadata(options.metadata);
+  telemetry.trackCliOptionMeta(options.flags?.['--meta']);
+  telemetry.trackCliOptionMetadata(options.flags?.['--metadata']);
   telemetry.trackCliFlagNoConnect(options.noConnect);
   telemetry.trackCliFlagNoEnvPull(options.noEnvPull);
-  telemetry.trackCliOptionPlan(options.billingPlanId);
-  telemetry.trackCliOptionInstallationId(options.installationId);
+  telemetry.trackCliOptionBillingPlan(options.flags?.['--billing-plan']);
+  telemetry.trackCliOptionPlan(options.flags?.['--plan']);
+  telemetry.trackCliOptionInstallation(options.flags?.['--installation']);
+  telemetry.trackCliOptionInstallationId(options.flags?.['--installation-id']);
   telemetry.trackCliOptionEnvironment(options.environments);
   telemetry.trackCliOptionPrefix(options.prefix);
   telemetry.trackCliOptionFormat(options.asJson ? 'json' : undefined);
@@ -85,6 +103,28 @@ export async function addAutoProvision(
     return 1;
   }
   client.config.currentTeam = team.id;
+
+  if (options.environments?.length) {
+    let project: Pick<Project, 'id' | 'name'> | undefined;
+    if (!validateEnvironments(options.environments).valid) {
+      const linkedProject = await getLinkedProject(client);
+      if (linkedProject.status === 'error') {
+        return linkedProject.exitCode;
+      }
+      project =
+        linkedProject.status === 'linked' ? linkedProject.project : undefined;
+    }
+    const environmentResult = await resolveProjectEnvironments(
+      client,
+      project,
+      options.environments
+    );
+    if (!environmentResult.valid) {
+      output.error(environmentResult.error);
+      return 1;
+    }
+    options.environments = environmentResult.environments;
+  }
 
   // Fetch integration (with discover fallback if slug not found)
   const integration = await resolveAndFetchIntegration(
@@ -118,7 +158,7 @@ export async function addAutoProvision(
     output.error(
       `Integration "${integration.slug}" has multiple products. Specify one with:\n\n${choices}\n\nExample: vercel ${commandName} ${integration.slug}/${integration.products[0].slug}`
     );
-    return 1;
+    return 2;
   }
 
   // Select product and check installations in parallel
@@ -238,7 +278,7 @@ export async function addAutoProvision(
   if (options.metadata?.length) {
     // Parse metadata from CLI flags against merged schema (accepts all keys)
     output.debug(
-      `Parsing metadata from flags: ${JSON.stringify(options.metadata)}`
+      `Parsing metadata from options: ${JSON.stringify(options.metadata)}`
     );
     const { metadata: parsed, errors } = parseMetadataFlags(
       options.metadata,
@@ -283,7 +323,7 @@ export async function addAutoProvision(
     metadata = productMeta;
     installationMetadata = installMeta;
   } else {
-    // No --metadata flags: pass {} and let server fill defaults (API PR #58905)
+    // No --meta flags: pass {} and let server fill defaults (API PR #58905)
     metadata = {};
   }
 
@@ -378,7 +418,7 @@ export async function addAutoProvision(
       }
     );
     output.error(
-      `Multiple installations found for "${integration.slug}":\n${installationsList}\n\nRe-run with --installation-id to select one, e.g.:\n  vercel ${commandName} ${slug} --installation-id ${result.installations[0].id}`
+      `Multiple installations found for "${integration.slug}":\n${installationsList}\n\nRe-run with --installation to select one, e.g.:\n  vercel ${commandName} ${slug} --installation ${result.installations[0].id}`
     );
     return 1;
   }
@@ -418,7 +458,7 @@ export async function addAutoProvision(
         const prop = mergedParsingSchema.properties[key];
         const options = prop ? getVisibleOptions(prop) : undefined;
         const exampleVal = options?.[0] ?? '<value>';
-        return `-m ${key}=${exampleVal}`;
+        return `--meta ${key}=${exampleVal}`;
       });
       output.error(`Missing required metadata: ${missingRequired.join(', ')}.`);
       output.log(
@@ -430,7 +470,6 @@ export async function addAutoProvision(
       return 1;
     }
 
-    output.log('Additional setup required. Opening browser...');
     const url = new URL(fallback.url);
     url.searchParams.set('defaultResourceName', resourceName);
     url.searchParams.set('source', 'cli');
@@ -452,7 +491,33 @@ export async function addAutoProvision(
     if (options.environments?.length) {
       url.searchParams.set('environment', options.environments.join(','));
     }
-    output.debug(`Opening URL: ${url.href}`);
+    const setupMessage = fallback.error_message
+      ? `Additional setup required: ${fallback.error_message}`
+      : 'Additional setup required.';
+
+    // Agents and CI can't use a browser, so hand them the URL instead.
+    outputActionRequired(client, {
+      status: 'action_required',
+      reason: AGENT_REASON.INTEGRATION_SETUP_REQUIRED,
+      message: `${setupMessage} Finish setup for "${integration.name}" in the browser at verification_uri. This command does not wait for it in non-interactive mode.`,
+      verification_uri: url.href,
+      userActionRequired: true,
+      next: [
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv,
+            'integration list',
+            packageName,
+            { prependGlobalFlags: true }
+          ),
+          when: 'Confirm the resource exists after setup is finished in the browser',
+        },
+      ],
+    });
+
+    output.log(setupMessage);
+    output.log('Opening browser to finish setup...');
+    output.log(`Visit this URL if the browser does not open: ${url.href}`);
     open(url.href).catch((err: unknown) =>
       output.debug(`Failed to open browser: ${err}`)
     );
@@ -646,7 +711,10 @@ export async function addAutoProvision(
   }
 
   if (options.asJson) {
-    const warnings: string[] = [];
+    // This result's `warnings` are plain messages.
+    const warnings: string[] = (options.deprecations ?? []).flatMap(warning =>
+      warning ? [warning.message] : []
+    );
     if (setupResult.connectError) {
       warnings.push(
         `Failed to connect to project: ${setupResult.connectError}`
@@ -701,6 +769,8 @@ export async function addAutoProvision(
         ),
       },
       project: setupResult.project ?? null,
+      connected: setupResult.connected,
+      connectError: setupResult.connectError ?? null,
       environments: setupResult.environments,
       envPulled: setupResult.envPulled,
       guideCommand,

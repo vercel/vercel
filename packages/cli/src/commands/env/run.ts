@@ -83,7 +83,7 @@ export default async function run(
     parsedArgs = parseArguments(vercelArgs, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (userCommand.length === 0) {
@@ -93,15 +93,15 @@ export default async function run(
         status: 'action_required',
         reason: 'missing_command',
         message:
-          'No command provided. Use `--` to separate Vercel flags from your command.',
+          'No command provided. Use `--` to separate Vercel options from your command.',
         next: [{ command: getCommandNamePlain('env run -- <command>') }],
       },
-      1
+      2
     );
     output.error(
-      `No command provided. Use \`--\` to separate vercel flags from your command.`
+      `No command provided. Use \`--\` to separate vercel options from your command.`
     );
-    return 1;
+    return 2;
   }
 
   // Resolve the selected project

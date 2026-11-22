@@ -46,7 +46,7 @@ export async function rules(client: Client): Promise<number> {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(
@@ -60,16 +60,18 @@ export async function rules(client: Client): Promise<number> {
     telemetry.trackCliFlagHelp('flags rules', subcommand);
     output.print(
       help(rulesSubcommand, {
+        stream: client.stderr,
         parent: flagsCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: rulesSubcommand,
         columns: client.stderr.columns,
       })
@@ -81,7 +83,7 @@ export async function rules(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags rules', subcommandOriginal);
         printHelp(rulesListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return rulesLs(client, args);
@@ -89,7 +91,7 @@ export async function rules(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags rules', subcommandOriginal);
         printHelp(rulesAddSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return rulesAdd(client, args);
@@ -97,7 +99,7 @@ export async function rules(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags rules', subcommandOriginal);
         printHelp(rulesUpdateSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
       return rulesUpdate(client, args);
@@ -105,7 +107,7 @@ export async function rules(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags rules', subcommandOriginal);
         printHelp(rulesRemoveSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return rulesRemove(client, args);
@@ -113,7 +115,7 @@ export async function rules(client: Client): Promise<number> {
       if (needHelp) {
         telemetry.trackCliFlagHelp('flags rules', subcommandOriginal);
         printHelp(rulesMoveSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandMove(subcommandOriginal);
       return rulesMove(client, args);
@@ -121,6 +123,7 @@ export async function rules(client: Client): Promise<number> {
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
         help(rulesSubcommand, {
+          stream: client.stderr,
           parent: flagsCommand,
           columns: client.stderr.columns,
         })

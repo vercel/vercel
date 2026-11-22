@@ -26,6 +26,7 @@ export const cursor: CodingAgent = {
     return {
       fileChanges: [],
       envExports: [{ name: 'AI_GATEWAY_API_KEY', value: ctx.apiKey }],
+      actionRequired: true,
       notes: [
         'Cursor keeps its API-key settings in the app itself, so finish the setup there:',
         '1. Open Cursor → Settings (Cmd+Shift+J) → Models.',

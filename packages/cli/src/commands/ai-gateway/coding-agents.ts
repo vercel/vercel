@@ -32,7 +32,7 @@ export default async function codingAgents(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(2);
@@ -46,14 +46,18 @@ export default async function codingAgents(client: Client) {
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('ai-gateway coding-agents', subcommand);
     output.print(
-      help(codingAgentsSubcommand, { columns: client.stderr.columns })
+      help(codingAgentsSubcommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: codingAgentsSubcommand,
         columns: client.stderr.columns,
       })
@@ -68,14 +72,17 @@ export default async function codingAgents(client: Client) {
           subcommandOriginal
         );
         printHelp(setupSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSetup(subcommandOriginal);
       return setup(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
-        help(codingAgentsSubcommand, { columns: client.stderr.columns })
+        help(codingAgentsSubcommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
       );
       return 2;
   }

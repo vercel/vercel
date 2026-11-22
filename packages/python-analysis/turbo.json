@@ -12,8 +12,30 @@
       "outputs": ["src/**/schema.zod.ts"]
     },
     "build:wasm": {
-      "cache": false,
-      "inputs": ["$TURBO_DEFAULT$", "!src/**/schema.zod.ts"],
+      "dependsOn": ["//#generate:cache-keys"],
+      "env": [
+        "RUSTFLAGS",
+        "CARGO_ENCODED_RUSTFLAGS",
+        "CARGO_BUILD_RUSTFLAGS",
+        "CARGO_TARGET_WASM32_WASIP2_RUSTFLAGS",
+        "CARGO_PROFILE_RELEASE_*",
+        "RUSTUP_TOOLCHAIN",
+        "RUSTC",
+        "RUSTC_WRAPPER"
+      ],
+      "inputs": [
+        ".cargo/config.toml",
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        "crates/**",
+        "scripts/build-wasm.mjs",
+        {
+          "mode": "dependencyOutputs",
+          "globs": ["turbo-host-cache-key.json"],
+          "from": ["//#generate:cache-keys"]
+        }
+      ],
       "outputs": ["dist/wasm/**"]
     },
     "type-check": {

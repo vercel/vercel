@@ -292,6 +292,7 @@ export const build: BuildV2 = async ({
   config,
   meta = {},
   service,
+  diagnosticsValues,
 }) => {
   const { installCommand, buildCommand } = config;
   const mountpoint = dirname(entrypoint);
@@ -358,7 +359,7 @@ export const build: BuildV2 = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: config.framework ?? undefined,
+      framework: diagnosticsValues?.framework,
       serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {

@@ -66,10 +66,17 @@ export async function detectFirstDeploymentFramework(options: {
   workPath: string;
   projectSettings: { framework?: string | null };
   frameworkExplicitlyConfigured?: boolean;
+  /** Framework presets to leave out of detection. */
+  excludedFrameworks?: readonly string[];
   output?: FrameworkDetectionOutput;
 }): Promise<DetectedFramework> {
-  const { workPath, projectSettings, frameworkExplicitlyConfigured, output } =
-    options;
+  const {
+    workPath,
+    projectSettings,
+    frameworkExplicitlyConfigured,
+    excludedFrameworks = [],
+    output,
+  } = options;
 
   logDebug(
     `First deployment: evaluating framework detection (workPath="${workPath}", ` +
@@ -100,9 +107,17 @@ export async function detectFirstDeploymentFramework(options: {
     output
   );
 
+  if (excludedFrameworks.length > 0) {
+    logDebug(
+      `First deployment: not detecting ${excludedFrameworks.join(', ')}`,
+      output
+    );
+  }
   const detected = await detectFrameworkRecord({
     fs: new LocalFileSystemDetector(workPath),
-    frameworkList,
+    frameworkList: frameworkList.filter(
+      framework => !excludedFrameworks.includes(framework.slug ?? '')
+    ),
   });
 
   if (!detected || !detected.slug) {

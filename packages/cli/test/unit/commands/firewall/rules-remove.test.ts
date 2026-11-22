@@ -60,7 +60,7 @@ describe('firewall rules remove', () => {
     expect(lastPatchBody.action).toBe('rules.remove');
   });
 
-  it('should work with delete alias', async () => {
+  it('should warn that the delete alias is deprecated', async () => {
     const active = createConfig({ rules: [createRule(1)] });
     useListFirewallConfigs(active, null);
     usePatchDraft();
@@ -68,6 +68,9 @@ describe('firewall rules remove', () => {
 
     client.setArgv('firewall', 'rules', 'delete', 'Test Rule 1', '--yes');
     const exitCodePromise = firewall(client);
+    await expect(client.stderr).toOutput(
+      '`vercel firewall rules delete` is deprecated. Use `vercel firewall rules remove`.'
+    );
     await expect(client.stderr).toOutput('Removed');
     expect(await exitCodePromise).toEqual(0);
     expect(lastPatchBody.action).toBe('rules.remove');
@@ -115,7 +118,7 @@ describe('firewall rules remove', () => {
     (client.stdin as any).isTTY = false;
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('Rule name or ID is required');
-    expect(await exitCodePromise).toEqual(1);
+    expect(await exitCodePromise).toEqual(2);
   });
 
   it('should show interactive picker when no identifier', async () => {
@@ -140,5 +143,16 @@ describe('firewall rules remove', () => {
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('No custom rules configured');
     expect(await exitCodePromise).toEqual(1);
+  });
+
+  it('refuses to remove a managed bot rule', async () => {
+    useListFirewallConfigs(createConfig({ rules: [createRule(1)] }), null);
+    client.setArgv('firewall', 'rules', 'remove', 'bot-protection', '--yes');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(2);
+    expect(client.stderr.getFullOutput()).toContain("Can't remove");
+    expect(client.stderr.getFullOutput()).toContain(
+      'firewall rules update bot-protection --action'
+    );
   });
 });

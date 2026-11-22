@@ -18,7 +18,7 @@ describe('kms add-key', () => {
     it('tracks telemetry', async () => {
       client.setArgv('kms', 'add-key', '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'kms:add-key' },
@@ -53,7 +53,7 @@ describe('kms add-key', () => {
     useUser();
     client.setArgv('kms', 'add-key', 'iss_test', '--activation', 'later');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Invalid activation mode "later"');
   });
 
@@ -66,7 +66,7 @@ describe('kms add-key', () => {
       '--revoke-previous-after-hours=-1'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       '--revoke-previous-after-hours must be 0 or more'
     );
@@ -81,7 +81,7 @@ describe('kms add-key', () => {
       '--revoke-previous-after-hours=soon'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       '--revoke-previous-after-hours must be a number of hours'
     );

@@ -29,12 +29,17 @@ describe('firewall rules list', () => {
     client.cwd = cwd;
   });
 
-  it('should show no rules when empty', async () => {
+  it('should show managed bot rules when custom rules are empty', async () => {
     useListFirewallConfigs(createConfig(), null);
     client.setArgv('firewall', 'rules', 'list');
     const exitCodePromise = firewall(client);
     await expect(client.stderr).toOutput('No custom rules configured');
     expect(await exitCodePromise).toEqual(0);
+
+    const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Managed');
+    expect(fullOutput).toContain('bot-protection');
+    expect(fullOutput).toContain('Custom');
   });
 
   it('should list active rules in table format', async () => {
@@ -48,6 +53,8 @@ describe('firewall rules list', () => {
     expect(await exitCodePromise).toEqual(0);
 
     const fullOutput = client.stderr.getFullOutput();
+    expect(fullOutput).toContain('Managed');
+    expect(fullOutput).toContain('Custom');
     expect(fullOutput).toContain('Test Rule 1');
     expect(fullOutput).toContain('Test Rule 2');
     expect(fullOutput).toContain('Test Rule 3');
@@ -144,6 +151,12 @@ describe('firewall rules list', () => {
     const jsonOutput = (client.stdout as any).getFullOutput();
     const parsed = JSON.parse(jsonOutput);
     expect(parsed).toHaveProperty('rules');
+    expect(parsed).toHaveProperty('managed');
+    expect(parsed.managed).toHaveLength(3);
+    expect(parsed.managed[0]).toMatchObject({
+      id: 'bot-protection',
+      name: 'Bot Protection',
+    });
     expect(parsed).toHaveProperty('hasDraft');
     expect(parsed).toHaveProperty('pendingChanges');
     expect(parsed.rules).toHaveLength(2);
@@ -210,6 +223,6 @@ describe('firewall rules list', () => {
   it('tracks help telemetry', async () => {
     client.setArgv('firewall', 'rules', 'list', '--help');
     const exitCode = await firewall(client);
-    expect(exitCode).toEqual(2);
+    expect(exitCode).toEqual(0);
   });
 });

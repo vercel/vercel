@@ -1,6 +1,13 @@
 import type { Span } from '@vercel/build-utils';
-import type { OidcClaims } from './util';
-import { debug, done, readString, step, tokenFingerprint } from './util';
+import { createHash } from 'node:crypto';
+import { DEBUG, debug, done, readString, step } from './util';
+
+export interface OidcClaims {
+  owner?: string;
+  owner_id?: string;
+  project?: string;
+  project_id?: string;
+}
 
 export interface OidcTokenPayload extends OidcClaims {
   exp?: number;
@@ -21,6 +28,64 @@ export function parseOidcToken(token: string): OidcTokenPayload {
     return JSON.parse(json) as OidcTokenPayload;
   } catch {
     throw new Error('VERCEL_OIDC_TOKEN has an unreadable JWT payload.');
+  }
+}
+
+export function decodeOidcClaims(token: string | undefined): OidcClaims {
+  if (!token) return {};
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return {};
+    const json = Buffer.from(payload, 'base64url').toString('utf8');
+    return JSON.parse(json) as OidcClaims;
+  } catch {
+    return {};
+  }
+}
+
+export function tokenFingerprint(token: string | undefined): string {
+  if (!token) return 'absent';
+  const sha = createHash('sha256').update(token).digest('hex').slice(0, 8);
+  return `present(len=${token.length}, sha256=${sha})`;
+}
+
+export function debugTokenClaims(
+  label: string,
+  token: string | undefined
+): void {
+  if (!DEBUG) return;
+  if (!token) {
+    debug(`${label}: <absent>`);
+    return;
+  }
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) {
+      debug(`${label}: <not a JWT>`);
+      return;
+    }
+    const claims = JSON.parse(
+      Buffer.from(payload, 'base64url').toString('utf8')
+    ) as Record<string, unknown>;
+    const safe = {
+      iss: claims.iss,
+      aud: claims.aud,
+      sub: claims.sub,
+      scope: claims.scope,
+      owner: claims.owner,
+      owner_id: claims.owner_id,
+      project: claims.project,
+      project_id: claims.project_id,
+      exp:
+        typeof claims.exp === 'number'
+          ? `${new Date(claims.exp * 1000).toISOString()} (in ${Math.round(
+              (claims.exp * 1000 - Date.now()) / 1000
+            )}s)`
+          : claims.exp,
+    };
+    debug(`${label}: ${JSON.stringify(safe)}`);
+  } catch (err) {
+    debug(`${label}: <unparseable claims> (${(err as Error).message})`);
   }
 }
 

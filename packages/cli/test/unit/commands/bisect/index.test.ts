@@ -44,7 +44,7 @@ describe('bisect', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = bisect(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

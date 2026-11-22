@@ -22,7 +22,7 @@ export default async function security(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new SecurityTelemetryClient({
@@ -40,11 +40,12 @@ export default async function security(client: Client) {
     telemetry.trackCliFlagHelp('security', subcommandOriginal);
     output.print(
       help(checkSubcommand, {
+        stream: client.stderr,
         parent: securityCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   telemetry.trackCliSubcommandCheck(subcommandOriginal);

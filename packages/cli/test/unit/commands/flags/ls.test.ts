@@ -14,6 +14,7 @@ import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 import { useFlags, defaultFlags } from '../../../mocks/flags';
 import type { Flag } from '../../../../src/util/flags/types';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 describe('flags ls', () => {
   let flagsList: Flag[];
@@ -87,7 +88,7 @@ describe('flags ls', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = flags(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -238,7 +239,7 @@ describe('flags ls', () => {
     it('rejects a --limit below 1', async () => {
       client.setArgv('flags', 'ls', '--limit', '0');
       const exitCode = await flags(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput(
         'The --limit option must be an integer between 1 and 100.'
       );
@@ -247,7 +248,7 @@ describe('flags ls', () => {
     it('rejects a --limit above 100', async () => {
       client.setArgv('flags', 'ls', '--limit', '101');
       const exitCode = await flags(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput(
         'The --limit option must be an integer between 1 and 100.'
       );
@@ -379,5 +380,77 @@ describe('flags ls', () => {
         },
       ]);
     });
+  });
+});
+
+describe('flags ls --maintainer', () => {
+  // Runs `flags ls` with a fresh client against two flags with different
+  // maintainers.
+  async function run(...args: string[]) {
+    client.reset();
+    const flagsList = JSON.parse(JSON.stringify(defaultFlags)) as Flag[];
+    flagsList[0].maintainerIds = ['user_a'];
+    flagsList[1].maintainerIds = ['user_b'];
+    for (let i = 0; i < 3; i++) {
+      flagsList.push({
+        ...JSON.parse(JSON.stringify(flagsList[1])),
+        id: `flag_b_${i}`,
+        slug: `b-flag-${i}`,
+      });
+    }
+    useUser({ id: 'user_1', username: 'tester' });
+    useTeams('team_dummy');
+    useProject({
+      ...defaultProject,
+      id: 'vercel-flags-test',
+      name: 'vercel-flags-test',
+      accountId: 'team_dummy',
+    });
+    useFlags(flagsList);
+    client.cwd = setupUnitFixture('commands/flags/vercel-flags-test');
+    client.setArgv('flags', 'ls', ...args);
+    const exitCode = await flags(client);
+    return {
+      exitCode,
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  it('still accepts --maintainer-id, with one warning that names --maintainer', async () => {
+    const now = await run('--maintainer', 'user_b', '--limit', '1');
+    const before = await run('--maintainer-id', 'user_b', '--limit', '1');
+
+    expect(now.exitCode).toBe(0);
+    expect(now.stderr).not.toContain('deprecated');
+    expect(now.stderr).toContain('--maintainer user_b --next 1');
+    expect(before.exitCode).toBe(now.exitCode);
+    expect(before.stdout).toBe(now.stdout);
+    expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+    expect(before.stderr).toContain(
+      '! --maintainer-id is deprecated. Use --maintainer.\n'
+    );
+    expect(before.stderr).toContain('--maintainer user_b --next 1');
+
+    const nowJson = await run('--maintainer', 'user_b', '--json');
+    const beforeJson = await run('--maintainer-id', 'user_b', '--json');
+    expect(beforeJson.exitCode).toBe(0);
+    expect(JSON.parse(beforeJson.stdout).flags).toHaveLength(4);
+    expectDeprecationInJson(
+      beforeJson.stdout,
+      nowJson.stdout,
+      '--maintainer-id is deprecated. Use --maintainer.'
+    );
+    expect(beforeJson.stderr).not.toContain('deprecated');
+  });
+
+  it('rejects --maintainer with --maintainer-id', async () => {
+    const result = await run('--maintainer', 'a', '--maintainer-id', 'b');
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain(
+      "Can't use --maintainer with --maintainer-id."
+    );
+    expect(result.stdout).toBe('');
   });
 });

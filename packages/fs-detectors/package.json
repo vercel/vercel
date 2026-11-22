@@ -1,6 +1,6 @@
 {
   "name": "@vercel/fs-detectors",
-  "version": "7.2.1",
+  "version": "7.11.1",
   "description": "Vercel filesystem detectors",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,7 +14,7 @@
   },
   "license": "Apache-2.0",
   "scripts": {
-    "build": "node ../../utils/build.mjs",
+    "build": "node build.mjs",
     "test": "vitest run --config ../../vitest.config.mts",
     "test-unit": "vitest run --config ../../vitest.config.mts test/unit.",
     "type-check": "tsc --noEmit"
@@ -33,6 +33,7 @@
     "smol-toml": "1.5.2"
   },
   "devDependencies": {
+    "@vercel-internals/runtimes": "workspace:*",
     "@types/glob": "7.2.0",
     "@types/js-yaml": "4.0.5",
     "@types/minimatch": "3.0.5",

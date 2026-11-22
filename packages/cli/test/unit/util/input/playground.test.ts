@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { isWindows } from '../../../helpers/is-windows';
 
@@ -21,6 +21,7 @@ describe.skipIf(isWindows)('client.input', () => {
         message: 'What is your name',
         theme,
       });
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(`"? What is your name"`);
       client.events.type('Joe');
       client.events.keypress('enter');
@@ -35,6 +36,7 @@ describe.skipIf(isWindows)('client.input', () => {
         default: 'Joe',
         theme,
       });
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? What is your name (Joe)"`
       );
@@ -50,6 +52,7 @@ describe.skipIf(isWindows)('client.input', () => {
         choices: [{ value: 'a' }, { value: 'b' }, { value: 'c' }],
         theme,
       });
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(`
         "? Choose an option (Press <space> to select, <a> to toggle all, <i> to invert
         selection, and <enter> to proceed)
@@ -81,6 +84,7 @@ describe.skipIf(isWindows)('client.input', () => {
           { key: 's', name: 'Skip', value: 'skip' },
         ],
       });
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Select an action: (gbsH)"`
       );
@@ -99,6 +103,7 @@ describe.skipIf(isWindows)('client.input', () => {
           { key: 's', name: 'Skip', value: 'skip' },
         ],
       });
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Select an action: (gbsH)"`
       );
@@ -117,6 +122,7 @@ describe.skipIf(isWindows)('client.input', () => {
         message: 'Choose an option',
         choices: [{ value: 'a' }, { value: 'b' }],
       });
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(`
         "? Choose an option (Use arrow keys)
         ❯ a
@@ -132,6 +138,7 @@ describe.skipIf(isWindows)('client.input', () => {
           { value: 'b' },
         ],
       });
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(`
         "? Choose an option (Use arrow keys)
         ❯ a
@@ -154,6 +161,7 @@ describe.skipIf(isWindows)('client.input', () => {
           { value: 'b', name: 'Option B' },
         ],
       });
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(`
         "? Choose an option (Use arrow keys)
         ❯ Option A
@@ -180,6 +188,7 @@ describe.skipIf(isWindows)('client.input', () => {
           { value: 'b', name: 'Option B' },
         ],
       });
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(`
         "? Choose an option (Use arrow keys)
           Option A
@@ -195,6 +204,7 @@ describe.skipIf(isWindows)('client.input', () => {
   describe('confirm', () => {
     it(`defaults to true if no default is provided`, async () => {
       const answer = client.input.confirm('Confirm the value', true);
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Confirm the value (Y/n)"`
       );
@@ -203,6 +213,7 @@ describe.skipIf(isWindows)('client.input', () => {
     });
     it(`defaulting to false works`, async () => {
       const answer = client.input.confirm('Confirm the value', false);
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Confirm the value (y/N)"`
       );
@@ -211,6 +222,7 @@ describe.skipIf(isWindows)('client.input', () => {
     });
     it(`typing "n" for the value`, async () => {
       const answer = client.input.confirm('Confirm the value', true);
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Confirm the value (Y/n)"`
       );
@@ -223,6 +235,7 @@ describe.skipIf(isWindows)('client.input', () => {
     });
     it(`typing "y" for the value`, async () => {
       const answer = client.input.confirm('Confirm the value', true);
+      await vi.waitFor(() => expect(client.getScreen()).not.toBe(''));
       expect(client.getScreen()).toMatchInlineSnapshot(
         `"? Confirm the value (Y/n)"`
       );

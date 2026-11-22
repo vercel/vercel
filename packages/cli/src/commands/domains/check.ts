@@ -29,7 +29,7 @@ export default async function check(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -38,12 +38,12 @@ export default async function check(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   if (domains.length === 0) {
     output.error('Missing domain name. Usage: `vercel domains check <domain>`');
-    return 1;
+    return 2;
   }
 
   if (domains.length > 50) {

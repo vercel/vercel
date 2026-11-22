@@ -72,5 +72,8 @@
   },
   "ember": {
     "edition": "octane"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }

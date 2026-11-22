@@ -84,6 +84,7 @@ export const build: BuildV2 = async ({
   config,
   meta = {},
   service,
+  diagnosticsValues,
   span,
 }) => {
   const { installCommand, buildCommand } = config;
@@ -159,7 +160,7 @@ export const build: BuildV2 = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: config.framework ?? undefined,
+      framework: diagnosticsValues?.framework,
       serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {

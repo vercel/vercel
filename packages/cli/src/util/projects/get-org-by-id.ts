@@ -14,7 +14,11 @@ export default async function getOrgById(
 ): Promise<Org | null> {
   if (orgId.startsWith('team_')) {
     try {
-      const team = await getTeamByIdOrSlug(client, orgId);
+      // The path names the team, so the lookup must not depend on (or choose)
+      // the current team: a link read from another directory names its own.
+      const team = await getTeamByIdOrSlug(client, orgId, {
+        useCurrentTeam: false,
+      });
       if (!team) return null;
       return { type: 'team', id: team.id, slug: team.slug };
     } catch (err) {

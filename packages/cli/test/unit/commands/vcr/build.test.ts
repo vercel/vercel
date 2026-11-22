@@ -75,7 +75,7 @@ describe('vcr build', () => {
     it('tracks telemetry and exits 2', async () => {
       client.setArgv('vcr', 'build', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',
@@ -172,7 +172,7 @@ describe('vcr build', () => {
   it('errors when the engine argument is omitted', async () => {
     client.setArgv('vcr', 'build');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('Missing engine');
     expect(mockedExeca).not.toHaveBeenCalled();
   });
@@ -180,7 +180,7 @@ describe('vcr build', () => {
   it('rejects an invalid engine value', async () => {
     client.setArgv('vcr', 'build', 'nope');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('docker, podman, buildah');
     expect(mockedExeca).not.toHaveBeenCalled();
   });
@@ -206,7 +206,7 @@ describe('vcr build', () => {
   it('rejects an invalid repository name without invoking the engine', async () => {
     client.setArgv('vcr', 'build', 'docker', '.', 'Bad/Name');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(mockedExeca).not.toHaveBeenCalled();
   });
 

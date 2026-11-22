@@ -19,7 +19,7 @@ describe('crons add', () => {
     it('prints help and tracks telemetry', async () => {
       client.setArgv('crons', 'add', '--help');
       const exitCode = await crons(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'crons:add' },
       ]);
@@ -253,8 +253,8 @@ describe('crons add', () => {
       (client.stdin as any).isTTY = false;
 
       const exitCode = await crons(client);
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Missing required flags');
+      expect(exitCode).toEqual(2);
+      await expect(client.stderr).toOutput('Missing required options');
     });
   });
 

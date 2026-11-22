@@ -15,6 +15,7 @@ Always-loaded guidance for work inside `packages/cli`. Keep this file small. The
 - UX/copy/prompt/output/help/error/JSON/agent behavior: use `packages/cli/.agents/skills/cli-ux/SKILL.md` and load the references it names.
 - Vercel Agent Review and any other code review of those surfaces: load the `cli-ux` skill before assessing the diff or posting findings, even when the review makes no edits.
 - New or changed command metadata: update `src/commands/<name>/command.ts`, telemetry, help snapshots, and tests.
+- New or renamed command, option, noun, or verb: check `packages/cli/.agents/skills/cli-ux/references/registry.md` first and update it in the same change.
 - Command implementation: follow the surrounding command family in `src/commands/<name>/` and shared helpers in `src/util/`.
 - Shared output, prompt, target resolution, or remote-mutation behavior: inspect parallel command paths before editing one path.
 - New durable CLI UX rule or command-specific UX contract: update the `cli-ux` skill, not this file.
@@ -47,11 +48,14 @@ Common shared areas:
 
 - Define commands in `command.ts` as const command objects.
 - Use lowercase kebab-case for flags.
-- Reuse shared options from `src/util/arg-common.ts`.
+- Reuse shared options from `src/util/arg-common.ts` (`jsonOption`, `yesOption`, `limitOption`, `nextCursorOption`, `sinceOption`, `untilOption`, `projectOption`, and the rest). For a command-specific default, spread one and replace only `description`.
+- Rename a command or option by keeping the old name as a hidden alias (or a `deprecated: true` option), warning with `warnDeprecatedSubcommand()` when it's used, tracking telemetry under the canonical name, updating the `cli-ux` registry, and adding a `minor` changeset.
 - Parse flags with `parseArguments(args, getFlagsSpecification(command.options))`.
 - Parent commands with subcommands may use permissive parsing to route; subcommands should parse strictly.
 - Resolve subcommands with the `src/util/get-subcommand` default export and the named `getCommandAliases` helper.
-- Return `0` for completed success, `1` for operational failure, and preserve existing usage/help exit codes such as `2` unless intentionally normalizing them with tests.
+- Exit `0` for completed success, `1` for operational failure, `2` for usage errors (unknown option, missing or invalid argument or flag value, unknown subcommand), and `130` for user cancellation (see the `cli-ux` Exit Codes section). Change an existing command's exit codes only as an intentional, tested contract change. A usage error reported with `outputAgentError()` or `outputActionRequired()` gets exit code `2` from its `reason` (`getExitCodeForReason()`); return the same code from the human path. A new usage-error `reason` or error code must be added to `USAGE_ERROR_REASONS` (`src/util/agent-output-constants.ts`) or `USAGE_ERROR_CODES` (`src/util/command-validation.ts`), or it exits `1`.
+- Print warnings with `output.warning()` (the `!` gutter), not the legacy `output.warn()` and its `WARNING!` banner.
+- The CLI entry point answers `--help` for every command (stdout, exit `0`) and shows a group's help when it runs without a subcommand (stdout, exit `0`), from the command metadata, so do not add per-command `--help` or bare-group handling; describe help content in `command.ts`, set `dynamicHelp` only when help depends on runtime data, and set `runsWithoutSubcommand` on a group that does work when run bare.
 - Wrap top-level command logic in `try/catch`, print user-facing errors, and return `1`.
 - Track telemetry after parsing and before command execution.
 - Do not record tokens, secrets, env values, file contents, request bodies, or unredacted user content in telemetry.
@@ -65,6 +69,7 @@ Common shared areas:
 - When changing JSON, parse stdout and assert shape; do not snapshot incidental formatting only.
 - When changing interactive behavior, test both TTY and non-interactive paths when both exist.
 - When changing shared output, prompt, target-resolution, or remote-mutation helpers, inspect and test parallel command paths.
+- `test/unit/commands/option-uniformity.test.ts` checks every command's options against the `cli-ux` registry. Its exception lists only shrink: fixing a command removes its entry.
 
 Focused examples:
 
@@ -93,7 +98,7 @@ pnpm vercel --cwd /path/to/project
 
 ## Guardrails
 
-Always-loaded digest; full CLI UX gates live in `packages/cli/.agents/skills/cli-ux/references/verification.md`.
+Always-loaded digest; full CLI UX gates live in `packages/cli/.agents/skills/cli-ux/references/guidelines.md` (Verification and Review).
 
 - Do not prompt in non-interactive mode.
 - Do not put human prose, warnings, ANSI, or spinners on JSON stdout.

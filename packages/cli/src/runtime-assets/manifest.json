@@ -2,5 +2,17 @@
   "nextDevWebSocketPreload": {
     "source": "node-preloads/next-dev-websocket.cjs",
     "destination": "node-preloads/next-dev-websocket.cjs"
+  },
+  "devTunnelFunction": {
+    "source": "dev-tunnel/api/tunnel.ts",
+    "destination": "dev-tunnel/api/tunnel.ts"
+  },
+  "devTunnelEnv": {
+    "source": "dev-tunnel/lib/env.ts",
+    "destination": "dev-tunnel/lib/env.ts"
+  },
+  "devTunnelProto": {
+    "source": "dev-tunnel/lib/tunnel_pb.ts",
+    "destination": "dev-tunnel/lib/tunnel_pb.ts"
   }
 }

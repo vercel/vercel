@@ -6,12 +6,15 @@
       "dependsOn": [
         "@vercel-internals/builder-orchestration#build",
         "@vercel-internals/cli-builder-integration#build",
+        "@vercel-internals/get-package-json#build",
+        "@vercel-internals/local-schedules#build",
         "@vercel-internals/service-topology#build",
         "@vercel/build-utils#build",
         "@vercel/client#build",
         "@vercel/fs-detectors#build",
         "@vercel/routing-utils#build"
       ],
+      "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/skills/vercel-cli/**"],
       "outputs": [
         "dist/**",
         "src/util/constants.ts",
@@ -32,6 +35,9 @@
     "test-e2e": {
       "dependsOn": ["//#generate:cache-keys"]
     },
+    "test-build-integration": {
+      "dependsOn": ["build:package", "//#generate:cache-keys"]
+    },
     "test-e2e-artifacts": {
       "command": [
         "node",
@@ -45,9 +51,22 @@
     "test-dev-artifacts": {
       "command": ["pnpm", "run", "test-dev"]
     },
+    "test-testserver": {
+      "cache": false,
+      "dependsOn": ["build:package"]
+    },
     "test-unit": {
+      // Vercel CI runs each turbo task in one VM (2 CPUs by default), so this
+      // suite gets 16 CPUs and vitest spreads its files across them. GitHub
+      // Actions instead splits it into 7 jobs with VITEST_SHARD. Splitting it
+      // into per-area turbo tasks with narrow inputs is a possible follow-up.
+      "tags": ["ci", "ci:cpus:16"],
       "dependsOn": ["build:package", "//#generate:cache-keys"],
-      "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/skills/vercel-cli/**"]
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/skills/vercel-cli/**",
+        "$TURBO_ROOT$/.github/workflows/pr-binaries.yml"
+      ]
     }
   }
 }

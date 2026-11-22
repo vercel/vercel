@@ -11,6 +11,8 @@ export default async function patchTeam(
     {
       method: 'PATCH',
       body: payload,
+      // The path names the team, so the request never needs to choose one.
+      teamOptional: true,
     }
   );
   // fetch() returns Response when response is not application/json; PATCH /teams should return JSON

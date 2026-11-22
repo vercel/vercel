@@ -15,11 +15,12 @@ import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { DeployHooksTelemetryClient } from '../../util/telemetry/commands/deploy-hooks';
 import output from '../../output-manager';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   create: ['create', 'add'],
   ls: ['ls', 'list'],
-  rm: ['rm', 'remove', 'delete'],
+  delete: ['delete', 'rm', 'del', 'remove'],
 };
 
 export default async function main(client: Client) {
@@ -31,7 +32,7 @@ export default async function main(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new DeployHooksTelemetryClient({
@@ -49,18 +50,24 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('deploy-hooks');
-    output.print(help(deployHooksCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(deployHooksCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: deployHooksCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
@@ -70,13 +77,27 @@ export default async function main(client: Client) {
         return printHelp(createSubcommand);
       }
       telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      if (subcommandOriginal === 'add') {
+        warnDeprecatedSubcommand(
+          client,
+          'deploy-hooks add',
+          'deploy-hooks create'
+        );
+      }
       return create(client, args);
-    case 'rm':
+    case 'delete':
       if (needHelp) {
         telemetry.trackCliFlagHelp('deploy-hooks', subcommandOriginal);
         return printHelp(removeSubcommand);
       }
-      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      telemetry.trackCliSubcommandDelete(subcommandOriginal);
+      if (subcommandOriginal === 'remove') {
+        warnDeprecatedSubcommand(
+          client,
+          'deploy-hooks remove',
+          'deploy-hooks delete'
+        );
+      }
       return rm(client, args);
     default:
       if (needHelp) {

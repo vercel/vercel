@@ -23,7 +23,7 @@ describe('certs ls', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = certs(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -132,5 +132,75 @@ describe('certs ls', () => {
     await expect(exec).rejects.toThrow(
       "You don't have permission to list the domain certificate."
     );
+  });
+
+  it('writes certs and the next page to stdout with --json', async () => {
+    useUser();
+    useCert();
+    client.setArgv('certs', 'ls', '--json');
+
+    expect(await certs(client)).toBe(0);
+    const result = JSON.parse(client.stdout.getFullOutput());
+    expect(result.certs).toHaveLength(20);
+    expect(result.pagination).toEqual({ next: null });
+    expect(client.stderr.getFullOutput()).not.toContain('found under');
+  });
+  describe('--next cursor', () => {
+    function usePagedApi() {
+      const queries: Record<string, unknown>[] = [];
+      client.scenario.get('/v4/certs', (req, res) => {
+        queries.push(req.query);
+        res.json({ certs: [], pagination: { count: 0, next: 1584722256000 } });
+      });
+      return queries;
+    }
+
+    it.each([
+      [['--next', '1584722256178']],
+      [['--next=1584722256178']],
+      [['-N', '1584722256178']],
+    ])('sends %j to the API as the same timestamp as before', async args => {
+      useUser();
+      const queries = usePagedApi();
+      client.setArgv('certs', 'ls', ...args);
+
+      expect(await certs(client)).toBe(0);
+      expect(queries[0].until).toBe('1584722256178');
+      expect(client.stderr.getFullOutput()).toContain(
+        '  Next page:\n    vercel certs ls --next 1584722256000\n'
+      );
+    });
+
+    it('warns when the hidden -N is used, and not with --json', async () => {
+      useUser();
+      usePagedApi();
+      client.setArgv('certs', 'ls', '-N', '1584722256178');
+      expect(await certs(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        '! -N is deprecated. Use --next.'
+      );
+
+      client.reset();
+      useUser();
+      usePagedApi();
+      client.setArgv('certs', 'ls', '-N', '1584722256178', '--json');
+      expect(await certs(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(JSON.parse(client.stdout.getFullOutput()).pagination.next).toBe(
+        1584722256000
+      );
+    });
+
+    it('rejects a value that is not a cursor as a usage error', async () => {
+      useUser();
+      const queries = usePagedApi();
+      client.setArgv('certs', 'ls', '--next', 'oops');
+
+      expect(await certs(client)).toBe(2);
+      expect(queries).toHaveLength(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--next must be the cursor printed with the previous page.'
+      );
+    });
   });
 });

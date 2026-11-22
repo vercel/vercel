@@ -6,6 +6,7 @@ import type { BlobRWToken } from '../../../../src/util/blob/token';
 import output from '../../../../src/output-manager';
 import * as path from 'node:path';
 import { ReadStream } from 'node:fs';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 vi.mock('@vercel/blob');
 vi.mock('../../../../src/output-manager');
@@ -311,7 +312,7 @@ describe('blob put-image', () => {
         oidcAuth
       );
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedBlob.putImage).not.toHaveBeenCalled();
     });
 
@@ -324,7 +325,7 @@ describe('blob put-image', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
-        'Missing required --pathname flag. Set the pathname to store the optimized image at in the Blob store.'
+        'Missing required --pathname option. Set the pathname to store the optimized image at in the Blob store.'
       );
       expect(mockedBlob.putImage).not.toHaveBeenCalled();
     });
@@ -349,7 +350,7 @@ describe('blob put-image', () => {
         oidcAuth
       );
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedBlob.putImage).not.toHaveBeenCalled();
     });
 
@@ -440,6 +441,68 @@ describe('blob put-image', () => {
       expect(exitCode).toBe(1);
       expect(mockedOutput.stopSpinner).toHaveBeenCalled();
       expect(client.stdout.getFullOutput()).toBe('');
+    });
+  });
+
+  describe('--force', () => {
+    async function run(...args: string[]) {
+      vi.clearAllMocks();
+      mockedBlob.putImage.mockResolvedValue(putResult);
+      const exitCode = await putImage(
+        client,
+        [
+          getFixturePath('image.jpg'),
+          '--pathname',
+          'images/photo.jpg',
+          '--access',
+          'public',
+          ...args,
+        ],
+        oidcAuth
+      );
+      return {
+        exitCode,
+        options: mockedBlob.putImage.mock.calls[0]?.[2],
+        warnings: mockedOutput.warning.mock.calls.map(([message]) => message),
+        stdout: client.stdout.getFullOutput(),
+      };
+    }
+
+    it('still accepts --allow-overwrite, with one warning that names --force', async () => {
+      const now = await run('--force');
+      const before = await run('--allow-overwrite');
+
+      expect(now.exitCode).toBe(0);
+      expect(now.options).toMatchObject({ allowOverwrite: true });
+      expect(now.warnings).toEqual([]);
+      expect(before.exitCode).toBe(now.exitCode);
+      expect(before.options).toEqual(now.options);
+      expect(before.warnings).toEqual([
+        '--allow-overwrite is deprecated. Use --force.',
+      ]);
+    });
+
+    it('puts the warning in the JSON result with --json', async () => {
+      client.reset();
+      const now = await run('--force', '--json');
+      client.reset();
+      const before = await run('--allow-overwrite', '--json');
+
+      expect(before.exitCode).toBe(0);
+      expect(before.options).toMatchObject({ allowOverwrite: true });
+      expect(before.warnings).toEqual([]);
+      expectDeprecationInJson(
+        before.stdout,
+        now.stdout,
+        '--allow-overwrite is deprecated. Use --force.'
+      );
+    });
+
+    it('rejects --force with --allow-overwrite before uploading', async () => {
+      const result = await run('--force', '--allow-overwrite');
+
+      expect(result.exitCode).toBe(2);
+      expect(result.options).toBeUndefined();
     });
   });
 });

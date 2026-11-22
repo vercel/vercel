@@ -43,7 +43,7 @@ describe('dns update', () => {
     it('tracks telemetry', async () => {
       client.setArgv('dns', 'update', '--help');
       const exitCodePromise = dns(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -58,7 +58,7 @@ describe('dns update', () => {
     it('errors when no record id is passed', async () => {
       client.setArgv('dns', 'update');
       const exitCode = await dns(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput('Invalid number of arguments');
     });
   });
@@ -66,7 +66,7 @@ describe('dns update', () => {
   it('errors when no fields are provided', async () => {
     client.setArgv('dns', 'update', 'rec_123');
     const exitCode = await dns(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'Provide at least one field to update'
     );
@@ -172,7 +172,7 @@ describe('dns update', () => {
   it('errors when only some srv flags are provided', async () => {
     client.setArgv('dns', 'update', 'rec_srv', '--srv-port', '389');
     const exitCode = await dns(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'Updating an SRV record requires all of'
     );
@@ -181,7 +181,7 @@ describe('dns update', () => {
   it('errors when --ttl is not a number', async () => {
     client.setArgv('dns', 'update', 'rec_123', '--ttl', 'abc');
     const exitCode = await dns(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('--ttl option must be a number');
   });
 

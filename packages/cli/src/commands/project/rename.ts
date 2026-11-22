@@ -28,7 +28,7 @@ export default async function rename(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args } = parsedArgs;
 

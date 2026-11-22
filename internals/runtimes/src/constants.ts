@@ -38,6 +38,31 @@ export const ENTRYPOINT_EXTENSIONS: Record<string, ServiceRuntime> = {
 };
 
 /**
+ * Maps each builder to its runtime: the inverse of RUNTIME_BUILDERS, plus
+ * framework-specific builders.
+ */
+export const BUILDER_RUNTIMES: Record<string, ServiceRuntime> = {
+  ...Object.fromEntries(
+    Object.entries(RUNTIME_BUILDERS).map(([runtime, builder]) => [
+      builder,
+      runtime as ServiceRuntime,
+    ])
+  ),
+  '@vercel/node': 'node',
+  '@vercel/next': 'node',
+  '@vercel/remix-builder': 'node',
+  '@vercel/redwood': 'node',
+  '@vercel/hydrogen': 'node',
+  '@vercel/express': 'node',
+  '@vercel/hono': 'node',
+  '@vercel/h3': 'node',
+  '@vercel/koa': 'node',
+  '@vercel/nestjs': 'node',
+  '@vercel/fastify': 'node',
+  '@vercel/elysia': 'node',
+};
+
+/**
  * Builders that produce static output (SPAs, static sites) with no runtime.
  */
 export const STATIC_BUILDERS = new Set([

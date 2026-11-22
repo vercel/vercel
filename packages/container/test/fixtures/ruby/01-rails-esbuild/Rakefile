@@ -1,0 +1,15 @@
+require_relative "config/application"
+
+Rails.application.load_tasks
+
+# The buildpack installs from the lockfile before Rake; Rails must not repeat it.
+Rake::Task["javascript:install"].clear.enhance do
+  raise "javascript:install must be skipped after the buildpack installs dependencies"
+end
+
+Rake::Task["javascript:build"].enhance do
+  raise "SKIP_YARN_INSTALL must be set by the buildpack" unless ENV["SKIP_YARN_INSTALL"] == "1"
+  raise "asset builds must use a dummy secret" unless ENV["SECRET_KEY_BASE_DUMMY"] == "1"
+  raise "asset builds must not need a runtime secret" if ENV.key?("SECRET_KEY_BASE")
+  raise "the dummy secret was not usable" if Rails.application.secret_key_base.empty?
+end

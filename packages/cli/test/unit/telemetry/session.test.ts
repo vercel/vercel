@@ -1,10 +1,17 @@
 import { randomUUID } from 'node:crypto';
-import { rmSync } from 'node:fs';
+import {
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { TelemetryEventStore } from '../../../src/util/telemetry';
 import { RootTelemetryClient } from '../../../src/util/telemetry/root';
+import { getOrCreatePersistedCliSession } from '../../../src/util/telemetry/session';
 
 describe('persisted cli telemetry session', () => {
   let sessionFilePath: string;
@@ -15,6 +22,25 @@ describe('persisted cli telemetry session', () => {
       `vercel-cli-telemetry-session-${randomUUID()}.json`
     );
     rmSync(sessionFilePath, { force: true });
+  });
+
+  afterEach(() => {
+    rmSync(sessionFilePath, { recursive: true, force: true });
+  });
+
+  it('cleans up failed writes without replacing the existing destination', () => {
+    mkdirSync(sessionFilePath);
+    const destination = join(sessionFilePath, 'session.json');
+    mkdirSync(destination);
+    writeFileSync(join(destination, 'keep'), 'existing data');
+
+    expect(
+      getOrCreatePersistedCliSession({ filePath: destination }).id
+    ).toBeTypeOf('string');
+    expect(readdirSync(sessionFilePath)).toEqual(['session.json']);
+    expect(readFileSync(join(destination, 'keep'), 'utf8')).toBe(
+      'existing data'
+    );
   });
 
   it('reuses the same session within the inactivity timeout', async () => {

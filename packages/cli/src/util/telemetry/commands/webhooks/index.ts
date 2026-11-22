@@ -13,16 +13,16 @@ export class WebhooksTelemetryClient
     });
   }
 
-  trackCliSubcommandGet(actual: string) {
+  trackCliSubcommandInspect(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'get',
+      subcommand: 'inspect',
       value: actual,
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'remove',
+      subcommand: 'delete',
       value: actual,
     });
   }

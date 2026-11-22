@@ -8,6 +8,7 @@ import {
 export const curlCommand = {
   name: 'curl',
   aliases: [],
+  summary: 'Request deployments with protection bypass',
   description:
     'Make curl requests to Vercel deployments with automatic protection bypass.',
   arguments: [
@@ -16,6 +17,8 @@ export const curlCommand = {
       required: true,
     },
   ],
+  // Options it doesn't define go to curl.
+  forwardsUnknownOptions: true,
   options: [
     {
       ...yesOption,
@@ -63,11 +66,12 @@ export const curlCommand = {
       value: `${packageName} curl /api/status --deployment https://your-project-abc123.vercel.app`,
     },
     {
-      name: 'Use curl flags after the separator',
+      name: 'Use curl options after the separator',
       value: `${packageName} curl /api/test -- --header "Content-Type: application/json" --request PUT`,
     },
     {
       name: 'Use with protection bypass secret',
+      placeholders: ['<secret>'],
       value: `${packageName} curl /api/protected --protection-bypass <secret> -- --request GET`,
     },
     {

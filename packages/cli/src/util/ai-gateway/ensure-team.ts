@@ -3,11 +3,13 @@ import selectOrg from '../input/select-org';
 import output from '../../output-manager';
 
 export async function ensureTeam(client: Client): Promise<boolean> {
-  if (client.config.currentTeam) {
+  if (await client.resolveCurrentTeam()) {
     return true;
   }
 
-  if (!client.stdin.isTTY) {
+  // Three separate conditions: `nonInteractive` misses an agent attached to a
+  // pty, and neither covers a plain piped invocation.
+  if (client.nonInteractive || client.isAgent || !client.stdin.isTTY) {
     output.error(
       'No team selected. Use `vercel --scope <team-slug> ai-gateway …` or run `vercel switch` first.'
     );

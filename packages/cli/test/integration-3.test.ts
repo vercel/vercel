@@ -1,4 +1,3 @@
-import ms from 'ms';
 import path from 'path';
 import { once } from 'node:events';
 import { URL } from 'url';
@@ -6,13 +5,18 @@ import semVer from 'semver';
 import { homedir } from 'os';
 import { runNpmInstall } from '@vercel/build-utils';
 import { execCli } from './helpers/exec';
-import nodeFetch, { type RequestInfo } from '../src/util/fetch';
+import { getCliPath } from './helpers/get-cli-path';
+import nodeFetch from '../src/util/fetch';
 import fs from 'fs-extra';
 import { logo } from '../src/util/pkg-name';
-import sleep from '../src/util/sleep';
+import chars from '../src/util/output/chars';
 import humanizePath from '../src/util/humanize-path';
 import pkg from '../package.json';
 import waitForPrompt from './helpers/wait-for-prompt';
+import {
+  pickDeploymentUrl,
+  waitForDeployment,
+} from './helpers/wait-for-deployment';
 import { getNewTmpDir, listTmpDirs } from './helpers/get-tmp-dir';
 import {
   setupE2EFixture,
@@ -26,43 +30,10 @@ import { apiFetch } from './helpers/api-fetch';
 const TEST_TIMEOUT = 3 * 60 * 1000;
 vi.setConfig({ testTimeout: TEST_TIMEOUT, hookTimeout: TEST_TIMEOUT });
 
-const binaryPath = path.resolve(__dirname, `../scripts/start.js`);
+const binaryPath = getCliPath();
 
-const deployHelpMessage = `${logo} vercel [options] <command | path>`;
+const deployHelpMessage = `${logo} vercel [options] [command | path]`;
 const session = Math.random().toString(36).split('.')[1];
-
-const pickUrl = (stdout: string) => {
-  const lines = stdout.split('\n');
-  return lines[lines.length - 1];
-};
-
-const waitForDeployment = async (href: RequestInfo) => {
-  console.log(`waiting for ${href} to become ready...`);
-  const start = Date.now();
-  const max = ms('4m');
-
-  while (true) {
-    const response = await nodeFetch(href, { redirect: 'manual' });
-    const text = await response.text();
-    if (
-      response.status === 200 &&
-      !text.includes('<title>Deployment Overview')
-    ) {
-      break;
-    }
-
-    const current = Date.now();
-
-    if (current - start > max || response.status >= 500) {
-      throw new Error(
-        `Waiting for "${href}" failed since it took longer than 4 minutes.\n` +
-          `Received status ${response.status}:\n"${text}"`
-      );
-    }
-
-    await sleep(2000);
-  }
-};
 
 beforeAll(async () => {
   try {
@@ -129,8 +100,35 @@ test('print the deploy help message', async () => {
   const { stderr, stdout, exitCode } = await execCli(binaryPath, ['help']);
 
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-  expect(stderr).toContain(deployHelpMessage);
+  // `--help` prints to stdout; the version banner stays on stderr.
+  expect(stdout).toContain(deployHelpMessage);
   expect(stderr).not.toContain('ExperimentalWarning');
+});
+
+test('`vercel help help` prints root help', async () => {
+  const { stderr, stdout, exitCode } = await execCli(binaryPath, [
+    'help',
+    'help',
+  ]);
+
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+  expect(stdout).toContain(deployHelpMessage);
+  expect(stderr).not.toContain('Unknown command');
+});
+
+test('help for an absolute directory path prints deploy help', async () => {
+  const directory = await setupE2EFixture('static-deployment');
+
+  for (const args of [
+    [directory, '--help'],
+    ['help', directory],
+  ]) {
+    const { stderr, stdout, exitCode } = await execCli(binaryPath, args);
+
+    expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
+    expect(stdout).toContain('vercel deploy [project-path] [options]');
+    expect(stderr).not.toContain('Unknown command');
+  }
 });
 
 test('output the version', async () => {
@@ -313,24 +311,24 @@ test.skip('ensure we render a warning for deployments with no files', async () =
   expect(res.status).toBe(404);
 });
 
-test('ensure we render a prompt when deploying home directory', async () => {
-  const directory = homedir();
-
+test('rejects an agent deploying the home directory without prompting', async () => {
   const { stderr, stdout, exitCode } = await execCli(
     binaryPath,
-    [directory, '--name', session, '--force'],
+    ['deploy', homedir()],
     {
-      input: 'N\n',
+      input: '',
+      env: { AI_AGENT: 'v0' },
     }
   );
 
-  // Ensure the exit code is right
-  expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
-
-  expect(stderr).toContain(
-    'You are deploying your home directory. Do you want to continue?'
-  );
-  expect(stderr).toContain('Canceled');
+  expect(exitCode, formatOutput({ stdout, stderr })).toBe(2);
+  expect(JSON.parse(stdout)).toMatchObject({
+    status: 'action_required',
+    reason: 'interactive_confirmation_required',
+    userActionRequired: true,
+  });
+  expect(stderr).not.toContain('Do you want to continue?');
+  expect(stderr).not.toContain('Canceled');
 });
 
 test('ensure the `scope` property works with email', async () => {
@@ -656,10 +654,14 @@ test('`vercel rm` should fail with unexpected option', async () => {
     '--fake',
   ]);
 
-  expect(output.exitCode, formatOutput(output)).toBe(1);
-  expect(output.stderr).toMatch(
-    /Error: unknown or unexpected option: --fake/gm
+  expect(output.exitCode, formatOutput(output)).toBe(2);
+  expect(output.stderr).toContain(
+    `${chars.fatal} unknown or unexpected option: --fake`
   );
+  expect(output.stderr).toContain(`Vercel CLI ${pkg.version} accepts:`);
+  expect(output.stderr).toContain('--yes');
+  expect(output.stderr).not.toContain('Error:');
+  expect(output.stdout).toBe('');
 });
 
 test('`vercel rm` 404 exits quickly', async () => {
@@ -692,7 +694,7 @@ test('render build errors', async () => {
 test('invalid deployment, projects and alias names', async () => {
   const check = async (...args: string[]) => {
     const output = await execCli(binaryPath, args);
-    expect(output.exitCode, formatOutput(output)).toBe(1);
+    expect(output.exitCode, formatOutput(output)).toBe(2);
     expect(output.stderr).toMatch(/The provided argument/gm);
   };
 
@@ -969,7 +971,7 @@ test.skip('deploy a Lambda with 3 seconds of maxDuration', async () => {
 });
 
 test('fail to deploy a Lambda with an incorrect value for maxDuration', async () => {
-  const directory = await setupE2EFixture('lambda-with-1000-second-timeout');
+  const directory = await setupE2EFixture('lambda-with-2000-second-timeout');
   const output = await execCli(binaryPath, [directory, '--yes']);
 
   expect(output.exitCode, formatOutput(output)).toBe(1);
@@ -982,7 +984,7 @@ test('fail to deploy a Lambda with an incorrect value for maxDuration', async ()
 test('invalid `--token`', async () => {
   const output = await execCli(binaryPath, ['--token', 'he\nl,o.']);
 
-  expect(output.exitCode, formatOutput(output)).toBe(1);
+  expect(output.exitCode, formatOutput(output)).toBe(2);
   expect(output.stderr).toContain(
     'Error: You defined "--token", but its contents are invalid. Must not contain: "\\n", ",", "."'
   );
@@ -994,9 +996,8 @@ test('deploy a Lambda with a specific runtime', async () => {
 
   expect(output.exitCode, formatOutput(output)).toBe(0);
 
-  const url = new URL(output.stdout);
-  const res = await nodeFetch(`${url}/api/test`);
-  const text = await res.text();
+  const url = pickDeploymentUrl(output.stdout);
+  const { text } = await waitForDeployment(`${url}/api/test`);
   expect(text).toBe('Hello from PHP');
 });
 
@@ -1022,14 +1023,10 @@ test('use build-env', async () => {
   expect(exitCode, formatOutput({ stdout, stderr })).toBe(0);
 
   // Test if the output is really a URL
-  const deploymentUrl = pickUrl(stdout);
+  const deploymentUrl = pickDeploymentUrl(stdout);
   const { href } = new URL(deploymentUrl);
 
-  await waitForDeployment(href);
-
-  // get the content
-  const response = await nodeFetch(href);
-  const content = await response.text();
+  const { text: content } = await waitForDeployment(href);
   expect(content.trim()).toBe('bar');
 });
 
@@ -1085,6 +1082,29 @@ test.each([
   expect(output.stderr, formatOutput(output)).toContain(
     'No existing credentials found. Run `vercel deploy --temporary` to create a temporary deployment you can claim later, or `vercel login` to log in.'
   );
+});
+
+test.each([
+  ['check', 'Missing domain name'],
+  ['price', 'Missing domain name'],
+  ['search', 'Missing query'],
+])('domain %s should skip authentication', async (command: string, message: string) => {
+  const globalConfigDir = getNewTmpDir();
+  await fs.writeJson(path.join(globalConfigDir, 'config.json'), {
+    credStorage: 'file',
+  });
+
+  const output = await execCli(
+    binaryPath,
+    ['-Q', globalConfigDir, 'domain', command, '--scope', 'test'],
+    {
+      cwd: globalConfigDir,
+      token: false,
+      scope: false,
+      env: { CI: '1', VERCEL_TOKEN: '' },
+    }
+  );
+  expect(output.stderr, formatOutput(output)).toContain(message);
 });
 
 test('invalid credStorage should fail with a config error', async () => {

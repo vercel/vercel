@@ -13,6 +13,7 @@ export const addSubcommand = {
   name: 'add',
   aliases: ['install'],
   description: 'Installs a marketplace integration',
+  dynamicHelp: true,
   arguments: [
     {
       name: 'integration',
@@ -24,27 +25,46 @@ export const addSubcommand = {
       name: 'name',
       description:
         'Custom name for the resource (auto-generated if not provided)',
-      shorthand: 'n',
+      shorthand: null,
+      deprecatedShorthand: 'n',
       type: String,
       deprecated: false,
       argument: 'NAME',
     },
     {
-      name: 'metadata',
+      name: 'meta',
       description:
         'Metadata for the resource as KEY=VALUE (can be repeated). Run `vercel integration add <name> --help` to see available keys.',
-      shorthand: 'm',
+      shorthand: null,
       type: [String],
       deprecated: false,
       argument: 'KEY=VALUE',
     },
+    // Hidden: `--metadata` and `-m` are the old names of `--meta`.
+    {
+      name: 'metadata',
+      description: 'Deprecated alias for `--meta`',
+      shorthand: 'm',
+      type: [String],
+      deprecated: true,
+      argument: 'KEY=VALUE',
+    },
+    {
+      name: 'billing-plan',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'BILLING_PLAN',
+      description: 'Billing plan ID to use for the resource',
+    },
+    // Hidden: `--plan` and `-p` are the old names of `--billing-plan`.
     {
       name: 'plan',
       shorthand: 'p',
       type: String,
-      deprecated: false,
+      deprecated: true,
       argument: 'PLAN_ID',
-      description: 'Billing plan ID to use for the resource',
+      description: 'Deprecated alias for `--billing-plan`',
     },
     {
       name: 'no-connect',
@@ -66,9 +86,9 @@ export const addSubcommand = {
       shorthand: 'e',
       type: [String],
       deprecated: false,
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
       description:
-        'Environment to connect (can be repeated: production, preview, development). Defaults to all.',
+        'Environment to connect. Accepts production, preview, development, or a Custom Environment slug or ID from the linked project. Can be repeated (default: all built-in environments).',
     },
     {
       name: 'prefix',
@@ -80,13 +100,22 @@ export const addSubcommand = {
         'Prefix for environment variable names (e.g., --prefix NEON2_ creates NEON2_DATABASE_URL instead of DATABASE_URL)',
     },
     {
-      name: 'installation-id',
+      name: 'installation',
       shorthand: null,
       type: String,
       deprecated: false,
-      argument: 'ID',
+      argument: 'INSTALLATION',
       description:
         'Installation ID to use when multiple installations exist for the integration',
+    },
+    // Hidden: `--installation-id` is the old name of `--installation`.
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: true,
+      argument: 'ID',
+      description: 'Deprecated alias for `--installation`',
     },
     {
       name: 'claim',
@@ -110,17 +139,13 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Install a marketplace integration (auto-generates resource name)',
-      value: [
-        `${packageName} integration add <integration-name>`,
-        `${packageName} integration add acme`,
-      ],
+      placeholders: ['<integration-name>'],
+      value: `${packageName} integration add <integration-name>`,
     },
     {
       name: 'Install a specific product from an integration',
-      value: [
-        `${packageName} integration add <integration>/<product>`,
-        `${packageName} integration add acme/acme-redis`,
-      ],
+      placeholders: ['<integration>', '<product>'],
+      value: `${packageName} integration add <integration>/<product>`,
     },
     {
       name: 'Search by keyword (prompts to select a matching integration)',
@@ -133,23 +158,23 @@ export const addSubcommand = {
       name: 'Install with a custom resource name',
       value: [
         `${packageName} integration add acme --name my-database`,
-        `${packageName} integration add acme -n my-database`,
+        `${packageName} integration add acme --name my-database`,
       ],
     },
     {
       name: 'Install with metadata options',
       value: [
-        `${packageName} integration add acme --metadata region=us-east-1`,
-        `${packageName} integration add acme -m region=us-east-1 -m version=16`,
-        `${packageName} integration add acme -m auth=true`,
-        `${packageName} integration add acme -m "readRegions=sfo1,iad1"`,
+        `${packageName} integration add acme --meta region=us-east-1`,
+        `${packageName} integration add acme --meta region=us-east-1 --meta version=16`,
+        `${packageName} integration add acme --meta auth=true`,
+        `${packageName} integration add acme --meta "readRegions=sfo1,iad1"`,
       ],
     },
     {
       name: 'Install with a specific billing plan',
       value: [
-        `${packageName} integration add acme --plan pro`,
-        `${packageName} integration add acme -p pro`,
+        `${packageName} integration add acme --billing-plan pro`,
+        `${packageName} integration add acme --billing-plan pro`,
       ],
     },
     {
@@ -187,28 +212,39 @@ export const addSubcommand = {
 } as const;
 
 export const acceptTermsSubcommand = {
+  descriptionTone: 'normal',
   name: 'accept-terms',
   aliases: [],
   description:
-    'Accept marketplace legal terms for an integration and install it on the current team (installation only; no product resource). Requires an interactive terminal and human confirmation. Does not replace integrations that require a browser or device attestation.',
+    'Accept marketplace legal terms for an integration and install it on the current team (installation only; no product resource). Requires an interactive terminal and human confirmation, unless `--yes` is passed (supported for `neon` only). Does not replace integrations that require a browser or device attestation.',
   arguments: [
     {
       name: 'integration',
       required: true,
     },
   ],
-  options: [formatOption, jsonOption],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Accept the terms without a confirmation prompt. Only supported for the `neon` integration.',
+    },
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
       name: 'Accept terms interactively, then install on the team',
-      value: [
-        `${packageName} integration accept-terms <integration>`,
-        `${packageName} integration accept-terms neon`,
-      ],
+      placeholders: ['<integration>'],
+      value: `${packageName} integration accept-terms <integration>`,
     },
     {
       name: 'Output result as JSON',
       value: `${packageName} integration accept-terms neon --json`,
+    },
+    {
+      name: 'Accept terms without a prompt (neon only)',
+      value: `${packageName} integration accept-terms neon --yes`,
     },
   ],
 } as const;
@@ -248,17 +284,13 @@ export const openSubcommand = {
   examples: [
     {
       name: "Open a marketplace integration's dashboard",
-      value: [
-        `${packageName} integration open <integration-name>`,
-        `${packageName} integration open acme`,
-      ],
+      placeholders: ['<integration-name>'],
+      value: `${packageName} integration open <integration-name>`,
     },
     {
       name: "Open a resource's dashboard within an integration",
-      value: [
-        `${packageName} integration open <integration-name> <resource-name>`,
-        `${packageName} integration open acme my-acme-store`,
-      ],
+      placeholders: ['<integration-name>', '<resource-name>'],
+      value: `${packageName} integration open <integration-name> <resource-name>`,
     },
     {
       name: 'Get the SSO link as JSON',
@@ -280,7 +312,8 @@ export const installationsSubcommand = {
     {
       name: 'integration',
       description: 'Limit to installations of this integration (slug or id)',
-      shorthand: 'i',
+      shorthand: null,
+      deprecatedShorthand: 'i',
       type: String,
       deprecated: false,
       argument: 'SLUG_OR_ID',
@@ -319,7 +352,8 @@ export const listSubcommand = {
     {
       name: 'integration',
       description: 'Limits the resources listed to a designated integration',
-      shorthand: 'i',
+      shorthand: null,
+      deprecatedShorthand: 'i',
       type: String,
       deprecated: false,
       argument: 'NAME',
@@ -341,11 +375,8 @@ export const listSubcommand = {
     },
     {
       name: 'Filter the resources to a single integration',
-      value: [
-        `${packageName} integration list --integration <integration>`,
-        `${packageName} integration list --integration acme`,
-        `${packageName} integration list -i acme`,
-      ],
+      placeholders: ['<integration>'],
+      value: `${packageName} integration list --integration <integration>`,
     },
     {
       name: 'List all marketplace resources for the current team',
@@ -374,12 +405,13 @@ export const discoverSubcommand = {
   options: [
     {
       name: 'category',
-      shorthand: 'c',
+      shorthand: null,
+      deprecatedShorthand: 'c',
       type: [String],
       deprecated: false,
       argument: 'CATEGORY',
       description:
-        'Filter integrations by category (can be repeated; e.g., -c storage -c authentication). Run `vercel integration categories` for valid slugs.',
+        'Filter integrations by category (can be repeated; e.g., --category storage --category authentication). Run `vercel integration categories` for valid slugs.',
     },
     formatOption,
     jsonOption,
@@ -400,14 +432,14 @@ export const discoverSubcommand = {
       name: 'Filter integrations by category',
       value: [
         `${packageName} integration discover --category storage`,
-        `${packageName} integration discover -c authentication`,
+        `${packageName} integration discover --category authentication`,
       ],
     },
     {
-      name: 'Filter by multiple categories at once (repeat the flag)',
+      name: 'Filter by multiple categories at once (repeat the option)',
       value: [
         `${packageName} integration discover --category storage --category authentication`,
-        `${packageName} integration discover -c commerce -c payments -c authentication`,
+        `${packageName} integration discover --category commerce --category payments --category authentication`,
       ],
     },
     {
@@ -459,10 +491,8 @@ export const balanceSubcommand = {
   examples: [
     {
       name: 'Show the balance(s) & threshold(s) of a marketplace integration',
-      value: [
-        `${packageName} integration balance <integration-name>`,
-        `${packageName} integration balance acme`,
-      ],
+      placeholders: ['<integration-name>'],
+      value: `${packageName} integration balance <integration-name>`,
     },
     {
       name: 'Output as JSON',
@@ -472,12 +502,13 @@ export const balanceSubcommand = {
 } as const;
 
 export const updateSubcommand = {
+  descriptionTone: 'normal',
   name: 'update',
   aliases: [],
   description:
     'Update a marketplace integration installation (billing plan or which projects can access it). ' +
-    'Install, remove, and connect flows are separate (integration add, integration remove, integration-resource, env pull, etc.) — not part of update. ' +
-    'UI-only flows (OAuth in a browser, consent screens, marketplace purchase) may not map one-to-one to a single CLI flag; pass --plan and --authorization-id when the product requires them for billing changes. ' +
+    'Install, remove, and connect flows are separate (integration add, integration remove, integration resource, env pull, etc.) — not part of update. ' +
+    'UI-only flows (OAuth in a browser, consent screens, marketplace purchase) may not map one-to-one to a single CLI option; pass --billing-plan and --authorization when the product requires them for billing changes. ' +
     'Any extra fields on the configuration resource that the API exposes but this command PATCH body does not send are not covered until the API and CLI support them.',
   arguments: [
     {
@@ -487,22 +518,40 @@ export const updateSubcommand = {
   ],
   options: [
     {
-      name: 'plan',
-      shorthand: 'p',
+      name: 'billing-plan',
+      shorthand: null,
       type: String,
       deprecated: false,
-      argument: 'PLAN_ID',
+      argument: 'BILLING_PLAN',
       description:
         'Billing plan ID for integrations that support installation-level billing plans',
     },
+    // Hidden: `--plan` and `-p` are the old names of `--billing-plan`.
+    {
+      name: 'plan',
+      shorthand: 'p',
+      type: String,
+      deprecated: true,
+      argument: 'PLAN_ID',
+      description: 'Deprecated alias for `--billing-plan`',
+    },
+    {
+      name: 'authorization',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      argument: 'AUTHORIZATION',
+      description:
+        'Billing authorization ID when the platform requires it for plan changes',
+    },
+    // Hidden: `--authorization-id` is the old name of `--authorization`.
     {
       name: 'authorization-id',
       shorthand: null,
       type: String,
-      deprecated: false,
+      deprecated: true,
       argument: 'ID',
-      description:
-        'Billing authorization ID when the platform requires it for plan changes',
+      description: 'Deprecated alias for `--authorization`',
     },
     {
       name: 'projects',
@@ -514,13 +563,22 @@ export const updateSubcommand = {
         'Project ID allowed to use this installation, or "all" for all projects (repeatable)',
     },
     {
-      name: 'installation-id',
+      name: 'installation',
       shorthand: null,
       type: String,
       deprecated: false,
-      argument: 'ID',
+      argument: 'INSTALLATION',
       description:
         'Configuration ID when multiple marketplace installations exist for this integration',
+    },
+    // Hidden: `--installation-id` is the old name of `--installation`.
+    {
+      name: 'installation-id',
+      shorthand: null,
+      type: String,
+      deprecated: true,
+      argument: 'ID',
+      description: 'Deprecated alias for `--installation`',
     },
     formatOption,
     jsonOption,
@@ -528,10 +586,8 @@ export const updateSubcommand = {
   examples: [
     {
       name: 'Grant all team projects access to the integration',
-      value: [
-        `${packageName} integration update <integration> --projects all`,
-        `${packageName} integration update neon --projects all`,
-      ],
+      placeholders: ['<integration>'],
+      value: `${packageName} integration update <integration> --projects all`,
     },
     {
       name: 'Limit access to specific projects',
@@ -539,11 +595,11 @@ export const updateSubcommand = {
     },
     {
       name: 'Change installation billing plan',
-      value: `${packageName} integration update acme --plan pro`,
+      value: `${packageName} integration update acme --billing-plan pro`,
     },
     {
       name: 'Select installation when several exist',
-      value: `${packageName} integration update neon --installation-id icfg_xxx --projects all`,
+      value: `${packageName} integration update neon --installation icfg_xxx --projects all`,
     },
     {
       name: 'Output result as JSON',
@@ -558,9 +614,9 @@ export const updateSubcommand = {
 
 export const removeSubcommand = {
   name: 'remove',
-  aliases: [],
+  aliases: ['rm'],
   description:
-    'Uninstalls a marketplace integration. Resources must be removed first using `integration-resource remove`.',
+    'Remove a marketplace integration. Resources must be deleted first using `integration resource delete`.',
   arguments: [
     {
       name: 'integration',
@@ -570,23 +626,21 @@ export const removeSubcommand = {
   options: [
     {
       ...yesOption,
-      description:
-        'Skip the confirmation prompt when uninstalling an integration',
+      description: 'Skip the confirmation prompt when removing an integration',
     },
     formatOption,
     jsonOption,
   ],
   examples: [
     {
-      name: 'Uninstall an integration',
-      value: [
-        `${packageName} integration remove <integration>`,
-        `${packageName} integration remove acme`,
-      ],
+      name: 'Remove an integration',
+      placeholders: ['<integration>'],
+      value: `${packageName} integration remove <integration>`,
     },
     {
-      name: 'Remove a resource before uninstalling',
-      value: `${packageName} integration-resource remove <resource-name> --disconnect-all --yes`,
+      name: 'Delete a resource before removing the integration',
+      placeholders: ['<resource-name>'],
+      value: `${packageName} integration resource delete <resource-name> --disconnect-all --yes`,
     },
     {
       name: 'Output as JSON',
@@ -609,7 +663,8 @@ export const guideSubcommand = {
   options: [
     {
       name: 'framework',
-      shorthand: 'f',
+      shorthand: null,
+      deprecatedShorthand: 'f',
       type: String,
       deprecated: false,
       argument: 'FRAMEWORK',
@@ -620,17 +675,13 @@ export const guideSubcommand = {
   examples: [
     {
       name: 'Show guides for a single-product integration',
-      value: [
-        `${packageName} integration guide <integration-name>`,
-        `${packageName} integration guide neon`,
-      ],
+      placeholders: ['<integration-name>'],
+      value: `${packageName} integration guide <integration-name>`,
     },
     {
       name: 'Show guides for a specific product of a multi-product integration',
-      value: [
-        `${packageName} integration guide <integration>/<product>`,
-        `${packageName} integration guide aws/aws-dynamodb`,
-      ],
+      placeholders: ['<integration>', '<product>'],
+      value: `${packageName} integration guide <integration>/<product>`,
     },
     {
       name: 'Show the Next.js guide without prompts (useful for CI/agents)',
@@ -647,7 +698,7 @@ export const resourceSubcommand = {
   name: 'resource',
   aliases: [],
   description:
-    'Manage marketplace integration resources (connect, disconnect, remove, create-threshold, claim)',
+    'Manage marketplace integration resources (inspect, connect, disconnect, delete, claim, create-threshold)',
   options: [],
   arguments: [],
   subcommands: [
@@ -668,8 +719,8 @@ export const resourceSubcommand = {
       value: `${packageName} integration resource disconnect my-acme-resource`,
     },
     {
-      name: 'Remove a resource (disconnecting all projects first)',
-      value: `${packageName} integration resource remove my-acme-resource --disconnect-all --yes`,
+      name: 'Delete a resource (disconnecting all projects first)',
+      value: `${packageName} integration resource delete my-acme-resource --disconnect-all --yes`,
     },
   ],
 } as const;

@@ -1,0 +1,14 @@
+[package]
+name = "services-backend"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# No `src/main.rs` on purpose: the buildpack must select this target from the
+# Cargo metadata, and the service is routed by `runtime`, not by framework
+# detection (which needs `src/main.rs`).
+[[bin]]
+name = "server"
+path = "src/bin/server.rs"
+
+[dependencies]

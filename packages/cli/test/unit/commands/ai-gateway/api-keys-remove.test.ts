@@ -18,43 +18,50 @@ function useDeleteNotFound(id = 'missing') {
   });
 }
 
-describe('ai-gateway api-keys remove', () => {
+describe('ai-gateway api-keys revoke', () => {
   describe('--help', () => {
-    it('returns exit code 2', async () => {
-      client.setArgv('ai-gateway', 'api-keys', 'remove', '--help');
+    it('returns exit code 0', async () => {
+      client.setArgv('ai-gateway', 'api-keys', 'revoke', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:api-keys', value: 'api-keys' },
-        { key: 'flag:help', value: 'ai-gateway api-keys:remove' },
+        { key: 'flag:help', value: 'ai-gateway api-keys:revoke' },
       ]);
     });
   });
 
-  it('removes a key with --yes', async () => {
+  it('revokes a key with --yes', async () => {
     const team = useTeam();
     useUser();
     useDeleteApiKey();
     client.config.currentTeam = team.id;
-    client.setArgv('ai-gateway', 'api-keys', 'rm', 'key_1', '--yes');
+    client.setArgv('ai-gateway', 'api-keys', 'revoke', 'key_1', '--yes');
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput('removed');
+    await expect(client.stderr).toOutput('revoked');
     expect(await exitCodePromise).toBe(0);
   });
 
-  it('removes a key via the delete alias', async () => {
+  it.each([
+    'remove',
+    'rm',
+    'delete',
+  ])('warns that %s is deprecated', async name => {
     const team = useTeam();
     useUser();
     useDeleteApiKey();
     client.config.currentTeam = team.id;
-    client.setArgv('ai-gateway', 'api-keys', 'delete', 'key_1', '--yes');
+    client.setArgv('ai-gateway', 'api-keys', name, 'key_1', '--yes');
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput('removed');
+    await expect(client.stderr).toOutput(
+      `\`vercel ai-gateway api-keys ${name}\` is deprecated. Use \`vercel ai-gateway api-keys revoke\`.`
+    );
+    await expect(client.stderr).toOutput('revoked');
     expect(await exitCodePromise).toBe(0);
   });
 
@@ -66,7 +73,7 @@ describe('ai-gateway api-keys remove', () => {
     client.setArgv(
       'ai-gateway',
       'api-keys',
-      'rm',
+      'revoke',
       'key_1',
       '--yes',
       '--format',
@@ -81,10 +88,10 @@ describe('ai-gateway api-keys remove', () => {
 
   it('requires an id', async () => {
     useUser();
-    client.setArgv('ai-gateway', 'api-keys', 'rm', '--yes');
+    client.setArgv('ai-gateway', 'api-keys', 'revoke', '--yes');
     const exitCodePromise = aiGateway(client);
     await expect(client.stderr).toOutput('expects an API key id');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('fails in non-interactive mode without --yes', async () => {
@@ -92,7 +99,7 @@ describe('ai-gateway api-keys remove', () => {
     useUser();
     client.config.currentTeam = team.id;
     client.stdin.isTTY = false;
-    client.setArgv('ai-gateway', 'api-keys', 'rm', 'key_1');
+    client.setArgv('ai-gateway', 'api-keys', 'revoke', 'key_1');
 
     const exitCodePromise = aiGateway(client);
 
@@ -105,7 +112,7 @@ describe('ai-gateway api-keys remove', () => {
     useUser();
     useDeleteNotFound();
     client.config.currentTeam = team.id;
-    client.setArgv('ai-gateway', 'api-keys', 'rm', 'missing', '--yes');
+    client.setArgv('ai-gateway', 'api-keys', 'revoke', 'missing', '--yes');
 
     const exitCodePromise = aiGateway(client);
 
@@ -113,19 +120,19 @@ describe('ai-gateway api-keys remove', () => {
     expect(await exitCodePromise).toBe(1);
   });
 
-  it('removes after interactive confirmation', async () => {
+  it('revokes after interactive confirmation', async () => {
     const team = useTeam();
     useUser();
     useDeleteApiKey();
     client.config.currentTeam = team.id;
-    client.setArgv('ai-gateway', 'api-keys', 'rm', 'key_1');
+    client.setArgv('ai-gateway', 'api-keys', 'revoke', 'key_1');
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput('Remove API key');
+    await expect(client.stderr).toOutput('Revoke API key');
     client.stdin.write('y\n');
 
-    await expect(client.stderr).toOutput('removed');
+    await expect(client.stderr).toOutput('revoked');
     expect(await exitCodePromise).toBe(0);
   });
 
@@ -134,11 +141,11 @@ describe('ai-gateway api-keys remove', () => {
     useUser();
     useDeleteApiKey();
     client.config.currentTeam = team.id;
-    client.setArgv('ai-gateway', 'api-keys', 'rm', 'key_1');
+    client.setArgv('ai-gateway', 'api-keys', 'revoke', 'key_1');
 
     const exitCodePromise = aiGateway(client);
 
-    await expect(client.stderr).toOutput('Remove API key');
+    await expect(client.stderr).toOutput('Revoke API key');
     client.stdin.write('n\n');
 
     await expect(client.stderr).toOutput('Canceled');

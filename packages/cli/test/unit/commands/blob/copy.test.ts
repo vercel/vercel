@@ -304,7 +304,7 @@ describe('blob copy', () => {
       }));
 
       const exitCode = await copy(client, ['--invalid-flag'], testAuth);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when --access flag is missing', async () => {
@@ -312,7 +312,7 @@ describe('blob copy', () => {
 
       expect(exitCode).toBe(1);
       expect(mockedOutput.error).toHaveBeenCalledWith(
-        "Missing required --access flag. Must be 'public' or 'private'."
+        "Missing required --access option. Must be 'public' or 'private'."
       );
       expect(mockedBlob.copy).not.toHaveBeenCalled();
     });
@@ -336,7 +336,7 @@ describe('blob copy', () => {
     it('should return 1 when no arguments are provided', async () => {
       const exitCode = await copy(client, ['--access', 'public'], testAuth);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedOutput.success).not.toHaveBeenCalled();
     });
 
@@ -347,7 +347,7 @@ describe('blob copy', () => {
         testAuth
       );
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedOutput.success).not.toHaveBeenCalled();
     });
   });

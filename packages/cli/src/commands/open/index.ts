@@ -27,12 +27,17 @@ export default async function openCommandHandler(
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('open');
-    output.print(help(openCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(openCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 

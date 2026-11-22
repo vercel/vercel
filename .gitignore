@@ -43,6 +43,7 @@ __pycache__
 .turbo
 .eslintcache
 turbo-cache-key.json
+turbo-host-cache-key.json
 turbo-native-cache-key.json
 turbo-platform-cache-key.json
 junit.xml

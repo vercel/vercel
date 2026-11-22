@@ -143,7 +143,7 @@ export interface MetricsQueryResponse {
 
 export interface CanonicalMetricSelection {
   metric: string;
-  aggregation: CanonicalAggregation | 'unique';
+  aggregation: string;
   dimensions?: string[];
   per?: 'second';
   normalize?: 'percent';
@@ -159,14 +159,33 @@ export interface CanonicalMetricsQueryRequest {
     start: string;
     end: string;
   };
-  bucketSeconds: number;
+  /**
+   * Bucket width for a timeseries. Omitted asks for a summary alone, which is
+   * what `orderBy` and `rowLimit` narrow — those two are rejected when it is
+   * present, and `seriesSelection` requires it.
+   */
+  bucketSeconds?: number;
   groupBy?: string[];
   filter?: string;
   metrics: Record<string, CanonicalMetricSelection>;
   outputs: string[];
+  /**
+   * Summary-query ordering and row cap. Rejected alongside `bucketSeconds`:
+   * a bucketed result is complete or it fails, and a grouped one narrows
+   * through `seriesSelection` instead.
+   */
+  orderBy?: Array<{ metric: string; direction: OrderDirection }>;
+  rowLimit?: number;
   seriesSelection?: {
     limit: number;
-    mode: 'exact';
+    /**
+     * `approximate` lets the API serve the query from a sampled read of the
+     * raw source, which is what keeps a high-cardinality top-N inside the
+     * per-day query-bytes budget. Only worth asking for where the selection
+     * really is a top-N: it buys nothing over a group set the limit already
+     * covers, and the response does not say whether sampling was applied.
+     */
+    mode: 'exact' | 'approximate';
     rankBy: Array<{ metric: string; direction: OrderDirection }>;
   };
 }

@@ -1,4 +1,7 @@
-import { type ArchiveFormat, VALID_ARCHIVE_FORMATS } from '@vercel/client';
+import {
+  type ArchiveFormat,
+  VALID_ARCHIVE_FORMATS,
+} from '@vercel/client/dist/types';
 
 const validArchiveFormats = new Set<string>(VALID_ARCHIVE_FORMATS);
 

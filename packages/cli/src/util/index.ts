@@ -2,7 +2,7 @@ import qs from 'querystring';
 import { parse as parseUrl } from 'url';
 import retry from 'async-retry';
 import ms from 'ms';
-import fetch, { Headers } from './fetch';
+import fetch from './fetch';
 import bytes from 'bytes';
 import chalk from 'chalk';
 import ua from './ua';
@@ -26,6 +26,8 @@ export interface NowOptions {
   withCache?: boolean;
 }
 
+export type BuildMachine = 'turbo';
+
 export interface CreateOptions {
   // Legacy
   nowConfig?: VercelConfig;
@@ -38,11 +40,12 @@ export interface CreateOptions {
   vercelOutputDir?: string;
   rootDirectory?: string | null;
   meta: Dictionary<string>;
-  gitMetadata?: GitMetadata;
+  gitMetadata?: GitMetadata | Promise<GitMetadata | undefined>;
   regions?: string[];
   quiet?: boolean;
   env: Dictionary<string>;
   build: { env: Dictionary<string> };
+  buildMachine?: BuildMachine;
   forceNew?: boolean;
   withCache?: boolean;
   target?: string | null;
@@ -123,6 +126,7 @@ export default class Now {
       quiet = false,
       env,
       build,
+      buildMachine,
       forceNew = false,
       withCache = false,
       target = null,
@@ -145,10 +149,10 @@ export default class Now {
       ...nowConfig,
       env,
       build,
+      buildMachine,
       name,
       project,
       meta,
-      gitMetadata,
       regions,
       target: target || undefined,
       projectSettings,
@@ -169,6 +173,7 @@ export default class Now {
       now: this,
       path,
       requestBody,
+      gitMetadata,
       quiet,
       force: forceNew,
       withCache,
@@ -366,7 +371,7 @@ export default class Now {
       delete opts.useCurrentTeam;
     }
 
-    opts.headers = new Headers(opts.headers);
+    opts.headers = new globalThis.Headers(opts.headers);
     opts.headers.set('accept', 'application/json');
     if (this._token) {
       opts.headers.set('authorization', `Bearer ${this._token}`);

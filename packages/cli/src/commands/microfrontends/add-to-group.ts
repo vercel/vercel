@@ -30,7 +30,7 @@ export default async function addToGroup(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const context = await ensureMicrofrontendsContext(client);

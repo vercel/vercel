@@ -9,7 +9,7 @@ import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { packageName } from '../../util/pkg-name';
 import getCommandFlags from '../../util/get-command-flags';
-import cmd from '../../util/output/cmd';
+import { printNextPageCommand } from '../../util/pagination';
 import { quoteArg } from '../../util/flags/quote-arg';
 
 interface TokenRow {
@@ -38,7 +38,7 @@ export default async function ls(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const validation = validateJsonOutput(parsedArgs.flags);
@@ -51,7 +51,7 @@ export default async function ls(
   const limit = parsedArgs.flags['--limit'];
   if (typeof limit === 'number' && (limit < 1 || limit > 100)) {
     output.error('`--limit` must be between 1 and 100.');
-    return 1;
+    return 2;
   }
   const next = parsedArgs.flags['--next'];
 
@@ -95,7 +95,8 @@ export default async function ls(
   if (result.pagination?.next) {
     const flags = getCommandFlags(parsedArgs.flags, ['_', '--next', '-N']);
     const nextCmd = `${packageName} tokens ls${flags} --next ${quoteArg(String(result.pagination.next))}`;
-    output.log(`To display the next page run ${cmd(nextCmd)}`);
+    output.print('\n');
+    printNextPageCommand(nextCmd);
   }
 
   return 0;

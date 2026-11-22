@@ -21,6 +21,10 @@ import {
   RUNTIME_MANIFESTS,
 } from './runtimes/constants';
 import {
+  BUILDPACK_PROJECT_MARKERS,
+  toBuildpackRuntime,
+} from '../buildpack-runtimes';
+import {
   filterFrameworksByRuntime,
   inferRuntimeFromFramework,
 } from './runtimes/framework';
@@ -666,6 +670,23 @@ export function validateServiceConfig(
     };
   }
   if (hasBuilderOrRuntime && !hasFramework && !hasEntrypoint) {
+    // Entrypoint-free builds exist only under `services`: `experimentalServices`
+    // is deprecated, shares one output directory across services, and routes
+    // functions by their Lambda output path, none of which fits a container
+    // image. Point at the migration rather than at a bare missing field.
+    const buildpackRuntime = config.builder
+      ? undefined
+      : toBuildpackRuntime(config.runtime);
+    if (buildpackRuntime) {
+      const markers = BUILDPACK_PROJECT_MARKERS.get(buildpackRuntime) ?? [];
+      return {
+        code: 'BUILDPACK_REQUIRES_SERVICES',
+        message:
+          `Service "${name}" must specify "entrypoint" when using "runtime" with "experimentalServices". ` +
+          `Move it to "services" to build without an "entrypoint" from a ${markers.join(' or ')} at the service root.`,
+        serviceName: name,
+      };
+    }
     return {
       code: 'MISSING_ENTRYPOINT',
       message: `Service "${name}" must specify "entrypoint" when using "${config.builder ? 'builder' : 'runtime'}".`,

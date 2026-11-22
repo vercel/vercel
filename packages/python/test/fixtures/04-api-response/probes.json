@@ -1,0 +1,31 @@
+{
+  "probes": [
+    {
+      "path": "/api/content_type",
+      "mustContain": "RANDOMNESS_PLACEHOLDER",
+      "notResponseHeaders": { "content-type": "application/octet-stream" }
+    },
+    {
+      "path": "/api/cookie_as_asgi.py",
+      "responseHeaders": {
+        "set-cookie": ["one=first", "two=second"],
+        "content-type": "text/plain"
+      }
+    },
+    {
+      "path": "/api/cookie_as_handler.py",
+      "responseHeaders": {
+        "set-cookie": ["one=first", "two=second"],
+        "content-type": "text/plain"
+      }
+    },
+    {
+      "path": "/api/cookie_as_flask.py",
+      "responseHeaders": {
+        "set-cookie": ["one=first; Path=/", "two=second; Path=/"],
+        "content-type": "text/plain; charset=utf-8"
+      }
+    },
+    { "logMustContain": "Using python version: 3.12" }
+  ]
+}

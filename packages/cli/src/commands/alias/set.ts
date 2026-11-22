@@ -32,7 +32,7 @@ export default async function set(client: Client, argv: string[]) {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags: opts } = parsedArguments;
@@ -51,19 +51,19 @@ export default async function set(client: Client, argv: string[]) {
   // If there are more than two args we have to error
   if (args.length > 2) {
     output.error(
-      `${getCommandName('alias <id-or-url> <target>')} accepts at most two arguments`
+      `${getCommandName('alias <deployment> <target>')} accepts at most two arguments`
     );
     return 1;
   }
 
   if (args.length >= 1 && !isValidName(args[0])) {
     output.error(`The provided argument "${args[0]}" is not a valid ID or URL`);
-    return 1;
+    return 2;
   }
 
   if (args.length >= 2 && !isValidName(args[1])) {
     output.error(`The provided argument "${args[1]}" is not a valid domain`);
-    return 1;
+    return 2;
   }
 
   if (args.length === 0) {
@@ -142,7 +142,7 @@ export default async function set(client: Client, argv: string[]) {
   }
 
   const [idOrUrl, aliasTarget] = args;
-  telemetryClient.trackCliArgumentIdOrUrl(idOrUrl);
+  telemetryClient.trackCliArgumentDeployment(idOrUrl);
   telemetryClient.trackCliArgumentAlias(aliasTarget);
 
   output.log(`Assigning alias ${aliasTarget} to ${idOrUrl}`);
@@ -258,6 +258,16 @@ function handleSetupDomainError<T>(error: SetupDomainError | T): T | 1 {
     output.error(
       `The TLD for domain name ${error.meta.domain} is not supported via the CLI. Use the REST API or the dashboard to purchase.`
     );
+    return 1;
+  }
+
+  if (
+    error instanceof ERRORS.DomainPurchaseRefundFailed ||
+    error instanceof ERRORS.DomainPurchaseRefunded ||
+    error instanceof ERRORS.DomainChargeOutcomeUnknown ||
+    error instanceof ERRORS.DomainPriceChanged
+  ) {
+    output.error(error.message);
     return 1;
   }
 

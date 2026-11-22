@@ -86,6 +86,10 @@ describe('platformForTarget()', () => {
       os: 'win32',
       cpu: 'x64',
     });
+    expect(platformForTarget('node24.14.1-win-arm64')).toEqual({
+      os: 'win32',
+      cpu: 'arm64',
+    });
   });
 
   it('returns null for host or unknown targets', () => {

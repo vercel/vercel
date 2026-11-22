@@ -29,7 +29,7 @@ describe('redirects remove', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = redirects(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -189,7 +189,7 @@ describe('redirects remove', () => {
 
       await expect(client.stderr).toOutput('Missing required argument: source');
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
   });
 

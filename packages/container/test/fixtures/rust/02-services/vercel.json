@@ -1,0 +1,47 @@
+{
+  "name": "02-rust-services",
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_BUILDPACK_RUST": "1"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path(.*)?",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ],
+  "services": {
+    "frontend": {
+      "root": "frontend/",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    "backend": {
+      "root": "backend/",
+      "runtime": "rust",
+      "rewrites": [
+        {
+          "source": "/api/:path(.*)?",
+          "destination": "/:path"
+        }
+      ]
+    }
+  }
+}

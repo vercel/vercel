@@ -50,8 +50,7 @@ export default async function invite(
   argv: string[],
   { introMsg = '', noopMsg = 'No changes made' } = {}
 ): Promise<number> {
-  const { config, telemetryEventStore } = client;
-  const { currentTeam: currentTeamId } = config;
+  const { telemetryEventStore } = client;
   const telemetry = new TeamsInviteTelemetryClient({
     opts: {
       store: telemetryEventStore,
@@ -71,11 +70,11 @@ export default async function invite(
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
   const { args: emails } = parsedArgs;
 
@@ -102,11 +101,12 @@ export default async function invite(
           },
         ],
       },
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
+  const currentTeamId = await client.resolveCurrentTeam();
   output.spinner('Fetching teams');
   const teams = await getTeams(client);
   const currentTeam = teams.find(team => team.id === currentTeamId);

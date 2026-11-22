@@ -1,0 +1,12 @@
+[project]
+name = "no-runtime-install-fixture"
+version = "0.0.1"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.141.1",
+  "matplotlib==3.11.1",
+  "numpy==2.2.6",
+  "pandas==2.3.2",
+  "scikit-learn==1.7.2",
+  "scipy==1.16.3",
+]

@@ -7,6 +7,7 @@ import project from '../../../../src/commands/project';
 import { useProject } from '../../../mocks/project';
 import { defaultProject } from '../../../mocks/project';
 import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
+import { expectDeprecationInJson } from '../../../helpers/deprecation-warning';
 
 describe('project members', () => {
   it('lists project members in table output', async () => {
@@ -79,7 +80,7 @@ describe('project members', () => {
   it('validates limit range', async () => {
     client.setArgv('project', 'members', '--limit', '0');
     const exitCode = await project(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     await expect(client.stderr).toOutput(
       '`--limit` must be a number between 1 and 100.'
     );
@@ -117,7 +118,7 @@ describe('project members', () => {
 
     expect(exitCode).toBe(0);
     await expect(client.stderr).toOutput(
-      "project members my-project --limit 5 --search 'Jane Doe' --next 1584722257000"
+      "project members my-project --limit 5 --query 'Jane Doe' --next 1584722257000"
     );
   });
 
@@ -332,7 +333,7 @@ describe('project members', () => {
         'OWNER'
       );
       const exitCode = await project(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('`--role` must be one of:');
       expect(posted).toBe(false);
     });
@@ -346,14 +347,14 @@ describe('project members', () => {
         'user@example.com'
       );
       const exitCode = await project(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('`--role` is required.');
     });
 
     it('errors when arguments are missing', async () => {
       client.setArgv('project', 'members', 'add', 'my-project');
       const exitCode = await project(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Invalid number of arguments.');
     });
 
@@ -679,7 +680,7 @@ describe('project members', () => {
         '--json'
       );
       const exitCode = await project(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload).toMatchObject({
         status: 'error',
@@ -698,7 +699,7 @@ describe('project members', () => {
         'user@example.com'
       );
       const exitCode = await project(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload).toMatchObject({
         status: 'error',
@@ -861,7 +862,7 @@ describe('project members', () => {
         '--yes'
       );
       const exitCode = await project(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(deleted).toBe(false);
       await expect(client.stderr).toOutput('unknown or unexpected option');
     });
@@ -992,7 +993,7 @@ describe('project members', () => {
     it('errors when arguments are missing', async () => {
       client.setArgv('project', 'members', 'remove', 'my-project');
       const exitCode = await project(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput('Invalid number of arguments.');
     });
 
@@ -1090,6 +1091,86 @@ describe('project members', () => {
         userActionRequired: true,
       });
       expect(payload.message).toMatch(/interactive confirmation/i);
+    });
+  });
+  describe('--next cursor', () => {
+    it('still reads the hidden -N as --next, and warns', async () => {
+      useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+      const queries: Record<string, unknown>[] = [];
+      client.scenario.get('/v1/projects/:idOrName/members', (req, res) => {
+        queries.push(req.query);
+        res.json({ members: [], pagination: { next: null } });
+      });
+      client.setArgv('project', 'members', 'my-project', '-N', '1584722256178');
+
+      expect(await project(client)).toBe(0);
+      expect(queries[0].until).toBe('1584722256178');
+      expect(client.stderr.getFullOutput()).toContain(
+        '! -N is deprecated. Use --next.'
+      );
+    });
+
+    it('rejects a value that is not a cursor as a usage error', async () => {
+      useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+      client.setArgv('project', 'members', 'my-project', '--next', 'oops');
+
+      expect(await project(client)).toBe(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--next must be the cursor printed with the previous page.'
+      );
+    });
+  });
+
+  describe('--query', () => {
+    async function run(...args: string[]) {
+      client.reset();
+      useProject({ ...defaultProject, id: 'prj_123', name: 'my-project' });
+      let query: Record<string, unknown> | undefined;
+      client.scenario.get('/v1/projects/:idOrName/members', (req, res) => {
+        query = req.query;
+        res.json({ members: [], pagination: {} });
+      });
+      client.setArgv('project', 'members', 'my-project', ...args);
+      const exitCode = await project(client);
+      return {
+        exitCode,
+        query,
+        stdout: client.stdout.getFullOutput(),
+        stderr: client.stderr.getFullOutput(),
+      };
+    }
+
+    it('still accepts --search, with one warning that names --query', async () => {
+      const now = await run('--query', 'Jane');
+      const before = await run('--search', 'Jane');
+
+      expect(now.exitCode).toBe(0);
+      expect(now.query).toMatchObject({ search: 'Jane' });
+      expect(now.stderr).not.toContain('deprecated');
+      expect(before.exitCode).toBe(now.exitCode);
+      expect(before.query).toEqual(now.query);
+      expect(before.stdout).toBe(now.stdout);
+      expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+      expect(before.stderr).toContain(
+        '! --search is deprecated. Use --query.\n'
+      );
+
+      const nowJson = await run('--query', 'Jane', '--json');
+      const beforeJson = await run('--search', 'Jane', '--json');
+      expectDeprecationInJson(
+        beforeJson.stdout,
+        nowJson.stdout,
+        '--search is deprecated. Use --query.'
+      );
+      expect(beforeJson.stderr).not.toContain('deprecated');
+    });
+
+    it('rejects --query with --search before any request', async () => {
+      const result = await run('--query', 'a', '--search', 'b');
+
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toContain("Can't use --query with --search.");
+      expect(result.query).toBeUndefined();
     });
   });
 });

@@ -30,12 +30,12 @@ function invalidTypeOptionError(
     return undefined;
   }
   if (value === 'sensitive') {
-    return `The \`${optionName}\` flag accepts \`config\` or \`secret\`. Use \`--type secret\` or the legacy \`--sensitive\` flag.`;
+    return `The \`${optionName}\` option accepts \`config\` or \`secret\`. Use \`--type secret\` or the legacy \`--sensitive\` option.`;
   }
   if (value === 'plain' || value === 'encrypted') {
-    return `The \`${optionName}\` flag accepts \`config\` or \`secret\`. Use \`--type config\` for readable values.`;
+    return `The \`${optionName}\` option accepts \`config\` or \`secret\`. Use \`--type config\` for readable values.`;
   }
-  return `The \`${optionName}\` flag must be either \`config\` or \`secret\`.`;
+  return `The \`${optionName}\` option must be either \`config\` or \`secret\`.`;
 }
 
 /** Resolves the canonical `--type` option and its deprecated alias. */
@@ -215,11 +215,11 @@ export function resolveEnvVarVisibility(
       return {
         error:
           options.explicitVisibility === 'sensitive'
-            ? `The \`${optionName}\` flag accepts \`config\` or \`secret\`. Use \`--type secret\` or the legacy \`--sensitive\` flag.`
+            ? `The \`${optionName}\` option accepts \`config\` or \`secret\`. Use \`--type secret\` or the legacy \`--sensitive\` option.`
             : options.explicitVisibility === 'plain' ||
                 options.explicitVisibility === 'encrypted'
-              ? `The \`${optionName}\` flag accepts \`config\` or \`secret\`. Use \`--type config\` for readable values.`
-              : `The \`${optionName}\` flag must be either \`config\` or \`secret\`.`,
+              ? `The \`${optionName}\` option accepts \`config\` or \`secret\`. Use \`--type config\` for readable values.`
+              : `The \`${optionName}\` option must be either \`config\` or \`secret\`.`,
       };
     }
 

@@ -8,6 +8,7 @@ import {
   withGlobalFlags,
   failFirewall,
   failFirewallApi,
+  failFirewallObservabilityPlan,
 } from '../shared';
 import { requireProjectContext } from '../../../util/projects/require-project-context';
 import {
@@ -325,10 +326,7 @@ export default async function inspect(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     if (isActivityUnavailable(e)) {
-      return failFirewall(client, {
-        message: FIREWALL_ACTIVITY_PLAN_MESSAGE,
-        reason: AGENT_REASON.API_ERROR,
-      });
+      return failFirewallObservabilityPlan(client, e, project.name);
     }
     return failFirewallApi(client, e, {
       fallback: 'Failed to fetch firewall alert',

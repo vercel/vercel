@@ -26,7 +26,7 @@ describe('ai-gateway rules remove', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'rules', 'remove', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:rules', value: 'rules' },
@@ -49,7 +49,7 @@ describe('ai-gateway rules remove', () => {
     expect(getQuery()).toMatchObject({ ruleId: 'rule_1' });
   });
 
-  it('removes a rule via the delete alias', async () => {
+  it('removes a rule via the deprecated delete alias', async () => {
     const team = useTeam();
     useUser();
     const getQuery = useDeleteRule();
@@ -58,6 +58,9 @@ describe('ai-gateway rules remove', () => {
 
     const exitCodePromise = aiGateway(client);
 
+    await expect(client.stderr).toOutput(
+      '`vercel ai-gateway rules delete` is deprecated. Use `vercel ai-gateway rules remove`.'
+    );
     await expect(client.stderr).toOutput('removed');
     expect(await exitCodePromise).toBe(0);
     expect(getQuery()).toMatchObject({ ruleId: 'rule_1' });
@@ -89,7 +92,7 @@ describe('ai-gateway rules remove', () => {
     client.setArgv('ai-gateway', 'rules', 'rm', '--yes');
     const exitCodePromise = aiGateway(client);
     await expect(client.stderr).toOutput('expects a rule id');
-    expect(await exitCodePromise).toBe(1);
+    expect(await exitCodePromise).toBe(2);
   });
 
   it('fails in non-interactive mode without --yes', async () => {

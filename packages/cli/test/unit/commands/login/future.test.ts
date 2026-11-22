@@ -3,7 +3,8 @@ import login from '../../../../src/commands/login';
 import { performDeviceCodeFlow } from '../../../../src/commands/login/future';
 import { client } from '../../../mocks/client';
 import { vi } from 'vitest';
-import _fetch, { Headers, type Response } from '../../../../src/util/fetch';
+import _fetch, { type Response } from '../../../../src/util/fetch';
+import { Headers } from '../../../../src/util/fetch-primitives';
 import * as oauth from '../../../../src/util/oauth';
 import { randomUUID } from 'node:crypto';
 import * as open from 'open';
@@ -107,6 +108,7 @@ describe('login', () => {
     const exitCodePromise = login(client, { shouldParseArgs: true });
     expect(await exitCodePromise, 'exit code for "login"').toBe(0);
     await expect(client.stderr).toOutput('Congratulations!');
+    expect(client.stderr.getFullOutput()).toContain('vercel setup');
 
     expect(fetch).toHaveBeenCalledTimes(pollCount + 4);
 

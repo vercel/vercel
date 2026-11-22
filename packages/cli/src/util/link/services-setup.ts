@@ -7,15 +7,19 @@ import {
 import { join, relative } from 'path';
 import { LocalFileSystemDetector } from '@vercel/fs-detectors';
 import {
+  detectDaemons,
   detectServices,
+  type DetectedDaemon,
   type DetectServicesResult,
 } from '@vercel-internals/service-topology';
 import output from '../../output-manager';
 import type Client from '../client';
 import {
+  displayDetectedDaemons,
   displayDetectedServices,
   displayServiceErrors,
   displayServicesConfigNote,
+  getNameColumnWidth,
 } from '../input/display-services';
 import {
   getServicesConfigWriteBlocker,
@@ -36,6 +40,8 @@ export type InferredServicesChoice =
 export interface ServicesSetupState {
   detectServicesResult: DetectServicesResult;
   hasConfiguredServices: boolean;
+  /** `vercel.json#daemons`, read only when services are configured. */
+  daemons: DetectedDaemon[];
   inferredServices: DetectServicesResult['inferred'];
   inferredServicesWriteBlocker: ServicesConfigWriteBlocker | null;
 }
@@ -43,8 +49,11 @@ export interface ServicesSetupState {
 export async function getServicesSetupState(
   workPath: string
 ): Promise<ServicesSetupState> {
+  // Services and daemons are both read from this directory's vercel.json or
+  // vercel.toml, so they always come from the same config.
+  const fs = new LocalFileSystemDetector(workPath);
   const detectServicesResult = await detectServices({
-    fs: new LocalFileSystemDetector(workPath),
+    fs,
     detectEntrypoint: createDetectEntrypoint(workPath),
   });
   // `resolved` is undefined when no services are detected at all (common for
@@ -58,30 +67,39 @@ export async function getServicesSetupState(
   const inferredServicesWriteBlocker = inferredServices
     ? await getServicesConfigWriteBlocker(workPath, inferredServices.config)
     : null;
+  const daemons = hasConfiguredServices ? await detectDaemons({ fs }) : [];
 
   return {
     detectServicesResult,
     hasConfiguredServices,
+    daemons,
     inferredServices,
     inferredServicesWriteBlocker,
   };
 }
 
 export function displayConfiguredServicesSetup(
-  detectServicesResult: DetectServicesResult,
+  { detectServicesResult, daemons }: ServicesSetupState,
   configFileName = 'vercel.json'
 ): void {
-  // display only `experimentalServices` for now
-  const v1Services = detectServicesResult.services.filter(
-    isExperimentalService
+  const { services } = detectServicesResult;
+  // One name-column width for both tables, so their brackets line up.
+  const nameWidth = getNameColumnWidth(
+    [...services, ...daemons].map(({ name }) => name)
   );
-  if (v1Services.length > 0) {
-    displayDetectedServices(v1Services);
+  if (services.length > 0) {
+    displayDetectedServices(services, nameWidth);
+  }
+  if (daemons.length > 0) {
+    if (services.length > 0) {
+      output.print('\n');
+    }
+    displayDetectedDaemons(daemons, nameWidth);
   }
   if (detectServicesResult.errors.length > 0) {
     displayServiceErrors(detectServicesResult.errors);
   }
-  displayServicesConfigNote(configFileName);
+  displayServicesConfigNote(configFileName, daemons.length > 0);
 }
 
 function formatDetectedServicesSummary(services: Service[]): string {

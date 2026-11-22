@@ -6,9 +6,13 @@
 // process-local cache and cross-service reads always miss.
 
 import ms from 'ms';
+import { DEV_RESOURCE_TOKEN } from './resource-servers';
 
 /** Internal dev path that fronts the store. */
 export const DEV_RUNTIME_CACHE_PREFIX = '/_svc/_cache/';
+
+/** Runtime Cache API path served on the dedicated local listener. */
+export const DEV_RUNTIME_CACHE_API_PREFIX = '/v1/suspense-cache/';
 
 /**
  * Item path, mirroring the public Runtime Cache API so the endpoint is
@@ -27,11 +31,14 @@ const TICK_INTERVAL = ms('1m');
  * Environment that points the Runtime Cache clients in `@vercel/functions` and
  * the Vercel Python SDK at the dev server's store.
  */
-export function getDevRuntimeCacheEnv(origin: string): Record<string, string> {
+export function getDevRuntimeCacheEnv(
+  origin: string,
+  itemPrefix = DEV_RUNTIME_CACHE_ITEM_PREFIX
+): Record<string, string> {
   return {
-    RUNTIME_CACHE_ENDPOINT: `${origin}${DEV_RUNTIME_CACHE_ITEM_PREFIX}`,
+    RUNTIME_CACHE_ENDPOINT: `${origin}${itemPrefix}`,
     RUNTIME_CACHE_HEADERS: JSON.stringify({
-      authorization: 'Bearer vc-dev-token',
+      authorization: `Bearer ${DEV_RESOURCE_TOKEN}`,
     }),
   };
 }

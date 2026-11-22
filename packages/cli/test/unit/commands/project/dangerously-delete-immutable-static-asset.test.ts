@@ -1,0 +1,150 @@
+import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest';
+import project from '../../../../src/commands/project';
+import { client } from '../../../mocks/client';
+import { useUser } from '../../../mocks/user';
+import { defaultProject, useProject } from '../../../mocks/project';
+import { useTeam } from '../../../mocks/team';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
+import { basename, join } from 'path';
+import { outputFile } from 'fs-extra';
+
+describe('project dangerously-delete-immutable-static-asset', () => {
+  const assetPath = '_next/static/immutable/chunks/example.js';
+  let projectId = 'wat';
+  afterEach(() => {
+    vi.restoreAllMocks();
+    client.nonInteractive = false;
+  });
+
+  beforeEach(async () => {
+    useUser();
+    useTeam('team_dummy');
+    const cwd = setupTmpDir();
+    client.cwd = cwd;
+    projectId = basename(cwd);
+    useProject({
+      ...defaultProject,
+      id: projectId,
+      name: projectId,
+      accountId: 'team_dummy',
+    });
+    await outputFile(
+      join(cwd, '.vercel', 'project.json'),
+      JSON.stringify({ projectId, orgId: 'team_dummy' })
+    );
+  });
+
+  it('should error without a path argument', async () => {
+    client.setArgv('project', 'dangerously-delete-immutable-static-asset');
+    const exitCode = await project(client);
+    expect(exitCode).toEqual(2);
+    await expect(client.stderr).toOutput('Missing required argument');
+  });
+
+  it('should delete after the typed path confirmation', async () => {
+    let deleteCalled = false;
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-immutable-static`,
+      (req, res) => {
+        deleteCalled = true;
+        expect(req.query.projectIdOrName).toEqual(projectId);
+        expect(req.body).toEqual({ path: assetPath });
+        res.end();
+      }
+    );
+    client.setArgv(
+      'project',
+      'dangerously-delete-immutable-static-asset',
+      assetPath
+    );
+    const exitCodePromise = project(client);
+
+    await expect(client.stderr).toOutput(
+      `Deleting immutable static asset ${assetPath} for project ${projectId} permanently removes it from storage`
+    );
+    await expect(client.stderr).toOutput(`Type ${assetPath}`);
+    client.stdin.write(`${assetPath}\n`);
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+    expect(deleteCalled).toBe(true);
+    await expect(client.stderr).toOutput(
+      `Successfully deleted immutable static asset ${assetPath}; its URL now serves 410`
+    );
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:dangerously-delete-immutable-static-asset',
+        value: 'dangerously-delete-immutable-static-asset',
+      },
+      { key: 'argument:path', value: '[REDACTED]' },
+    ]);
+  });
+
+  it('does not delete when the typed path does not match', async () => {
+    let deleteCalled = false;
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-immutable-static`,
+      (req, res) => {
+        deleteCalled = true;
+        res.end();
+      }
+    );
+    client.setArgv(
+      'project',
+      'dangerously-delete-immutable-static-asset',
+      assetPath
+    );
+    const exitCodePromise = project(client);
+
+    await expect(client.stderr).toOutput(`Type ${assetPath}`);
+    client.stdin.write('_next/static/immutable/chunks/other.js\n');
+
+    await expect(exitCodePromise).resolves.toEqual(0);
+    await expect(client.stderr).toOutput('Canceled');
+    expect(deleteCalled).toBe(false);
+  });
+
+  it('surfaces the server message for asset_not_found', async () => {
+    client.scenario.post(
+      `/v1/edge-cache/dangerously-delete-immutable-static`,
+      (req, res) => {
+        res.status(404).json({
+          error: {
+            code: 'asset_not_found',
+            message:
+              'No immutable static asset exists at `path` for this project.',
+          },
+        });
+      }
+    );
+    client.setArgv(
+      'project',
+      'dangerously-delete-immutable-static-asset',
+      assetPath
+    );
+    const exitCodePromise = project(client);
+    await expect(client.stderr).toOutput(`Type ${assetPath}`);
+    client.stdin.write(`${assetPath}\n`);
+    await expect(exitCodePromise).resolves.toEqual(1);
+    await expect(client.stderr).toOutput(
+      'No immutable static asset exists at `path` for this project.'
+    );
+  });
+
+  it('rejects non-interactive mode with a structured payload', async () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code ?? 0}`);
+    }) as () => never);
+    client.nonInteractive = true;
+    client.setArgv(
+      'project',
+      'dangerously-delete-immutable-static-asset',
+      assetPath
+    );
+
+    await expect(project(client)).rejects.toThrow('exit:1');
+    const payload = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(payload.status).toBe('action_required');
+    expect(payload.next[0].command).toContain(assetPath);
+    expect(payload.next[0].command).toContain(`--project ${projectId}`);
+  });
+});

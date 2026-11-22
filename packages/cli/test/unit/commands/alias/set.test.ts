@@ -14,7 +14,7 @@ describe('alias set', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = alias(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -27,6 +27,18 @@ describe('alias set', () => {
 
   describe('missing args', () => {
     it.todo('errors');
+  });
+
+  describe('too many args', () => {
+    it('names the deployment argument in the usage', async () => {
+      useUser();
+      client.setArgv('alias', 'set', 'a.vercel.app', 'b.com', 'c.com');
+
+      await expect(alias(client)).resolves.toEqual(1);
+      expect(client.stderr.getFullOutput()).toContain(
+        '`vercel alias <deployment> <target>` accepts at most two arguments'
+      );
+    });
   });
 
   describe('[custom domain]', () => {

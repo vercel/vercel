@@ -43,7 +43,7 @@ describe('cache dangerously-delete', () => {
     );
     client.setArgv('cache', 'dangerously-delete', '--yes');
     const exitCode = await cache(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'The --tag or --srcimg option is required'
     );
@@ -244,7 +244,7 @@ describe('cache dangerously-delete', () => {
       '--srcimg=/api/avatar/1'
     );
     const exitCode = await cache(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       'Cannot use both --tag and --srcimg options'
     );

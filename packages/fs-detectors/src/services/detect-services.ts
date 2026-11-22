@@ -15,6 +15,7 @@ import type {
   ExperimentalServices,
   Services,
   ExperimentalService,
+  InferredServiceConfig,
   InferredServicesConfig,
   InferredServicesResult,
   ResolvedServicesResult,
@@ -23,7 +24,11 @@ import type {
   ServiceDetectionWarning,
   ServicesRoutes,
 } from './types';
-import { isFrontendFramework } from './runtimes/framework';
+import { toBuildpackRuntime } from '../buildpack-runtimes';
+import {
+  inferRuntimeFromFramework,
+  isFrontendFramework,
+} from './runtimes/framework';
 import {
   getInternalServiceCronPathPrefix,
   getInternalServiceFunctionPath,
@@ -73,6 +78,21 @@ function withResolvedResult(
   };
 }
 
+/**
+ * Inference detectors synthesize entrypoints the user never wrote. An
+ * explicit file entrypoint can select the legacy runtime over the buildpack,
+ * so forwarding a synthesized one could turn our own output into an opt-out;
+ * they are dropped instead. The buildpack build finds the same entrypoint on
+ * its own.
+ */
+function isBuildpackInferredService(svc: InferredServiceConfig): boolean {
+  return (
+    toBuildpackRuntime(
+      svc.runtime ?? inferRuntimeFromFramework(svc.framework)
+    ) !== undefined
+  );
+}
+
 /*
  * This lets us define the conventions of how we'd like the services configuration
  * to look like.
@@ -91,7 +111,10 @@ function toInferredLayoutConfig(
       serviceConfig.type = service.type;
     }
 
-    if (typeof service.entrypoint === 'string') {
+    if (
+      typeof service.entrypoint === 'string' &&
+      !isBuildpackInferredService(service)
+    ) {
       serviceConfig.entrypoint = service.entrypoint;
     }
 
@@ -325,7 +348,9 @@ async function tryResolveInferred(
       v2Services[name] = {
         root: svc.root,
         ...(svc.framework ? { framework: svc.framework } : {}),
-        ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
+        ...(svc.entrypoint && !isBuildpackInferredService(svc)
+          ? { entrypoint: svc.entrypoint }
+          : {}),
       };
     }
 
@@ -379,7 +404,9 @@ async function tryResolveInferred(
     v1Services[name] = {
       root: svc.root === '.' ? undefined : svc.root,
       ...(svc.framework ? { framework: svc.framework } : {}),
-      ...(svc.entrypoint ? { entrypoint: svc.entrypoint } : {}),
+      ...(svc.entrypoint && !isBuildpackInferredService(svc)
+        ? { entrypoint: svc.entrypoint }
+        : {}),
       ...(svc.type ? { type: svc.type } : {}),
       ...(svc.buildCommand ? { buildCommand: svc.buildCommand } : {}),
       ...(svc.preDeployCommand

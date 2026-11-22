@@ -50,13 +50,13 @@ export default async function enable(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
       `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes enable <name-or-id>')}`
     );
-    return 1;
+    return 2;
   }
 
   // Check for existing staging version (for auto-promote logic)

@@ -1,3 +1,4 @@
+import plural from 'pluralize';
 import type Client from '../../util/client';
 import output from '../../output-manager';
 import * as blob from '@vercel/blob';
@@ -8,6 +9,7 @@ import { BlobDelTelemetryClient } from '../../util/telemetry/commands/blob/del';
 import { printError } from '../../util/error';
 import { getCommandName } from '../../util/pkg-name';
 import { blobOpts, type BlobRWToken } from '../../util/blob/token';
+import { canPrompt } from '../../util/can-prompt';
 
 export default async function del(
   client: Client,
@@ -27,21 +29,51 @@ export default async function del(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   if (!parsedArgs.args.length) {
     printError(
-      `Missing required arguments: ${getCommandName('blob del urlOrPathname')}`
+      `Missing required arguments: ${getCommandName('blob delete urlOrPathname')}`
     );
-    return 1;
+    return 2;
   }
 
   const { args } = parsedArgs;
-  const { '--if-match': ifMatch } = parsedArgs.flags;
+  const { '--if-match': ifMatch, '--yes': yes } = parsedArgs.flags;
 
   telemetryClient.trackCliArgumentUrlsOrPathnames(args[0]);
   telemetryClient.trackCliOptionIfMatch(ifMatch);
+  telemetryClient.trackCliFlagYes(yes);
+
+  // Deleting blobs loses their data, so ask first. Without a terminal it still
+  // goes ahead for now, with a warning.
+  if (!yes) {
+    if (canPrompt(client)) {
+      if (args.length > 1) {
+        for (const target of args.slice(0, 5)) {
+          output.print(`  ${target}\n`);
+        }
+        if (args.length > 5) {
+          output.print(`  and ${args.length - 5} more\n`);
+        }
+      }
+      const target =
+        args.length === 1 ? args[0] : plural('blob', args.length, true);
+      const confirmed = await client.input.confirm(
+        `Delete ${target}? This cannot be undone.`,
+        false
+      );
+      if (!confirmed) {
+        output.log('Canceled. Nothing was changed.');
+        return 130;
+      }
+    } else {
+      output.warning(
+        'Deleting blobs without a terminal will need --yes in a future major version. Add --yes to keep this working.'
+      );
+    }
+  }
 
   try {
     output.debug('Deleting blob');

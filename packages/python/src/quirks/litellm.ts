@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { join } from 'path';
+import { join, posix } from 'path';
 import { debug } from '@vercel/build-utils';
 import { getVenvSitePackagesDirs } from '../install';
 import type { Quirk, QuirkContext, QuirkResult } from './index';
@@ -63,7 +63,7 @@ export const litellmQuirk: Quirk = {
       if (configName) {
         debug(`LiteLLM quirk: found config at ${configName}`);
         buildEnv.CONFIG_FILE_PATH = join(ctx.workPath, configName);
-        env.CONFIG_FILE_PATH = join(LAMBDA_ROOT, configName);
+        env.CONFIG_FILE_PATH = posix.join(LAMBDA_ROOT, configName);
       }
     } else {
       debug(

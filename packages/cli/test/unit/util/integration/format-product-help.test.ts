@@ -15,6 +15,12 @@ function makeProduct(
 }
 
 describe('formatProductHelp', () => {
+  it('keeps unsafe selectors out of the usage template', () => {
+    const result = stripAnsi(formatProductHelp('acme;echo SAMPLE', []));
+    const usage = result.split('\n').find(line => line.startsWith('▲'));
+    expect(usage).toBe('▲ vercel integration add <INTEGRATION>/<product-slug>');
+  });
+
   it('should list all products with aligned columns', () => {
     const products = [
       makeProduct({ slug: 'short', name: 'Short Name' }),
@@ -32,14 +38,14 @@ describe('formatProductHelp', () => {
     const result = stripAnsi(formatProductHelp('acme', products));
 
     // Should use packageName (which is "vercel") rather than a hardcoded value
-    expect(result).toContain('$ vercel integration add acme/<product-slug>');
+    expect(result).toContain('▲ vercel integration add acme/<product-slug>');
   });
 
   it('should include Usage section', () => {
     const products = [makeProduct({ slug: 'prod-a', name: 'Product A' })];
     const result = stripAnsi(formatProductHelp('acme', products));
 
-    expect(result).toContain('Usage:');
+    expect(result).toContain('▲');
   });
 
   it('should use the integration slug in the header and usage example', () => {
@@ -54,7 +60,7 @@ describe('formatProductHelp', () => {
     const products = [makeProduct({ slug: 'prod-a', name: 'Product A' })];
     const result = stripAnsi(formatProductHelp('acme', products, 'install'));
 
-    expect(result).toContain('$ vercel install acme/<product-slug>');
+    expect(result).toContain('▲ vercel install acme/<product-slug>');
     expect(result).not.toContain('integration add');
   });
 });

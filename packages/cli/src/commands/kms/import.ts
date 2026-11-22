@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
 import { parseArguments } from '../../util/get-args';
@@ -48,7 +48,7 @@ export default async function importIssuer(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [name] = args;
@@ -85,7 +85,7 @@ export default async function importIssuer(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
@@ -128,7 +128,7 @@ export default async function importIssuer(client: Client, argv: string[]) {
     ...(claimsSchema && { claimsSchema }),
   };
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   if (!client.nonInteractive) {
     output.spinner(`Importing issuer under ${chalk.bold(contextName)}`);
   }

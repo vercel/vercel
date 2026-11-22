@@ -175,6 +175,7 @@ export interface Build {
   use: string;
   entrypoint: string;
   routes?: Route[];
+  projectMiddleware?: boolean;
 }
 
 export interface Rewrite {

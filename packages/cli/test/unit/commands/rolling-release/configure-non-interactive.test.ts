@@ -17,9 +17,9 @@ describe('rolling-release configure non-interactive mode', () => {
       advancementType: undefined,
       stageFlags: undefined,
     });
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(2);
     await expect(client.stderr).toOutput(
-      'In non-interactive mode use --enable or --disable with --advancement-type and --stage as needed'
+      'In non-interactive mode use --enable or --no-enable with --advancement-type and --stage as needed'
     );
   });
 

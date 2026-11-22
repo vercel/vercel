@@ -33,7 +33,7 @@ export default async function bisect(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new BisectTelemetryClient({
@@ -44,8 +44,13 @@ export default async function bisect(client: Client): Promise<number> {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('bisect');
-    output.print(help(bisectCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(bisectCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   telemetry.trackCliOptionGood(parsedArgs.flags['--good']);

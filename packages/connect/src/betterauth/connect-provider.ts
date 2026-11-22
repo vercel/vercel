@@ -30,7 +30,10 @@
 import { getVercelOidcToken } from '@vercel/oidc';
 import { getOAuth2Tokens, type OAuth2UserInfo } from 'better-auth/oauth2';
 import type { GenericOAuthConfig } from 'better-auth/plugins/generic-oauth';
-import { tryGetVercelTeamId, withTeamId } from '../internal/team-id.js';
+import {
+  tryGetVercelAuthorizationContext,
+  withAuthorizationContext,
+} from '../internal/authorization-context.js';
 import { ConnectError, createConnectErrorFromResponse } from '../token.js';
 
 const CONNECT_AUTHORIZATION_URL = 'https://connect.vercel.com/oauth/authorize';
@@ -83,12 +86,12 @@ export function connect(options: BetterAuthConnectOptions): GenericOAuthConfig {
     providerId: options.providerId,
     clientId: options.connector,
     // Best-effort: scope the Vercel Connect consent UI to the
-    // deployment's Vercel team when we can read it from the OIDC
-    // token. Falls back to the unqualified URL when the token isn't
-    // present (e.g. running outside Vercel).
-    authorizationUrl: withTeamId(
+    // deployment's team, project, and environment from the OIDC token.
+    // Falls back to the unqualified URL when the token isn't present
+    // (e.g. running outside Vercel).
+    authorizationUrl: withAuthorizationContext(
       CONNECT_AUTHORIZATION_URL,
-      tryGetVercelTeamId()
+      tryGetVercelAuthorizationContext()
     ),
     scopes,
     pkce: true,

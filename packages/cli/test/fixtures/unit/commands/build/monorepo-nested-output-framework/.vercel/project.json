@@ -1,0 +1,10 @@
+{
+  "orgId": ".",
+  "projectId": ".",
+  "settings": {
+    "framework": "nextjs",
+    "buildCommand": "cd apps/nextjs && npm run build",
+    "rootDirectory": "./",
+    "outputDirectory": "apps/nextjs/.next"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_BUILDPACK_RUBY": "1"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/red/:path(.*)?",
+      "destination": {
+        "service": "red"
+      }
+    },
+    {
+      "source": "/blue/:path(.*)?",
+      "destination": {
+        "service": "blue"
+      }
+    }
+  ],
+  "services": {
+    "red": {
+      "root": "services/red",
+      "rewrites": [
+        {
+          "source": "/red/:path(.*)?",
+          "destination": "/:path"
+        }
+      ]
+    },
+    "blue": {
+      "root": "services/blue",
+      "runtime": "ruby",
+      "rewrites": [
+        {
+          "source": "/blue/:path(.*)?",
+          "destination": "/:path"
+        }
+      ]
+    }
+  }
+}

@@ -1,9 +1,12 @@
 import {
   confirmOption,
+  deploymentOption,
+  environmentOption,
   forceOption,
   formatOption,
   jsonOption,
   projectOption,
+  targetOption,
   yesOption,
 } from '../../util/arg-common';
 
@@ -18,6 +21,7 @@ export const initSubcommand = {
   options: [
     {
       ...forceOption,
+      deprecatedShorthand: 'f',
       description: 'Force a new deployment even if nothing has changed',
     },
     {
@@ -29,30 +33,31 @@ export const initSubcommand = {
     },
     {
       name: 'env',
-      shorthand: 'e',
+      shorthand: null,
       type: [String],
       argument: 'KEY=VALUE',
       deprecated: false,
       description:
-        'Specify environment variables during run-time (e.g. `-e KEY1=value1 -e KEY2=value2`)',
+        'Specify environment variables during run-time (e.g. `--env KEY1=value1 --env KEY2=value2`)',
     },
     {
       name: 'build-env',
-      shorthand: 'b',
+      shorthand: null,
       type: [String],
       argument: 'KEY=VALUE',
       deprecated: false,
       description:
-        'Specify environment variables during build-time (e.g. `-b KEY1=value1 -b KEY2=value2`)',
+        'Specify environment variables during build-time (e.g. `--build-env KEY1=value1 --build-env KEY2=value2`)',
     },
     {
       name: 'meta',
-      shorthand: 'm',
+      shorthand: null,
+      deprecatedShorthand: 'm',
       type: [String],
       argument: 'KEY=VALUE',
       deprecated: false,
       description:
-        'Specify metadata for the deployment (e.g. `-m KEY1=value1 -m KEY2=value2`)',
+        'Specify metadata for the deployment (e.g. `--meta KEY1=value1 --meta KEY2=value2`)',
     },
     {
       name: 'regions',
@@ -68,7 +73,7 @@ export const initSubcommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'Create a production deployment (shorthand for `--target=production`)',
+        'Create a production deployment (shorthand for `--environment production`)',
     },
     {
       name: 'archive',
@@ -92,13 +97,13 @@ export const initSubcommand = {
       description: 'Use default options to skip all prompts',
     },
     {
-      name: 'target',
+      ...environmentOption,
+      // `-e` is still the deprecated short form of `--env` here.
       shorthand: null,
-      type: String,
-      argument: 'TARGET',
-      deprecated: false,
-      description: 'Specify the target deployment environment',
+      description:
+        'Environment to deploy to: production, preview, or a custom environment',
     },
+    targetOption,
     formatOption,
     jsonOption,
     confirmOption,
@@ -124,13 +129,11 @@ export const continueSubcommand = {
   arguments: [],
   options: [
     {
-      name: 'id',
-      shorthand: null,
-      type: String,
-      argument: 'ID',
-      deprecated: false,
+      ...deploymentOption,
       description: 'The deployment ID to continue (e.g. dpl_xxx)',
     },
+    // `--id` is the deprecated name of `--deployment`.
+    { name: 'id', shorthand: null, type: String, deprecated: true },
     {
       name: 'archive',
       shorthand: null,
@@ -152,7 +155,58 @@ export const continueSubcommand = {
   examples: [
     {
       name: 'Continue a deployment by ID',
-      value: 'vercel deploy continue --id dpl_xxx',
+      value: 'vercel deploy continue --deployment dpl_xxx',
+    },
+  ],
+} as const;
+
+export const describeSubcommand = {
+  name: 'describe',
+  aliases: [],
+  description:
+    'Prepare deployment functions for provisioning in your AWS account',
+  hidden: true as const,
+  arguments: [],
+  options: [
+    {
+      ...deploymentOption,
+      description:
+        'Deployment ID used with vercel build --deployment (required)',
+    },
+    // `--id` is the deprecated name of `--deployment`.
+    { name: 'id', shorthand: null, type: String, deprecated: true },
+    {
+      name: 'aws-account-id',
+      shorthand: null,
+      type: String,
+      argument: 'AWS_ACCOUNT',
+      deprecated: false,
+      description: '12-digit AWS account ID for provisioning (required)',
+    },
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Prepare a deployment for provisioning',
+      value:
+        'vercel deploy describe --deployment dpl_xxx --aws-account-id 123456789012',
+    },
+    {
+      name: 'Return artifact paths as JSON',
+      value:
+        'vercel deploy describe --deployment dpl_xxx --aws-account-id 123456789012 --json',
+    },
+  ],
+  helpSections: [
+    {
+      title: 'Notes',
+      body: [
+        'Uses the team in .vercel/project.json. Run vercel build --deployment first.',
+        'Writes descriptor.json, function ZIPs, and runtime layers to .vercel/<DEPLOYMENT>/. Keep these artifacts private.',
+        'Preserves the original build in .vercel/<DEPLOYMENT>/build/ and replaces .vercel/output with a code-free continuation.',
+        'Does not create AWS resources. Provision the described functions before running vercel deploy continue --deployment <DEPLOYMENT>.',
+        'Edge Functions and service outputs are not supported.',
+      ],
     },
   ],
 } as const;
@@ -168,10 +222,11 @@ export const deployCommand = {
       required: false,
     },
   ],
-  subcommands: [initSubcommand, continueSubcommand],
+  subcommands: [initSubcommand, continueSubcommand, describeSubcommand],
   options: [
     {
       ...forceOption,
+      deprecatedShorthand: 'f',
       description: 'Force a new deployment even if nothing has changed',
     },
     {
@@ -183,30 +238,38 @@ export const deployCommand = {
     },
     {
       name: 'env',
-      shorthand: 'e',
+      shorthand: null,
       type: [String],
       argument: 'KEY=VALUE',
       deprecated: false,
       description:
-        'Specify environment variables during run-time (e.g. `-e KEY1=value1 -e KEY2=value2`)',
+        'Specify environment variables during run-time (e.g. `--env KEY1=value1 --env KEY2=value2`)',
     },
     {
       name: 'build-env',
-      shorthand: 'b',
+      shorthand: null,
       type: [String],
       argument: 'KEY=VALUE',
       deprecated: false,
       description:
-        'Specify environment variables during build-time (e.g. `-b KEY1=value1 -b KEY2=value2`)',
+        'Specify environment variables during build-time (e.g. `--build-env KEY1=value1 --build-env KEY2=value2`)',
+    },
+    {
+      name: 'turbo',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Use a Turbo build machine for this deployment',
     },
     {
       name: 'meta',
-      shorthand: 'm',
+      shorthand: null,
+      deprecatedShorthand: 'm',
       type: [String],
       argument: 'KEY=VALUE',
       deprecated: false,
       description:
-        'Specify metadata for the deployment (e.g. `-m KEY1=value1 -m KEY2=value2`)',
+        'Specify metadata for the deployment (e.g. `--meta KEY1=value1 --meta KEY2=value2`)',
     },
     {
       name: 'regions',
@@ -230,7 +293,7 @@ export const deployCommand = {
       type: Boolean,
       deprecated: false,
       description:
-        'Create a production deployment (shorthand for `--target=production`)',
+        'Create a production deployment (shorthand for `--environment production`)',
     },
     {
       name: 'temporary',
@@ -256,12 +319,28 @@ export const deployCommand = {
       description: "Don't wait for the deployment to finish",
     },
     {
+      name: 'verify',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        "Load the deployment URL once it is ready and report the status code, size, and page title, even with Deployment Protection on (creates the project's Protection Bypass for Automation secret if missing). Exits 1 if the load fails. Can't be used with --no-wait or --dry",
+    },
+    {
       name: 'dry',
       shorthand: null,
       type: Boolean,
       deprecated: false,
       description:
         'Inspect the detected framework preset and source files without uploading or creating a deployment. Non-TTY output includes every file as JSON',
+    },
+    {
+      name: 'create-if-missing',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        "Create the --project if it doesn't exist. Required with --yes and in non-interactive mode",
     },
     {
       name: 'skip-domain',
@@ -277,7 +356,8 @@ export const deployCommand = {
     },
     {
       name: 'logs',
-      shorthand: 'l',
+      shorthand: null,
+      deprecatedShorthand: 'l',
       type: Boolean,
       deprecated: false,
       description: 'Print the build logs',
@@ -309,17 +389,21 @@ export const deployCommand = {
       deprecated: true,
     },
     {
-      name: 'target',
+      ...environmentOption,
+      // `-e` is still the deprecated short form of `--env` here.
       shorthand: null,
-      type: String,
-      argument: 'TARGET',
-      deprecated: false,
-      description: 'Specify the target deployment environment',
+      description:
+        'Environment to deploy to: production, preview, or a custom environment',
     },
+    targetOption,
     formatOption,
     jsonOption,
     confirmOption,
-    projectOption,
+    {
+      ...projectOption,
+      description:
+        'Project name or ID to deploy to, without linking this directory (default: linked project). A missing name is created; with --yes or in non-interactive mode, add --create-if-missing',
+    },
   ],
   examples: [
     {
@@ -327,16 +411,28 @@ export const deployCommand = {
       value: 'vercel',
     },
     {
+      name: 'Deploy a single HTML file',
+      value: 'vercel ./index.html',
+    },
+    {
       name: 'Deploy a custom path',
       value: 'vercel /usr/src/project',
     },
     {
+      name: 'Deploy to production and check that the URL loads',
+      value: 'vercel deploy --prod --verify',
+    },
+    {
       name: 'Deploy with run-time Environment Variables',
-      value: 'vercel -e NODE_ENV=production',
+      value: 'vercel --env NODE_ENV=production',
     },
     {
       name: 'Deploy with prebuilt outputs',
       value: ['vercel build', 'vercel deploy --prebuilt'],
+    },
+    {
+      name: 'Deploy using a Turbo build machine',
+      value: 'vercel deploy --turbo',
     },
     {
       name: 'Inspect deployment inputs without deploying',

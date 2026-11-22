@@ -29,7 +29,7 @@ describe('webhooks get', () => {
       expect(payload.status).toBe('error');
       expect(payload.reason).toBe('missing_id');
       expect(payload.next[0].command).toBe('vercel webhooks ls');
-      expect(payload.next[1].command).toBe('vercel webhooks get <id>');
+      expect(payload.next[1].command).toBe('vercel webhooks inspect <id>');
 
       exitSpy.mockRestore();
     });
@@ -41,7 +41,7 @@ describe('webhooks get', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = webhooks(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -55,7 +55,7 @@ describe('webhooks get', () => {
   it('should show error when no id provided', async () => {
     client.setArgv('webhooks', 'get');
     const exitCode = await webhooks(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('expects one argument');
   });
 
@@ -90,7 +90,7 @@ describe('webhooks get', () => {
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:get',
+        key: 'subcommand:inspect',
         value: 'get',
       },
       {
@@ -110,7 +110,7 @@ describe('webhooks get', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:get',
+          key: 'subcommand:inspect',
           value: 'get',
         },
         {
@@ -122,6 +122,8 @@ describe('webhooks get', () => {
           value: 'json',
         },
       ]);
+      // JSON output keeps stderr clean, so no deprecation warning here.
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     });
 
     it('outputs webhook as valid JSON', async () => {
@@ -144,17 +146,34 @@ describe('webhooks get', () => {
     });
   });
 
-  describe('inspect alias', () => {
-    it('should work with inspect alias', async () => {
+  describe('subcommand name', () => {
+    it('warns when invoked as the deprecated get name', async () => {
+      useUser();
+      useWebhook('hook_test123');
+      client.setArgv('webhooks', 'get', 'hook_test123');
+      const exitCode = await webhooks(client);
+      expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        '`vercel webhooks get` is deprecated. Use `vercel webhooks inspect`.'
+      );
+      const stderr = client.stderr.getFullOutput();
+      expect(stderr).toMatch(
+        /^! `vercel webhooks get` is deprecated\. Use `vercel webhooks inspect`\.$/m
+      );
+      expect(stderr).not.toContain('WARNING!');
+    });
+
+    it('does not warn when invoked as inspect', async () => {
       useUser();
       useWebhook('hook_test123');
       client.setArgv('webhooks', 'inspect', 'hook_test123');
       const exitCode = await webhooks(client);
       expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:get',
+          key: 'subcommand:inspect',
           value: 'inspect',
         },
         {

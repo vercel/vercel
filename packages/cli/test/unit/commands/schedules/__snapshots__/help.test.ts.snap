@@ -1,0 +1,332 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`schedules local help > documents local mode on 'create' 1`] = `
+"▲ vercel schedules create <name> [options]
+Create a schedule
+
+Options:
+  --at <DATETIME>                  Run once at a local datetime
+                                   (YYYY-MM-DDTHH:mm or :00 seconds)
+  --cron <EXPRESSION>              Use a cron expression
+  -e, --environment <ENVIRONMENT>  Use the schedules of an environment:
+                                   production or a custom environment (default:
+                                   production)
+  --git-branch <BRANCH>            Use the schedules of a Git branch's
+                                   deployments in the linked repository
+  --jitter <MINUTES>               Add a jitter window between 1 and 15 minutes
+  --json                           Output as JSON
+  --local                          Use the local Schedules session started by
+                                   vercel dev
+  --namespace <NAMESPACE>          Use a schedule namespace (default: default)
+  --payload <JSON>                 Set the JSON payload delivered to the target
+  --timezone <TIMEZONE>            Evaluate expressions in an IANA timezone
+                                   (default: UTC)
+  --topic <TOPIC>                  Target a queue topic
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Create a recurring schedule
+    vercel schedules create daily-cleanup --cron "0 2 * * *" --topic scheduled-cleanup
+
+  Create a one-time schedule
+    vercel schedules create send-reminder --at 2026-09-17T10:00 --timezone America/New_York --topic reminders
+"
+`;
+
+exports[`schedules local help > documents local mode on 'delete' 1`] = `
+"▲ vercel schedules delete <name> [options]
+Delete a schedule
+
+Options:
+  -e, --environment <ENVIRONMENT>  Use the schedules of an environment:
+                                   production or a custom environment (default:
+                                   production)
+  --git-branch <BRANCH>            Use the schedules of a Git branch's
+                                   deployments in the linked repository
+  --json                           Output as JSON
+  --local                          Use the local Schedules session started by
+                                   vercel dev
+  --namespace <NAMESPACE>          Use a schedule namespace (default: default)
+  -y, --yes                        Skip the confirmation prompt when deleting
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Delete a schedule
+    vercel schedules delete daily-cleanup
+
+  Delete without confirmation
+    vercel schedules delete daily-cleanup --yes
+"
+`;
+
+exports[`schedules local help > documents local mode on 'disable' 1`] = `
+"▲ vercel schedules disable <name> [options]
+Disable a schedule
+
+Options:
+  -e, --environment <ENVIRONMENT>  Use the schedules of an environment:
+                                   production or a custom environment (default:
+                                   production)
+  --git-branch <BRANCH>            Use the schedules of a Git branch's
+                                   deployments in the linked repository
+  --json                           Output as JSON
+  --local                          Use the local Schedules session started by
+                                   vercel dev
+  --namespace <NAMESPACE>          Use a schedule namespace (default: default)
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Disable a schedule in the default namespace
+    vercel schedules disable daily-cleanup
+"
+`;
+
+exports[`schedules local help > documents local mode on 'enable' 1`] = `
+"▲ vercel schedules enable <name> [options]
+Enable a schedule
+
+Options:
+  -e, --environment <ENVIRONMENT>  Use the schedules of an environment:
+                                   production or a custom environment (default:
+                                   production)
+  --for <DURATION>                 Enable only for this long, then disable again
+                                   (e.g. 30m, 5h)
+  --git-branch <BRANCH>            Use the schedules of a Git branch's
+                                   deployments in the linked repository
+  --json                           Output as JSON
+  --local                          Use the local Schedules session started by
+                                   vercel dev
+  --namespace <NAMESPACE>          Use a schedule namespace (default: default)
+  -u, --until <TIME>               Enable only until this time, then disable
+                                   again: ISO 8601 or Unix milliseconds
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Enable a schedule in the default namespace
+    vercel schedules enable daily-cleanup
+
+  Enable a schedule for 2 hours
+    vercel schedules enable daily-cleanup --for 2h
+
+  Enable a schedule until a time
+    vercel schedules enable daily-cleanup --until 2026-10-09T17:00:00Z
+"
+`;
+
+exports[`schedules local help > documents local mode on 'executions' 1`] = `
+"▲ vercel schedules executions <command> [options]
+Inspect schedule execution history
+
+Commands:
+  list <name>  List executions for a schedule
+
+Options:
+  --local  Local execution history is not supported
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  List recent executions for a schedule
+    vercel schedules executions list daily-cleanup
+"
+`;
+
+exports[`schedules local help > documents local mode on 'inspect' 1`] = `
+"▲ vercel schedules inspect <name> [options]
+Show a schedule
+
+Options:
+  -e, --environment <ENVIRONMENT>  Use the schedules of an environment:
+                                   production or a custom environment (default:
+                                   production)
+  --git-branch <BRANCH>            Use the schedules of a Git branch's
+                                   deployments in the linked repository
+  --json                           Output as JSON
+  --local                          Use the local Schedules session started by
+                                   vercel dev
+  --namespace <NAMESPACE>          Use a schedule namespace (default: default)
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Show a schedule in the default namespace
+    vercel schedules inspect daily-cleanup
+
+  Show a schedule in another namespace
+    vercel schedules inspect daily-cleanup --namespace jobs
+
+  Show a schedule as JSON
+    vercel schedules inspect daily-cleanup --json
+"
+`;
+
+exports[`schedules local help > documents local mode on 'invoke' 1`] = `
+"▲ vercel schedules invoke <name> [options]
+Invoke a schedule immediately
+
+Options:
+  -e, --environment <ENVIRONMENT>  Use the schedules of an environment:
+                                   production or a custom environment (default:
+                                   production)
+  --git-branch <BRANCH>            Use the schedules of a Git branch's
+                                   deployments in the linked repository
+  --json                           Output as JSON
+  --local                          Use the local Schedules session started by
+                                   vercel dev
+  --namespace <NAMESPACE>          Use a schedule namespace (default: default)
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Invoke a schedule immediately in the default namespace
+    vercel schedules invoke daily-cleanup
+"
+`;
+
+exports[`schedules local help > documents local mode on 'list' 1`] = `
+"▲ vercel schedules list [options]
+List schedules
+
+Options:
+  -e, --environment <ENVIRONMENT>  Use the schedules of an environment:
+                                   production or a custom environment (default:
+                                   production)
+  --git-branch <BRANCH>            Use the schedules of a Git branch's
+                                   deployments in the linked repository
+  --json                           Output as JSON
+  -n, --limit <NUMBER>             Number of results to return per page
+                                   (default: 20, max: 100)
+  --local                          Use the local Schedules session started by
+                                   vercel dev
+  --namespace <NAMESPACE>          Use a schedule namespace (default: default)
+  --next <CURSOR>                  Show the next page using the cursor from the
+                                   previous output
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  List schedules in the default namespace
+    vercel schedules list
+
+  List schedules in another namespace
+    vercel schedules list --namespace jobs
+
+  List schedules for a Git branch
+    vercel schedules list --git-branch feature
+
+  List schedules for a custom environment
+    vercel schedules list --environment staging
+
+  Continue listing schedules
+    vercel schedules list --next <CURSOR>
+
+  List schedules as JSON
+    vercel schedules list --json
+"
+`;
+
+exports[`schedules local help > documents local mode on 'update' 1`] = `
+"▲ vercel schedules update <name> [options]
+Update a schedule
+
+Options:
+  --at <DATETIME>                  Run once at a local datetime
+                                   (YYYY-MM-DDTHH:mm or :00 seconds)
+  --cron <EXPRESSION>              Use a cron expression
+  -e, --environment <ENVIRONMENT>  Use the schedules of an environment:
+                                   production or a custom environment (default:
+                                   production)
+  --git-branch <BRANCH>            Use the schedules of a Git branch's
+                                   deployments in the linked repository
+  --jitter <MINUTES|none>          Set jitter to 1–15 minutes, or use none to
+                                   remove it
+  --json                           Output as JSON
+  --local                          Use the local Schedules session started by
+                                   vercel dev
+  --namespace <NAMESPACE>          Use a schedule namespace (default: default)
+  --payload <JSON>                 Replace the JSON payload; use null to remove
+                                   it
+  --timezone <TIMEZONE>            Evaluate expressions in an IANA timezone
+                                   (default: UTC)
+  --topic <TOPIC>                  Target a queue topic
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  Change a recurring schedule
+    vercel schedules update daily-cleanup --cron "0 3 * * *"
+
+  Remove a jitter window
+    vercel schedules update daily-cleanup --jitter none
+"
+`;
+
+exports[`schedules local help > documents local mode on the group 1`] = `
+"▲ vercel schedules <command> [options]
+Manage schedules for the current project
+
+Commands:
+  list            List schedules
+  inspect <name>  Show a schedule
+  create <name>   Create a schedule
+  update <name>   Update a schedule
+  enable <name>   Enable a schedule
+  disable <name>  Disable a schedule
+  invoke <name>   Invoke a schedule immediately
+  delete <name>   Delete a schedule
+  executions      Inspect schedule execution history
+
+Options:
+  --local  Use the local Schedules session started by vercel dev
+
+Global Options: See \`vercel --help\`
+"
+`;
+
+exports[`schedules local help > documents the parsed flag on nested execution history 1`] = `
+"▲ vercel schedules executions list <name> [options]
+List executions for a schedule
+
+Options:
+  -e, --environment <ENVIRONMENT>  Use the schedules of an environment:
+                                   production or a custom environment (default:
+                                   production)
+  --execution <EXECUTION>          Filter by execution ID substring
+  --git-branch <BRANCH>            Use the schedules of a Git branch's
+                                   deployments in the linked repository
+  --json                           Output as JSON
+  -n, --limit <NUMBER>             Number of results to return per page
+                                   (default: 20, max: 100)
+  --local                          Local execution history is not supported
+  --namespace <NAMESPACE>          Use a schedule namespace (default: default)
+  --next <CURSOR>                  Show the next page using the cursor from the
+                                   previous output
+  -s, --since <TIME>               Start time: ISO 8601 or relative, like 1h or
+                                   7d (at most 30 days before --until)
+  --sort <ORDER>                   Sort by time: asc or desc (default: desc)
+  -u, --until <TIME>               End time: ISO 8601 or relative; requires
+                                   --since (default: now)
+
+Global Options: See \`vercel --help\`
+
+Examples:
+  List recent executions for a schedule
+    vercel schedules executions list daily-cleanup
+
+  List executions from the last 7 days
+    vercel schedules executions list daily-cleanup --since 7d
+
+  List executions in a time range
+    vercel schedules executions list daily-cleanup --since 2026-09-01T00:00:00Z --until 2026-09-02T00:00:00Z
+
+  Continue listing executions
+    vercel schedules executions list daily-cleanup --next <CURSOR>
+
+  List executions as JSON
+    vercel schedules executions list daily-cleanup --json
+"
+`;

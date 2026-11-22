@@ -7,8 +7,10 @@ export async function updateCurrentTeamAfterLogin(
   client: Client,
   ssoTeamId?: string
 ) {
+  // `updateConfig` also updates the saved team, so a login run by an agent
+  // still saves the new team for the human.
   if (ssoTeamId) {
-    client.config.currentTeam = ssoTeamId;
+    client.updateConfig({ currentTeam: ssoTeamId });
   } else {
     let user = null;
     try {
@@ -19,10 +21,11 @@ export async function updateCurrentTeamAfterLogin(
       return 1;
     }
 
-    if (user.version === 'northstar' && user.defaultTeamId) {
-      client.config.currentTeam = user.defaultTeamId;
-    } else {
-      delete client.config.currentTeam;
-    }
+    client.updateConfig({
+      currentTeam:
+        user.version === 'northstar' && user.defaultTeamId
+          ? user.defaultTeamId
+          : undefined,
+    });
   }
 }

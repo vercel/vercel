@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { join } from 'path';
 import { outputFile } from 'fs-extra';
 import domains from '../../../../src/commands/domains';
+import * as addDomainModule from '../../../../src/util/projects/add-domain-to-project';
 import { client } from '../../../mocks/client';
 import { useDomain } from '../../../mocks/domains';
 import { defaultProject, useProject } from '../../../mocks/project';
@@ -17,7 +18,7 @@ describe('domains add', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -222,6 +223,136 @@ describe('domains add', () => {
       });
 
       describe('--force', () => {
+        it.each([
+          { machine: false, phase: 'add' },
+          { machine: true, phase: 'add' },
+          { machine: false, phase: 'remove' },
+          { machine: true, phase: 'remove' },
+          { machine: false, phase: 'network' },
+          { machine: true, phase: 'network' },
+        ])('reports completed removal only when it happened ($phase failure, machine=$machine)', async ({
+          machine,
+          phase,
+        }) => {
+          useUser();
+          const domain = useDomain();
+          const { project } = useProject();
+          client.setArgv(
+            'domains',
+            'add',
+            domain.name,
+            String(project.name),
+            '--force'
+          );
+          client.nonInteractive = machine;
+          const exitSpy = machine
+            ? vi.spyOn(process, 'exit').mockImplementation((() => {
+                throw new Error('exit');
+              }) as () => never)
+            : undefined;
+          const originalAdd = addDomainModule.addDomainToProject;
+          let attempts = 0;
+          const addSpy = vi
+            .spyOn(addDomainModule, 'addDomainToProject')
+            .mockImplementation(async (...args) => {
+              attempts++;
+              if (attempts === 2 && phase === 'network')
+                throw new Error('Connection lost');
+              return originalAdd(...args);
+            });
+          let posts = 0;
+          client.scenario.post(
+            `/projects/${project.name}/alias`,
+            (_req, res) => {
+              posts++;
+              res.status(400).json({
+                error:
+                  posts === 1
+                    ? {
+                        code: 'ALIAS_DOMAIN_EXIST',
+                        message: 'Already assigned',
+                        project: { id: 'prj_previous', name: 'previous' },
+                      }
+                    : {
+                        code: 'invalid_request',
+                        message: 'Destination rejected',
+                      },
+              });
+            }
+          );
+          client.scenario.get(
+            `/v9/projects/${project.name}/domains/${domain.name}`,
+            (_req, res) => {
+              res
+                .status(404)
+                .json({ error: { code: 'not_found', message: 'Not found' } });
+            }
+          );
+          let removals = 0;
+          client.scenario.delete(
+            '/projects/prj_previous/alias',
+            (_req, res) => {
+              removals++;
+              if (phase === 'remove') {
+                res.status(403).json({
+                  error: { code: 'forbidden', message: 'Removal denied' },
+                });
+              } else {
+                res.json([]);
+              }
+            }
+          );
+          try {
+            if (machine) await expect(domains(client)).rejects.toThrow('exit');
+            else expect(await domains(client)).toEqual(1);
+            expect(removals).toEqual(1);
+            expect(attempts).toEqual(phase === 'remove' ? 1 : 2);
+            const text = machine
+              ? (JSON.parse(client.stdout.getFullOutput()).hint ?? '')
+              : client.stderr.getFullOutput();
+            if (phase === 'remove') {
+              expect(text).not.toContain(
+                'Removed the previous project assignment'
+              );
+            } else {
+              expect(text).toContain('Removed the previous project assignment');
+              expect(text).toContain(
+                'could not confirm the destination assignment'
+              );
+              expect(text).toContain(
+                'Inspect the current assignment before retrying'
+              );
+            }
+            if (machine) {
+              const payload = JSON.parse(client.stdout.getFullOutput());
+              expect(payload.status).toEqual('error');
+              expect(payload.reason).toEqual(
+                phase === 'remove'
+                  ? 'domain_remove_failed'
+                  : 'domain_add_failed'
+              );
+              expect(payload.message).toContain(
+                phase === 'network'
+                  ? 'Connection lost'
+                  : phase === 'remove'
+                    ? 'Removal denied'
+                    : 'Destination rejected'
+              );
+              if (phase !== 'remove') {
+                expect(payload.next).toHaveLength(1);
+                expect(payload.next[0].command).toContain(
+                  `domains inspect ${domain.name}`
+                );
+                expect(payload.next[0].command).not.toContain('domains add');
+              }
+            }
+          } finally {
+            client.nonInteractive = false;
+            exitSpy?.mockRestore();
+            addSpy.mockRestore();
+          }
+        });
+
         it('tracks telemetry data', async () => {
           useUser();
           const domain = useDomain();

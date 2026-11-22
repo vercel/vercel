@@ -24,7 +24,7 @@ export default async (client: Client): Promise<number> => {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const telemetry = new PromoteTelemetryClient({
@@ -37,8 +37,13 @@ export default async (client: Client): Promise<number> => {
 
   if (!parsedArgs.args[1] && needHelp) {
     telemetry.trackCliFlagHelp('promote');
-    output.print(help(promoteCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(promoteCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   const yes = parsedArgs.flags['--yes'] ?? false;
@@ -61,11 +66,12 @@ export default async (client: Client): Promise<number> => {
         telemetry.trackCliFlagHelp('promote', 'status');
         output.print(
           help(statusSubcommand, {
+            stream: client.stderr,
             columns: client.stderr.columns,
             parent: promoteCommand,
           })
         );
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandStatus();
       const project = await getProjectByCwdOrLink({
@@ -82,7 +88,7 @@ export default async (client: Client): Promise<number> => {
       });
     }
 
-    telemetry.trackCliArgumentUrlOrDeploymentId(actionOrDeployId);
+    telemetry.trackCliArgumentDeployment(actionOrDeployId);
     return await requestPromote({
       client,
       deployId: actionOrDeployId,

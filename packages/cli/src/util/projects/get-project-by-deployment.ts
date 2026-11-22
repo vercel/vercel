@@ -3,7 +3,7 @@ import type Client from '../client';
 import type { Deployment, Project, Team } from '@vercel-internals/types';
 import getDeployment from '../get-deployment';
 import getProjectByNameOrId from './get-project-by-id-or-name';
-import getScope from '../get-scope';
+import { getContextName } from '../get-scope';
 import getTeamByIdOrSlug from '../teams/get-team-by-id-or-slug';
 import { isValidName } from '../is-valid-name';
 import { ProjectNotFound } from '../errors-ts';
@@ -21,7 +21,7 @@ export default async function getProjectByDeployment({
   project: Project;
 }> {
   const { config } = client;
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   if (!isValidName(deployId)) {
     throw new Error(

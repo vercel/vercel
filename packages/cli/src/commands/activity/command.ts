@@ -3,8 +3,10 @@ import {
   formatOption,
   jsonOption,
   limitOption,
-  nextOption,
+  nextCursorOption,
   projectOption,
+  sinceOption,
+  untilOption,
 } from '../../util/arg-common';
 
 export const typesSubcommand = {
@@ -55,23 +57,8 @@ export const activityCommand = {
       description:
         'Filter by event type. Repeatable and comma-separated (e.g. --type deployment --type project-created or --type deployment,project-created).',
     },
-    {
-      name: 'since',
-      shorthand: null,
-      type: String,
-      argument: 'DATE',
-      deprecated: false,
-      description:
-        'Show events after this date (ISO 8601 or relative: 1d, 7d, 30d).',
-    },
-    {
-      name: 'until',
-      shorthand: null,
-      type: String,
-      argument: 'DATE',
-      deprecated: false,
-      description: 'Show events before this date (ISO 8601 or relative).',
-    },
+    sinceOption,
+    untilOption,
     {
       ...projectOption,
       shorthand: 'p',
@@ -86,7 +73,7 @@ export const activityCommand = {
       description: 'Show all team events (ignore linked project auto-scoping).',
     },
     limitOption,
-    nextOption,
+    nextCursorOption,
     formatOption,
     jsonOption,
   ],

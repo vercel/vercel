@@ -6,6 +6,8 @@ import output from '../../output-manager';
 import type Client from '../../util/client';
 import type { JSONObject } from '@vercel-internals/types';
 import { validateJsonOutput } from '../../util/output-format';
+import { applyDeprecatedGitBranchFlag } from '../../util/git-branch-option';
+import { reportRenamedOptionError } from '../../util/renamed-option';
 import { printError } from '../../util/error';
 import { getProjectLink } from '../../util/projects/link';
 import getProjectByNameOrId from '../../util/projects/get-project-by-id-or-name';
@@ -50,6 +52,7 @@ export async function create(
     '--trigger-event'?: string[];
     '--trigger-path'?: string;
     '--trigger-project'?: string;
+    '--git-branch'?: string;
     '--trigger-branch'?: string;
     '--trigger-environment'?: string;
     '--icon'?: string;
@@ -66,24 +69,33 @@ export async function create(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
   const service = args[0];
   if (!service) {
     output.error('Missing service. Usage: vercel connect create <service>');
-    return 1;
+    return 2;
+  }
+
+  const branchError = applyDeprecatedGitBranchFlag(
+    client,
+    flags,
+    '--trigger-branch'
+  );
+  if (branchError) {
+    return reportRenamedOptionError(client, branchError, { json: asJson });
   }
 
   if (flags['--trigger-event'] && !flags['--triggers']) {
-    output.error('The --trigger-event flag requires --triggers.');
-    return 1;
+    output.error('The --trigger-event option requires --triggers.');
+    return 2;
   }
 
   const triggerPath = flags['--trigger-path'];
   const triggerProject = flags['--trigger-project'];
-  const triggerBranch = flags['--trigger-branch'];
+  const triggerBranch = flags['--git-branch'];
   const triggerEnvironment = flags['--trigger-environment'];
   if (
     !flags['--triggers'] &&
@@ -93,15 +105,15 @@ export async function create(
       triggerEnvironment !== undefined)
   ) {
     output.error(
-      'The --trigger-project, --trigger-path, --trigger-branch, and --trigger-environment flags require --triggers.'
+      'The --trigger-project, --trigger-path, --git-branch, and --trigger-environment options require --triggers.'
     );
     return 1;
   }
   if (triggerBranch !== undefined && triggerEnvironment !== undefined) {
     output.error(
-      'The --trigger-branch and --trigger-environment flags are mutually exclusive.'
+      'The --git-branch and --trigger-environment options are mutually exclusive.'
     );
-    return 1;
+    return 2;
   }
   if (triggerProject !== undefined && triggerProject.trim() === '') {
     output.error('The --trigger-project value must not be empty.');
@@ -114,10 +126,10 @@ export async function create(
     output.error(
       'The --trigger-path value must be between 1 and 2048 characters.'
     );
-    return 1;
+    return 2;
   }
   if (triggerBranch !== undefined && triggerBranch.trim() === '') {
-    output.error('The --trigger-branch value must not be empty.');
+    output.error('The --git-branch value must not be empty.');
     return 1;
   }
   if (triggerEnvironment !== undefined && triggerEnvironment.trim() === '') {
@@ -131,12 +143,12 @@ export async function create(
   const targetFlag = flags['--target'];
 
   if (connectorType && dataFlag === undefined) {
-    output.error('The --connector-type flag requires --data.');
-    return 1;
+    output.error('The --connector-type option requires --data.');
+    return 2;
   }
   if (connectorType && connectionMethodFlag) {
     output.error(
-      'The --connector-type and --connection-method flags cannot be combined. The connection method decides the connector type.'
+      'The --connector-type and --connection-method options cannot be combined. The connection method decides the connector type.'
     );
     return 1;
   }
@@ -157,12 +169,12 @@ export async function create(
   }
 
   if (isDataOnlyCreate && Object.keys(suppliedParams).length > 0) {
-    output.error('The --param flag requires --connection-method.');
-    return 1;
+    output.error('The --param option requires --connection-method.');
+    return 2;
   }
   if (isDataOnlyCreate && targetFlag) {
-    output.error('The --target flag requires --connection-method.');
-    return 1;
+    output.error('The --target option requires --connection-method.');
+    return 2;
   }
 
   // Resolve the --data source up front (inline JSON, `@<path>` to read a
@@ -246,7 +258,7 @@ export async function create(
       triggerProjectId = resolvedProject.id;
     } catch (err: unknown) {
       output.stopSpinner();
-      printError(err);
+      printError(err, client);
       return 1;
     }
   }
@@ -259,7 +271,7 @@ export async function create(
     !destinationProjectId
   ) {
     output.error(
-      'Trigger destination flags require a linked project. Run `vercel link` first.'
+      'Trigger destination options require a linked project. Run `vercel link` first.'
     );
     return 1;
   }
@@ -283,7 +295,7 @@ export async function create(
       }
       customEnvironmentId = customEnvironment.id;
     } catch (err: unknown) {
-      printError(err);
+      printError(err, client);
       return 1;
     }
   }
@@ -299,9 +311,9 @@ export async function create(
   if (!name) {
     if (!interactive) {
       output.error(
-        'Missing required flag --name. In non-interactive mode, provide --name for the connector.'
+        'Missing required option --name. In non-interactive mode, provide --name for the connector.'
       );
-      return 1;
+      return 2;
     }
     name = await client.input.text({
       message: `What would you like to name your ${service} app?`,
@@ -322,7 +334,7 @@ export async function create(
     } catch (err) {
       if (connectionMethodFlag) {
         output.stopSpinner();
-        printError(err);
+        printError(err, client);
         return 1;
       }
       // Discovery is additive here: a service the registry doesn't describe
@@ -508,17 +520,24 @@ export async function create(
         );
         return 1;
       }
-      printError(err);
+      printError(err, client);
       return 1;
     }
   } else if (isDataOnlyCreate) {
     try {
+      // Only an OAuth create reads the discovery result.
+      const serviceInfo =
+        connectorType === undefined || connectorType === 'oauth'
+          ? await fetchConnexServiceInfo(client, service)
+          : undefined;
       const resolvedConnectorType =
-        connectorType ??
-        (await discoverConnectorType(client, service)) ??
-        'oauth';
+        connectorType ?? defaultConnectorType(serviceInfo) ?? 'oauth';
 
-      body.data = suppliedData;
+      body.data = withDiscoveredServerUrl(
+        suppliedData,
+        resolvedConnectorType,
+        serviceInfo
+      );
       body.type = resolvedConnectorType;
 
       createdClient = await client.fetch<ConnexClient>(
@@ -535,7 +554,7 @@ export async function create(
         return 1;
       }
       output.stopSpinner();
-      printError(err);
+      printError(err, client);
       return 1;
     }
   } else {
@@ -561,7 +580,7 @@ export async function create(
         return 1;
       } else {
         output.stopSpinner();
-        printError(err);
+        printError(err, client);
         return 1;
       }
     }
@@ -762,7 +781,7 @@ function warnInlineSecret(data: JSONObject): void {
   const secretKey = Object.keys(data).find(key => SECRET_KEY_PATTERN.test(key));
   if (secretKey) {
     output.warn(
-      `--data was passed inline and appears to contain a credential ("${secretKey}"). Inline flag values leak into shell history and process listings. Pass \`--data @<path>\` to read from a file or \`--data @-\` to read from stdin instead.`
+      `--data was passed inline and appears to contain a credential ("${secretKey}"). Inline option values leak into shell history and process listings. Pass \`--data @<path>\` to read from a file or \`--data @-\` to read from stdin instead.`
     );
   }
 }
@@ -782,12 +801,26 @@ function parseDataFlag(raw: string): JSONObject {
   return parsed as JSONObject;
 }
 
-async function discoverConnectorType(
-  client: Client,
-  service: string
-): Promise<string | undefined> {
-  const serviceInfo = await fetchConnexServiceInfo(client, service);
-  return defaultConnectorType(serviceInfo);
+/**
+ * Sends the discovered server URL with BYO credentials for an unlisted URL,
+ * so the API fills in the server config from discovery, as the dashboard's
+ * manual form does. A `serverUrl` in `--data` wins.
+ */
+function withDiscoveredServerUrl(
+  data: JSONObject | undefined,
+  connectorType: string,
+  serviceInfo: ConnexServiceInfo | undefined
+): JSONObject | undefined {
+  const serverUrl = serviceInfo?.discovery?.serverUrl;
+  if (
+    !data ||
+    connectorType !== 'oauth' ||
+    !serverUrl ||
+    data.serverUrl !== undefined
+  ) {
+    return data;
+  }
+  return { serverUrl, ...data };
 }
 
 async function outputMissingDataError(
@@ -839,7 +872,10 @@ async function resolveMissingDataSchemaInfo(
 function defaultConnectorType(
   serviceInfo: ConnexServiceInfo | undefined
 ): string | undefined {
-  const discoveredType = serviceInfo?.types?.[0]?.type;
+  // `types[]` covers APIs without `discovery` and the `oauth`/`api-key`
+  // template reads (CNX-498).
+  const discoveredType =
+    serviceInfo?.discovery?.type.type ?? serviceInfo?.types?.[0]?.type;
   if (typeof discoveredType === 'string' && discoveredType.length > 0) {
     return discoveredType;
   }
@@ -849,6 +885,10 @@ function createInputSchemaForType(
   serviceInfo: ConnexServiceInfo | undefined,
   connectorType: string
 ): Record<string, unknown> | undefined {
+  const discoveryType = serviceInfo?.discovery?.type;
+  if (discoveryType?.type === connectorType) {
+    return discoveryType.createInputSchema;
+  }
   return serviceInfo?.types?.find(typeInfo => typeInfo.type === connectorType)
     ?.createInputSchema;
 }

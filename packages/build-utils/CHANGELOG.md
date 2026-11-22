@@ -1,5 +1,244 @@
 # @vercel/build-utils
 
+## 15.1.0
+
+### Minor Changes
+
+- 5f55ccc: Add an experimental Buildah image store cache, enabled with `VERCEL_BUILDAH_STORE_CACHE=1`, so builds reuse images and layers from earlier deployments. Concurrent service builds share one `--source-date-epoch` per deployment so their layers stay reusable. `@vercel/build-utils` now exports `resolveBuildConcurrency()`.
+- d0629bd: Remove the deprecated array format for `schedules`. `schedules` in `vercel.json`, in Build Output `config.json`, and from `getDevManifest` must be an object keyed by schedule name. `@vercel/config` no longer exports `Schedule` (use `ScheduleDefinition`), and `@vercel/client` no longer exports `VercelConfigSchedule`.
+
+## 15.0.2
+
+### Patch Changes
+
+- 2f0edaf: Report the runtime preset for services without a framework.
+
+## 15.0.1
+
+### Patch Changes
+
+- 1a379a3: Support `livenessProbe` in `vercel.json#daemons`.
+
+## 15.0.0
+
+### Major Changes
+
+- fec2df1: Remove the legacy BYOC extension's build-output collection and deserialization utilities, Lambda finalization and size validation, and serverless environment/streaming helpers. BYOC function preparation now uses `vercel deploy describe`.
+
+  The removed exports include `deserializeBuildOutput`, `deserializeLambda`, `deserializeEdgeFunction`, `finalizeLambda`, `collectUncompressedSize`, the `validateBuildResult` and `validateLambdaSize` families, `getEncryptedEnv`, `getLambdaEnvironment`, `getLambdaPreloadScripts`, `getLambdaSupportsStreaming`, and the associated collection/deserialization and serverless types. Also remove the unused standalone `md5` helper. Preserve `streamToDigestAsync`, `sha256`, `FileDigest`, and `ExtendedBodyData`, which still have build-container consumers.
+
+  Remove the Node builder's outdated reference to the shared streaming helper; its AWS custom-handler streaming behavior is unchanged.
+
+### Minor Changes
+
+- 9b1b587: Allow explicitly selecting Node.js 26 for local builds without an environment variable.
+
+### Patch Changes
+
+- d123652: Accept a command argument array and `root` with Dockerfile and Containerfile schedule entrypoints. This adds configuration support; building and executing these schedules will follow separately.
+
+## 14.23.0
+
+### Minor Changes
+
+- d39dd61: Require `name` for `schedules` entries in `vercel.json` and Build Output `config.json`. Schedules without a `name` no longer get a derived default name, and `getScheduleName` and `defaultScheduleName` are removed from `@vercel/build-utils`.
+- 5aa1b58: `schedules` in `vercel.json` can now be an object keyed by schedule name, like `"schedules": { "nightly": { "schedule": "0 0 * * *", "path": "/api/cron" } }`. `vercel build` writes `schedules` to Build Output `config.json` in the format it was given, and builders can return it from `getDevManifest`. The array of named schedules still works but is deprecated, and `vercel build` and `vercel dev` warn when it's used.
+
+### Patch Changes
+
+- 9abaa6d: Accept service bindings on daemons in `vercel.json`.
+- 179d4ab: Fix `ENOENT` build failures when daemons are deployed alongside a zero-config server app that has no `public/` directory.
+
+## 14.22.0
+
+### Minor Changes
+
+- a2e9f5d: Add `functions[glob].installCommand`. For matching `@vercel/node` functions, an empty string skips the dependency install and a non-empty value runs instead of the default install. Builds warn when the property matches functions of other runtimes, which ignore it.
+
+### Patch Changes
+
+- a19979c: Use Vercel Flags project activation metadata to detect when to embed flag definitions, including builds without installed SDK packages. Preserve explicit embedding overrides and existing SDK detection for projects without activation metadata.
+
+## 14.21.3
+
+### Patch Changes
+
+- bb42e81: Display the edge middleware deprecation warning in yellow with a bold WARNING! prefix during builds and at `vercel dev` startup. Add an optional builder hook for detecting startup warnings without starting a development server.
+
+## 14.21.2
+
+### Patch Changes
+
+- cd68435: Add opt-in support for Node.js 26.
+
+## 14.21.1
+
+### Patch Changes
+
+- 1336097: Detect Yarn 4 from lockfile versions 9 and 10 (written by Yarn 4.14+), so workspace-scoped installs and the Yarn 3/4 `enableGlobalCache` setup apply to newer Yarn 4 projects.
+
+## 14.21.0
+
+### Minor Changes
+
+- 24a7e04: Accept `instances` for daemons in `vercel.json`. `replicas` is deprecated and ignored when `instances` is set. Daemon build output now writes `instances`.
+
+### Patch Changes
+
+- 7e396f7: Support `terminationGracePeriodSeconds` in `vercel.json#daemons`.
+
+## 14.20.1
+
+### Patch Changes
+
+- 42cc083: Parse `yarn.lock` with js-yaml `safeLoad` so custom JS tags like `!!js/function` are rejected
+
+## 14.20.0
+
+### Minor Changes
+
+- e041037: Add an optional `service` to function-target `schedules`, naming the service that owns `function`. `function` is then the path within that service. `vercel dev` does not run service-hosted schedule targets yet.
+
+## 14.19.0
+
+### Minor Changes
+
+- e58b37a: Breaking (beta): the nested `expression`/`target` `schedules` format is no longer supported in `vercel.json` or Build Output. `schedules` entries use `schedule` plus exactly one of `path`, `function`, `topic`, or `entrypoint`, with optional `name`, `timezone`, and `jitter`. When `name` is omitted, it defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+
+  `Schedule` now has the flat shape. Removed exports: `parseScheduleDefinition`, `formatBuildOutputSchedule`, `FlatBuildOutputSchedule`, `ScheduleExpression`, and `ScheduleTarget` from `@vercel/build-utils`; `FlatScheduleDefinition`, `LegacyScheduleDefinition`, and `ScheduleDefinition` from `@vercel/config`; and `VercelConfigFlatSchedule` from `@vercel/client`.
+
+## 14.18.0
+
+### Minor Changes
+
+- 94f6cea: Flat path `schedules` accept an optional `requestMethod` of `GET` or `POST`, defaulting to `POST`. `vercel build` writes it to Build Output, and `vercel dev` invokes path schedules with it.
+- 3eeaad5: Move static file copying to build utils.
+
+### Patch Changes
+
+- 8ac5320: Add an experimental workspace-scoped install path for Node builds to avoid installing unrelated monorepo workspaces.
+
+## 14.17.0
+
+### Minor Changes
+
+- 28a7ab7: Build top-level `daemons` when `VERCEL_ENABLE_DAEMONS_BOA=1`: `vercel build` builds the project as usual, pushes each daemon's Dockerfile image, and writes a Build Output API descriptor to `daemons/<name>/.vc-config.json`.
+
+### Patch Changes
+
+- 28a7ab7: Prevent static deployments from accidentally publishing daemon source files. Both static builders skip nested daemon roots with a warning and reject publishing a directory that is itself a daemon root. Build scripts can still deliberately publish files through a separate output directory.
+
+## 14.16.0
+
+### Minor Changes
+
+- 20c5940: Make `name` optional for flat `schedules` entries. When omitted, the name defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+
+## 14.15.0
+
+### Minor Changes
+
+- a7ef28c: Accept a top-level `daemons` field in `vercel.json`. `vercel dev` warns that it doesn't run daemons, and `vercel build` doesn't build them yet.
+
+## 14.14.0
+
+### Minor Changes
+
+- deb48cd: Accept a flat `schedules` format in `vercel.json` that is aligned with `crons` (`schedule` plus one of `path`, `function`, `topic`, or `entrypoint`), and emit schedules in the flat format in Build Output API `config.json`. The nested `expression`/`target` format is still accepted.
+
+## 14.13.2
+
+### Patch Changes
+
+- ff3d2f7: Allow projects to temporarily extend Node.js 20 support through November 1, 2026.
+
+## 14.13.1
+
+### Patch Changes
+
+- 5082546: Build Python schedule entrypoints. A `.py` entrypoint such as `jobs/nightly.py` runs as a script once per firing in a private function under `_vercel/schedules/`. Entrypoints with the same `functions` config share one function, which runs the script for the dispatched schedule name, so the project's dependencies are bundled once per distinct config instead of once per script. Entrypoints without `functions` config share `_vercel/schedules/default`; the others' function is named after the `functions` patterns their config came from, such as `_vercel/schedules/jobs/report`. Schedule names must be unique within a shared function.
+
+  Declared schedule entrypoints are not served as static files, but other files follow the normal static rules. When a project with Python schedule entrypoints publishes other `.py` files from its root, through the zero-config static fallback or `outputDirectory: "."`, `vercel build` now warns and lists them.
+
+  Add `findMatchingFunction` to `@vercel/build-utils`, which returns the `functions` entry that applies to a function.
+
+## 14.13.0
+
+### Minor Changes
+
+- 34b2c8e: Support `afterCacheBypass` rules in Build Output API `config.json`, preserving request and cached response header conditions through builds and deserialization.
+
+## 14.12.0
+
+### Minor Changes
+
+- 6e68e60: Add `onMiss` to `Prerender`.
+
+  ```ts
+  onMiss?: 'sync' | 'dynamic';
+  ```
+
+  Declares how a request is served when no prerendered output is available for
+  it yet. Absent means `sync`: block the response on rendering it. `dynamic`
+  serves the request dynamically while the static shell is regenerated in the
+  background. The value is carried unvalidated so an unknown mode cannot fail
+  a deploy.
+
+## 14.11.0
+
+### Minor Changes
+
+- 888f59e: Define an optional builder-owned development manifest for function identities, local invocation targets, trigger metadata, and native schedule definitions. Conventional functions can use host-owned per-entrypoint discovery; frameworks can override it. The host retains ownership of processes, readiness, and registration reconciliation.
+
+### Patch Changes
+
+- 7eb63c0: Accept runtime-specific schedule entrypoints and provide build plumbing for lowering dedicated entrypoints to function targets. All schedule entrypoints must use one runtime, including for static frameworks and `framework: null`. Entrypoints must also match the runtime of frameworks that own one (Next.js, FastAPI, Express). The builder contract still supports multiple entrypoints per function for future runtimes.
+
+## 14.10.2
+
+### Patch Changes
+
+- 53a6086: Remove `payload` from static schedule configuration in `vercel.json`. Static schedules no longer accept or expose a payload field; use dynamic schedules for payload support.
+
+## 14.10.1
+
+### Patch Changes
+
+- f9d0e90: Add experimental Cloud Native Buildpacks lifecycle support with isolated source
+  staging, pinned lifecycle and buildpack archives, and runtime-owned image
+  resolution. Ruby images are selected from `.ruby-version`, `.tool-versions`, or
+  the `tools.ruby` entry in `mise.toml`, then an exact Gemfile declaration,
+  defaulting to Ruby 3.4. Unsupported version declarations fail with configuration
+  guidance. Nothing selects a buildpack yet.
+- 8a277e4: Fix `bun install` silently discarding `bun.lock` files with `lockfileVersion: 2` (written by Bun >= 1.4). The install step now selects the Bun 1.4 binary whenever the lockfile requires it, mirroring how the pnpm version is already inferred from its lockfile version, instead of always running the container's default Bun 1.3.x install.
+- 66e443e: Fix native CLI build/dev worker dispatch, preserve the system Node executable for shell commands, resolve project analytics versions outside the binary snapshot, pair dynamically installed builders with compatible build-utils versions, and lazily materialize the packaged esbuild executable for JavaScript and TypeScript configuration files.
+- 08b0be2: Require maxConcurrency to be an integer from 1 to 8192.
+
+## 14.10.0
+
+### Minor Changes
+
+- 54a6d73: Require schedule jitter to be an integer from 1 to 15 minutes in vercel.json and Build Output API config, matching the maximum SQS message delay. Duration strings are no longer accepted.
+- 3d16792: Add an optional IANA `timezone` to schedules in `vercel.json` and Build Output API config. Omitted timezones use UTC. Validate configured timezones before building.
+
+### Patch Changes
+
+- 2a57243: More robust Next.js framework version detection
+
+## 14.9.3
+
+### Patch Changes
+
+- 55e8d1e: Reduce CLI startup and deployment preparation time through lazy shared dependencies, smaller bundles, parallel Git metadata and file collection, and native executable startup caching. Allow deployment options to resolve asynchronously while the client collects local files.
+
+  Keep startup regression tests compatible with asynchronous prompts and Windows Git paths, and allow the NestJS build fixture sufficient time for cold dependency installation.
+
+## 14.9.2
+
+### Patch Changes
+
+- b174f14: Raise the client-side `maxDuration` validation limit to 3600 seconds.
+
 ## 14.9.1
 
 ### Patch Changes

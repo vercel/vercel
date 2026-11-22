@@ -1,0 +1,30 @@
+{
+  "name": "@vercel-internals/local-schedules",
+  "private": true,
+  "version": "0.0.4",
+  "description": "Project-scoped in-memory Schedules engine for local development",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "node ../../utils/build.mjs",
+    "test": "vitest run --config ../../vitest.config.mts",
+    "test-unit": "vitest run --config ../../vitest.config.mts test",
+    "type-check": "tsc --noEmit -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "cron-parser": "5.4.0",
+    "luxon": "^3.4.0",
+    "ulid": "3.0.1"
+  },
+  "devDependencies": {
+    "@types/luxon": "3.6.2",
+    "@types/node": "20.11.0",
+    "typescript": "5.9.3",
+    "vite": "6.4.3",
+    "vitest": "4.1.10"
+  }
+}

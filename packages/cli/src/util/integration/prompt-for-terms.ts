@@ -89,6 +89,13 @@ export async function promptForTermAcceptance(
     return null;
   }
 
+  return buildAcceptedPolicies(integration);
+}
+
+/** Records acceptance (as of now) of every policy the integration requires. */
+export function buildAcceptedPolicies(
+  integration: Pick<Integration, 'privacyDocUri' | 'eulaDocUri'>
+): AcceptedPolicies {
   const acceptedAt = new Date().toISOString();
   const acceptedPolicies: AcceptedPolicies = {
     toc: acceptedAt,
@@ -99,6 +106,5 @@ export async function promptForTermAcceptance(
   if (integration.eulaDocUri) {
     acceptedPolicies.eula = acceptedAt;
   }
-
   return acceptedPolicies;
 }

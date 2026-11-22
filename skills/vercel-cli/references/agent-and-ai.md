@@ -1,52 +1,9 @@
-# Agent, MCP, Skills, and AI Gateway
+# Agent, MCP, and AI Gateway Setup
 
-Use these commands for AI-agent setup and AI Gateway key management. Confirm flags with `vercel <command> --help` before scripting client-specific setup.
+Machine setup can install or enable plugins, write configuration under the user's home directory, and create an AI Gateway key for the selected team. Limit setup to the requested agent and capability; inspect its dry-run result before changing an existing configuration. Existing configuration backups use `.bak`.
 
-## Agent Instructions
+Plugin installation and Gateway setup are separate steps. A successful plugin install does not establish that Gateway configuration completed; canceled setup or an unapplied generated prompt leaves work outstanding.
 
-`vercel agent` generates an `AGENTS.md` file with Vercel deployment best practices.
+Use the supported installer for the selected client. An installed plugin may still need a new session or account connection. Verify installed/enabled and connected state rather than repeatedly reinstalling.
 
-```bash
-vercel agent init
-vercel agent init --yes
-```
-
-## MCP Setup
-
-`vercel mcp` sets up MCP agents and configuration for Vercel integration.
-
-```bash
-vercel mcp                                      # interactive setup
-vercel mcp --project                            # project-specific access
-vercel mcp --clients "Cursor,VS Code with Copilot"
-```
-
-In non-interactive mode, pass `--clients`. Supported client labels are listed in `vercel mcp --help`.
-
-## Skill Discovery
-
-`vercel skills` discovers agent skills relevant to a project.
-
-```bash
-vercel skills
-vercel skills nextjs --format json
-vercel skills --json
-```
-
-## AI Gateway
-
-`vercel ai-gateway` manages AI Gateway API keys, routing rules, and models.
-
-```bash
-vercel ai-gateway api-keys create
-vercel ai-gateway api-keys create --name my-key --budget 500 --refresh-period monthly
-vercel ai-gateway api-keys create --include-byok
-
-vercel ai-gateway rules ls
-vercel ai-gateway rules add --type rewrite --source anthropic/claude-fable-5 --destination anthropic/claude-opus-4.8
-
-vercel ai-gateway models ls
-vercel ai-gateway models endpoints anthropic/claude-opus-4.8
-```
-
-Use the dashboard or `vercel api` only when first-class CLI commands do not expose the needed operation.
+Gateway keys are credentials with billing scope. Reuse an appropriate existing key when supplied, preserve the requested team and budget, and avoid exposing the key in output. MCP setup can require client selection and a user-controlled authentication flow; do not treat generating local configuration as completed authentication.

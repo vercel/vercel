@@ -109,7 +109,7 @@ export default async function exportRoutes(client: Client, argv: string[]) {
       process.exit(1);
     }
     output.error(msg);
-    return 1;
+    return 2;
   }
 
   // Fetch routes

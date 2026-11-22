@@ -1512,6 +1512,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]
@@ -1626,7 +1627,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "vercel_runtime"
-version = "2.4.0"
+version = "2.4.1"
 dependencies = [
  "actix-http",
  "actix-rt",
@@ -1644,6 +1645,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tokio-stream",
+ "tokio-util",
  "tower",
 ]
 

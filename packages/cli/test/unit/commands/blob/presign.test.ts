@@ -406,14 +406,14 @@ describe('blob presign', () => {
     expect(exitCode).toBe(1);
     expect(mockedBlob.issueSignedToken).not.toHaveBeenCalled();
     expect(mockedOutput.error).toHaveBeenCalledWith(
-      'The --if-match flag can only be used with --operation put or --operation delete.'
+      'The --if-match option can only be used with --operation put or --operation delete.'
     );
   });
 
   it('should require pathname argument', async () => {
     const exitCode = await presign(client, ['--access', 'public'], testAuth);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(mockedOutput.error).toHaveBeenCalledWith(
       'Missing required argument: pathname'
     );
@@ -438,7 +438,7 @@ describe('blob presign', () => {
     expect(mockedBlob.issueSignedToken).not.toHaveBeenCalled();
     expect(mockedBlob.presignUrl).not.toHaveBeenCalled();
     expect(mockedOutput.error).toHaveBeenCalledWith(
-      'The --valid-until and --valid-for flags are mutually exclusive. Pass only one.'
+      'The --valid-until and --valid-for options are mutually exclusive. Pass only one.'
     );
   });
 
@@ -459,7 +459,7 @@ describe('blob presign', () => {
     expect(mockedBlob.issueSignedToken).not.toHaveBeenCalled();
     expect(mockedBlob.presignUrl).not.toHaveBeenCalled();
     expect(mockedOutput.error).toHaveBeenCalledWith(
-      'The --delegation-token and --client-signing-token flags must be passed together. Pass both, or pass neither to issue a token automatically.'
+      'The --delegation-token and --client-signing-token options must be passed together. Pass both, or pass neither to issue a token automatically.'
     );
   });
 

@@ -1,3 +1,6 @@
 [toolchain]
-channel = "stable"
+# Pinned to an exact version (matching CI) so the rustc version is part of the
+# Turbo cache key for `build:wasm`. A floating channel like "stable" would let
+# rustc change without invalidating cached wasm output.
+channel = "1.96.1"
 targets = ["wasm32-wasip2"]

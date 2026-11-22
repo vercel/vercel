@@ -18,19 +18,16 @@ const { readdir, readFile, unlink } = promises;
 
 export const frameworks = [
   {
-    // A `Dockerfile.vercel` / `Containerfile.vercel` is an explicit opt-in to
-    // deploy a project as a container, regardless of any other framework that
-    // may also be detected. It is listed first so that framework detection
-    // (which returns the first match in list order) selects it over everything
-    // else — e.g. a Next.js app shipping a `Dockerfile.vercel` deploys as a
-    // container, not via `@vercel/next`.
+    // Versioned container files are an explicit opt-in and remain eager. Plain
+    // Dockerfile and Containerfile matches are fallback-only so they do not
+    // override a project's actual framework preset.
     name: 'Container',
     slug: 'container',
     runtimeFramework: true,
     logo: 'https://api-frameworks.vercel.sh/framework-logos/container.svg',
     tagline: 'Deploy any project as a container image built from a Dockerfile.',
     description:
-      'A project deployed as a container image, built from a Dockerfile.vercel or Containerfile.vercel.',
+      'A project deployed as a container image, built from a Dockerfile or Containerfile.',
     website: 'https://docs.docker.com/reference/dockerfile/',
     useRuntime: { src: '<detect>', use: '@vercel/container' },
     detectors: {
@@ -40,6 +37,14 @@ export const frameworks = [
         },
         {
           path: 'Containerfile.vercel',
+        },
+        {
+          path: 'Dockerfile',
+          fallback: true,
+        },
+        {
+          path: 'Containerfile',
+          fallback: true,
         },
       ],
     },

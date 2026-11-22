@@ -1,0 +1,492 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/\",\"query\":\"\",\"headers\":{\"x-test-client\":\"1\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "continue",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/cookies",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/cookies\",\"query\":\"\",\"headers\":{\"x-test-client\":\"1\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "cookies",
+        "content-type": "application/json",
+        "set-cookie": [
+          "a=1; Path=/; SameSite=lax",
+          "b=2; Path=/; SameSite=lax"
+        ],
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/headers",
+      "headers": {
+        "x-test-client": "1",
+        "x-test-removed": "present"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/headers\",\"query\":\"\",\"headers\":{\"x-test-added\":\"yes\",\"x-test-client\":\"1\",\"x-test-dup\":\"b\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "headers",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/headers",
+      "method": "POST",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "body": {
+        "hello": "world"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"POST\",\"path\":\"/headers\",\"query\":\"\",\"headers\":{\"x-test-added\":\"yes\",\"x-test-client\":\"1\",\"x-test-dup\":\"b\"},\"body\":\"{\\\"hello\\\":\\\"world\\\"}\"}",
+      "responseHeaders": {
+        "x-proxy": "headers",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/rewrite",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/rewritten\",\"query\":\"\",\"headers\":{\"x-test-added\":\"rewrite\",\"x-test-client\":\"1\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "rewrite",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/rewrite/",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/rewritten\",\"query\":\"\",\"headers\":{\"x-test-added\":\"rewrite\",\"x-test-client\":\"1\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "rewrite",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/search?q=1",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/results\",\"query\":\"q=1\",\"headers\":{\"x-test-client\":\"1\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "search",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/block",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 403,
+      "bodyMustBe": "blocked",
+      "responseHeaders": {
+        "x-proxy": "block",
+        "content-type": "text/plain; charset=utf-8",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/json",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"ok\":true}",
+      "responseHeaders": {
+        "x-proxy": "json",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/created",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 201,
+      "bodyMustBe": "{\"id\":1}",
+      "responseHeaders": {
+        "x-proxy": "created",
+        "content-type": "application/json",
+        "location": "/items/1",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/redirect",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 307,
+      "responseHeaders": {
+        "x-proxy": "redirect",
+        "location": "/^https:\\/\\/61-asgi-proxy-static-[a-z0-9-]+\\.vercel\\.app\\/$/",
+        "content-type": "text/plain",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/redirect-encoded",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 308,
+      "responseHeaders": {
+        "x-proxy": "encoded",
+        "location": "/^https:\\/\\/61-asgi-proxy-static-[a-z0-9-]+\\.vercel\\.app\\/caf%C3%A9%20menu$/",
+        "content-type": "text/plain",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/redirect-raw",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 302,
+      "responseHeaders": {
+        "x-proxy": "raw",
+        "location": "/^https:\\/\\/61-asgi-proxy-static-[a-z0-9-]+\\.vercel\\.app\\/$/",
+        "content-type": null,
+        "content-length": "0",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      },
+      "fetchOptions": {
+        "redirect": "manual"
+      }
+    },
+    {
+      "path": "/users/42",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"user_id\":42}",
+      "responseHeaders": {
+        "x-proxy": "user",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/users/42/",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"user_id\":42}",
+      "responseHeaders": {
+        "x-proxy": "user",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/users/abc",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/users/abc\",\"query\":\"\",\"headers\":{\"x-test-client\":\"1\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "fallback",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/about",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/about\",\"query\":\"\",\"headers\":{\"x-test-client\":\"1\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "about",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/about/",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/about/\",\"query\":\"\",\"headers\":{\"x-test-client\":\"1\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "about-slash",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/host",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "host",
+      "responseHeaders": {
+        "x-proxy": "host",
+        "x-test-host-name": "/^61-asgi-proxy-static-[a-z0-9-]+$/",
+        "content-type": "text/plain; charset=utf-8",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/method",
+      "method": "POST",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "posted",
+      "responseHeaders": {
+        "x-proxy": "method",
+        "content-type": "text/plain; charset=utf-8",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/method",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 200,
+      "bodyMustBe": "{\"method\":\"GET\",\"path\":\"/method\",\"query\":\"\",\"headers\":{\"x-test-client\":\"1\"},\"body\":\"\"}",
+      "responseHeaders": {
+        "x-proxy": "fallback",
+        "content-type": "application/json",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/body",
+      "method": "POST",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "body": {
+        "hello": "world"
+      },
+      "status": 200,
+      "bodyMustBe": "[{\"hello\":\"world\"}]",
+      "responseHeaders": {
+        "x-proxy": "body",
+        "content-type": "text/plain; charset=utf-8",
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    },
+    {
+      "path": "/error",
+      "headers": {
+        "x-test-client": "1"
+      },
+      "status": 500,
+      "mustNotContain": "proxy-error-detail",
+      "responseHeaders": {
+        "x-proxy": null,
+        "x-middleware-next": null,
+        "x-middleware-rewrite": null,
+        "x-middleware-redirect": null,
+        "x-middleware-refresh": null,
+        "x-middleware-set-cookie": null,
+        "x-middleware-override-headers-diff": null,
+        "x-middleware-request-x-test-added": null,
+        "x-middleware-request-x-test-dup": null
+      }
+    }
+  ]
+}

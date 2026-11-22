@@ -144,18 +144,27 @@ describe('Lambda', () => {
   describe('maxConcurrency', () => {
     const files: Files = {};
 
-    it('accepts a positive integer', () => {
+    it.each([1, 8, 8192])('accepts supported integer %s', maxConcurrency => {
       const lambda = new Lambda({
         files,
         handler: 'index.handler',
         runtime: 'nodejs22.x',
-        maxConcurrency: 8,
+        maxConcurrency,
       });
 
-      expect(lambda.maxConcurrency).toBe(8);
+      expect(lambda.maxConcurrency).toBe(maxConcurrency);
     });
 
-    it.each([0, -1, 1.5])('rejects %s', maxConcurrency => {
+    it.each([
+      0,
+      -1,
+      1.5,
+      8193,
+      1e20,
+      1e30,
+      NaN,
+      Infinity,
+    ])('rejects %s', maxConcurrency => {
       expect(
         () =>
           new Lambda({
@@ -164,9 +173,7 @@ describe('Lambda', () => {
             runtime: 'nodejs22.x',
             maxConcurrency,
           })
-      ).toThrow(
-        '"maxConcurrency" must be an integer greater than or equal to 1'
-      );
+      ).toThrow('"maxConcurrency" must be an integer from 1 to 8192');
     });
   });
 

@@ -8,7 +8,7 @@ vi.mock('open', () => ({
   default: vi.fn().mockResolvedValue({ on: vi.fn() }),
 }));
 
-describe('tokens add', () => {
+describe('tokens create', () => {
   it('creates a token', async () => {
     useUser();
     client.scenario.post('/v3/user/tokens', (req, res) => {
@@ -24,7 +24,7 @@ describe('tokens add', () => {
     expect(exitCode).toBe(0);
     await expect(client.stderr).toOutput('secret_value_once');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
-      { key: 'subcommand:add', value: 'add' },
+      { key: 'subcommand:create', value: 'add' },
     ]);
   });
 
@@ -33,7 +33,7 @@ describe('tokens add', () => {
     client.setArgv('tokens', 'add');
 
     const exitCode = await tokens(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     await expect(client.stderr).toOutput('Token name is required');
   });
 
@@ -42,7 +42,7 @@ describe('tokens add', () => {
     client.setArgv('tokens', 'add', 'one', 'two');
 
     const exitCode = await tokens(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     await expect(client.stderr).toOutput('Too many arguments');
   });
 
@@ -98,7 +98,7 @@ describe('tokens add', () => {
       client.nonInteractive = true;
       client.setArgv(
         'tokens',
-        'add',
+        'create',
         'my-token',
         '--token=-secret-token',
         '--non-interactive'
@@ -128,7 +128,7 @@ describe('tokens add', () => {
       ).toBe(true);
       expect(
         payload.next.some((n: { command?: string }) =>
-          String(n.command).includes('tokens add my-token')
+          String(n.command).includes('tokens create my-token')
         )
       ).toBe(true);
       expect(
@@ -181,6 +181,36 @@ describe('tokens add', () => {
             !String(n.command).includes('-secret-token')
         )
       ).toBe(true);
+    });
+  });
+
+  describe('subcommand name', () => {
+    function useCreation() {
+      useUser();
+      client.scenario.post('/v3/user/tokens', (_req, res) => {
+        res.json({
+          token: { id: 'tok_new', name: 'My CI' },
+          bearerToken: 'secret_value_once',
+        });
+      });
+    }
+
+    it('warns when invoked as the deprecated add name', async () => {
+      useCreation();
+      client.setArgv('tokens', 'add', 'My CI');
+
+      expect(await tokens(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel tokens add` is deprecated. Use `vercel tokens create`.'
+      );
+    });
+
+    it('does not warn when invoked as create', async () => {
+      useCreation();
+      client.setArgv('tokens', 'create', 'My CI');
+
+      expect(await tokens(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     });
   });
 });

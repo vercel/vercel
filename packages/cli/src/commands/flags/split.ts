@@ -1,3 +1,4 @@
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import chalk from 'chalk';
 import deepEqual from 'fast-deep-equal';
 import type Client from '../../util/client';
@@ -47,7 +48,7 @@ export default async function split(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -70,7 +71,7 @@ export default async function split(
     output.log(
       `Example: ${getCommandName('flags split my-feature --environment production --by user.userId --weight false=95 --weight true=5')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -106,12 +107,7 @@ export default async function split(
     ]);
     output.stopSpinner();
 
-    if (flag.state === 'archived') {
-      output.error(
-        `Flag ${chalk.bold(flag.slug)} is archived and cannot be split`
-      );
-      return 1;
-    }
+    logArchivedFlagNotice(flag);
 
     const selectedEnvironment = await resolveFlagEnvironment(
       client,
@@ -162,7 +158,10 @@ export default async function split(
       baseSelector: resolvedBaseSelector,
       weightInputs: resolvedWeightInputs,
       defaultVariantSelector: resolvedDefaultVariantSelector,
-      currentOutcome: envConfig.fallthrough,
+      currentOutcome:
+        envConfig.fallthrough.type === 'experiment'
+          ? undefined
+          : envConfig.fallthrough,
     });
     const nextEnvironmentConfig = buildOutcomeEnvConfig(envConfig, {
       outcome: splitConfig.outcome,

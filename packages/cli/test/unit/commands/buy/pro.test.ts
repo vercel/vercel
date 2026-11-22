@@ -288,7 +288,7 @@ describe('buy pro', () => {
     it('shows help and returns 2', async () => {
       client.setArgv('buy', 'pro', '--help');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
     });
 
     it('tracks telemetry', async () => {

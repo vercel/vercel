@@ -93,11 +93,11 @@ export default async function speedInsights(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const firstArg = parsedArgs.args[0];
@@ -120,7 +120,7 @@ export default async function speedInsights(
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 

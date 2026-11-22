@@ -4,7 +4,9 @@ import {
   mkdir,
   copyFile,
   access,
+  chmod,
   lstat,
+  stat,
   link,
   unlink,
 } from 'node:fs/promises';
@@ -14,13 +16,25 @@ import { parse as tomlParse, stringify as tomlStringify } from 'smol-toml';
 import {
   applyEdits,
   modify,
+  parse as jsoncParse,
+  printParseErrorCode,
   type FormattingOptions as JsonFormattingOptions,
+  type ParseError,
 } from 'jsonc-parser';
 
 export async function pathExists(path: string): Promise<boolean> {
   try {
     await access(path);
     return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Follows symlinks: a directory (some agents' configPath) is not readable as a file. */
+export async function isFile(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isFile();
   } catch {
     return false;
   }
@@ -46,7 +60,7 @@ export async function readFileOrNull(path: string): Promise<string | null> {
   }
 }
 
-type JsonObject = Record<string, unknown>;
+export type JsonObject = Record<string, unknown>;
 
 function isPlainObject(value: unknown): value is JsonObject {
   return (
@@ -80,6 +94,27 @@ function detectJsonFormatting(text: string): JsonFormattingOptions {
   return { eol, insertSpaces: true, tabSize: indent?.length || 2 };
 }
 
+export function parseJsonObjectOrNull(
+  current: string | null,
+  parse: (text: string) => unknown = JSON.parse
+): JsonObject | null {
+  if (!current || !current.trim()) {
+    return null;
+  }
+  let raw: unknown;
+  try {
+    raw = parse(current);
+  } catch (err) {
+    throw new Error(
+      `existing file is not valid JSON (${(err as Error).message})`
+    );
+  }
+  if (!isPlainObject(raw)) {
+    throw new Error('existing file is not a JSON object');
+  }
+  return raw;
+}
+
 /**
  * The user's file is edited in place, never re-serialized: only the keys the
  * patch sets are spliced in (deep-merge semantics), so untouched content keeps
@@ -89,20 +124,14 @@ function detectJsonFormatting(text: string): JsonFormattingOptions {
  * and JSON.parse disagree about which occurrence wins) falls back to the
  * plain merge-and-rewrite.
  */
-export function mergeJson(current: string | null, patch: JsonObject): string {
-  if (!current || !current.trim()) {
+export function mergeJson(
+  current: string | null,
+  patch: JsonObject,
+  parse: (text: string) => unknown = JSON.parse
+): string {
+  const raw = parseJsonObjectOrNull(current, parse);
+  if (!current || raw === null) {
     return `${JSON.stringify(deepMerge({}, patch), null, 2)}\n`;
-  }
-  let raw: unknown;
-  try {
-    raw = JSON.parse(current);
-  } catch (err) {
-    throw new Error(
-      `existing file is not valid JSON (${(err as Error).message})`
-    );
-  }
-  if (!isPlainObject(raw)) {
-    throw new Error('existing file is not a JSON object');
   }
   const merged = deepMerge(raw, patch);
   // Single-line (minified) files take the raw un-formatted edit so they stay
@@ -131,13 +160,28 @@ export function mergeJson(current: string | null, patch: JsonObject): string {
       }
     };
     splice(raw, patch, []);
-    if (isDeepStrictEqual(JSON.parse(text), merged)) {
+    if (isDeepStrictEqual(parse(text), merged)) {
       return text;
     }
   } catch {
     // fall through to the legacy rewrite
   }
   return `${JSON.stringify(merged, null, 2)}\n`;
+}
+
+/** JSONC-aware mergeJson: in-place edits keep comments; the rare fallback rewrite drops them. */
+export function mergeJsonc(current: string | null, patch: JsonObject): string {
+  return mergeJson(current, patch, text => {
+    const errors: ParseError[] = [];
+    const value = jsoncParse(text, errors, { allowTrailingComma: true });
+    const first = errors[0];
+    if (first) {
+      throw new Error(
+        `${printParseErrorCode(first.error)} at offset ${first.offset}`
+      );
+    }
+    return value;
+  });
 }
 
 /** True when every value the patch would set already holds (deep-merge view). */
@@ -398,9 +442,20 @@ export async function publishNoClobber(
   }
 }
 
-export async function backupFile(path: string): Promise<string> {
+export async function ensureMode(path: string, mode: number): Promise<void> {
+  try {
+    await chmod(path, mode);
+  } catch {}
+}
+
+export async function backupFile(path: string, mode?: number): Promise<string> {
   const backupPath = `${path}.bak`;
-  await copyFile(path, backupPath);
+  if (mode === undefined) {
+    await copyFile(path, backupPath);
+    return backupPath;
+  }
+  await ensureMode(backupPath, mode);
+  await writeFile(backupPath, await readFile(path, 'utf8'), { mode });
   return backupPath;
 }
 
@@ -410,5 +465,9 @@ export async function writeConfigFile(
   mode?: number
 ): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
+  if (mode !== undefined) {
+    // writeFile only applies `mode` on create: tighten a pre-existing config first.
+    await ensureMode(path, mode);
+  }
   await writeFile(path, content, mode === undefined ? 'utf8' : { mode });
 }

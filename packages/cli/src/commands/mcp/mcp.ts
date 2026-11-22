@@ -122,7 +122,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
               ', '
             )}. Valid options: ${availableClients.join(', ')}.`,
           },
-          1
+          2
         );
       }
       output.error(
@@ -130,7 +130,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
           ', '
         )}. Valid options: ${availableClients.join(', ')}.`
       );
-      return 1;
+      return 2;
     }
     selectedClients = opts.clients;
     if (!client.nonInteractive) {
@@ -503,7 +503,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
     const jsonOutput: Record<string, unknown> = {
       status: 'ok',
       summary,
-      hint: 'Restart your MCP client(s) to apply changes.',
+      hint: 'Complete any required setup and authentication in the selected MCP clients. Restart configured clients if needed.',
       next: [
         {
           command: `${packageName} link`,
@@ -519,7 +519,9 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
   output.print('─'.repeat(50) + '\n');
   summary.forEach(line => output.print(`${line}\n`));
 
-  output.print('✨ Setup complete! Restart your clients if needed.\n');
+  output.print(
+    'Complete any required setup and authentication in the selected MCP clients. Restart configured clients if needed.\n'
+  );
 
   return 0;
 }

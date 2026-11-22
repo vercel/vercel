@@ -1,6 +1,6 @@
 import type { LinearChannelCredentials } from 'eve/channels/linear';
 
-import { vercelOidc } from 'eve/channels/auth';
+import { createConnectWebhookVerifier } from '../chat/webhook-verifier.js';
 
 import {
   getToken,
@@ -39,6 +39,6 @@ export function connectLinearCredentials(
   return {
     accessToken: () =>
       getToken(connector, { ...params, subject: { type: 'app' } }, options),
-    webhookVerifier: vercelOidc(),
+    webhookVerifier: createConnectWebhookVerifier(),
   };
 }

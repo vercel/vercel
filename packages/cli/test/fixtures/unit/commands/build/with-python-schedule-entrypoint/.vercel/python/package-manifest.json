@@ -1,0 +1,10 @@
+{
+  "version": "20260304",
+  "runtime": "python",
+  "runtimeVersion": {
+    "requested": "3.12",
+    "requestedSource": ".python-version",
+    "resolved": "3.12"
+  },
+  "dependencies": []
+}

@@ -15,6 +15,24 @@ export class AgentTraceTelemetryClient
     }
   }
 
+  trackCliOptionNext(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'next',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionPrevious(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'previous',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliOptionMaxFieldLength(value: number | undefined) {
     if (typeof value === 'number') {
       this.trackCliOption({

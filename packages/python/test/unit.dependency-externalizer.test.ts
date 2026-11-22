@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import fs from 'fs-extra';
 import path from 'path';
 import { tmpdir } from 'os';
@@ -47,12 +47,24 @@ describe('dependency externalizer support', () => {
   describe('shouldEnableRuntimeInstall', () => {
     const originalLargeFunctionsEnv =
       process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+    const originalRuntimeInstallEnv =
+      process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL;
+
+    beforeEach(() => {
+      delete process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL;
+    });
 
     afterEach(() => {
       if (originalLargeFunctionsEnv === undefined) {
         delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
       } else {
         process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFunctionsEnv;
+      }
+      if (originalRuntimeInstallEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL;
+      } else {
+        process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL =
+          originalRuntimeInstallEnv;
       }
     });
 
@@ -92,6 +104,32 @@ describe('dependency externalizer support', () => {
       // Large functions keep deferrable bundles on Lambda via runtime install;
       // Hive is only used when the deps can't fit ephemeral storage.
       process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+      const ext = createExternalizer({ totalBundleSize: oversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(true);
+    });
+
+    it.each([
+      '1',
+      'true',
+      'TRUE',
+      'True',
+    ])('skips runtime install when VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL is %j', value => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL = value;
+      const ext = createExternalizer({ totalBundleSize: oversized });
+      expect(ext.shouldEnableRuntimeInstall()).toBe(false);
+    });
+
+    it.each([
+      '0',
+      'false',
+      'FALSE',
+      'False',
+      '',
+      'no',
+      'yes',
+    ])('keeps runtime install when VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL is %j', value => {
+      process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL = value;
       const ext = createExternalizer({ totalBundleSize: oversized });
       expect(ext.shouldEnableRuntimeInstall()).toBe(true);
     });
@@ -1051,12 +1089,24 @@ version = "8.1.7"
   describe('analyze', () => {
     const originalLargeFunctionsEnv =
       process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+    const originalRuntimeInstallEnv =
+      process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL;
+
+    beforeEach(() => {
+      delete process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL;
+    });
 
     afterEach(() => {
       if (originalLargeFunctionsEnv === undefined) {
         delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
       } else {
         process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = originalLargeFunctionsEnv;
+      }
+      if (originalRuntimeInstallEnv === undefined) {
+        delete process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL;
+      } else {
+        process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL =
+          originalRuntimeInstallEnv;
       }
     });
 
@@ -1265,6 +1315,43 @@ version = "8.1.7"
       }
     });
 
+    it('allows an oversized bundle through when runtime install is disabled', async () => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL = '1';
+
+      const tempDir = path.join(tmpdir(), `dep-ext-disabled-${Date.now()}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+
+      const bigFilePath = path.join(tempDir, 'big-file.dat');
+      const fd = fs.openSync(bigFilePath, 'w');
+      const size = LAMBDA_SIZE_THRESHOLD_BYTES + 1024 * 1024;
+      fs.ftruncateSync(fd, size);
+      fs.closeSync(fd);
+
+      const ext = new PythonDependencyExternalizer({
+        installedDistributions: createInstalledDistributions(),
+        vendorDir: '_vendor',
+        workPath: tempDir,
+        uvLockPath: path.join(tempDir, 'uv.lock'),
+        uvProjectDir: tempDir,
+        projectName: 'test-project',
+        pythonVersion: TEST_PYTHON_VERSION,
+        hasCustomCommand: false,
+      });
+
+      const files = {
+        'big-file.dat': new FileFsRef({ fsPath: bigFilePath }),
+      };
+
+      try {
+        const result = await ext.analyze(files);
+        expect(result.runtimeInstallEnabled).toBe(false);
+        expect(result.totalBundleSize).toBe(size);
+      } finally {
+        fs.removeSync(tempDir);
+      }
+    });
+
     it('skips runtime install under supportLargeFunctions when the bundle exceeds ephemeral storage', async () => {
       // Too big for /tmp: bundle everything (no runtime install) and let the
       // platform route it to Hive.
@@ -1339,8 +1426,12 @@ version = "8.1.7"
       }
     });
 
-    it('throws under supportLargeFunctions when the bundle is exactly at the 5 GB limit', async () => {
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+    it.each([
+      'VERCEL_SUPPORT_LARGE_FUNCTIONS',
+      'VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL',
+    ])('throws at the 5 GB limit when %s is enabled', async flag => {
+      delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+      process.env[flag] = '1';
 
       const tempDir = path.join(tmpdir(), `dep-ext-large-eq-${Date.now()}`);
       fs.mkdirSync(tempDir, { recursive: true });
@@ -1376,14 +1467,29 @@ version = "8.1.7"
       }
     });
 
-    it('does not throw the custom-install-command error under supportLargeFunctions', async () => {
-      process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+    it.each([
+      {
+        name: 'under supportLargeFunctions',
+        setup: () => {
+          process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS = '1';
+        },
+      },
+      {
+        name: 'when runtime install is disabled',
+        setup: () => {
+          delete process.env.VERCEL_SUPPORT_LARGE_FUNCTIONS;
+          process.env.VERCEL_PYTHON_DISABLE_RUNTIME_INSTALL = '1';
+        },
+      },
+    ])('does not throw the custom-install-command error $name', async ({
+      setup,
+    }) => {
+      setup();
 
       const tempDir = path.join(tmpdir(), `dep-ext-large-custom-${Date.now()}`);
       fs.mkdirSync(tempDir, { recursive: true });
 
-      // Over the AWS Lambda threshold; with a custom command this throws on the
-      // standard path, but direct-bundle mode bundles it for Hive instead.
+      // Over the AWS Lambda threshold; direct-bundle mode ships it to Hive.
       const bigFilePath = path.join(tempDir, 'big-file.dat');
       const fd = fs.openSync(bigFilePath, 'w');
       fs.ftruncateSync(fd, LAMBDA_SIZE_THRESHOLD_BYTES + 1024 * 1024);

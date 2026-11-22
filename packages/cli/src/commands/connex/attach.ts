@@ -2,6 +2,8 @@ import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { validateJsonOutput } from '../../util/output-format';
+import { applyDeprecatedGitBranchFlag } from '../../util/git-branch-option';
+import { reportRenamedOptionError } from '../../util/renamed-option';
 import { printError } from '../../util/error';
 import { selectConnexTeam } from '../../util/connex/select-team';
 import { getLinkedProject } from '../../util/projects/link';
@@ -110,6 +112,7 @@ export async function attach(
     '--environment'?: string[];
     '--project'?: string;
     '--triggers'?: boolean;
+    '--git-branch'?: string;
     '--trigger-branch'?: string;
     '--trigger-environment'?: string;
     '--trigger-path'?: string;
@@ -121,18 +124,26 @@ export async function attach(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
+  const branchError = applyDeprecatedGitBranchFlag(
+    client,
+    flags,
+    '--trigger-branch'
+  );
+  if (branchError) {
+    return reportRenamedOptionError(client, branchError, { json: asJson });
+  }
   const skipConfirmation = !!flags['--yes'];
   const withTriggers = !!flags['--triggers'];
-  const triggerBranch = flags['--trigger-branch'];
+  const triggerBranch = flags['--git-branch'];
   const triggerEnvironment = flags['--trigger-environment'];
   const triggerPath = flags['--trigger-path'];
 
   if (asJson && !skipConfirmation) {
     output.error('--json requires --yes to skip confirmation prompts');
-    return 1;
+    return 2;
   }
 
   if (
@@ -142,16 +153,16 @@ export async function attach(
       triggerPath !== undefined)
   ) {
     output.error(
-      '--trigger-branch, --trigger-environment, and --trigger-path require --triggers to also be set.'
+      '--git-branch, --trigger-environment, and --trigger-path require --triggers to also be set.'
     );
     return 1;
   }
 
   if (triggerBranch !== undefined && triggerEnvironment !== undefined) {
     output.error(
-      '--trigger-branch and --trigger-environment are mutually exclusive.'
+      '--git-branch and --trigger-environment are mutually exclusive.'
     );
-    return 1;
+    return 2;
   }
 
   if (triggerEnvironment !== undefined && triggerEnvironment.trim() === '') {
@@ -164,7 +175,7 @@ export async function attach(
     output.error(
       'Missing connector ID or UID. Usage: vercel connect attach <connector>'
     );
-    return 1;
+    return 2;
   }
 
   // Custom environment slugs are project-scoped, so resolve the project before
@@ -188,7 +199,7 @@ export async function attach(
       resolvedProject = await getProjectByNameOrId(client, projectFlag, team);
     } catch (err: unknown) {
       output.stopSpinner();
-      printError(err);
+      printError(err, client);
       return 1;
     }
     output.stopSpinner();
@@ -231,7 +242,7 @@ export async function attach(
       requestedEnvsRaw
     );
   } catch (err: unknown) {
-    printError(err);
+    printError(err, client);
     return 1;
   }
   if (!environments) {
@@ -254,7 +265,7 @@ export async function attach(
       output.error(`No connector found for ${chalk.bold(clientIdOrUid)}.`);
       return 1;
     }
-    printError(err);
+    printError(err, client);
     return 1;
   }
   output.stopSpinner();
@@ -283,7 +294,7 @@ export async function attach(
       try {
         customEnvironments = await getCustomEnvironments(client, projectId);
       } catch (err: unknown) {
-        printError(err);
+        printError(err, client);
         return 1;
       }
       const customEnvironment = pickCustomEnvironment(
@@ -331,7 +342,7 @@ export async function attach(
   } catch (err: unknown) {
     const status = (err as { status?: number }).status;
     if (status !== 404) {
-      printError(err);
+      printError(err, client);
       return 1;
     }
   }
@@ -451,7 +462,7 @@ export async function attach(
         );
         return 1;
       }
-      printError(err);
+      printError(err, client);
       return 1;
     }
     output.stopSpinner();
@@ -481,7 +492,7 @@ export async function attach(
         );
         return 1;
       }
-      printError(err);
+      printError(err, client);
       return 1;
     }
     output.stopSpinner();

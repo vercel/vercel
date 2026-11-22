@@ -1,21 +1,28 @@
 import type { Span } from '@vercel/build-utils';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { formatVcrAuthError } from '../oidc';
+import { resolvePushedImageDigest } from '../registry';
 import {
   DEBUG,
   debug,
   done,
   extractField,
+  hasCommand,
   info,
   isBuildContainer,
   readString,
   run,
+  type RunResult,
   step,
   toTag,
   withSpan,
 } from '../util';
 import { selectStorageDriver } from '../storage-driver';
-import type { BuildPushParams, ContainerEngine } from './types';
+import type {
+  BuildPushParams,
+  ContainerEngine,
+  RegistryCredentials,
+} from './types';
 import { TARGET_PLATFORM, buildArgFlags } from './types';
 
 /** Run `docker` with the given args, logging the exact invocation for debugging. */
@@ -27,15 +34,6 @@ function runDocker(
   // the command line.
   debug(`exec: docker ${args.join(' ')}`);
   return run('docker', args, opts);
-}
-
-async function hasBinary(name: string): Promise<boolean> {
-  try {
-    await run('which', [name], { quiet: true });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function isDockerDaemonReachable(): Promise<boolean> {
@@ -182,7 +180,7 @@ async function withManagedDaemon<T>(
   if (await isDockerDaemonReachable()) {
     return fn();
   }
-  if (!(await hasBinary('dockerd'))) {
+  if (!(await hasCommand('dockerd'))) {
     return fn();
   }
   const daemon = await withSpan(span, 'container.start_daemon', undefined, s =>
@@ -287,7 +285,7 @@ export const dockerEngine: ContainerEngine = {
 
   withRuntime: withManagedDaemon,
 
-  async build(params: BuildPushParams): Promise<void> {
+  async build(params: BuildPushParams): Promise<string> {
     await runDocker([
       'build',
       '--platform',
@@ -299,9 +297,21 @@ export const dockerEngine: ContainerEngine = {
       params.dockerfilePath,
       params.contextDir,
     ]);
+    return params.imageRef;
   },
 
-  async login(params: BuildPushParams): Promise<void> {
+  async onBuildTriggers(imageRef: string): Promise<string[]> {
+    const { stdout } = await runDocker([
+      'image',
+      'inspect',
+      '--format',
+      '{{json .Config.OnBuild}}',
+      imageRef,
+    ]);
+    return JSON.parse(stdout) ?? [];
+  },
+
+  async login(params: RegistryCredentials): Promise<void> {
     try {
       await runDocker(
         [
@@ -328,23 +338,13 @@ export const dockerEngine: ContainerEngine = {
     }
   },
 
-  async push(params: BuildPushParams): Promise<string | undefined> {
+  async push(params: BuildPushParams): Promise<string> {
+    let output: RunResult;
     try {
       info(`pushing ${params.imageRef}`);
       const pushStart = Date.now();
-      const { stdout } = await runDocker(['push', params.imageRef]);
+      output = await runDocker(['push', params.imageRef]);
       debug(`push completed in ${Date.now() - pushStart}ms`);
-      let resolvedDigest = stdout.match(/sha256:[a-f0-9]{64}/)?.[0];
-      if (!resolvedDigest) {
-        debug('digest not found in push output — inspecting RepoDigests');
-        const inspect = await run(
-          'docker',
-          ['inspect', '--format', '{{index .RepoDigests 0}}', params.imageRef],
-          { quiet: true }
-        );
-        resolvedDigest = inspect.stdout.match(/sha256:[a-f0-9]{64}/)?.[0];
-      }
-      return resolvedDigest;
     } catch (err) {
       const message = (err as Error).message;
       if (
@@ -364,5 +364,17 @@ export const dockerEngine: ContainerEngine = {
       }
       throw err;
     }
+
+    // Only the final summary line names the manifest; earlier output can
+    // carry layer digests (e.g. Podman's `Copying blob sha256:…`).
+    const summary = /^[^\s:]+: digest: (sha256:[a-f0-9]{64}) size: \d+\s*$/m;
+    const digest =
+      output.stdout.match(summary)?.[1] ?? output.stderr.match(summary)?.[1];
+    if (digest) {
+      return digest;
+    }
+
+    debug('digest not found in push summary — resolving registry manifest');
+    return resolvePushedImageDigest(params);
   },
 };

@@ -97,13 +97,14 @@ export async function validateBuildOutput(
       }
     }
 
-    const [hasFunctions, hasStatic] = await Promise.all([
+    const [hasFunctions, hasStatic, hasDaemons] = await Promise.all([
       fs.pathExists(join(outputDir, 'functions')),
       fs.pathExists(join(outputDir, 'static')),
+      fs.pathExists(join(outputDir, 'daemons')),
     ]);
     const hasServices = serviceNames.length > 0;
 
-    if (!hasFunctions && !hasStatic && !hasServices) {
+    if (!hasFunctions && !hasStatic && !hasServices && !hasDaemons) {
       problems.push({
         severity: 'warning',
         message:

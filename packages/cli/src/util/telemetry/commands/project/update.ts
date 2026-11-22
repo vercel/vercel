@@ -80,8 +80,21 @@ export class ProjectUpdateTelemetryClient
     }
   }
 
+  /** The old `--fluid-compute on|off` form. */
   trackCliOptionFluidCompute(value: string | undefined) {
     this.trackChoiceOption('fluid-compute', value, ['on', 'off']);
+  }
+
+  trackCliFlagFluidCompute(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('fluid-compute');
+    }
+  }
+
+  trackCliFlagNoFluidCompute(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('no-fluid-compute');
+    }
   }
 
   trackCliOptionFunctionCpu(value: string | undefined) {
@@ -103,8 +116,21 @@ export class ProjectUpdateTelemetryClient
     ]);
   }
 
+  /** The old `--elastic-concurrency on|off` form. */
   trackCliOptionElasticConcurrency(value: string | undefined) {
     this.trackChoiceOption('elastic-concurrency', value, ['on', 'off']);
+  }
+
+  trackCliFlagElasticConcurrency(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('elastic-concurrency');
+    }
+  }
+
+  trackCliFlagNoElasticConcurrency(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('no-elastic-concurrency');
+    }
   }
 
   trackCliOptionNodeVersion(value: string | undefined) {

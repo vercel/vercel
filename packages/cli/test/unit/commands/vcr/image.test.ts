@@ -56,7 +56,7 @@ describe('vcr image', () => {
   it('errors with a generic message when no subcommand is given', async () => {
     client.setArgv('vcr', 'image');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     const out = client.stderr.getFullOutput();
     expect(out).not.toContain('undefined');
     expect(out).toContain('Please specify a valid subcommand');
@@ -65,7 +65,7 @@ describe('vcr image', () => {
   it('errors on an unknown subcommand', async () => {
     client.setArgv('vcr', 'image', 'bogus');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('Unknown "vcr image"');
   });
 

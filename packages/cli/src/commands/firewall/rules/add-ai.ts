@@ -6,10 +6,11 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   printActionImpactWarning,
+  failPriorityProjectGate,
 } from '../shared';
 import { outputAgentError } from '../../../util/agent-output';
 import patchFirewallDraft from '../../../util/firewall/patch-firewall-draft';
-import { projectScope } from '../../../util/firewall/scope';
+import { projectScope, type FirewallScope } from '../../../util/firewall/scope';
 import generateFirewallRule from '../../../util/firewall/generate-firewall-rule';
 import { formatRuleExpanded } from '../../../util/firewall/format';
 import type { FirewallRule } from '../../../util/firewall/types';
@@ -20,6 +21,8 @@ interface HandleAIAddOptions {
   prompt?: string;
   name?: string;
   skipPrompts?: boolean;
+  /** Pins `--scope` on a Priority refusal. */
+  teamSlug?: string;
 }
 
 export async function handleAIAdd(
@@ -43,6 +46,8 @@ export async function handleAIAdd(
         val.trim() ? true : 'Please provide a description.',
     });
   }
+
+  const scope = projectScope(project, teamId, opts.teamSlug);
 
   // Generate with retry
   let currentRule: FirewallRule | undefined;
@@ -114,7 +119,7 @@ export async function handleAIAdd(
                     client,
                     'firewall rules add "Name" --condition \'{"type":"path","op":"pre","value":"/api"}\' --action deny --yes'
                   ),
-                  when: 'create with flags instead',
+                  when: 'create with options instead',
                 },
               ],
             },
@@ -188,6 +193,8 @@ export async function handleAIAdd(
       break;
     } catch (e: unknown) {
       output.stopSpinner();
+      const priority = failPriorityProjectGate(client, e, scope);
+      if (priority !== null) return priority;
       const error = e as { message?: string };
       const msg = error.message || 'Failed to generate rule';
 
@@ -247,7 +254,7 @@ export async function handleAIAdd(
 
   // Auto-create with --yes
   if (opts.skipPrompts) {
-    return createFromGenerated(client, project, teamId, currentRule, opts);
+    return createFromGenerated(client, scope, currentRule, opts);
   }
 
   // Review menu loop
@@ -263,7 +270,7 @@ export async function handleAIAdd(
     });
 
     if (choice === 'create') {
-      return createFromGenerated(client, project, teamId, currentRule!, opts);
+      return createFromGenerated(client, scope, currentRule!, opts);
     }
 
     if (choice === 'edit-ai') {
@@ -303,6 +310,8 @@ export async function handleAIAdd(
         continue;
       } catch (e: unknown) {
         output.stopSpinner();
+        const priority = failPriorityProjectGate(client, e, scope);
+        if (priority !== null) return priority;
         const error = e as { message?: string };
         output.error(
           `Failed to regenerate: ${error.message || 'Unknown error'}`
@@ -320,7 +329,7 @@ export async function handleAIAdd(
       if (!modified) {
         continue;
       }
-      return createFromGenerated(client, project, teamId, modified, opts);
+      return createFromGenerated(client, scope, modified, opts);
     }
 
     if (choice === 'discard') {
@@ -332,15 +341,12 @@ export async function handleAIAdd(
 
 async function createFromGenerated(
   client: Client,
-  project: { id: string; name: string },
-  teamId: string | undefined,
+  scope: FirewallScope,
   rule: FirewallRule,
   opts: HandleAIAddOptions
 ): Promise<number> {
   const createStamp = stamp();
   output.spinner('Staging rule');
-
-  const scope = projectScope(project, teamId);
 
   try {
     const hadExistingDraft = await detectExistingDraft(client, scope);
@@ -368,6 +374,9 @@ async function createFromGenerated(
 
     return 0;
   } catch (e: unknown) {
+    output.stopSpinner();
+    const priority = failPriorityProjectGate(client, e, scope);
+    if (priority !== null) return priority;
     const error = e as { message?: string };
     const msg = error.message || 'Failed to stage rule';
     if (client.nonInteractive) {

@@ -1,10 +1,11 @@
 import chalk from 'chalk';
 import plural from 'pluralize';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
 import { validateJsonOutput } from '../../util/output-format';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { parseArguments } from '../../util/get-args';
@@ -32,7 +33,7 @@ export default async function ls(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -54,11 +55,11 @@ export default async function ls(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   const lsStamp = stamp();
   if (!client.nonInteractive) {
@@ -108,7 +109,7 @@ export default async function ls(client: Client, argv: string[]) {
   if (issuers.length === 0) {
     output.log(
       `No issuers found under ${chalk.bold(contextName)}. Run ${getCommandName(
-        'kms add <name>'
+        'kms create <name>'
       )} to create one.`
     );
     return 0;
@@ -124,10 +125,8 @@ export default async function ls(client: Client, argv: string[]) {
 
   if (pagination.next) {
     const flags = getCommandFlags(opts, ['_', '--next']);
-    output.log(
-      `To display the next page, run ${getCommandName(
-        `kms ls${flags} --next ${pagination.next}`
-      )}`
+    printNextPageCommand(
+      getCommandNamePlain(`kms ls${flags} --next ${pagination.next}`)
     );
   }
 

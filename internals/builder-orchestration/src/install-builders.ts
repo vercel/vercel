@@ -16,6 +16,8 @@ export interface InstallBuildersOutput {
 
 export interface InstallBuildersDependencies {
   buildUtilsVersion?: string;
+  pinnedBuildUtilsVersion?: string;
+  strictBuilderPins?: boolean;
   code(value: string): string;
   cmd(value: string): string;
   isCantParseJSONFile(value: unknown): value is Error;
@@ -31,6 +33,25 @@ export interface InstallBuildersDependencies {
 type BonusError = Error & {
   stderr?: string | Writable;
 };
+
+export function getBuildUtilsVersionForInstall(
+  dependencies: Pick<
+    InstallBuildersDependencies,
+    'buildUtilsVersion' | 'pinnedBuildUtilsVersion'
+  >,
+  usePinnedVersion: boolean
+): string | undefined {
+  return usePinnedVersion
+    ? (dependencies.pinnedBuildUtilsVersion ?? dependencies.buildUtilsVersion)
+    : dependencies.buildUtilsVersion;
+}
+
+export function shouldFallbackBuilderPins(
+  dependencies: Pick<InstallBuildersDependencies, 'strictBuilderPins'>,
+  pinnedSpecCount: number
+): boolean {
+  return pinnedSpecCount > 0 && !dependencies.strictBuilderPins;
+}
 
 export function getBuildUtilsSpec(buildUtilsVersion?: string): string {
   if (!buildUtilsVersion) return '@vercel/build-utils';
@@ -64,10 +85,10 @@ function getErrorMessage(err: BonusError, execaMessage: string) {
 async function untracedInstallBuilders(
   buildersDir: string,
   buildersToAdd: Set<string>,
-  dependencies: InstallBuildersDependencies
+  dependencies: InstallBuildersDependencies,
+  buildUtilsVersion = dependencies.buildUtilsVersion
 ): Promise<Map<string, string>> {
-  const { buildUtilsVersion, code, cmd, output, readJSONFile, run } =
-    dependencies;
+  const { code, cmd, output, readJSONFile, run } = dependencies;
   const resolvedSpecs = new Map<string, string>();
   const buildersPkgPath = join(buildersDir, 'package.json');
   try {
@@ -173,7 +194,7 @@ export type InstallBuilders = (
   span?: Span,
   installReasons?: Map<string, string>,
   /**
-   * Bare specs rewritten to `name@pin` from `package.json#builders`.
+   * Default specs (bare or `@latest`) rewritten from `package.json#builders`.
    * When present, the install span is tagged so we can track dynamic installs
    * of builders we intend to preinstall.
    */
@@ -196,16 +217,24 @@ export function createInstallBuilders(
         return await untracedInstallBuilders(
           buildersDir,
           buildersToAdd,
-          dependencies
+          dependencies,
+          getBuildUtilsVersionForInstall(
+            dependencies,
+            Boolean(pinnedSpecs?.size)
+          )
         );
       } catch (err) {
-        if (!pinnedSpecs?.size) {
+        const fallbackPins = pinnedSpecs;
+        if (
+          !fallbackPins ||
+          !shouldFallbackBuilderPins(dependencies, fallbackPins.size)
+        ) {
           throw err;
         }
 
         const fallbackSpecs = new Set(
           Array.from(buildersToAdd, spec => {
-            for (const [originalSpec, pinnedSpec] of pinnedSpecs) {
+            for (const [originalSpec, pinnedSpec] of fallbackPins) {
               if (pinnedSpec === spec) {
                 return originalSpec;
               }
@@ -219,9 +248,10 @@ export function createInstallBuilders(
         const resolvedSpecs = await untracedInstallBuilders(
           buildersDir,
           fallbackSpecs,
-          dependencies
+          dependencies,
+          dependencies.buildUtilsVersion
         );
-        for (const originalSpec of pinnedSpecs.keys()) {
+        for (const originalSpec of fallbackPins.keys()) {
           if (fallbackSpecs.has(originalSpec)) {
             resolvedSpecs.set(originalSpec, originalSpec);
           }

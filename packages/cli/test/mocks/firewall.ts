@@ -1,4 +1,5 @@
 import { client } from './client';
+import { OBSERVABILITY_METRICS_PATH } from '../../src/commands/metrics/schema-api';
 import type {
   FirewallConfigResponse,
   FirewallConfigListResponse,
@@ -228,21 +229,40 @@ export function useGetBypassError(
  * arguments, because `client.scenario` is an express Router: re-registering a
  * route adds a second handler and the first one still answers.
  */
+interface FirewallQueryResponse {
+  summary?: unknown[];
+  data?: unknown[];
+  /** Non-200 fails just this dimension's query. */
+  status?: number;
+  /** Server message for a failed query, which callers classify on. */
+  message?: string;
+  /** `error.issues` for a failed query. */
+  issues?: { path: string; message: string }[];
+  /** `Retry-After`, in seconds, for a 429. */
+  retryAfter?: number;
+}
+
+/** What `/metrics/v1` answers when a team's daily query budget is spent. */
+export const RATE_LIMIT_MESSAGE =
+  'You have reached the daily observability metrics query limit for your team. Request a higher usage limit from your Vercel account team.';
+
 export const firewallActivity = {
   queryStatus: 200,
-  /** Status for `/alerts/v3/groups`, to fail one alert source alone. */
-  alertsStatus: 200,
-  /** Status for `/v1/security/firewall/attack-status`. */
-  attackStatusStatus: 200,
+  /** Server message for a failed query; empty stands for the API sending none. */
+  queryMessage: 'Observability Plus is required to run this query',
+  /** `error.issues` for a failed query, which is where a 400 says why. */
+  queryIssues: undefined as { path: string; message: string }[] | undefined,
   series: [] as unknown[],
   alerts: [] as unknown[],
   anomalies: [] as AttackStatusAnomaly[],
-  /** Summary rows for the by-rule query, keyed by `waf_rule_id`. */
+  /** Summary rows for the by-rule query, keyed by `wafRuleId`. */
   topRules: [] as unknown[],
   /** Summary rows for the by-action query, exercising the totals branch. */
   actionSummary: undefined as unknown[] | undefined,
   /** Query string the alerts request carried. */
   alertsQuery: undefined as Record<string, unknown> | undefined,
+  alertsStatus: 200,
+  attackStatusStatus: 200,
   /** Query string the attack-status request carried. */
   attackStatusQuery: undefined as Record<string, unknown> | undefined,
   /** Held back this long before answering, for exercising timeouts. */
@@ -260,17 +280,118 @@ export const firewallActivity = {
   events: [] as unknown[],
   eventsStatus: 200,
   eventsQuery: undefined as Record<string, unknown> | undefined,
-  /** Summary rows for inspect path queries, keyed by `request_path`. */
+  /** Summary rows for inspect path queries, keyed by `requestPath`. */
   topPaths: [] as unknown[],
-  /** Every observability query body, in arrival order. */
+  /**
+   * Observability responses keyed by the query's `groupBy`, joined with
+   * commas. Answers any dimension the traffic commands group by, including
+   * the multi-field header-detail query, and can carry a timeseries as well
+   * as a summary so a breakdown's per-row trend has something to render.
+   * A `status` fails that one query, which the traffic commands survive.
+   */
+  byField: {} as Record<string, FirewallQueryResponse>,
+  /**
+   * Every observability query, in arrival order, flattened out of the
+   * canonical request the API takes: the metric comes from the `value` alias,
+   * the window from `timeRange`, and `granularity` back out of
+   * `bucketSeconds`. `body` is the request as sent, for the assertions that
+   * care about the wire shape itself.
+   */
   queries: [] as {
+    metric?: string;
     groupBy?: string[];
     startTime?: string;
     endTime?: string;
-    granularity?: { minutes?: number; hours?: number };
+    granularity?: { minutes?: number; hours?: number; days?: number };
+    bucketSeconds?: number;
     filter?: string;
+    rowLimit?: number;
+    seriesLimit?: number;
+    body?: Record<string, any>;
   }[],
 };
+
+/**
+ * The value column the fixtures key their totals with. The API itself returns
+ * the value under the `value` metric alias; `canonicalResponse` moves it
+ * there, so a fixture stays a flat readable row.
+ */
+export const FIREWALL_ROLLUP_COLUMN = 'vercel_firewall_action_count_sum';
+
+function granularityFrom(bucketSeconds?: number) {
+  if (bucketSeconds === undefined) return undefined;
+  if (bucketSeconds % 86_400 === 0) return { days: bucketSeconds / 86_400 };
+  if (bucketSeconds % 3_600 === 0) return { hours: bucketSeconds / 3_600 };
+  return { minutes: bucketSeconds / 60 };
+}
+
+/** Flatten a canonical metrics request into what the assertions read. */
+function recordQuery(body: Record<string, any>) {
+  return {
+    metric: body.metrics?.value?.metric,
+    groupBy: body.groupBy,
+    startTime: body.timeRange?.start,
+    endTime: body.timeRange?.end,
+    granularity: granularityFrom(body.bucketSeconds),
+    bucketSeconds: body.bucketSeconds,
+    filter: body.filter,
+    rowLimit: body.rowLimit,
+    seriesLimit: body.seriesSelection?.limit,
+    body,
+  };
+}
+
+/**
+ * Turn flat fixture rows into the shape the Observability API answers with:
+ * dimensions in `dimensions`, the total under the `value` alias in `values`.
+ */
+function canonicalRow(row: Record<string, unknown>) {
+  const dimensions: Record<string, string | null> = {};
+  let value: number | null = null;
+  for (const [key, raw] of Object.entries(row)) {
+    if (key === 'timestamp') continue;
+    if (key === FIREWALL_ROLLUP_COLUMN || key === 'value' || key === 'count') {
+      value = raw === null ? null : Number(raw);
+      continue;
+    }
+    dimensions[key] = raw === null ? null : String(raw);
+  }
+  return { dimensions, values: { value } };
+}
+
+function canonicalResponse(body: {
+  summary?: unknown[];
+  data?: unknown[];
+  series?: unknown[];
+}) {
+  const seriesRows = (body.series ?? body.data ?? []) as Record<
+    string,
+    unknown
+  >[];
+  return {
+    ...(body.series || body.data
+      ? {
+          series: seriesRows.map(row => ({
+            timestamp: String(row.timestamp),
+            ...canonicalRow(row),
+          })),
+        }
+      : {}),
+    summary: ((body.summary ?? []) as Record<string, unknown>[]).map(
+      canonicalRow
+    ),
+    queryId: 'query_test',
+    meta: {
+      sources: [{ id: 'firewall-actions-v6' }],
+      statistics: {
+        elapsedMs: 1,
+        databaseElapsedMs: 1,
+        rowsRead: 1,
+        bytesRead: 1,
+      },
+    },
+  };
+}
 
 /**
  * Mock the endpoints behind `firewall overview`'s activity window. Returns an
@@ -286,6 +407,7 @@ export function useFirewallActivity({
   alertGroups = {},
   events = [] as unknown[],
   topPaths = [] as unknown[],
+  byField = {},
 }: {
   series?: unknown[];
   alerts?: unknown[];
@@ -295,10 +417,12 @@ export function useFirewallActivity({
   alertGroups?: Record<string, unknown>;
   events?: unknown[];
   topPaths?: unknown[];
+  byField?: Record<string, FirewallQueryResponse>;
 } = {}) {
   firewallActivity.queryStatus = 200;
-  firewallActivity.alertsStatus = 200;
-  firewallActivity.attackStatusStatus = 200;
+  firewallActivity.queryMessage =
+    'Observability Plus is required to run this query';
+  firewallActivity.queryIssues = undefined;
   firewallActivity.series = series;
   firewallActivity.alerts = alerts;
   firewallActivity.anomalies = anomalies;
@@ -310,39 +434,80 @@ export function useFirewallActivity({
   firewallActivity.eventsStatus = 200;
   firewallActivity.eventsQuery = undefined;
   firewallActivity.topPaths = topPaths;
+  firewallActivity.byField = byField;
   firewallActivity.queries = [];
-  firewallActivity.alertsQuery = undefined;
   firewallActivity.attackStatusQuery = undefined;
   firewallActivity.attackStatusDelayMs = 0;
   firewallActivity.attackStatusBody = undefined;
+  firewallActivity.alertsQuery = undefined;
+  firewallActivity.alertsStatus = 200;
+  firewallActivity.attackStatusStatus = 200;
 
-  client.scenario.post('/v2/observability/query', (req: any, res: any) => {
-    firewallActivity.queries.push(req.body ?? {});
+  client.scenario.post(OBSERVABILITY_METRICS_PATH, (req: any, res: any) => {
+    firewallActivity.queries.push(recordQuery(req.body ?? {}));
     if (firewallActivity.queryStatus !== 200) {
-      res
-        .status(firewallActivity.queryStatus)
-        .json({ error: { message: 'Observability Plus is required' } });
+      res.status(firewallActivity.queryStatus).json({
+        error: {
+          code:
+            firewallActivity.queryStatus === 400
+              ? 'invalid_request'
+              : 'payment_required',
+          message: firewallActivity.queryMessage,
+          ...(firewallActivity.queryIssues
+            ? { issues: firewallActivity.queryIssues }
+            : {}),
+        },
+      });
       return;
     }
-    // Both activity panels post to this endpoint; only the group-by tells
-    // them apart. The by-rule query reads `summary` alone, the by-action one
-    // reads `data` and falls back to summing it when `summary` is absent.
+    // Every panel posts to this endpoint; only the group-by tells them apart.
+    // The by-rule query reads `summary` alone, the by-action one reads the
+    // series and falls back to summing it when `summary` is absent.
     const groupBy = (req.body?.groupBy ?? []) as string[];
-    if (groupBy.includes('waf_rule_id')) {
-      res.json({ summary: firewallActivity.topRules, meta: {} });
+    const byField = firewallActivity.byField[groupBy.join(',')];
+    if (byField) {
+      const { status, message, issues, retryAfter, ...body } = byField;
+      if (status && status !== 200) {
+        if (retryAfter !== undefined) {
+          res.setHeader('Retry-After', String(retryAfter));
+        }
+        res.status(status).json({
+          error: {
+            code:
+              status === 400
+                ? 'invalid_request'
+                : status === 429
+                  ? 'rate_limited'
+                  : 'payment_required',
+            // A real rate limit always explains itself, and names who can
+            // raise the budget. Pass `message: ''` to model an API that
+            // said nothing.
+            message:
+              message ?? (status === 429 ? RATE_LIMIT_MESSAGE : 'Query failed'),
+            ...(issues ? { issues } : {}),
+          },
+        });
+        return;
+      }
+      res.json(canonicalResponse(body));
       return;
     }
-    if (groupBy.includes('request_path')) {
-      res.json({ summary: firewallActivity.topPaths, meta: {} });
+    if (groupBy.includes('wafRuleId')) {
+      res.json(canonicalResponse({ summary: firewallActivity.topRules }));
       return;
     }
-    res.json({
-      data: firewallActivity.series,
-      ...(firewallActivity.actionSummary
-        ? { summary: firewallActivity.actionSummary }
-        : {}),
-      meta: {},
-    });
+    if (groupBy.includes('requestPath')) {
+      res.json(canonicalResponse({ summary: firewallActivity.topPaths }));
+      return;
+    }
+    res.json(
+      canonicalResponse({
+        data: firewallActivity.series,
+        ...(firewallActivity.actionSummary
+          ? { summary: firewallActivity.actionSummary }
+          : {}),
+      })
+    );
   });
   client.scenario.get('/alerts/v3/groups', (req: any, res: any) => {
     firewallActivity.alertsQuery = req.query;
@@ -815,4 +980,3 @@ export function createPersistentAction({
  * The column each observability row carries its value in. The API flattens
  * `<metric>_<aggregation>`, replacing dots — see `getRollupColumnName`.
  */
-export const FIREWALL_ROLLUP_COLUMN = 'vercel_firewall_action_count_sum';

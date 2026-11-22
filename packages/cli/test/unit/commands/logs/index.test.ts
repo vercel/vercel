@@ -1,15 +1,19 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { join } from 'path';
+import { outputJSON } from 'fs-extra';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Request, Response } from 'express';
 import { client } from '../../../mocks/client';
 import { useUser } from '../../../mocks/user';
-import { useTeam, useTeams } from '../../../mocks/team';
+import { useTeams } from '../../../mocks/team';
 import { defaultProject, useProject } from '../../../mocks/project';
-import { useDeployment, useRuntimeLogs } from '../../../mocks/deployment';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import logs from '../../../../src/commands/logs';
-import { join } from 'path';
 
-const logsFixturesDir = join(__dirname, '../../../fixtures/unit/commands/logs');
-
-const fixture = (name: string) => join(logsFixturesDir, name);
+const NOW = Date.parse('2026-10-07T14:00:00.000Z');
+const linkedFixture = join(
+  __dirname,
+  '../../../fixtures/unit/commands/logs/linked-project'
+);
 
 const logsProject = {
   ...defaultProject,
@@ -18,1862 +22,1498 @@ const logsProject = {
   accountId: 'team_dummy',
 };
 
-function useLogsDeployment(
-  creator: ReturnType<typeof useUser>,
-  state?: Parameters<typeof useDeployment>[0]['state']
+const runtimeEvent = {
+  timestamp: '2026-10-07T13:59:00.123Z',
+  projectId: 'prj_logstest',
+  requestId: 'iad1::abcde-1791381540123-0123456789ab',
+  deploymentId: 'dpl_123',
+  environment: 'production',
+  source: 'serverless',
+  service: null,
+  level: 'error',
+  message: 'Error: boom\n    at handler (index.js:1:1)',
+  truncated: false,
+};
+
+const requestEvent = {
+  timestamp: '2026-10-07T13:58:00.000Z',
+  requestId: 'abcde-1791381480000-0123456789ab',
+  requestHostname: 'logs-test.vercel.app',
+  requestPath: '/api/checkout',
+  requestMethod: 'POST',
+  httpStatus: 502,
+  cacheResult: 'MISS',
+};
+
+interface EventsCall {
+  query: Request['query'];
+  headers: Request['headers'];
+  body: Record<string, any>;
+}
+
+type PageResponder = (
+  call: EventsCall,
+  index: number,
+  res: Response
+) => void | Record<string, unknown>;
+
+function page(
+  events: Record<string, unknown>[],
+  nextCursor: string | null = null,
+  meta: Record<string, unknown> = {}
 ) {
-  const deployment = useDeployment({
-    creator: {
-      id: logsProject.accountId,
-      email: creator.email,
-      name: 'Vercel',
-      username: 'vercel',
-    },
-    project: logsProject,
-    state,
-  });
-  deployment.team = {
-    id: logsProject.accountId,
-    name: 'Vercel',
-    slug: 'vercel',
-  };
-  return deployment;
-}
-
-// API response format (what the server returns)
-interface ApiLogEntry {
-  requestId?: string;
-  timestamp?: string;
-  deploymentId?: string;
-  requestMethod?: string;
-  requestPath?: string;
-  statusCode?: number;
-  environment?: string;
-  domain?: string;
-  logs?: Array<{
-    level?: string;
-    message?: string;
-    messageTruncated?: boolean;
-  }>;
-  events?: Array<{ source?: string }>;
-}
-
-function createMockLog(
-  overrides: {
-    id?: string;
-    message?: string;
-    level?: string;
-    source?: string;
-    environment?: string;
-    deploymentId?: string;
-    responseStatusCode?: number;
-  } = {}
-): ApiLogEntry {
   return {
-    requestId: overrides.id ?? 'log_123',
-    timestamp: new Date().toISOString(),
-    deploymentId: overrides.deploymentId ?? 'dpl_test123',
-    requestMethod: 'GET',
-    requestPath: '/api/test',
-    statusCode: overrides.responseStatusCode ?? 200,
-    environment: overrides.environment ?? 'production',
-    domain: 'test.vercel.app',
-    logs: [
-      {
-        level: overrides.level ?? 'info',
-        message: overrides.message ?? 'Test log message',
-      },
-    ],
-    events: [{ source: overrides.source ?? 'serverless' }],
+    queryId: 'q_1',
+    events,
+    pagination: { hasMore: nextCursor !== null, nextCursor },
+    meta,
   };
 }
 
-function useRequestLogs(logs: ApiLogEntry[] = []) {
-  client.scenario.get('/api/logs/request-logs', (_req, res) => {
-    res.json({
-      rows: logs,
-      hasMoreRows: false,
-    });
+function useEvents(...responders: Array<PageResponder | object>) {
+  const calls: EventsCall[] = [];
+  client.scenario.post('/v1/observability/events', (req, res) => {
+    const call = { query: req.query, headers: req.headers, body: req.body };
+    calls.push(call);
+    const index = calls.length - 1;
+    const responder = responders[Math.min(index, responders.length - 1)];
+    const result =
+      typeof responder === 'function'
+        ? (responder as PageResponder)(call, index, res)
+        : responder;
+    if (result && !res.headersSent) {
+      res.json(result);
+    }
   });
+  return calls;
 }
 
-function useActiveProductionDeployment(
-  projectId: string,
-  deployment: { id: string; url: string } | null
+function apiError(
+  res: Response,
+  status: number,
+  error: Record<string, unknown>
 ) {
-  client.scenario.get(
-    `/projects/${projectId}/production-deployment`,
-    (_req, res) => {
-      if (!deployment) {
-        res.status(404).json({
-          error: {
-            code: 'not_found',
-            message: 'Production deployment not found',
-          },
-        });
-        return;
-      }
-      res.json({ deployment });
-    }
-  );
+  res.status(status).json({ error });
+}
+
+function stdout() {
+  return client.stdout.getFullOutput();
+}
+
+function stderr() {
+  return client.stderr.getFullOutput();
+}
+
+/** Parses stdout as JSON Lines. */
+function jsonLines(): Array<Record<string, any>> {
+  return stdout()
+    .split('\n')
+    .filter(line => line.trim() !== '')
+    .map(line => JSON.parse(line));
+}
+
+function summaryOf(lines: Array<Record<string, any>>) {
+  const summaries = lines.filter(line => line.type === 'summary');
+  expect(summaries).toHaveLength(1);
+  expect(lines[lines.length - 1].type).toBe('summary');
+  return summaries[0];
+}
+
+/** Parses the single JSON error document on stderr. */
+function jsonError(): Record<string, any> {
+  const lines = stderr()
+    .split('\n')
+    .filter(line => line.trim() !== '');
+  expect(lines).toHaveLength(1);
+  return JSON.parse(lines[0]);
+}
+
+function decodeToken(token: string): Record<string, any> {
+  return JSON.parse(Buffer.from(token, 'base64url').toString('utf8'));
 }
 
 describe('logs', () => {
-  describe('--help', () => {
-    it('should display help and track telemetry', async () => {
-      client.setArgv('logs', '--help');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'flag:help',
-          value: 'logs',
-        },
-      ]);
-    });
-
-    it('should display help with examples', async () => {
-      client.setArgv('logs', '--help');
-      await logs(client);
-
-      const output = client.getFullOutput();
-      const normalizedOutput = output.replace(/\s+/g, ' ');
-      expect(normalizedOutput).toContain('Display request logs');
-      expect(normalizedOutput).toContain('--level');
-      expect(normalizedOutput).toContain('--environment');
-      expect(normalizedOutput).toContain(
-        'falls back to your latest READY deployment'
-      );
-      expect(normalizedOutput).toContain('active production deployment');
-      expect(normalizedOutput).toContain(
-        'with --follow, require a matching READY deployment'
-      );
-      expect(normalizedOutput).not.toContain('defaults to current branch');
-      expect(normalizedOutput).not.toContain(
-        'production always streams the latest production deployment'
-      );
-    });
-
-    it('should hide the deprecated --no-branch flag', async () => {
-      client.setArgv('logs', '--help');
-      await logs(client);
-
-      const normalizedOutput = client.getFullOutput().replace(/\s+/g, ' ');
-      expect(normalizedOutput).toContain('--branch');
-      expect(normalizedOutput).not.toContain('--no-branch');
-      expect(normalizedOutput).not.toContain('Disable auto-detection');
-    });
+  beforeEach(() => {
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+    useUser();
+    useTeams('team_dummy');
+    useProject(logsProject);
+    client.cwd = linkedFixture;
   });
 
-  describe('with linked project', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
-    });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete process.env.VERCEL_ORG_ID;
+    delete process.env.VERCEL_PROJECT_ID;
+  });
 
-    it('should fetch logs for linked project', async () => {
-      const mockLogs = [
-        createMockLog({ message: 'First log' }),
-        createMockLog({ message: 'Second log' }),
-      ];
-      useRequestLogs(mockLogs);
+  describe('help', () => {
+    it('shows generic help with data sources and common filter fields', async () => {
+      client.setArgv('logs', '--help');
+      expect(await logs(client)).toBe(0);
 
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      await expect(client.stderr).toOutput('Fetching logs');
-    });
-
-    it('should output logs as JSON with --json flag', async () => {
-      const mockLogs = [createMockLog({ message: 'JSON log test' })];
-      useRequestLogs(mockLogs);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--json');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      await expect(client.stdout).toOutput('"message":"JSON log test"');
-    });
-
-    it('should output all request logs as a logs array in JSON mode', async () => {
-      client.scenario.get('/api/logs/request-logs', (_req, res) => {
-        res.json({
-          rows: [
-            {
-              ...createMockLog(),
-              logs: [
-                { level: 'info', message: 'first message' },
-                { level: 'error', message: 'actual error' },
-              ],
-            },
-          ],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--json', '--level', 'error');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      const output = client.stdout.getFullOutput();
+      const output = stderr();
+      expect(output).toContain('Display logs.');
+      expect(output).toContain('Data sources');
+      expect(output).toContain('Display runtime log entries');
+      expect(output).toContain('(default)');
+      expect(output).toContain('Display CDN request records');
+      expect(output).toContain('Common --query fields');
+      expect(output).toContain('runtime (default)');
+      expect(output).toContain('requestHostname');
+      expect(output).toContain('Background function executions are excluded.');
       expect(output).toContain(
-        '"logs":[{"level":"info","message":"first message"},{"level":"error","message":"actual error"}]'
+        'Additional public fields supported by the API are accepted.'
       );
-      expect(output).toContain('"level":"error"');
-      expect(output).toContain('"message":"actual error"');
+      expect(output).not.toContain('--follow');
+      expect(output).not.toContain('--search');
+      expect(output).not.toContain('--branch');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:help', value: 'logs' },
+      ]);
     });
 
-    it('should track telemetry for --json flag', async () => {
-      useRequestLogs([]);
+    it('shows runtime help with field types and bare-text syntax', async () => {
+      client.setArgv('logs', 'runtime', '--help');
+      expect(await logs(client)).toBe(0);
 
-      client.cwd = fixture('linked-project');
+      const output = stderr();
+      expect(output).toContain('Display runtime log entries');
+      expect(output).toMatch(
+        /isSystemLog\s+boolean; example: isSystemLog:false/
+      );
+      expect(output).toMatch(
+        /requestId\s+string; example: requestId:"<request-id>"/
+      );
+      expect(output).toContain('Search message tokens, ignoring case');
+      expect(output).toContain('unexpected token equals unexpected AND token.');
+      expect(output).toContain(
+        'Search messages with unquoted words; bare "unexpected token" is rejected.'
+      );
+      expect(output).toContain('json AND (parse OR (unexpected AND token)).');
+      expect(output).toContain('Quotes work only in field values.');
+      expect(output).not.toContain('bare quoted phrase searches');
+      expect(output).toContain('Common values:');
+      expect(output).toContain(
+        'source: function, middleware, ci, edge, daemon'
+      );
+      expect(output).not.toContain('httpStatus');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'flag:help', value: 'logs:runtime' },
+      ]);
+    });
+
+    it('shows requests help with numeric comparisons and the exclusion', async () => {
+      client.setArgv('logs', 'requests', '--help');
+      expect(await logs(client)).toBe(0);
+
+      const output = stderr();
+      expect(output).toMatch(/httpStatus\s+number; example: httpStatus >= 500/);
+      expect(output).toContain('Compare numeric fields');
+      expect(output).toContain('bare-text search is unavailable for requests');
+      expect(output).toContain('Quotes work only in field values.');
+      expect(output).not.toContain('unexpected token');
+      expect(output).toContain(
+        'Background function executions are always excluded'
+      );
+    });
+  });
+
+  describe('runtime', () => {
+    it('queries the last 30 minutes of runtime logs for the linked project', async () => {
+      const calls = useEvents(page([runtimeEvent]));
+      client.setArgv('logs');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].query).toEqual({ teamId: 'team_dummy' });
+      expect(calls[0].headers['x-vercel-observability-query-reason']).toBe(
+        'cli/logs-runtime'
+      );
+      expect(calls[0].body).toEqual({
+        event: 'vercel.log',
+        scope: { ownerId: 'team_dummy', projectIds: ['prj_logstest'] },
+        timeRange: {
+          start: '2026-10-07T13:30:00.000Z',
+          end: '2026-10-07T14:00:00.000Z',
+        },
+        select: expect.arrayContaining([
+          'message',
+          'level',
+          'attributes',
+          'branch',
+          'projectId',
+        ]),
+        order: 'desc',
+        limit: 100,
+      });
+      expect(calls[0].body.select).not.toContain('timestamp');
+    });
+
+    it('returns the same query for implicit and explicit runtime', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--query', 'level:error');
+      expect(await logs(client)).toBe(0);
+      client.setArgv('logs', 'runtime', '--query', 'level:error');
+      expect(await logs(client)).toBe(0);
+
+      expect(calls).toHaveLength(2);
+      expect(calls[1].body).toEqual(calls[0].body);
+      expect(calls[0].body.filter).toBe('(level:error)');
+    });
+
+    it('prints full multiline messages and the producer on stdout', async () => {
+      useEvents(
+        page([
+          runtimeEvent,
+          {
+            ...runtimeEvent,
+            level: 'info',
+            service: 'api',
+            message: 'hello',
+            truncated: true,
+          },
+        ])
+      );
+      client.setArgv('logs');
+
+      expect(await logs(client)).toBe(0);
+      const lines = stdout().split('\n');
+      expect(lines[0]).toMatch(/TIME\s+LEVEL\s+SERVICE\/SOURCE\s+MESSAGE/);
+      expect(lines[1]).toMatch(/error\s+serverless\s+Error: boom/);
+      expect(lines[2]).toMatch(/^\s+at handler \(index\.js:1:1\)$/);
+      expect(lines[3]).toMatch(/info\s+api\s+hello/);
+      expect(lines[4]).toContain('[message truncated]');
+      expect(stderr()).toMatch(
+        /Runtime logs for \S+\/logs-test-project, 2026-10-0\d/
+      );
+    });
+
+    it('emits typed JSON Lines with unchanged API events and a summary', async () => {
+      const events = [
+        runtimeEvent,
+        { ...runtimeEvent, message: 'same' },
+        { ...runtimeEvent, message: 'same' },
+      ];
+      useEvents(page(events));
       client.setArgv('logs', '--json');
-      await logs(client);
 
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      expect(await logs(client)).toBe(0);
+      const lines = jsonLines();
+      expect(lines.slice(0, 3)).toEqual(
+        events.map(event => ({ type: 'log', data: event }))
+      );
+      expect(summaryOf(lines)).toEqual({
+        type: 'summary',
+        recordsReturned: 3,
+        timeRange: {
+          start: '2026-10-07T13:30:00.000Z',
+          end: '2026-10-07T14:00:00.000Z',
+        },
+        pagination: { hasMore: false, next: null },
+        excludedIntervals: [],
+      });
+      expect(stderr()).toBe('');
+    });
+
+    it.each([
+      [['--format', 'json']],
+      [['--format=json']],
+      [['-F', 'json']],
+    ])('prints the same JSON Lines with %j', async args => {
+      useEvents(page([runtimeEvent]));
+      client.setArgv('logs', ...args);
+
+      expect(await logs(client)).toBe(0);
+      const lines = jsonLines();
+      expect(lines[0]).toEqual({ type: 'log', data: runtimeEvent });
+      expect(summaryOf(lines).recordsReturned).toBe(1);
+      expect(stderr()).toBe('');
+    });
+
+    it('reports an unsupported --format as JSON when --json is also given', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--json', '--format', 'yaml');
+
+      expect(await logs(client)).toBe(2);
+      expect(stdout()).toBe('');
+      expect(jsonError()).toMatchObject({
+        reason: 'invalid_arguments',
+        message: expect.stringContaining('Invalid output format: "yaml"'),
+      });
+      expect(calls).toHaveLength(0);
+    });
+
+    it('rejects an unsupported --format before querying', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--format', 'yaml');
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain('Invalid output format: "yaml"');
+      expect(calls).toHaveLength(0);
+    });
+
+    it.each([
+      [['-j']],
+      [['-jf']],
+    ])('explains that -j was removed for %j', async args => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', ...args);
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain('-j was removed. Use --json.');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('reports the removed -j as JSON in non-interactive mode', async () => {
+      client.nonInteractive = true;
+      client.setArgv('logs', '-jf');
+
+      expect(await logs(client)).toBe(2);
+      expect(stdout()).toBe('');
+      expect(jsonError()).toMatchObject({
+        reason: 'invalid_arguments',
+        message: '-j was removed. Use --json.',
+      });
+    });
+
+    it('treats --json=true as JSON for parse errors', async () => {
+      client.setArgv('logs', '--json=true', '--unknown-flag');
+
+      expect(await logs(client)).toBe(2);
+      expect(stdout()).toBe('');
+      expect(jsonError()).toMatchObject({ reason: 'invalid_arguments' });
+    });
+
+    it('prints JSON Lines in non-interactive mode without --json', async () => {
+      useEvents(page([runtimeEvent]));
+      client.nonInteractive = true;
+      client.setArgv('logs');
+
+      expect(await logs(client)).toBe(0);
+      const lines = jsonLines();
+      expect(lines[0]).toEqual({ type: 'log', data: runtimeEvent });
+      expect(summaryOf(lines).recordsReturned).toBe(1);
+      expect(stderr()).toBe('');
+    });
+
+    it('stops quietly with exit 0 when stdout is closed', async () => {
+      useEvents(page([runtimeEvent], 'cursor_1'));
+      client.stdout.destroy();
+      client.setArgv('logs', '--json');
+
+      expect(await logs(client)).toBe(0);
+      expect(stderr()).toBe('');
+    });
+
+    it('prints an empty-result hint and exits 0', async () => {
+      useEvents(page([]));
+      client.setArgv('logs');
+
+      expect(await logs(client)).toBe(0);
+      expect(stdout()).toBe('');
+      expect(stderr().match(/Fetching runtime log entries…/g)).toHaveLength(1);
+      expect(stderr()).toContain('No runtime log entries found in this window');
+      expect(stderr()).toContain('Use an earlier --since');
+    });
+
+    it('prints only a summary for an empty JSON result', async () => {
+      useEvents(page([]));
+      client.setArgv('logs', '--json');
+
+      expect(await logs(client)).toBe(0);
+      expect(jsonLines()).toEqual([
         {
-          key: 'flag:json',
-          value: 'TRUE',
+          type: 'summary',
+          recordsReturned: 0,
+          timeRange: {
+            start: '2026-10-07T13:30:00.000Z',
+            end: '2026-10-07T14:00:00.000Z',
+          },
+          pagination: { hasMore: false, next: null },
+          excludedIntervals: [],
         },
       ]);
-    });
-
-    it('should display help when an invalid flag is provided', async () => {
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--output', 'json');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      const output = client.getFullOutput();
-      expect(output).toContain('--output');
-      expect(output).toContain('unknown or unexpected option');
-      expect(output).toContain('Display request logs');
-      expect(output).toContain('--json');
-    });
-
-    it('should expand full log messages when stderr is not a TTY', async () => {
-      const longMessage = `Error: iMessage webhook failed ${'x'.repeat(300)}`;
-      client.scenario.get('/api/logs/request-logs', (_req, res) => {
-        res.json({
-          rows: [
-            {
-              ...createMockLog(),
-              logs: [
-                { level: 'info', message: 'workflow call started' },
-                { level: 'error', message: longMessage },
-              ],
-            },
-          ],
-          hasMoreRows: false,
-        });
-      });
-
-      client.stderr.isTTY = false;
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      const output = client.getFullOutput();
-      expect(output).toContain(longMessage);
-      expect(output).toContain('workflow call started');
-    });
-
-    it('should display "no logs found" when empty', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      await expect(client.stderr).toOutput('No logs found');
-    });
-
-    it('should fetch logs from all branches for a linked project by default', async () => {
-      let receivedBranch: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedBranch = req.query.branch as string | undefined;
-        res.json({
-          rows: [createMockLog()],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedBranch).toBeUndefined();
-    });
-
-    it('should filter by an explicitly selected branch on a linked project', async () => {
-      let receivedBranch: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedBranch = req.query.branch as string | undefined;
-        res.json({
-          rows: [createMockLog()],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--branch', 'feature-x');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedBranch).toEqual('feature-x');
-    });
-
-    it('should accept the deprecated --no-branch flag as a no-op', async () => {
-      let receivedBranch: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedBranch = req.query.branch as string | undefined;
-        res.json({
-          rows: [createMockLog()],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--no-branch');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedBranch).toBeUndefined();
-    });
-
-    it('should keep an explicit branch when --no-branch is also passed', async () => {
-      let receivedBranch: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedBranch = req.query.branch as string | undefined;
-        res.json({
-          rows: [createMockLog()],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--branch', 'feature-x', '--no-branch');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedBranch).toEqual('feature-x');
-    });
-
-    it('should track telemetry for the --no-branch flag', async () => {
-      client.scenario.get('/api/logs/request-logs', (_req, res) => {
-        res.json({
-          rows: [createMockLog()],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--no-branch');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'flag:no-branch',
-          value: 'TRUE',
-        },
-      ]);
+      expect(stderr()).toBe('');
     });
   });
 
-  describe('--project option', () => {
-    let user: ReturnType<typeof useUser>;
+  describe('requests', () => {
+    it('queries CDN requests with the background function exclusion and whole seconds', async () => {
+      vi.spyOn(Date, 'now').mockReturnValue(NOW + 456);
+      const calls = useEvents(page([requestEvent]));
+      client.setArgv('logs', 'requests', '--query', 'httpStatus >= 500');
 
-    beforeEach(() => {
-      user = useUser();
-      useProject({
-        ...defaultProject,
-        id: 'prj_explicit',
-        name: 'explicit-project',
-      });
-    });
-
-    it('should fetch logs without using the current branch', async () => {
-      let receivedBranch: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedBranch = req.query.branch as string | undefined;
-        res.json({
-          rows: [createMockLog()],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--project', 'explicit-project');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedBranch).toBeUndefined();
-    });
-
-    it('should use an explicitly selected branch', async () => {
-      let receivedBranch: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedBranch = req.query.branch as string | undefined;
-        res.json({
-          rows: [createMockLog()],
-          hasMoreRows: false,
-        });
-      });
-
-      client.setArgv(
-        'logs',
-        '--project',
-        'explicit-project',
-        '--branch',
-        'feature-branch'
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].headers['x-vercel-observability-query-reason']).toBe(
+        'cli/logs-requests'
       );
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedBranch).toEqual('feature-branch');
-    });
-
-    it('should follow the active production deployment for an explicit project', async () => {
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-      let newerProductionDeployment: ReturnType<typeof useDeployment>;
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        res.json({
-          deployments: [
-            {
-              uid: newerProductionDeployment.id,
-              url: newerProductionDeployment.url,
-            },
-          ],
-        });
-      });
-
-      const activeProductionDeployment = useDeployment({
-        creator: user,
-        project: {
-          ...defaultProject,
-          id: 'prj_explicit',
-          name: 'explicit-project',
+      expect(calls[0].body).toMatchObject({
+        event: 'vercel.proxy_response',
+        timeRange: {
+          start: '2026-10-07T13:30:00.000Z',
+          end: '2026-10-07T14:00:00.000Z',
         },
-        target: 'production',
+        filter: '(NOT pathType:"background_func") AND (httpStatus >= 500)',
       });
-      newerProductionDeployment = useDeployment({
-        creator: user,
-        project: {
-          ...defaultProject,
-          id: 'prj_explicit',
-          name: 'explicit-project',
-        },
-        target: 'production',
-      });
-      useActiveProductionDeployment('prj_explicit', activeProductionDeployment);
-      useRuntimeLogs({
-        deployment: activeProductionDeployment,
-        logProducer: async function* () {},
-      });
-
-      client.setArgv('logs', '--project', 'explicit-project', '--follow');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toHaveLength(0);
-      await expect(client.stderr).toOutput(
-        `Streaming logs for production deployment ${activeProductionDeployment.id}`
+      expect(stdout()).toMatch(
+        /STATUS\s+METHOD\s+CACHE\s+REQUEST ID\s+HOST AND PATH/
+      );
+      expect(stdout()).toMatch(
+        /502\s+POST\s+MISS\s+abcde-1791381480000-0123456789ab\s+logs-test\.vercel\.app\/api\/checkout/
       );
     });
 
-    it('should follow your latest deployment when no active production deployment exists', async () => {
-      let userDeployment: ReturnType<typeof useDeployment>;
-      const deploymentQueries: Array<Record<string, unknown>> = [];
+    it('keeps the exclusion when a filter selects background functions', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', 'requests', '--query', 'pathType:background_func');
 
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        res.json({
-          deployments: [
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].body.filter).toBe(
+        '(NOT pathType:"background_func") AND (pathType:background_func)'
+      );
+      expect(stderr()).toContain(
+        'Background function executions are always excluded.'
+      );
+    });
+
+    it('explains API rejections of bare text with source-specific help', async () => {
+      useEvents((_call, _index, res) =>
+        apiError(res, 400, {
+          code: 'invalid_request',
+          message: 'Invalid events request',
+          issues: [
             {
-              uid: userDeployment.id,
-              url: userDeployment.url,
+              path: 'filter',
+              message:
+                'Text search is not supported by event "vercel.proxy_response"',
             },
           ],
-        });
-      });
+        })
+      );
+      client.setArgv('logs', 'requests', '--query', 'checkout');
 
-      userDeployment = useDeployment({
-        creator: user,
-        project: {
-          ...defaultProject,
-          id: 'prj_explicit',
-          name: 'explicit-project',
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain(
+        'requests: Text search is not supported by event "vercel.proxy_response"'
+      );
+      expect(stderr()).toContain('logs requests --help');
+      expect(stdout()).toBe('');
+    });
+
+    it('reports API validation issues as one JSON error document', async () => {
+      useEvents((_call, _index, res) =>
+        apiError(res, 400, {
+          code: 'invalid_request',
+          message: 'Invalid events request',
+          issues: [{ path: 'filter', message: 'Expected a value after ":"' }],
+        })
+      );
+      client.setArgv('logs', 'requests', '--query', 'foo::', '--json');
+
+      expect(await logs(client)).toBe(2);
+      expect(stdout()).toBe('');
+      expect(jsonError()).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: 'The requests query was rejected.',
+        data: {
+          httpStatus: 400,
+          issues: [
+            {
+              field: 'filter',
+              reason: 'invalid',
+              message: 'Expected a value after ":"',
+            },
+          ],
         },
       });
-      useActiveProductionDeployment('prj_explicit', null);
-      useRuntimeLogs({
-        deployment: userDeployment,
-        logProducer: async function* () {},
+    });
+
+    it('explains CDN request access requirements', async () => {
+      useEvents((_call, _index, res) =>
+        apiError(res, 402, {
+          code: 'payment_required',
+          message: 'Observability Plus is required for this query.',
+        })
+      );
+      client.setArgv('logs', 'requests');
+
+      expect(await logs(client)).toBe(1);
+      expect(stderr()).toContain(
+        'CDN request logs require Observability Plus, a Priority project, or the Enterprise Agents & Apps entitlement.'
+      );
+    });
+
+    it('warns about excluded intervals on stderr and still succeeds', async () => {
+      useEvents(
+        page([], null, {
+          excludedIntervals: [
+            {
+              start: '2026-10-07T13:30:00.000Z',
+              end: '2026-10-07T13:40:00.000Z',
+            },
+          ],
+        })
+      );
+      client.setArgv('logs', 'requests');
+
+      expect(await logs(client)).toBe(0);
+      expect(stderr()).toContain(
+        'Results omit 2026-10-07T13:30:00.000Z to 2026-10-07T13:40:00.000Z'
+      );
+    });
+
+    it('reports excluded intervals as stream_gap lines and in the summary of an empty result', async () => {
+      const interval = {
+        start: '2026-10-07T13:30:00.000Z',
+        end: '2026-10-07T13:40:00.000Z',
+      };
+      useEvents(page([], null, { excludedIntervals: [interval] }));
+      client.setArgv('logs', 'requests', '--json');
+
+      expect(await logs(client)).toBe(0);
+      const lines = jsonLines();
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toEqual({
+        type: 'warning',
+        reason: 'stream_gap',
+        message:
+          'Results omit 2026-10-07T13:30:00.000Z to 2026-10-07T13:40:00.000Z: data for this period is unavailable to this query.',
+        data: interval,
       });
+      expect(summaryOf(lines)).toMatchObject({
+        recordsReturned: 0,
+        pagination: { hasMore: false, next: null },
+        excludedIntervals: [interval],
+      });
+      expect(stderr()).toBe('');
+    });
 
-      client.setArgv('logs', '--project', 'explicit-project', '--follow');
-      const exitCode = await logs(client);
+    it('deduplicates and sorts excluded intervals across pages', async () => {
+      const early = {
+        start: '2026-10-07T13:30:00.000Z',
+        end: '2026-10-07T13:31:00.000Z',
+      };
+      const late = {
+        start: '2026-10-07T13:50:00.000Z',
+        end: '2026-10-07T13:51:00.000Z',
+      };
+      useEvents(
+        page([requestEvent], 'cursor_1', { excludedIntervals: [late] }),
+        page([requestEvent], null, { excludedIntervals: [early, late] })
+      );
+      client.setArgv('logs', 'requests', '--limit', '2', '--json');
 
-      expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toEqual([
-        expect.objectContaining({
-          projectId: 'prj_explicit',
-          state: 'READY',
-          users: user.id,
-        }),
+      expect(await logs(client)).toBe(0);
+      const lines = jsonLines();
+      const gaps = lines.filter(line => line.type === 'warning');
+      expect(gaps.map(line => line.data)).toEqual([early, late]);
+      expect(lines.slice(0, 2).map(line => line.type)).toEqual([
+        'request',
+        'request',
       ]);
-      await expect(client.stderr).toOutput(
-        `Streaming logs for your latest deployment ${userDeployment.id}`
-      );
+      expect(summaryOf(lines).excludedIntervals).toEqual([early, late]);
     });
+  });
 
-    it('should follow the active production deployment with --environment production', async () => {
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        res.json({ deployments: [] });
+  describe('filters', () => {
+    it('combines deployment, environment, and user filters so OR cannot bypass them', async () => {
+      client.scenario.get('/v13/deployments/:id', (req, res) => {
+        expect(req.params.id).toBe('dpl_123');
+        res.json({ id: 'dpl_123', projectId: 'prj_logstest' });
       });
-
-      const productionDeployment = useDeployment({
-        creator: user,
-        project: {
-          ...defaultProject,
-          id: 'prj_explicit',
-          name: 'explicit-project',
-        },
-        target: 'production',
-      });
-      useActiveProductionDeployment('prj_explicit', productionDeployment);
-      useRuntimeLogs({
-        deployment: productionDeployment,
-        logProducer: async function* () {},
-      });
-
+      const calls = useEvents(page([]));
       client.setArgv(
         'logs',
-        '--project',
-        'explicit-project',
-        '--follow',
+        'requests',
+        '--deployment',
+        'dpl_123',
         '--environment',
-        'production'
+        'staging',
+        '--query',
+        'httpStatus >= 500 OR cacheResult:MISS'
       );
-      const exitCode = await logs(client);
 
-      expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toHaveLength(0);
-      await expect(client.stderr).toOutput(
-        `Streaming logs for production deployment ${productionDeployment.id}`
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].body.filter).toBe(
+        '(deploymentId:"dpl_123") AND (environment:"staging") AND (NOT pathType:"background_func") AND (httpStatus >= 500 OR cacheResult:MISS)'
       );
     });
 
-    it('should error when --environment production has no active deployment', async () => {
-      useActiveProductionDeployment('prj_explicit', null);
+    it('accepts the -q shorthand', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '-q', 'level:error');
 
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].body.filter).toBe('(level:error)');
+    });
+
+    it.each([
+      [''],
+      ['   '],
+    ])('rejects an empty --project %j instead of using the link', async value => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--project', value);
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain('--project must not be empty.');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('rejects an empty filter before querying', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--query', '  ');
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain('--query must not be empty.');
+      expect(calls).toHaveLength(0);
+    });
+  });
+
+  describe('time range', () => {
+    it.each([
+      [
+        ['--since', '1h'],
+        '2026-10-07T13:00:00.000Z',
+        '2026-10-07T14:00:00.000Z',
+      ],
+      [
+        ['--until', '10m'],
+        '2026-10-07T13:20:00.000Z',
+        '2026-10-07T13:50:00.000Z',
+      ],
+      [
+        ['--until', '1h'],
+        '2026-10-07T12:30:00.000Z',
+        '2026-10-07T13:00:00.000Z',
+      ],
+      [
+        ['--since', '2h', '--until', '1h'],
+        '2026-10-07T12:00:00.000Z',
+        '2026-10-07T13:00:00.000Z',
+      ],
+      [
+        ['--since', '2026-10-07T12:00:00Z', '--until', 'now'],
+        '2026-10-07T12:00:00.000Z',
+        '2026-10-07T14:00:00.000Z',
+      ],
+    ])('resolves %j from command start', async (args, start, end) => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', ...args);
+
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].body.timeRange).toEqual({ start, end });
+    });
+
+    it.each([
+      [
+        ['--since', '1h', '--until', '2h'],
+        'Use --since to set an earlier start',
+      ],
+      [['--since', '30m', '--until', '30m'], 'must be before the end'],
+      [['--since', 'yesterday-ish'], 'Invalid time format'],
+    ])('rejects %j before querying', async (args, message) => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', ...args);
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain(message);
+      expect(stdout()).toBe('');
+      expect(calls).toHaveLength(0);
+    });
+  });
+
+  describe('pagination', () => {
+    it('pages with the cursor and a fixed window, and reports a continuation', async () => {
+      vi.spyOn(Date, 'now')
+        .mockReturnValueOnce(NOW)
+        .mockReturnValue(NOW + 60_000);
+      const calls = useEvents(
+        page([runtimeEvent, runtimeEvent], 'cursor_1'),
+        page([runtimeEvent], 'cursor_2')
+      );
+      client.setArgv('logs', '--limit', '3', '--json');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls.map(call => [call.body.limit, call.body.cursor])).toEqual([
+        [3, undefined],
+        [1, 'cursor_1'],
+      ]);
+      expect(calls[1].body.timeRange).toEqual(calls[0].body.timeRange);
+      const lines = jsonLines();
+      expect(lines.filter(line => line.type === 'log')).toHaveLength(3);
+      const summary = summaryOf(lines);
+      expect(summary.recordsReturned).toBe(3);
+      expect(summary.pagination.hasMore).toBe(true);
+      expect(decodeToken(summary.pagination.next)).toEqual({
+        v: 1,
+        event: 'vercel.log',
+        ownerId: 'team_dummy',
+        projectIds: ['prj_logstest'],
+        timeRange: calls[0].body.timeRange,
+        order: 'desc',
+        cursor: 'cursor_2',
+      });
+      expect(stderr()).toBe('');
+    });
+
+    it('prints the next page command in human output', async () => {
+      useEvents(page([runtimeEvent], 'cursor_1'));
+      client.setArgv('logs', '--limit', '1');
+
+      expect(await logs(client)).toBe(0);
+      expect(stderr()).toContain('More runtime log entries matched.');
+      expect(stderr()).toMatch(/Next page:\n\s+`?vercel logs --next [\w-]+/);
+      expect(stderr()).not.toContain('Increase --limit');
+    });
+
+    it('reports hasMore false when the limit equals the matching records', async () => {
+      useEvents(page([runtimeEvent, runtimeEvent]));
+      client.setArgv('logs', '--limit', '2', '--json');
+
+      expect(await logs(client)).toBe(0);
+      expect(summaryOf(jsonLines()).pagination).toEqual({
+        hasMore: false,
+        next: null,
+      });
+    });
+
+    it('requests pages of at most 1000 records', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--limit', '5000');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].body.limit).toBe(1000);
+    });
+
+    it('retries the same cursor with a smaller page when the result is too large', async () => {
+      const calls = useEvents(
+        (_call, _index, res) =>
+          apiError(res, 413, {
+            code: 'result_too_large',
+            message: 'Result too large',
+          }),
+        page([runtimeEvent], 'cursor_1'),
+        page([runtimeEvent])
+      );
+      client.setArgv('logs', '--limit', '1000', '--json');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls.map(call => [call.body.limit, call.body.cursor])).toEqual([
+        [1000, undefined],
+        [500, undefined],
+        [500, 'cursor_1'],
+      ]);
+    });
+
+    it('fails clearly when a single record is too large', async () => {
+      useEvents((_call, _index, res) =>
+        apiError(res, 413, {
+          code: 'result_too_large',
+          message: 'Result too large',
+        })
+      );
+      client.setArgv('logs', '--limit', '1');
+
+      expect(await logs(client)).toBe(1);
+      expect(stderr()).toContain('A single record exceeds the API response');
+    });
+
+    it('keeps partial output and exits 1 when a later page fails', async () => {
+      useEvents(page([runtimeEvent], 'cursor_1'), (_call, _index, res) =>
+        apiError(res, 400, { code: 'bad_request', message: 'Cursor expired' })
+      );
+      client.setArgv('logs');
+
+      expect(await logs(client)).toBe(1);
+      expect(stdout()).toMatch(/error\s+serverless\s+Error: boom/);
+      expect(stderr()).toContain('Cursor expired');
+      expect(stderr()).toContain('Output is incomplete: 1 runtime log entries');
+      expect(stderr()).toMatch(
+        /Retry the failed page:\n\s+`?vercel logs --next/
+      );
+    });
+
+    it('reports a later page failure as a JSON error with a resume token', async () => {
+      useEvents(page([runtimeEvent], 'cursor_1'), (_call, _index, res) =>
+        apiError(res, 403, { code: 'forbidden', message: 'Not allowed' })
+      );
+      client.setArgv('logs', '--json');
+
+      expect(await logs(client)).toBe(1);
+      const lines = jsonLines();
+      expect(lines).toEqual([{ type: 'log', data: runtimeEvent }]);
+      const error = jsonError();
+      expect(error).toMatchObject({
+        status: 'error',
+        reason: 'permission_denied',
+        data: {
+          recordsReturned: 1,
+          outputIncomplete: true,
+          pagination: { hasMore: true },
+          excludedIntervals: [],
+        },
+      });
+      expect(decodeToken(error.data.pagination.next).cursor).toBe('cursor_1');
+    });
+
+    it('clamps --limit above the maximum with a warning', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--limit', '20000', '--json');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].body.limit).toBe(1000);
+      const lines = jsonLines();
+      expect(lines[0]).toEqual({
+        type: 'warning',
+        reason: 'limit_clamped',
+        message: '--limit 20000 is above the maximum of 10000. Using 10000.',
+        data: { requested: 20000, limit: 10000 },
+      });
+      expect(summaryOf(lines).recordsReturned).toBe(0);
+    });
+
+    it.each([0, 1.5])('rejects --limit %s', async limit => {
+      client.setArgv('logs', '--limit', String(limit));
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain(
+        '`--limit` must be an integer between 1 and 10000'
+      );
+    });
+  });
+
+  describe('API errors', () => {
+    it('adds a time-range hint to retention errors', async () => {
+      useEvents((_call, _index, res) =>
+        apiError(res, 400, {
+          code: 'bad_request',
+          message:
+            'The hobby plan does not retain runtime logs for the requested time range.',
+        })
+      );
+      client.setArgv('logs', '--since', '2h');
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain('does not retain runtime logs');
+      expect(stderr()).toContain('Use a later --since');
+    });
+  });
+
+  describe('continuation', () => {
+    function token(overrides: Record<string, unknown> = {}): string {
+      return Buffer.from(
+        JSON.stringify({
+          v: 1,
+          event: 'vercel.proxy_response',
+          ownerId: 'team_dummy',
+          projectIds: ['prj_logstest'],
+          timeRange: {
+            start: '2026-10-07T12:00:00.000Z',
+            end: '2026-10-07T13:00:00.000Z',
+          },
+          filter: '(NOT pathType:"background_func") AND (httpStatus >= 500)',
+          order: 'desc',
+          cursor: 'cursor_9',
+          ...overrides,
+        })
+      ).toString('base64url');
+    }
+
+    it('continues with the identity from the cursor and a new limit', async () => {
+      const calls = useEvents(page([requestEvent]));
+      client.setArgv('logs', '--next', token(), '--limit', '5', '--json');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].headers['x-vercel-observability-query-reason']).toBe(
+        'cli/logs-requests'
+      );
+      expect(calls[0].query).toEqual({ teamId: 'team_dummy' });
+      expect(calls[0].body).toMatchObject({
+        event: 'vercel.proxy_response',
+        scope: { ownerId: 'team_dummy', projectIds: ['prj_logstest'] },
+        timeRange: {
+          start: '2026-10-07T12:00:00.000Z',
+          end: '2026-10-07T13:00:00.000Z',
+        },
+        filter: '(NOT pathType:"background_func") AND (httpStatus >= 500)',
+        order: 'desc',
+        limit: 5,
+        cursor: 'cursor_9',
+      });
+      const lines = jsonLines();
+      expect(lines[0]).toEqual({ type: 'request', data: requestEvent });
+      expect(summaryOf(lines).timeRange).toEqual({
+        start: '2026-10-07T12:00:00.000Z',
+        end: '2026-10-07T13:00:00.000Z',
+      });
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:requests', value: 'default' },
+        { key: 'option:limit', value: '[REDACTED]' },
+        { key: 'option:next', value: '[REDACTED]' },
+        { key: 'flag:json', value: 'TRUE' },
+      ]);
+    });
+
+    it('round-trips the summary token into the next request', async () => {
+      const calls = useEvents(
+        page([runtimeEvent], 'cursor_1'),
+        page([runtimeEvent])
+      );
       client.setArgv(
         'logs',
-        '--project',
-        'explicit-project',
-        '--follow',
-        '--environment',
-        'production'
+        '--query',
+        'level:error',
+        '--limit',
+        '1',
+        '--json'
       );
-      const exitCode = await logs(client);
+      expect(await logs(client)).toBe(0);
+      const next = summaryOf(jsonLines()).pagination.next;
 
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput(
-        'No active production deployment found'
-      );
-    });
-
-    it('should track telemetry for --project option', async () => {
-      useRequestLogs([]);
-
-      client.setArgv('logs', '--project', 'explicit-project');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:project',
-          value: '[REDACTED]',
-        },
-      ]);
-    });
-
-    it('should error when project not found', async () => {
-      client.scenario.get('/v9/projects/nonexistent', (_req, res) => {
-        res.status(404).json({ error: { code: 'not_found' } });
+      client.setArgv('logs', '--next', next, '--json');
+      expect(await logs(client)).toBe(0);
+      expect(calls[1].body).toEqual({
+        ...calls[0].body,
+        limit: 100,
+        cursor: 'cursor_1',
       });
-
-      client.setArgv('logs', '--project', 'nonexistent');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Project not found');
     });
-  });
 
-  describe('--level option', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
+    it('uses the team in the cursor regardless of the link and current team', async () => {
       useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
-    });
-
-    it('should filter by error level', async () => {
-      let receivedLevel: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedLevel = req.query.level as string;
-        res.json({
-          rows: [createMockLog({ level: 'error', message: 'Error occurred' })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--level', 'error');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedLevel).toEqual('error');
-    });
-
-    it('should track telemetry for valid --level values', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--level', 'error');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:level',
-          value: 'error',
-        },
-      ]);
-    });
-
-    it('should track telemetry for multiple --level values', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--level', 'error', '--level', 'warning');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:level',
-          value: 'error,warning',
-        },
-      ]);
-    });
-
-    it('should error on invalid level', async () => {
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--level', 'invalid');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Invalid log level: invalid');
-    });
-  });
-
-  describe('--environment option', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
-    });
-
-    it('should filter by production environment', async () => {
-      let receivedEnvironment: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedEnvironment = req.query.environment as string;
-        res.json({
-          rows: [createMockLog({ environment: 'production' })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--environment', 'production');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedEnvironment).toEqual('production');
-    });
-
-    it('should track telemetry for production environment', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--environment', 'production');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:environment',
-          value: 'production',
-        },
-      ]);
-    });
-
-    it('should track telemetry for preview environment', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--environment', 'preview');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:environment',
-          value: 'preview',
-        },
-      ]);
-    });
-
-    it('should error on invalid environment', async () => {
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--environment', 'staging');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Invalid environment: staging');
-    });
-  });
-
-  describe('--source option', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
-    });
-
-    it('should filter by serverless source', async () => {
-      let receivedSource: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedSource = req.query.source as string;
-        res.json({
-          rows: [createMockLog({ source: 'serverless' })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--source', 'serverless');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedSource).toEqual('serverless');
-    });
-
-    it('should track telemetry for valid --source values', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--source', 'edge-function');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:source',
-          value: 'edge-function',
-        },
-      ]);
-    });
-
-    it('should error on invalid source', async () => {
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--source', 'invalid-source');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Invalid source: invalid-source');
-    });
-  });
-
-  describe('--status-code option', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
-    });
-
-    it('should filter by status code', async () => {
-      let receivedStatusCode: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedStatusCode = req.query.statusCode as string;
-        res.json({
-          rows: [createMockLog({ responseStatusCode: 500 })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--status-code', '500');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedStatusCode).toEqual('500');
-    });
-
-    it('should track telemetry for --status-code option', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--status-code', '500');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:status-code',
-          value: '[REDACTED]',
-        },
-      ]);
-    });
-  });
-
-  describe('--since and --until options', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
-    });
-
-    it('should filter by time range', async () => {
-      let receivedStartDate: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedStartDate = req.query.startDate as string;
-        res.json({
-          rows: [createMockLog()],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--since', '1h');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      const startDateMs = parseInt(receivedStartDate!, 10);
-      const now = Date.now();
-      const oneHourAgo = now - 60 * 60 * 1000;
-      expect(startDateMs).toBeGreaterThan(oneHourAgo - 1000);
-      expect(startDateMs).toBeLessThan(oneHourAgo + 1000);
-    });
-
-    it('should track telemetry for --since option', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--since', '1h');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:since',
-          value: '[REDACTED]',
-        },
-      ]);
-    });
-
-    it('should track telemetry for --until option', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--until', '30m');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:until',
-          value: '[REDACTED]',
-        },
-      ]);
-    });
-  });
-
-  describe('--limit option', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
-    });
-
-    it('should track telemetry for --limit option', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--limit', '50');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:limit',
-          value: '[REDACTED]',
-        },
-      ]);
-    });
-  });
-
-  describe('--query option', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
-    });
-
-    it('should search logs', async () => {
-      let receivedSearch: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedSearch = req.query.search as string;
-        res.json({
-          rows: [createMockLog({ message: 'timeout error occurred' })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--query', 'timeout');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedSearch).toEqual('timeout');
-    });
-
-    it('should track telemetry for --query option', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--query', 'error');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:query',
-          value: '[REDACTED]',
-        },
-      ]);
-    });
-  });
-
-  describe('--search option', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
-      });
-    });
-
-    it('should pass raw search query to the API', async () => {
-      let receivedSearch: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedSearch = req.query.search as string;
-        res.json({
-          rows: [createMockLog({ message: 'status:500 error' })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--search', 'status:500 error');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedSearch).toEqual('status:500 error');
-    });
-
-    it('should track telemetry for --search option', async () => {
-      useRequestLogs([]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--search', 'status:500 error');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:search',
-          value: '[REDACTED]',
-        },
-      ]);
-    });
-  });
-
-  describe('--deployment option', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject(logsProject);
-    });
-
-    it('should filter by deployment ID by default', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-
-      let receivedDeploymentId: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedDeploymentId = req.query.deploymentId as string;
-        res.json({
-          rows: [createMockLog({ deploymentId: deployment.id })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--deployment', deployment.id);
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedDeploymentId).toEqual(deployment.id);
-    });
-
-    it('should track telemetry for --deployment option', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-
-      useRequestLogs([createMockLog({ deploymentId: deployment.id })]);
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--deployment', deployment.id);
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:deployment',
-          value: '[REDACTED]',
-        },
-      ]);
-    });
-
-    it('should error when --project does not match the deployment project', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-      useProject({
-        ...defaultProject,
+        ...logsProject,
         id: 'prj_other',
         name: 'other-project',
-        accountId: logsProject.accountId,
+        accountId: 'team_other',
       });
-
-      client.cwd = logsFixturesDir;
+      const calls = useEvents(page([]));
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_dummy';
       client.setArgv(
         'logs',
-        '--deployment',
-        deployment.id,
-        '--project',
-        'other-project',
-        '--no-follow'
-      );
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput(
-        `The deployment "${deployment.id}" does not belong to "other-project" project. Remove either the deployment selection or the --project option.`
-      );
-    });
-
-    it('should show deployment error for errored deployment with --deployment', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user, 'ERROR');
-      const runtimeLogsSpy = vi.fn();
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (_req, res) => {
-          runtimeLogsSpy();
-          res.end();
-        }
+        '--next',
+        token({ ownerId: 'team_other', projectIds: ['prj_other'] }),
+        '--json'
       );
 
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--deployment', deployment.id);
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      expect(runtimeLogsSpy).not.toHaveBeenCalled();
-      const output = client.getFullOutput();
-      expect(output).toContain('Logs are unavailable');
-      expect(output).toContain(
-        `deployment ${deployment.id} never reached READY and ended in ERROR`
-      );
-      expect(output).toContain(
-        `Run \`vercel inspect https://${deployment.url}\` for deployment details.`
-      );
-    });
-  });
-
-  describe('positional deployment argument', () => {
-    let logsTeam: ReturnType<typeof useTeam>;
-
-    beforeEach(() => {
-      useUser();
-      logsTeam = useTeam(logsProject.accountId);
-      useProject(logsProject);
-    });
-
-    it('should filter by deployment ID by default', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-
-      let receivedDeploymentId: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedDeploymentId = req.query.deploymentId as string;
-        res.json({
-          rows: [createMockLog({ deploymentId: deployment.id })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id);
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedDeploymentId).toEqual(deployment.id);
-    });
-
-    it('should stream logs when --follow is specified for a deployment ID', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id, '--follow');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-    });
-
-    it('should show deployment error and skip runtime logs for errored deployment', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user, 'ERROR');
-      const runtimeLogsSpy = vi.fn();
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (_req, res) => {
-          runtimeLogsSpy();
-          res.end();
-        }
-      );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id);
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      expect(runtimeLogsSpy).not.toHaveBeenCalled();
-      expect(client.getFullOutput()).toContain(
-        `deployment ${deployment.id} never reached READY and ended in ERROR`
-      );
-    });
-
-    it('should include explicit scope in the inspect command for errored deployment', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user, 'ERROR');
-
-      client.config.currentTeam = logsTeam.id;
-      client.cwd = logsFixturesDir;
-      client.setArgv('logs', deployment.id, '--scope', logsTeam.slug);
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      expect(client.getFullOutput()).toContain(
-        `Run \`vercel inspect https://${deployment.url} --scope ${logsTeam.slug}\` for deployment details.`
-      );
-    });
-
-    it('should show deployment error and skip request logs for errored deployment with --no-follow', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user, 'ERROR');
-      const requestLogsSpy = vi.fn();
-
-      client.scenario.get('/api/logs/request-logs', (_req, res) => {
-        requestLogsSpy();
-        res.json({
-          rows: [createMockLog({ deploymentId: deployment.id })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id, '--no-follow');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      expect(requestLogsSpy).not.toHaveBeenCalled();
-      expect(client.getFullOutput()).toContain(
-        `deployment ${deployment.id} never reached READY and ended in ERROR`
-      );
-    });
-
-    it('should show deployment error for canceled deployment', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user, 'CANCELED');
-      const requestLogsSpy = vi.fn();
-
-      client.scenario.get('/api/logs/request-logs', (_req, res) => {
-        requestLogsSpy();
-        res.json({ rows: [], hasMoreRows: false });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id, '--no-follow');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      expect(requestLogsSpy).not.toHaveBeenCalled();
-      expect(client.getFullOutput()).toContain(
-        `deployment ${deployment.id} never reached READY and ended in CANCELED`
-      );
-    });
-
-    it('should output structured JSON for errored deployment', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user, 'ERROR');
-      const runtimeLogsSpy = vi.fn();
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (_req, res) => {
-          runtimeLogsSpy();
-          res.end();
-        }
-      );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id, '--json');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      expect(runtimeLogsSpy).not.toHaveBeenCalled();
-      expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
-        type: 'deployment_error',
-        message: `Logs are unavailable because deployment ${deployment.id} never reached READY and ended in ERROR. Run \`vercel inspect https://${deployment.url}\` for deployment details.`,
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].query).toEqual({ teamId: 'team_other' });
+      expect(calls[0].body.scope).toEqual({
+        ownerId: 'team_other',
+        projectIds: ['prj_other'],
       });
     });
 
-    it('should accept --no-follow while filtering deployment logs', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-
-      let receivedDeploymentId: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedDeploymentId = req.query.deploymentId as string;
-        res.json({
-          rows: [createMockLog({ deploymentId: deployment.id })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id, '--no-follow');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedDeploymentId).toEqual(deployment.id);
-    });
-
-    it('should extract hostname from URL positional argument', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-
-      client.scenario.get(`/v13/deployments/${deployment.url}`, (_req, res) => {
-        res.json(deployment);
-      });
-
-      let receivedDeploymentId: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedDeploymentId = req.query.deploymentId as string;
-        res.json({
-          rows: [createMockLog({ deploymentId: deployment.id })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', `https://${deployment.url}/some/path`);
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedDeploymentId).toEqual(deployment.id);
-    });
-
-    it('should stream logs for a deployment URL without a linked project', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-
-      let receivedTeamId: string | undefined;
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${deployment.id}/runtime-logs`,
-        (req, res) => {
-          receivedTeamId = req.query.teamId as string;
-          res.status(200);
-          res.end();
-        }
-      );
-
-      client.config.currentTeam = logsTeam.id;
-      client.cwd = logsFixturesDir;
-      client.setArgv('logs', `https://${deployment.url}`, '--follow');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedTeamId).toEqual(logsProject.accountId);
-    });
-
-    it('should fetch historical logs for a deployment URL without a linked project', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-      let receivedQuery:
-        | {
-            projectId?: string;
-            ownerId?: string;
-            deploymentId?: string;
-            teamId?: string;
-          }
-        | undefined;
-
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedQuery = {
-          projectId: req.query.projectId as string,
-          ownerId: req.query.ownerId as string,
-          deploymentId: req.query.deploymentId as string,
-          teamId: req.query.teamId as string,
-        };
-        res.json({
-          rows: [createMockLog({ deploymentId: deployment.id })],
-          hasMoreRows: false,
-        });
-      });
-
-      client.config.currentTeam = logsTeam.id;
-      client.cwd = logsFixturesDir;
-      client.setArgv('logs', `https://${deployment.url}`);
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedQuery).toEqual({
-        projectId: logsProject.id,
-        ownerId: logsProject.accountId,
-        deploymentId: deployment.id,
-        teamId: logsProject.accountId,
-      });
-    });
-
-    it('should include the searched scope in error message when the deployment project cannot be found', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-      deployment.projectId = 'prj_missing_logs';
-
-      client.scenario.get('/v9/projects/prj_missing_logs', (_req, res) => {
-        res.status(404).json({ error: { code: 'not_found' } });
-      });
-
-      client.config.currentTeam = logsTeam.id;
-      client.cwd = logsFixturesDir;
-      client.setArgv('logs', deployment.id, '--no-follow');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput(
-        `Project not found: prj_missing_logs under ${logsTeam.slug}`
-      );
-    });
-
-    it('should include the searched scope in error message when an explicit project cannot be found', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
-
-      client.scenario.get('/v9/projects/missing-project', (_req, res) => {
-        res.status(404).json({ error: { code: 'not_found' } });
-      });
-
-      client.config.currentTeam = logsTeam.id;
-      client.cwd = logsFixturesDir;
+    it('rejects an explicit --scope for a different team before the events query', async () => {
+      const calls = useEvents(page([]));
+      client.config.currentTeam = 'team_dummy';
       client.setArgv(
         'logs',
-        deployment.id,
-        '--project',
-        'missing-project',
-        '--no-follow'
+        '--scope',
+        'dummy',
+        '--next',
+        token({ ownerId: 'team_other' })
       );
-      const exitCode = await logs(client);
 
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput(
-        `Project not found: missing-project under ${logsTeam.slug}`
-      );
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain('belongs to a different team than --scope');
+      expect(calls).toHaveLength(0);
     });
 
-    it('should prioritize positional argument over --deployment flag', async () => {
-      const user = useUser();
-      const deployment = useLogsDeployment(user);
+    it('accepts an explicit --scope that matches the cursor team', async () => {
+      const calls = useEvents(page([]));
+      client.config.currentTeam = 'team_dummy';
+      client.setArgv('logs', '--scope', 'dummy', '--next', token(), '--json');
 
-      let receivedDeploymentId: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedDeploymentId = req.query.deploymentId as string;
-        res.json({
-          rows: [createMockLog({ deploymentId: deployment.id })],
-          hasMoreRows: false,
-        });
+      expect(await logs(client)).toBe(0);
+      expect(calls).toHaveLength(1);
+    });
+
+    it.each([
+      ['--project', 'logs-test-project'],
+      ['--deployment', 'dpl_123'],
+      ['--environment', 'production'],
+      ['--query', 'httpStatus:500'],
+      ['--since', '1h'],
+      ['--until', '10m'],
+    ])('rejects %s with --next', async (flag, value) => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--next', token(), flag, value);
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain(`${flag} can't be combined with --next`);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('rejects a data source that does not match the cursor', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', 'runtime', '--next', token());
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain('continues a requests query');
+      expect(calls).toHaveLength(0);
+    });
+
+    it.each([
+      ['null'],
+      ['not-a-token'],
+      [token({ v: 2 })],
+      [token({ event: 'vercel.span' })],
+      [token({ projectIds: [] })],
+      [token({ timeRange: { start: 'soon', end: 'later' } })],
+    ])('rejects malformed cursor %s as a JSON usage error', async value => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--next', value, '--json');
+
+      expect(await logs(client)).toBe(2);
+      expect(stdout()).toBe('');
+      expect(jsonError()).toMatchObject({
+        reason: 'invalid_arguments',
+        message: expect.stringContaining('--next is not a valid cursor'),
       });
+      expect(calls).toHaveLength(0);
+    });
 
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', deployment.id, '--deployment', 'other_dpl_id');
-      const exitCode = await logs(client);
+    it('rejects an empty --next', async () => {
+      client.setArgv('logs', '--next', ' ');
 
-      expect(exitCode).toEqual(0);
-      expect(receivedDeploymentId).toEqual(deployment.id);
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain('--next must not be empty.');
     });
   });
 
-  describe('--request-id option', () => {
-    beforeEach(() => {
-      useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
+  describe('target selection', () => {
+    it('resolves an explicit project within the linked team', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', '--project', 'logs-test-project');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].body.scope).toEqual({
+        ownerId: 'team_dummy',
+        projectIds: ['prj_logstest'],
       });
     });
 
-    it('should filter by request ID', async () => {
-      let receivedRequestId: string | undefined;
-      client.scenario.get('/api/logs/request-logs', (req, res) => {
-        receivedRequestId = req.query.requestId as string;
-        res.json({
-          rows: [createMockLog({ id: 'req_specific123' })],
-          hasMoreRows: false,
-        });
+    it('fails when an explicit team conflicts with the linked team', async () => {
+      const calls = useEvents(page([]));
+      client.config.currentTeam = 'team_other';
+      client.setArgv('logs', '--scope', 'other');
+
+      expect(await logs(client)).toBe(1);
+      expect(stderr()).toContain(
+        'This directory is linked to a project in team'
+      );
+      expect(stderr()).toContain('--project <name>');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('allows a fully explicit target in another team', async () => {
+      useProject({ ...logsProject, id: 'prj_other', name: 'other-project' });
+      const calls = useEvents(page([]));
+      client.config.currentTeam = 'team_other';
+      client.setArgv('logs', '--scope', 'other', '--project', 'other-project');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].query).toEqual({ teamId: 'team_other' });
+      expect(calls[0].body.scope).toEqual({
+        ownerId: 'team_other',
+        projectIds: ['prj_other'],
       });
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--request-id', 'req_specific123');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(receivedRequestId).toEqual('req_specific123');
     });
 
-    it('should track telemetry for --request-id option', async () => {
-      useRequestLogs([]);
+    it('explains how to select a target when unlinked', async () => {
+      client.cwd = setupTmpDir();
+      client.setArgv('logs', '--project', 'logs-test-project');
 
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--request-id', 'req_abc123');
-      await logs(client);
-
-      expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'option:request-id',
-          value: '[REDACTED]',
-        },
-      ]);
+      expect(await logs(client)).toBe(1);
+      expect(stderr()).toContain("Your codebase isn't linked to a project");
+      expect(stderr()).toContain('--scope <team> --project <name>');
     });
-  });
 
-  describe('error handling', () => {
-    it('should error when not linked and no project specified', async () => {
-      useUser();
-
+    it('rejects projects owned by a personal account', async () => {
+      const cwd = setupTmpDir();
+      await outputJSON(join(cwd, '.vercel/project.json'), {
+        orgId: 'user_123',
+        projectId: 'prj_logstest',
+      });
+      client.cwd = cwd;
       client.setArgv('logs');
-      const exitCode = await logs(client);
 
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput("isn't linked to a project");
+      expect(await logs(client)).toBe(1);
+      expect(stderr()).toContain('team-owned projects only');
     });
 
-    it('should include the current scope when a deployment is not found', async () => {
-      const user = useUser();
-      const team = useTeam(logsProject.accountId);
-      useLogsDeployment(user);
+    it.each([
+      false,
+      true,
+    ])('selects the explicit project from a multi-project repository link (non-interactive=%s)', async nonInteractive => {
+      const cwd = setupTmpDir();
+      await outputJSON(join(cwd, '.vercel/repo.json'), {
+        remoteName: 'origin',
+        projects: [
+          {
+            id: 'prj_a',
+            name: 'app-a',
+            directory: 'apps/a',
+            orgId: 'team_dummy',
+          },
+          {
+            id: 'prj_b',
+            name: 'app-b',
+            directory: 'apps/b',
+            orgId: 'team_dummy',
+          },
+        ],
+      });
+      useProject({ ...logsProject, id: 'prj_b', name: 'app-b' });
+      const select = vi.spyOn(client.input, 'select');
+      const calls = useEvents(page([]));
+      client.cwd = cwd;
+      client.nonInteractive = nonInteractive;
+      client.setArgv('logs', '--project', 'app-b', '--json');
 
-      client.config.currentTeam = team.id;
-      client.cwd = logsFixturesDir;
-      client.setArgv('logs', 'dpl_missing');
-      const exitCode = await logs(client);
+      expect(await logs(client)).toBe(0);
+      expect(select).not.toHaveBeenCalled();
+      expect(calls[0].body.scope).toEqual({
+        ownerId: 'team_dummy',
+        projectIds: ['prj_b'],
+      });
+    });
 
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput(
-        `Deployment not found: dpl_missing under ${team.slug}`
+    it('uses VERCEL_ORG_ID and VERCEL_PROJECT_ID as a link', async () => {
+      process.env.VERCEL_ORG_ID = 'team_dummy';
+      process.env.VERCEL_PROJECT_ID = 'prj_logstest';
+      client.cwd = setupTmpDir();
+      const calls = useEvents(page([]));
+      client.setArgv('logs');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls[0].body.scope.projectIds).toEqual(['prj_logstest']);
+    });
+
+    it('reports an incomplete environment link', async () => {
+      process.env.VERCEL_ORG_ID = 'team_dummy';
+      client.setArgv('logs');
+
+      expect(await logs(client)).toBe(1);
+      expect(stderr()).toContain('you forgot to specify `VERCEL_PROJECT_ID`');
+    });
+
+    it('rejects a deployment from another project', async () => {
+      client.scenario.get('/v13/deployments/:id', (_req, res) => {
+        res.json({ id: 'dpl_123', projectId: 'prj_elsewhere' });
+      });
+      useProject({ ...logsProject, id: 'prj_elsewhere', name: 'elsewhere' });
+      client.setArgv(
+        'logs',
+        '--deployment',
+        'dpl_123',
+        '--project',
+        'logs-test-project'
+      );
+
+      expect(await logs(client)).toBe(1);
+      expect(stderr()).toContain(
+        'Deployment dpl_123 does not belong to project logs-test-project'
       );
     });
   });
 
-  describe('--follow option', () => {
-    // The scenario router serves the first-registered `/v2/user` handler, so
-    // tests that assert on the current user's id must reuse this user instead
-    // of calling useUser() again.
-    let user: ReturnType<typeof useUser>;
-    beforeEach(() => {
-      user = useUser();
-      useTeams('team_dummy');
-      useProject({
-        ...defaultProject,
-        id: 'prj_logstest',
-        name: 'logs-test-project',
+  describe('arguments and migration', () => {
+    /** Resolves any deployment ID or host to `dpl_123` in the logs project. */
+    function useDeployment() {
+      const requested: string[] = [];
+      client.scenario.get('/v13/deployments/:id', (req, res) => {
+        requested.push(req.params.id);
+        res.json({ id: 'dpl_123', projectId: 'prj_logstest' });
       });
+      return requested;
+    }
+
+    it.each<[string[], string, string]>([
+      [['dpl_123'], 'dpl_123', '--deployment dpl_123'],
+      [
+        ['https://my-app.vercel.app'],
+        'my-app.vercel.app',
+        '--deployment my-app.vercel.app',
+      ],
+      [['-d', 'dpl_123'], 'dpl_123', '--deployment dpl_123'],
+      [['requests', 'dpl_123'], 'dpl_123', '--deployment dpl_123'],
+    ])('runs deployment positional %j as --deployment with a deprecation warning', async (args, lookup, flag) => {
+      const requested = useDeployment();
+      const calls = useEvents(page([]));
+      client.setArgv('logs', ...args);
+
+      expect(await logs(client)).toBe(0);
+      expect(requested).toEqual([lookup]);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].body.filter).toContain('(deploymentId:"dpl_123")');
+      expect(stderr()).toContain(
+        `Passing a deployment as an argument is deprecated. Use ${flag}.`
+      );
+      expect(stderr()).not.toContain(`vercel logs ${flag}`);
     });
 
-    it('should error when no deployments match an explicit branch', async () => {
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        res.json({ deployments: [] });
-      });
+    it('prints the positional deployment deprecation as a JSON warning line', async () => {
+      useDeployment();
+      useEvents(page([runtimeEvent]));
+      client.setArgv('logs', 'dpl_123', '--json');
 
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--follow', '--branch', 'main');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      expect(deploymentQueries).toEqual([
-        expect.objectContaining({
-          branch: 'main',
-          projectId: 'prj_logstest',
-          state: 'READY',
-        }),
+      expect(await logs(client)).toBe(0);
+      const lines = jsonLines();
+      expect(lines.map(line => line.type)).toEqual([
+        'warning',
+        'log',
+        'summary',
       ]);
-      await expect(client.stderr).toOutput(
-        'No READY deployments found for branch "main"'
-      );
-    });
-
-    it('should combine an explicit branch with the production environment', async () => {
-      let productionDeployment: ReturnType<typeof useLogsDeployment>;
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        res.json({
-          deployments: [
-            { uid: productionDeployment.id, url: productionDeployment.url },
-          ],
-        });
+      expect(lines[0]).toMatchObject({
+        reason: 'deprecated',
+        message:
+          'Passing a deployment as an argument is deprecated. Use --deployment dpl_123.',
       });
+      expect(stderr()).toBe('');
+    });
 
-      productionDeployment = useLogsDeployment(user);
+    it('warns for both --follow and a positional deployment', async () => {
+      useDeployment();
+      const calls = useEvents(page([runtimeEvent]));
+      client.setArgv('logs', 'my-app.vercel.app', '--follow');
 
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv(
-        'logs',
-        '--follow',
-        '--branch',
-        'main',
-        '--environment',
-        'production'
-      );
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toEqual([
-        expect.objectContaining({
-          branch: 'main',
-          projectId: 'prj_logstest',
-          state: 'READY',
-          target: 'production',
-        }),
-      ]);
-      await expect(client.stderr).toOutput(
-        `Streaming logs for latest deployment on branch "main" ${productionDeployment.id}`
+      expect(await logs(client)).toBe(0);
+      expect(calls).toHaveLength(1);
+      expect(stderr()).toContain('--follow is deprecated');
+      expect(stderr()).toContain(
+        'Passing a deployment as an argument is deprecated.'
       );
     });
 
-    it('should stream the active production deployment with --follow', async () => {
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        res.json({ deployments: [] });
+    it('rejects a positional deployment combined with --deployment', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', 'dpl_123', '--deployment', 'dpl_456');
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain(
+        'Pass the deployment once, with --deployment.'
+      );
+      expect(calls).toHaveLength(0);
+    });
+
+    it('rejects a positional deployment combined with --next', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', 'dpl_123', '--next', 'cursor');
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain(
+        "A deployment argument can't be combined with --next"
+      );
+      expect(calls).toHaveLength(0);
+    });
+
+    it('names the deployment argument when it belongs to another project', async () => {
+      client.scenario.get('/v13/deployments/:id', (_req, res) => {
+        res.json({ id: 'dpl_123', projectId: 'prj_elsewhere' });
       });
+      useProject({ ...logsProject, id: 'prj_elsewhere', name: 'elsewhere' });
+      client.setArgv('logs', 'dpl_123', '--project', 'logs-test-project');
 
-      const productionDeployment = useLogsDeployment(user);
-      useActiveProductionDeployment('prj_logstest', productionDeployment);
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--follow');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toHaveLength(0);
-      await expect(client.stderr).toOutput(
-        `Streaming logs for production deployment ${productionDeployment.id}`
+      expect(await logs(client)).toBe(1);
+      expect(stderr()).toContain(
+        'Deployment dpl_123 does not belong to project logs-test-project. Remove the deployment argument or --project.'
       );
     });
 
-    it('should fall back to your latest deployment when no active production deployment exists', async () => {
-      let userDeployment: ReturnType<typeof useLogsDeployment>;
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        res.json({
-          deployments: [{ uid: userDeployment.id, url: userDeployment.url }],
-        });
-      });
+    it('rejects more than one positional argument', async () => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', 'dpl_123', 'dpl_456');
 
-      userDeployment = useLogsDeployment(user);
-      useActiveProductionDeployment('prj_logstest', null);
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${userDeployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--follow');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toEqual([
-        expect.objectContaining({
-          projectId: 'prj_logstest',
-          state: 'READY',
-          users: user.id,
-        }),
-      ]);
-      await expect(client.stderr).toOutput(
-        `Streaming logs for your latest deployment ${userDeployment.id}`
-      );
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain('logs --deployment dpl_123');
+      expect(stderr()).not.toContain('is deprecated');
+      expect(calls).toHaveLength(0);
     });
 
-    it('should follow the latest deployment on an explicit branch', async () => {
-      let branchDeployment: ReturnType<typeof useLogsDeployment>;
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        if (req.query.branch === 'feature-x') {
-          res.json({
-            deployments: [
-              { uid: branchDeployment.id, url: branchDeployment.url },
-            ],
-          });
-          return;
-        }
-        res.json({ deployments: [] });
-      });
+    it('shell-quotes a positional deployment in the suggested command', async () => {
+      useDeployment();
+      useEvents(page([]));
+      client.setArgv('logs', 'dpl_x;touch /tmp/marker');
 
-      branchDeployment = useLogsDeployment(user);
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${branchDeployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--follow', '--branch', 'feature-x');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toHaveLength(1);
-      expect(deploymentQueries[0].branch).toEqual('feature-x');
-      expect(deploymentQueries[0].target).toBeUndefined();
-      await expect(client.stderr).toOutput(
-        `Streaming logs for latest deployment on branch "feature-x" ${branchDeployment.id}`
-      );
+      expect(await logs(client)).toBe(0);
+      expect(stderr()).toContain("Use --deployment 'dpl_x;touch /tmp/marker'.");
+      expect(stderr()).not.toContain('--deployment dpl_x;touch');
     });
 
-    it('should follow your latest preview deployment with --environment preview', async () => {
-      let previewDeployment: ReturnType<typeof useLogsDeployment>;
-      const deploymentQueries: Array<Record<string, unknown>> = [];
-      client.scenario.get('/v6/deployments', (req, res) => {
-        deploymentQueries.push({ ...req.query });
-        if (req.query.target === 'preview' && req.query.users) {
-          res.json({
-            deployments: [
-              { uid: previewDeployment.id, url: previewDeployment.url },
-            ],
-          });
-          return;
-        }
-        res.json({ deployments: [] });
-      });
+    it('lists the data sources for an unknown source', async () => {
+      client.setArgv('logs', 'runtiem');
 
-      previewDeployment = useLogsDeployment(user);
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${previewDeployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain(
+        'Unknown data source "runtiem". Use runtime or requests.'
       );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--follow', '--environment', 'preview');
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(0);
-      expect(deploymentQueries).toHaveLength(1);
-      expect(deploymentQueries[0].target).toEqual('preview');
-      expect(deploymentQueries[0].users).toEqual(user.id);
-      await expect(client.stderr).toOutput(
-        `Streaming logs for your latest deployment ${previewDeployment.id}`
-      );
-    });
-
-    it('should error when --follow is used with --level', async () => {
-      client.cwd = fixture('linked-project');
-      client.setArgv(
-        'logs',
-        '--follow',
-        '--deployment',
-        'dpl_test',
-        '--level',
-        'error'
-      );
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Remove: --level');
-    });
-
-    it('should error when --follow is used with --query', async () => {
-      client.cwd = fixture('linked-project');
-      client.setArgv(
-        'logs',
-        '--follow',
-        '--deployment',
-        'dpl_test',
-        '--query',
-        'error'
-      );
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Remove: --query');
-    });
-
-    it('should error when --follow is used with --search', async () => {
-      client.cwd = fixture('linked-project');
-      client.setArgv(
-        'logs',
-        '--follow',
-        '--deployment',
-        'dpl_test',
-        '--search',
-        'status:500 error'
-      );
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Remove: --search');
-    });
-
-    it('should error when --follow is used with multiple incompatible flags', async () => {
-      client.cwd = fixture('linked-project');
-      client.setArgv(
-        'logs',
-        '--follow',
-        '--deployment',
-        'dpl_test',
-        '--level',
-        'error',
-        '--since',
-        '1h'
-      );
-      const exitCode = await logs(client);
-
-      expect(exitCode).toEqual(1);
-      await expect(client.stderr).toOutput('Remove: --level, --since');
-    });
-
-    it('should track telemetry for --follow flag', async () => {
-      const user = useUser();
-
-      const productionDeployment = useLogsDeployment(user);
-      useActiveProductionDeployment('prj_logstest', productionDeployment);
-
-      client.scenario.get(
-        `/v1/projects/prj_logstest/deployments/${productionDeployment.id}/runtime-logs`,
-        (_req, res) => {
-          res.status(200);
-          res.end();
-        }
-      );
-
-      client.cwd = fixture('linked-project');
-      client.setArgv('logs', '--follow');
-      await logs(client);
-
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
-        {
-          key: 'flag:follow',
-          value: 'TRUE',
-        },
+        { key: 'subcommand:runtime', value: 'default' },
+        { key: 'argument:positional', value: 'unknown' },
+      ]);
+    });
+
+    it('records the kind of a positional deployment without its value', async () => {
+      useDeployment();
+      useEvents(page([]));
+      client.setArgv('logs', 'dpl_123');
+
+      expect(await logs(client)).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:runtime', value: 'default' },
+        { key: 'argument:positional', value: 'deployment' },
+      ]);
+    });
+
+    it('records removed options by name only', async () => {
+      client.setArgv('logs', '--level', 'error', '--request-id', 'secret-id');
+
+      expect(await logs(client)).toBe(2);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:runtime', value: 'default' },
+        { key: 'option:request-id', value: 'removed' },
+        { key: 'option:level', value: 'removed' },
+      ]);
+    });
+
+    it('records the removed -j shorthand', async () => {
+      client.setArgv('logs', '-j');
+
+      expect(await logs(client)).toBe(2);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'option:j', value: 'removed' },
+      ]);
+    });
+
+    it.each([
+      [['--search', 'error'], '--search was replaced by --query'],
+      [['--level', 'error'], "--query 'level:error'"],
+      [
+        ['--level', 'error', '--level', 'warning'],
+        "--query 'level:(error OR warning)'",
+      ],
+      [['--source', 'serverless'], "--query 'source:function'"],
+      [['--source', 'static'], 'Static and CDN traffic is in'],
+      [['--source', 'edge-middleware'], "--query 'source:<value>'"],
+      [
+        ['--status-code', '5xx'],
+        "logs requests --query 'httpStatus >= 500 AND httpStatus < 600'",
+      ],
+      [['--status-code', '404'], "logs requests --query 'httpStatus:404'"],
+      [['--request-id', 'abc-123'], `--query 'requestId:"abc-123"'`],
+      [['--branch', 'main'], '--branch is no longer supported'],
+      [['--expand'], 'Full runtime messages are shown by default'],
+      [['--no-follow'], '--no-follow was removed and has no effect'],
+    ])('explains the replacement for %j', async (args, message) => {
+      const calls = useEvents(page([]));
+      client.setArgv('logs', ...args);
+
+      expect(await logs(client)).toBe(2);
+      expect(stderr()).toContain(message);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('warns for deprecated --follow and runs the bounded query', async () => {
+      const calls = useEvents(page([runtimeEvent]));
+      client.setArgv('logs', '--follow');
+
+      expect(await logs(client)).toBe(0);
+      expect(calls).toHaveLength(1);
+      expect(stderr()).toContain('--follow is deprecated');
+    });
+
+    it('prints the --follow deprecation as a JSON warning line', async () => {
+      useEvents(page([runtimeEvent]));
+      client.setArgv('logs', '--follow', '--json');
+
+      expect(await logs(client)).toBe(0);
+      const lines = jsonLines();
+      expect(lines.map(line => line.type)).toEqual([
+        'warning',
+        'log',
+        'summary',
+      ]);
+      expect(lines[0]).toMatchObject({
+        reason: 'deprecated',
+        message: expect.stringContaining('--follow is deprecated'),
+      });
+      expect(stderr()).toBe('');
+    });
+
+    it('reports usage errors as one JSON error document', async () => {
+      client.setArgv('logs', 'runtiem', '--json');
+
+      expect(await logs(client)).toBe(2);
+      expect(stdout()).toBe('');
+      expect(jsonError()).toMatchObject({
+        status: 'error',
+        reason: 'invalid_arguments',
+        message: expect.stringContaining('Unknown data source "runtiem"'),
+      });
+    });
+
+    it('reports parse errors as JSON when --format json is requested', async () => {
+      client.setArgv('logs', '--unknown-flag', '--format', 'json');
+
+      expect(await logs(client)).toBe(2);
+      expect(stdout()).toBe('');
+      expect(jsonError()).toMatchObject({ reason: 'invalid_arguments' });
+    });
+
+    it('reports unknown options as a JSON error document', async () => {
+      client.setArgv('logs', '--unknown-flag', '--json');
+
+      expect(await logs(client)).toBe(2);
+      expect(stdout()).toBe('');
+      expect(jsonError()).toMatchObject({ reason: 'invalid_arguments' });
+    });
+
+    it('reports target errors as JSON without progress on stderr', async () => {
+      client.cwd = setupTmpDir();
+      client.setArgv('logs', '--json');
+
+      expect(await logs(client)).toBe(1);
+      expect(stdout()).toBe('');
+      expect(jsonError()).toMatchObject({
+        status: 'error',
+        reason: 'not_linked',
+      });
+    });
+
+    it('does not warn about --follow when it is not supplied', async () => {
+      useEvents(page([]));
+      client.setArgv('logs');
+
+      expect(await logs(client)).toBe(0);
+      expect(stderr()).not.toContain('--follow');
+    });
+  });
+
+  describe('telemetry', () => {
+    it('records the effective source and filter presence without contents', async () => {
+      useEvents(page([]));
+      client.setArgv('logs', '--query', 'requestId:"secret"', '--json');
+
+      expect(await logs(client)).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:runtime', value: 'default' },
+        { key: 'option:query', value: '[REDACTED]' },
+        { key: 'flag:json', value: 'TRUE' },
+      ]);
+    });
+
+    it('records an explicit requests source', async () => {
+      useEvents(page([]));
+      client.setArgv('logs', 'requests');
+
+      expect(await logs(client)).toBe(0);
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:requests', value: 'requests' },
       ]);
     });
   });

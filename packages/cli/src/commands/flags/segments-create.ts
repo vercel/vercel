@@ -46,7 +46,7 @@ export default async function segmentsCreate(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -86,15 +86,15 @@ export default async function segmentsCreate(
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error('Please provide a slug for the segment');
     output.log(
       `Example: ${getCommandName('flags segments create beta-users --label "Beta users" --add include:user.id=user_123')}`
     );
-    return 1;
+    return 2;
   }
 
   const link = await getLinkedFlagsProject(client, projectName);

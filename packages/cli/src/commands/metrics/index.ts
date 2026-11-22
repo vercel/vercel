@@ -28,8 +28,8 @@ export default async function metrics(client: Client): Promise<number> {
       permissive: true,
     });
   } catch (err) {
-    printError(err);
-    return 1;
+    printError(err, client);
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(1);
@@ -43,13 +43,19 @@ export default async function metrics(client: Client): Promise<number> {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('metrics', subcommand);
-    output.print(help(metricsCommand, { columns: client.stderr.columns }));
+    output.print(
+      help(metricsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 
   function printSubHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: metricsCommand,
         columns: client.stderr.columns,
       })
@@ -70,12 +76,22 @@ export default async function metrics(client: Client): Promise<number> {
     default: {
       if (needHelp) {
         telemetry.trackCliFlagHelp('metrics', subcommandOriginal);
-        output.print(help(metricsCommand, { columns: client.stderr.columns }));
+        output.print(
+          help(metricsCommand, {
+            stream: client.stderr,
+            columns: client.stderr.columns,
+          })
+        );
         return 0;
       }
       // Show help if no metric was provided for the default query form.
       if (!positionalMetric) {
-        output.print(help(metricsCommand, { columns: client.stderr.columns }));
+        output.print(
+          help(metricsCommand, {
+            stream: client.stderr,
+            columns: client.stderr.columns,
+          })
+        );
         return 2;
       }
       const queryFn = (await import('./query')).default;

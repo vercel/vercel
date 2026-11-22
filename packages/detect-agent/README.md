@@ -31,10 +31,13 @@ This package can detect the following AI agents and development environments:
 - **Devin** (Cognition Labs)
 - **Gemini CLI** (Google)
 - **Codex** (OpenAI)
+- **OpenCode** (via `OPENCODE=1` or `OPENCODE_CLIENT`)
 - **Antigravity** (Google DeepMind)
 - **GitHub Copilot** (via `AI_AGENT=github-copilot|github-copilot-cli`, `COPILOT_MODEL`, `COPILOT_ALLOW_ALL`, or `COPILOT_GITHUB_TOKEN`)
 - **Replit** (online IDE)
 - **v0** (Vercel's AI assistant, via `AI_AGENT=v0`)
+- **fx** (Vercel's agent harness, via `AI_AGENT=fx`)
+- **eve** (Vercel's agent framework, via `AI_AGENT=eve`)
 
 ## The AI_AGENT Standard
 

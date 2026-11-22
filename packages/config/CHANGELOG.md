@@ -1,5 +1,67 @@
 # @vercel/router-sdk
 
+## 0.14.0
+
+### Minor Changes
+
+- d0629bd: Remove the deprecated array format for `schedules`. `schedules` in `vercel.json`, in Build Output `config.json`, and from `getDevManifest` must be an object keyed by schedule name. `@vercel/config` no longer exports `Schedule` (use `ScheduleDefinition`), and `@vercel/client` no longer exports `VercelConfigSchedule`.
+
+## 0.13.0
+
+### Minor Changes
+
+- d39dd61: Require `name` for `schedules` entries in `vercel.json` and Build Output `config.json`. Schedules without a `name` no longer get a derived default name, and `getScheduleName` and `defaultScheduleName` are removed from `@vercel/build-utils`.
+- 5aa1b58: `schedules` in `vercel.json` can now be an object keyed by schedule name, like `"schedules": { "nightly": { "schedule": "0 0 * * *", "path": "/api/cron" } }`. `vercel build` writes `schedules` to Build Output `config.json` in the format it was given, and builders can return it from `getDevManifest`. The array of named schedules still works but is deprecated, and `vercel build` and `vercel dev` warn when it's used.
+
+## 0.12.0
+
+### Minor Changes
+
+- e041037: Add an optional `service` to function-target `schedules`, naming the service that owns `function`. `function` is then the path within that service. `vercel dev` does not run service-hosted schedule targets yet.
+
+## 0.11.0
+
+### Minor Changes
+
+- e58b37a: Breaking (beta): the nested `expression`/`target` `schedules` format is no longer supported in `vercel.json` or Build Output. `schedules` entries use `schedule` plus exactly one of `path`, `function`, `topic`, or `entrypoint`, with optional `name`, `timezone`, and `jitter`. When `name` is omitted, it defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+
+  `Schedule` now has the flat shape. Removed exports: `parseScheduleDefinition`, `formatBuildOutputSchedule`, `FlatBuildOutputSchedule`, `ScheduleExpression`, and `ScheduleTarget` from `@vercel/build-utils`; `FlatScheduleDefinition`, `LegacyScheduleDefinition`, and `ScheduleDefinition` from `@vercel/config`; and `VercelConfigFlatSchedule` from `@vercel/client`.
+
+## 0.10.0
+
+### Minor Changes
+
+- 94f6cea: Flat path `schedules` accept an optional `requestMethod` of `GET` or `POST`, defaulting to `POST`. `vercel build` writes it to Build Output, and `vercel dev` invokes path schedules with it.
+
+## 0.9.0
+
+### Minor Changes
+
+- 20c5940: Make `name` optional for flat `schedules` entries. When omitted, the name defaults to a hash of the target and cron expression, matching the name the API derives. `vercel build` leaves unnamed schedules unnamed in `config.json`, except entrypoint schedules, which keep the derived name their function dispatches on.
+
+## 0.8.0
+
+### Minor Changes
+
+- 2e10142: Accept the flat `schedules` format (`schedule` plus one of `path`, `function`, `topic`, or `entrypoint`) in `VercelConfig`, and export `FlatScheduleDefinition`, `LegacyScheduleDefinition`, and `ScheduleDefinition` types. The nested `expression`/`target` format is still accepted.
+
+### Patch Changes
+
+- d417d64: Add the optional `skipMiddlewareRequestBody` boolean to `VercelConfig`, matching the `vercel.json` schema. When enabled, routing middleware omits the request body while the destination request body is preserved. Defaults to false.
+
+## 0.7.2
+
+### Patch Changes
+
+- b76f6c1: Add `schedules` and `schedule/v1beta` function triggers to the generated `vercel.ts` config types.
+
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [f8eb285]
+  - @vercel/routing-utils@6.6.0
+
 ## 0.7.0
 
 ### Minor Changes

@@ -46,19 +46,19 @@ export default async function reorder(client: Client, argv: string[]) {
             {
               command: withGlobalFlags(
                 client,
-                'routes reorder <name-or-id> --position <pos> --yes'
+                'routes move <name-or-id> --position <pos> --yes'
               ),
               when: 'replace placeholders; --first/--last or numeric position',
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
-      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes reorder <name-or-id> --position <pos>')}`
+      `Route name or ID is required. Usage: ${withGlobalFlags(client, 'routes move <name-or-id> --position <pos>')}`
     );
-    return 1;
+    return 2;
   }
 
   // Check for existing staging version (for auto-promote logic)
@@ -93,13 +93,13 @@ export default async function reorder(client: Client, argv: string[]) {
         {
           status: 'error',
           reason: 'invalid_arguments',
-          message: 'Cannot reorder when there is only one route.',
+          message: 'Cannot move a route when there is only one route.',
         },
-        1
+        2
       );
     }
-    output.error('Cannot reorder when there is only one route.');
-    return 1;
+    output.error('Cannot move a route when there is only one route.');
+    return 2;
   }
 
   // Resolve the route
@@ -168,33 +168,33 @@ export default async function reorder(client: Client, argv: string[]) {
                   {
                     command: withGlobalFlags(
                       client,
-                      `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --first --yes`
+                      `routes move ${shellQuoteRouteIdentifierForSuggestion(identifier)} --first --yes`
                     ),
                     when: 'move to first position',
                   },
                   {
                     command: withGlobalFlags(
                       client,
-                      `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --position 1 --yes`
+                      `routes move ${shellQuoteRouteIdentifierForSuggestion(identifier)} --position 1 --yes`
                     ),
                     when: 'same as first (1-based index)',
                   },
                   {
                     command: withGlobalFlags(
                       client,
-                      `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --last --yes`
+                      `routes move ${shellQuoteRouteIdentifierForSuggestion(identifier)} --last --yes`
                     ),
                     when: 'move to last position',
                   },
                 ],
                 hint: 'Numeric --position uses 1-based indices; there is no position 0.',
               },
-              1
+              2
             );
-            return 1;
+            return 2;
           }
           output.error(msg);
-          return 1;
+          return 2;
         }
         // 1-based to 0-based; num > routes.length means "last"
         targetIndex = Math.min(num - 1, routes.length);
@@ -235,9 +235,9 @@ export default async function reorder(client: Client, argv: string[]) {
           }
         } catch (e) {
           output.error(
-            `${e instanceof Error ? e.message : 'Invalid position'}. Usage: ${withGlobalFlags(client, 'routes reorder <name-or-id> --position <pos>')}`
+            `${e instanceof Error ? e.message : 'Invalid position'}. Usage: ${withGlobalFlags(client, 'routes move <name-or-id> --position <pos>')}`
           );
-          return 1;
+          return 2;
         }
       }
     }
@@ -255,13 +255,13 @@ export default async function reorder(client: Client, argv: string[]) {
             {
               command: withGlobalFlags(
                 client,
-                `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --position <pos> --yes`
+                `routes move ${shellQuoteRouteIdentifierForSuggestion(identifier)} --position <pos> --yes`
               ),
               when: 'replace <pos> with numeric position or first/last',
             },
           ],
         },
-        1
+        2
       );
     }
     output.print('\n');
@@ -330,12 +330,12 @@ export default async function reorder(client: Client, argv: string[]) {
           status: 'error',
           reason: 'confirmation_required',
           message:
-            'Reorder requires confirmation. Pass --yes in non-interactive mode.',
+            'Move requires confirmation. Pass --yes in non-interactive mode.',
           next: [
             {
               command: withGlobalFlags(
                 client,
-                `routes reorder ${shellQuoteRouteIdentifierForSuggestion(identifier)} --position ${finalPosition} --yes`
+                `routes move ${shellQuoteRouteIdentifierForSuggestion(identifier)} --position ${finalPosition} --yes`
               ),
               when: 're-run with --yes',
             },
@@ -387,7 +387,7 @@ export default async function reorder(client: Client, argv: string[]) {
     return 0;
   } catch (e: unknown) {
     const error = e as { message?: string };
-    output.error(error.message || 'Failed to reorder route');
+    output.error(error.message || 'Failed to move route');
     return 1;
   }
 }

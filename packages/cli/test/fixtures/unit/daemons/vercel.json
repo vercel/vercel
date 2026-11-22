@@ -1,0 +1,10 @@
+{
+  "daemons": {
+    "heartbeat": {
+      "root": "daemon",
+      "entrypoint": "Dockerfile",
+      "instances": { "sfo1": 1 },
+      "resources": { "requests": { "memory": "1Gi" } }
+    }
+  }
+}

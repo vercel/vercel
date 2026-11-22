@@ -3,11 +3,16 @@ import {
   getMitigationsStatus,
   formatMitigationsStatus,
   formatBotProtectionStatus,
+  formatRulesTable,
+  formatRuleExpanded,
+  formatRuleDetail,
 } from '../../../../src/util/firewall/format';
 import type {
   BypassRule,
+  FirewallRule,
   ManagedRuleAction,
 } from '../../../../src/util/firewall/types';
+import stripAnsi from 'strip-ansi';
 
 const NOW = 1_700_000_000_000;
 /** Epoch seconds, two hours after NOW. */
@@ -231,5 +236,137 @@ describe('formatBotProtectionStatus', () => {
   it('reads as off when inactive, whatever the action', () => {
     expect(label('deny', false)).toEqual('Off');
     expect(formatBotProtectionStatus(undefined)).toContain('Off');
+  });
+});
+
+describe('formatRulesTable', () => {
+  function rule(overrides: Partial<FirewallRule> = {}): FirewallRule {
+    return {
+      id: 'rule_001',
+      name: 'Block bots',
+      active: true,
+      conditionGroup: [],
+      action: { mitigate: { action: 'deny' } },
+      ...overrides,
+    };
+  }
+
+  it('keeps Status on the name line when another rule has a long redirect', () => {
+    const longUrl = `https://example.com/${'a'.repeat(180)}`;
+    const rendered = formatRulesTable(
+      [
+        {
+          rule: rule({ name: 'Temp block /api/marketplace/logs' }),
+          status: 'live',
+        },
+        {
+          rule: rule({
+            id: 'rule_redirect',
+            name: 'Legacy docs',
+            action: {
+              mitigate: {
+                action: 'redirect',
+                redirect: { location: longUrl, permanent: true },
+              },
+            },
+          }),
+          status: 'live',
+        },
+      ],
+      80
+    );
+
+    expect(rendered).not.toContain(longUrl);
+    expect(rendered).toContain('Redirect (301)');
+
+    const header = stripAnsi(rendered).split('\n')[0];
+    const firstRow = stripAnsi(rendered).split('\n')[1];
+    expect(header).toMatch(/#\s+Name\s+Action\s+Status/);
+    expect(firstRow).toMatch(
+      /1\s+Temp block \/api\/marketplace\/logs\s+Deny\s+Enabled/
+    );
+    expect(firstRow.length).toBeLessThanOrEqual(80);
+  });
+
+  it('truncates a long name rather than wrapping Status', () => {
+    const rendered = formatRulesTable(
+      [
+        {
+          rule: rule({
+            name: 'A very long custom firewall rule name that would overflow a typical terminal',
+          }),
+          status: 'live',
+        },
+      ],
+      60
+    );
+    const firstRow = stripAnsi(rendered).split('\n')[1];
+    expect(firstRow).toContain('…');
+    expect(firstRow).toContain('Enabled');
+    expect(firstRow.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe('formatRuleExpanded', () => {
+  it('does not repeat the redirect destination on Action', () => {
+    const rendered = stripAnsi(
+      formatRuleExpanded({
+        id: 'rule_redirect',
+        name: 'Redirect inference to token theft page',
+        active: true,
+        description:
+          'Redirect requests to /protecting-against-inference-theft to /protecting-against-token-theft',
+        conditionGroup: [
+          {
+            conditions: [
+              {
+                type: 'path',
+                op: 'eq',
+                value: '/blog/protecting-against-inference-theft',
+              },
+            ],
+          },
+        ],
+        action: {
+          mitigate: {
+            action: 'redirect',
+            redirect: {
+              location: '/blog/protecting-against-token-theft',
+              permanent: false,
+            },
+          },
+        },
+      })
+    );
+
+    expect(rendered).toMatch(/Action:\s+Redirect$/m);
+    expect(rendered).toContain(
+      'Redirect: /blog/protecting-against-token-theft (307 temporary)'
+    );
+    expect(rendered).not.toContain('Redirect →');
+  });
+});
+
+describe('formatRuleDetail', () => {
+  it('does not repeat the redirect destination on Action', () => {
+    const rendered = stripAnsi(
+      formatRuleDetail({
+        id: 'rule_redirect',
+        name: 'Redirect Old Path',
+        active: true,
+        conditionGroup: [],
+        action: {
+          mitigate: {
+            action: 'redirect',
+            redirect: { location: '/new', permanent: true },
+          },
+        },
+      })
+    );
+
+    expect(rendered).toMatch(/Action:\s+Redirect$/m);
+    expect(rendered).toContain('Location:');
+    expect(rendered).toContain('/new');
+    expect(rendered).not.toContain('Redirect →');
   });
 });

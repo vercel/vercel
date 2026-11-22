@@ -4,7 +4,7 @@ import {
   validateCallbackUrl,
   validateWebhookUrl,
 } from './internal/url-validation.js';
-import { withDefaultScopes } from './internal/default-scopes.js';
+import { normalizeTokenParams } from './internal/normalize-token-params.js';
 import { resolveBaseUrl } from './internal/base-url.js';
 import {
   createConnectErrorFromResponse,
@@ -85,7 +85,7 @@ export async function startAuthorization(
       : {};
 
   const body = {
-    ...withDefaultScopes(params),
+    ...normalizeTokenParams(params),
     ...returnUrl,
     ...(options?.webhook !== undefined && { webhook: options.webhook }),
     ...(deviceCode !== undefined && {

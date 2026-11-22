@@ -30,6 +30,7 @@ export interface FlagRuleOutcomeOptions {
   rollFromVariantSelector?: string;
   rollToVariantSelector?: string;
   stageInputs: string[];
+  finalPercentage?: string;
   start?: string;
 }
 
@@ -112,7 +113,8 @@ export function hasFlagRuleOutcomeOptions(
       options.rollFromVariantSelector ||
       options.rollToVariantSelector ||
       options.stageInputs.length > 0 ||
-      options.start
+      options.start ||
+      options.finalPercentage !== undefined
   );
 }
 
@@ -130,7 +132,8 @@ export function needsFlagRuleOutcomeSettings(
       options.rollFromVariantSelector ||
       options.rollToVariantSelector ||
       options.stageInputs.length > 0 ||
-      options.start
+      options.start ||
+      options.finalPercentage !== undefined
   );
 }
 
@@ -147,7 +150,8 @@ export function resolveFlagRuleOutcome(
     options.rollFromVariantSelector ||
       options.rollToVariantSelector ||
       options.stageInputs.length > 0 ||
-      options.start
+      options.start ||
+      options.finalPercentage !== undefined
   );
   const hasSplitOnlyOptions = options.weightInputs.length > 0;
   const hasCommonOptions = Boolean(
@@ -185,12 +189,16 @@ export function resolveFlagRuleOutcome(
   if (shouldResolveRollout) {
     const rollout = resolveFlagRollout(flag, requireFlagSettings(settings), {
       stageInputs: options.stageInputs,
+      finalPercentage: options.finalPercentage,
       baseSelector: options.baseSelector,
       rollFromVariantSelector: options.rollFromVariantSelector,
       rollToVariantSelector: options.rollToVariantSelector,
       defaultVariantSelector: options.defaultVariantSelector,
       start: options.start,
-      currentOutcome: options.currentOutcome,
+      currentOutcome:
+        options.currentOutcome?.type === 'experiment'
+          ? undefined
+          : options.currentOutcome,
     });
 
     return rollout.outcome;
@@ -202,7 +210,10 @@ export function resolveFlagRuleOutcome(
       weightInputs: options.weightInputs,
       baseSelector: options.baseSelector,
       defaultVariantSelector: options.defaultVariantSelector,
-      currentOutcome: options.currentOutcome,
+      currentOutcome:
+        options.currentOutcome?.type === 'experiment'
+          ? undefined
+          : options.currentOutcome,
     });
 
     return split.outcome;

@@ -5,6 +5,10 @@ import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { parseArguments } from '../../util/get-args';
 import { blobOpts, type BlobRWToken } from '../../util/blob/token';
+import {
+  withWarnings,
+  type DeprecatedOptionWarning,
+} from '../../util/renamed-option';
 import { resolveBlobValidUntil } from '../../util/blob/validity';
 import {
   allowsUploadConstraints,
@@ -25,7 +29,8 @@ validUntil=${result.validUntil} (${new Date(result.validUntil).toISOString()})
 export default async function signedToken(
   client: Client,
   argv: string[],
-  auth: BlobRWToken
+  auth: BlobRWToken,
+  warnings: ReadonlyArray<DeprecatedOptionWarning | undefined> = []
 ): Promise<number> {
   const telemetryClient = new BlobSignedTokenTelemetryClient({
     opts: {
@@ -41,7 +46,7 @@ export default async function signedToken(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { flags } = parsedArgs;
@@ -99,7 +104,9 @@ export default async function signedToken(
     output.stopSpinner();
 
     if (asJson) {
-      client.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      client.stdout.write(
+        `${JSON.stringify(withWarnings(result, warnings), null, 2)}\n`
+      );
     } else {
       client.stdout.write(formatSignedToken(result));
     }

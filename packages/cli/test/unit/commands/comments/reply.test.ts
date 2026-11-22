@@ -116,7 +116,7 @@ describe('comments reply', () => {
     );
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('https');
   });
 
@@ -132,7 +132,7 @@ describe('comments reply', () => {
     );
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('not both');
   });
 
@@ -141,7 +141,7 @@ describe('comments reply', () => {
     client.setArgv('comments', 'reply', 'icZ9BnPPINuK');
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('No content provided');
   });
 
@@ -154,7 +154,7 @@ describe('comments reply', () => {
     client.setArgv('comments', 'reply', 'icZ9BnPPINuK', ...args);
     const exitCode = await comments(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.input.text).not.toHaveBeenCalled();
     const output = args.length
       ? JSON.parse(client.stdout.getFullOutput()).error.message

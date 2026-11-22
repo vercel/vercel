@@ -10,7 +10,6 @@ import {
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
 import { ensureLink } from '../../util/link/ensure-link';
-import promptMissingCredentials from '../../util/login/prompt-missing-credentials';
 import param from '../../util/output/param';
 import { getCommandName } from '../../util/pkg-name';
 import {
@@ -19,7 +18,6 @@ import {
   VERCEL_DIR_PROJECT,
 } from '../../util/projects/link';
 import output from '../../output-manager';
-import login from '../login';
 
 export function validateAnonymousTarget(
   isAnonymous: boolean,
@@ -28,7 +26,7 @@ export function validateAnonymousTarget(
   if (isAnonymous && target && target !== 'production') {
     output.error(
       `Anonymous deployments always target production, so "${target}" is not available. Remove the ${param(
-        '--target'
+        '--environment'
       )} option, or run ${getCommandName('login')} to deploy to other environments.`
     );
     return false;
@@ -53,6 +51,12 @@ export async function setupAnonymousDeployment(
       requireExistingState: dryRun,
     });
     if (anonymous === 'refused') {
+      output.log(
+        "Temporary deployments aren't available for this attempt. Log in to continue."
+      );
+      const { default: promptMissingCredentials } = await import(
+        '../../util/login/prompt-missing-credentials'
+      );
       const loginExitCode = await promptMissingCredentials(client);
       if (loginExitCode !== 0) {
         return loginExitCode;
@@ -101,6 +105,7 @@ export async function handleAnonymousDeploymentError({
     );
     let loginExitCode: number;
     try {
+      const { default: login } = await import('../login');
       loginExitCode = await login(client, { shouldParseArgs: false });
     } catch (loginError) {
       printError(loginError);

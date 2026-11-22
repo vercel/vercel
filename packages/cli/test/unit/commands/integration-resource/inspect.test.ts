@@ -199,7 +199,7 @@ describe('integration-resource inspect', () => {
   it('errors when no resource is specified', async () => {
     client.setArgv('integration-resource', 'inspect');
     const exitCode = await integrationResourceCommand(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
       'You must specify a resource'
     );

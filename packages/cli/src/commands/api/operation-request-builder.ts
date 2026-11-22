@@ -44,7 +44,7 @@ export async function parseOperationKeyValuePairs(
     const eqIndex = field.indexOf('=');
     if (eqIndex === -1) {
       throw new Error(
-        `Invalid option "${field}". Expected key=value (or use flags -F / -f).`
+        `Invalid option "${field}". Expected key=value (or use options -F / -f).`
       );
     }
     const key = field.slice(0, eqIndex);

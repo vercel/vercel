@@ -16,6 +16,7 @@ import {
   confirmationRequired,
   handleTracingApiError,
   invalidArguments,
+  missingEnvironment,
   ruleNotFound,
 } from './errors';
 import { writeConfigJson } from './json-output';
@@ -25,7 +26,8 @@ import {
   formatRuleLine,
   formatRuleTarget,
   isRuleEnvironment,
-  readProjectTracing,
+  readTracingConfig,
+  resolveRuleEnvironment,
   RULE_LIMIT,
   type RuleEnvironment,
   type SamplingRuleEntry,
@@ -35,7 +37,7 @@ import {
 } from './rules';
 import { resolveConfigScope } from './scope';
 
-const USAGE = 'traces config rm <environment> [requestPath]';
+const USAGE = 'traces config remove [requestPath] --environment <environment>';
 
 /**
  * Which rules a `rm` invocation targets. The path axis has three states, and
@@ -114,9 +116,10 @@ function commandToRunByHand(
   defaultFlag: boolean
 ): string {
   const template = [
-    'traces config rm',
-    environment,
+    'traces config remove',
     ...(pathArg !== undefined ? [quoteArg(pathArg)] : []),
+    '--environment',
+    environment,
     ...(defaultFlag ? ['--default'] : []),
   ].join(' ');
   return buildCommandWithGlobalFlags(client.argv, template, undefined, {
@@ -138,25 +141,45 @@ export default async function rm(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
   const { flags } = parsedArgs;
 
-  const [environmentArg, ...pathArgs] = subcommandArguments(parsedArgs.args);
+  const ruleEnvironment = resolveRuleEnvironment(
+    client,
+    flags['--environment'],
+    subcommandArguments(parsedArgs.args)
+  );
+  if ('error' in ruleEnvironment) {
+    return invalidArguments(client, ruleEnvironment.error);
+  }
+  const environmentArg = ruleEnvironment.environment;
+  const pathArgs = ruleEnvironment.args;
   const pathArg = pathArgs[0];
   const defaultFlag = Boolean(flags['--default']);
 
-  telemetry.trackCliArgumentEnvironment(environmentArg);
+  if (flags['--environment'] === undefined) {
+    telemetry.trackCliArgumentEnvironment(environmentArg);
+  }
+  telemetry.trackCliOptionEnvironment(flags['--environment']);
   telemetry.trackCliArgumentRequestPath(pathArg);
   telemetry.trackCliFlagDefault(flags['--default']);
   telemetry.trackCliOptionFormat(flags['--format']);
   telemetry.trackCliFlagJson(flags['--json']);
   telemetry.trackCliOptionProject(flags['--project']);
 
+  if (environmentArg === undefined && pathArg !== undefined) {
+    return missingEnvironment(
+      client,
+      `Can't remove sampling rules without --environment. Usage: ${getCommandName(USAGE)}`
+    );
+  }
+
   if (environmentArg === undefined) {
     output.print(
       help(rmSubcommand, {
-        parent: { ...tracesCommand, name: 'traces config' },
+        stream: client.stderr,
+        parent: tracesCommand,
         columns: client.stderr.columns,
       })
     );
@@ -199,7 +222,7 @@ export default async function rm(client: Client): Promise<number> {
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
@@ -215,10 +238,10 @@ export default async function rm(client: Client): Promise<number> {
   }
 
   let project;
-  let tracing;
+  let enabled;
   let entries: SamplingRuleEntry[];
   try {
-    ({ project, tracing, entries } = await readProjectTracing({
+    ({ project, enabled, entries } = await readTracingConfig({
       client,
       ...scope,
     }));
@@ -227,6 +250,13 @@ export default async function rm(client: Client): Promise<number> {
     return handleTracingApiError(client, err);
   }
   output.stopSpinner();
+
+  if (!enabled && entries.length > 0) {
+    return invalidArguments(
+      client,
+      `Tracing is disabled for ${project.name}. No rules were removed. Enable tracing with ${getCommandName('traces config set <rate> [requestPath] --environment <environment>')} before editing its saved rules.`
+    );
+  }
 
   const removed = entries
     .filter(entry => matches(entry.row, environmentArg, selector))
@@ -246,6 +276,7 @@ export default async function rm(client: Client): Promise<number> {
   }
 
   const removedLines = removed.map(formatRuleLine);
+  const disablesTracing = kept.length === 0;
 
   // One `rm` can destroy up to ten rules and nothing records what they held
   // afterwards, so the list is printed before the prompt: it is both the thing
@@ -256,6 +287,9 @@ export default async function rm(client: Client): Promise<number> {
   );
   for (const line of removedLines) {
     output.print(`  ${line}\n`);
+  }
+  if (disablesTracing) {
+    output.log('Removing the final rule disables tracing for this project.');
   }
 
   // A person answering the prompt is the only consent this command takes, so a
@@ -298,7 +332,6 @@ export default async function rm(client: Client): Promise<number> {
     await writeSamplingRules({
       client,
       ...scope,
-      tracing,
       rules: kept.map(entry => entry.rule),
     });
   } catch (err: unknown) {
@@ -307,7 +340,8 @@ export default async function rm(client: Client): Promise<number> {
   }
   output.stopSpinner();
 
-  const message = `Removed ${removed.length} trace sampling ${ruleWord(removed.length)} from ${project.name}. ${kept.length} of ${RULE_LIMIT} rules.`;
+  const disabledMessage = disablesTracing ? ' Tracing is disabled.' : '';
+  const message = `Removed ${removed.length} trace sampling ${ruleWord(removed.length)} from ${project.name}. ${kept.length} of ${RULE_LIMIT} rules.${disabledMessage}`;
 
   if (asJson) {
     // `envelope` is what a non-interactive run would print, and a
@@ -330,7 +364,7 @@ export default async function rm(client: Client): Promise<number> {
   }
 
   output.success(
-    `Removed ${removed.length} trace sampling ${ruleWord(removed.length)} from ${chalk.bold(project.name)}. ${kept.length} of ${RULE_LIMIT} rules.`
+    `Removed ${removed.length} trace sampling ${ruleWord(removed.length)} from ${chalk.bold(project.name)}. ${kept.length} of ${RULE_LIMIT} rules.${disabledMessage}`
   );
   return 0;
 }

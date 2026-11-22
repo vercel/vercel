@@ -146,6 +146,7 @@ describe('project update', () => {
     expect(client.stderr.getFullOutput()).toContain(
       'Next.js (nextjs) → Vite (vite)'
     );
+    expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
         key: 'subcommand:update',
@@ -175,6 +176,9 @@ describe('project update', () => {
     expect(exitCode).toBe(0);
     expect(client.stderr.getFullOutput()).toContain(
       'Next.js (nextjs) → Vite (vite)'
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      '`vercel project set` is deprecated. Use `vercel project update`.'
     );
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
@@ -443,7 +447,7 @@ describe('project update', () => {
     client.setArgv('project', 'update', 'my-project', '--framework', 'next-js');
     const exitCode = await project(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Unsupported framework preset "next-js"'
     );
@@ -478,7 +482,7 @@ describe('project update', () => {
     );
     const exitCode = await project(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Unknown auto-detect setting "build-commandz"'
     );
@@ -497,7 +501,7 @@ describe('project update', () => {
     );
     const exitCode = await project(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Build Command must be 256 characters or fewer'
     );
@@ -850,6 +854,99 @@ describe('project update', () => {
       expect(patched).toBe(true);
     });
 
+    it.each<[string, Record<string, unknown>]>([
+      ['--fluid-compute', { resourceConfig: { fluid: true } }],
+      ['--no-fluid-compute', { resourceConfig: { fluid: false } }],
+      ['--fluid-compute=false', { resourceConfig: { fluid: false } }],
+      [
+        '--elastic-concurrency',
+        { resourceConfig: { elasticConcurrencyEnabled: true } },
+      ],
+      [
+        '--no-elastic-concurrency',
+        { resourceConfig: { elasticConcurrencyEnabled: false } },
+      ],
+    ])('sends a sparse PATCH for %s', async (flag, expectedBody) => {
+      let patched = false;
+      useScope('pro');
+      useSettingsProject({}, body => {
+        patched = true;
+        expect(body).toEqual(expectedBody);
+      });
+
+      client.setArgv('project', 'update', 'my-project', flag);
+      const exitCodePromise = project(client);
+      await confirmUpdatePrompt();
+
+      await expect(exitCodePromise).resolves.toBe(0);
+      expect(patched).toBe(true);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+    });
+
+    it.each<[string[], string, Record<string, unknown>]>([
+      [
+        ['--fluid-compute', 'on'],
+        '--fluid-compute on is deprecated. Use --fluid-compute.',
+        { resourceConfig: { fluid: true } },
+      ],
+      [
+        ['--fluid-compute=off'],
+        '--fluid-compute=off is deprecated. Use --no-fluid-compute.',
+        { resourceConfig: { fluid: false } },
+      ],
+      [
+        ['--elastic-concurrency', 'off'],
+        '--elastic-concurrency off is deprecated. Use --no-elastic-concurrency.',
+        { resourceConfig: { elasticConcurrencyEnabled: false } },
+      ],
+    ])('still accepts the old %s, with a warning', async (flags, warning, expectedBody) => {
+      let patched = false;
+      useScope('pro');
+      useSettingsProject({}, body => {
+        patched = true;
+        expect(body).toEqual(expectedBody);
+      });
+
+      client.setArgv('project', 'update', 'my-project', ...flags);
+      const exitCodePromise = project(client);
+      await confirmUpdatePrompt();
+
+      await expect(exitCodePromise).resolves.toBe(0);
+      expect(patched).toBe(true);
+      expect(client.stderr.getFullOutput()).toContain(warning);
+    });
+
+    it('reads the project name after --fluid-compute', async () => {
+      let patched = false;
+      useScope('pro');
+      useSettingsProject({}, body => {
+        patched = true;
+        expect(body).toEqual({ resourceConfig: { fluid: true } });
+      });
+
+      client.setArgv('project', 'update', '--fluid-compute', 'my-project');
+      const exitCodePromise = project(client);
+      await confirmUpdatePrompt();
+
+      await expect(exitCodePromise).resolves.toBe(0);
+      expect(patched).toBe(true);
+    });
+
+    it('rejects --fluid-compute with --no-fluid-compute before resolving a project', async () => {
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--fluid-compute',
+        '--no-fluid-compute'
+      );
+
+      await expect(project(client)).resolves.toBe(2);
+      expect(client.stderr.getFullOutput()).toContain(
+        "Can't use --fluid-compute with --no-fluid-compute."
+      );
+    });
+
     it('omits existing resourceConfig siblings when changing one field', async () => {
       let patched = false;
       useScope('pro');
@@ -1055,14 +1152,23 @@ describe('project update', () => {
     });
 
     it.each([
-      ['--fluid-compute', 'yes', '--fluid-compute must be "on" or "off".'],
+      [
+        '--fluid-compute',
+        'yes',
+        "--fluid-compute doesn't take a value. Use --fluid-compute or --no-fluid-compute.",
+      ],
+      [
+        '--elastic-concurrency',
+        'true',
+        "--elastic-concurrency doesn't take a value. Use --elastic-concurrency or --no-elastic-concurrency.",
+      ],
       ['--function-cpu', 'mega', 'Function CPU must be one of'],
       ['--build-machine', 'huge', 'Build Machine must be one of'],
       ['--node-version', '19.x', 'Node.js Version must be one of'],
     ])('rejects an invalid %s value before resolving a project', async (flag, value, message) => {
       client.setArgv('project', 'update', 'my-project', flag, value);
 
-      await expect(project(client)).resolves.toBe(1);
+      await expect(project(client)).resolves.toBe(2);
       expect(client.stderr.getFullOutput()).toContain(message);
       expect(client.stdout.getFullOutput()).toBe('');
     });
@@ -1087,7 +1193,6 @@ describe('project update', () => {
         '--framework',
         'nextjs',
         '--fluid-compute',
-        'on',
         '--function-cpu',
         'performance_xl',
         '--node-version',
@@ -1114,9 +1219,36 @@ describe('project update', () => {
         { key: 'argument:name', value: '[REDACTED]' },
         { key: 'option:framework', value: '[REDACTED]' },
         { key: 'flag:json', value: 'TRUE' },
-        { key: 'option:fluid-compute', value: 'on' },
+        { key: 'flag:fluid-compute', value: 'TRUE' },
         { key: 'option:function-cpu', value: 'performance_xl' },
         { key: 'option:node-version', value: '22.x' },
+      ]);
+    });
+
+    it('records the old --fluid-compute value and keeps stderr clean with --json', async () => {
+      useScope('pro');
+      useSettingsProject({}, body => {
+        expect(body).toEqual({ resourceConfig: { fluid: true } });
+      });
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--fluid-compute',
+        'on',
+        '--json'
+      );
+      const exitCodePromise = project(client);
+      await confirmUpdatePrompt();
+
+      await expect(exitCodePromise).resolves.toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:update', value: 'update' },
+        { key: 'argument:name', value: '[REDACTED]' },
+        { key: 'flag:json', value: 'TRUE' },
+        { key: 'option:fluid-compute', value: 'on' },
       ]);
     });
 
@@ -1580,6 +1712,31 @@ describe('project update', () => {
       expect(
         fetchSpy.mock.calls.find(([, options]) => options?.method === 'PATCH')
       ).toBeUndefined();
+    });
+
+    it('suggests the presence form when the old --elastic-concurrency on needs a human', async () => {
+      useScope('pro');
+      useSettingsProject({});
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      client.nonInteractive = true;
+
+      client.setArgv(
+        'project',
+        'update',
+        'my-project',
+        '--elastic-concurrency',
+        'on',
+        '--non-interactive',
+        '--yes'
+      );
+
+      await expect(project(client)).rejects.toThrow('exit:1');
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.next[0].command).toBe(
+        'vercel project update my-project --elastic-concurrency'
+      );
     });
 
     it('fails when stdin is not a TTY', async () => {

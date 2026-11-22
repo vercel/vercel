@@ -95,7 +95,7 @@ async function fetchExampleList(client: Client) {
   output.spinner('Fetching examples');
   const url = `${EXAMPLE_API}/v2/list.json`;
 
-  const body = await client.fetch<Example[]>(url);
+  const body = await client.fetch<Example[]>(url, { teamOptional: true });
   output.stopSpinner();
   return body;
 }
@@ -136,7 +136,7 @@ async function extractExample(
   const url = `${EXAMPLE_API}/${ver}/download/${name}.tar.gz`;
 
   return client
-    .fetch(url, { json: false })
+    .fetch(url, { json: false, teamOptional: true })
     .then(async res => {
       output.stopSpinner();
 

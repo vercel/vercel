@@ -1,5 +1,20 @@
 import { packageName } from '../../util/pkg-name';
-import { formatOption, jsonOption, yesOption } from '../../util/arg-common';
+import {
+  formatOption,
+  jsonOption,
+  limitOption,
+  nextCursorOption,
+  yesOption,
+} from '../../util/arg-common';
+
+const tokenPassOption = {
+  name: 'token-pass',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description:
+    "Scope the key to Vercel Token Pass: it spends only the team's Token Pass credits, on Token Pass models only. Cannot be changed after creation.",
+} as const;
 
 export const createSubcommand = {
   name: 'create',
@@ -7,6 +22,7 @@ export const createSubcommand = {
   description: 'Create a new AI Gateway API key',
   arguments: [],
   options: [
+    tokenPassOption,
     {
       name: 'name',
       shorthand: null,
@@ -16,12 +32,29 @@ export const createSubcommand = {
       description: 'Human-readable name for the API key',
     },
     {
+      name: 'amount',
+      shorthand: null,
+      type: Number,
+      argument: 'USD',
+      deprecated: false,
+      description: 'Quota budget limit in dollars (minimum 1)',
+    },
+    // Hidden: `--limit` and `--budget` are the old names of `--amount`.
+    {
+      name: 'limit',
+      shorthand: null,
+      type: Number,
+      argument: 'AMOUNT',
+      deprecated: true,
+      description: 'Deprecated alias for `--amount`',
+    },
+    {
       name: 'budget',
       shorthand: null,
       type: Number,
       argument: 'AMOUNT',
-      deprecated: false,
-      description: 'Quota budget amount in dollars (minimum 1)',
+      deprecated: true,
+      description: 'Deprecated alias for `--amount`',
     },
     {
       name: 'refresh-period',
@@ -80,12 +113,16 @@ export const createSubcommand = {
       value: `${packageName} ai-gateway api-keys create`,
     },
     {
+      name: 'Create a key scoped to Vercel Token Pass',
+      value: `${packageName} ai-gateway api-keys create --name token-pass --token-pass`,
+    },
+    {
       name: 'Create an API key with a budget',
-      value: `${packageName} ai-gateway api-keys create --name my-key --budget 500 --refresh-period monthly`,
+      value: `${packageName} ai-gateway api-keys create --name my-key --amount 500 --refresh-period monthly`,
     },
     {
       name: 'Create a key that expires and alerts on spend',
-      value: `${packageName} ai-gateway api-keys create --budget 500 --alert-thresholds 75,100 --expiration 90d`,
+      value: `${packageName} ai-gateway api-keys create --amount 500 --alert-thresholds 75,100 --expiration 90d`,
     },
     {
       name: 'Create a ZDR-exempt key (team owners only)',
@@ -103,11 +140,74 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'List AI Gateway API keys',
   arguments: [],
-  options: [formatOption],
+  options: [
+    {
+      name: 'query',
+      shorthand: 'q',
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+      description:
+        'Only keys whose name or key suffix contains this text (case-insensitive)',
+    },
+    {
+      // Hidden alias; other list commands spell free-text search this way.
+      name: 'search',
+      shorthand: null,
+      type: String,
+      argument: 'TEXT',
+      deprecated: true,
+      description: 'Alias for --query',
+    },
+    {
+      name: 'creator',
+      shorthand: null,
+      type: String,
+      argument: 'USER',
+      deprecated: false,
+      description:
+        'Only keys created by this team member (email, username, or user id), or "me"; an unknown user id is used as-is',
+    },
+    {
+      name: 'state',
+      shorthand: null,
+      type: String,
+      argument: 'STATE',
+      deprecated: false,
+      description:
+        'Which keys to list: active (unexpired), expired, deleted, or any (default: active)',
+    },
+    {
+      name: 'sort',
+      shorthand: null,
+      type: String,
+      argument: 'FIELD',
+      deprecated: false,
+      description:
+        'Order by createdAt, lastActiveAt, name, or expiresAt, optionally with :asc or :desc (default: lastActiveAt:desc)',
+    },
+    limitOption,
+    nextCursorOption,
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
       name: 'List API keys',
-      value: `${packageName} ai-gateway api-keys ls`,
+      value: `${packageName} ai-gateway api-keys list`,
+    },
+    {
+      name: 'Find keys by name or suffix',
+      value: `${packageName} ai-gateway api-keys list --query prod`,
+    },
+    {
+      name: 'List your own unexpired keys, newest first',
+      value: `${packageName} ai-gateway api-keys list --creator me --state active --sort createdAt`,
+    },
+    {
+      name: 'Fetch the next 50 keys, using the cursor from pagination.next',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} ai-gateway api-keys list --limit 50 --next=<CURSOR> --json`,
     },
   ],
 } as const;
@@ -117,7 +217,7 @@ export const inspectSubcommand = {
   aliases: [],
   description: 'Show details about an AI Gateway API key',
   arguments: [{ name: 'id', required: true }],
-  options: [formatOption],
+  options: [formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect an API key',
@@ -127,15 +227,15 @@ export const inspectSubcommand = {
 } as const;
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm', 'delete'],
-  description: 'Remove an AI Gateway API key',
+  name: 'revoke',
+  aliases: ['remove', 'rm', 'delete'],
+  description: 'Revoke an AI Gateway API key',
   arguments: [{ name: 'id', required: true }],
-  options: [yesOption, formatOption],
+  options: [yesOption, formatOption, jsonOption],
   examples: [
     {
-      name: 'Remove an API key',
-      value: `${packageName} ai-gateway api-keys rm key_123`,
+      name: 'Revoke an API key',
+      value: `${packageName} ai-gateway api-keys revoke key_123`,
     },
   ],
 } as const;
@@ -229,21 +329,28 @@ export const rulesListSubcommand = {
       deprecated: false,
       description: 'Include disabled rules',
     },
+    limitOption,
+    nextCursorOption,
     formatOption,
     jsonOption,
   ],
   examples: [
     {
       name: 'List routing rules',
-      value: `${packageName} ai-gateway rules ls`,
+      value: `${packageName} ai-gateway rules list`,
+    },
+    {
+      name: 'Fetch the next 50 rules, using the cursor from pagination.next',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} ai-gateway rules list --limit 50 --next=<CURSOR> --json`,
     },
   ],
 } as const;
 
 export const rulesEditSubcommand = {
-  name: 'edit',
-  aliases: [],
-  description: 'Edit an AI Gateway routing rule',
+  name: 'update',
+  aliases: ['edit'],
+  description: 'Update an AI Gateway routing rule',
   arguments: [{ name: 'ruleId', required: true }],
   options: [
     {
@@ -251,14 +358,22 @@ export const rulesEditSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Enable the rule',
+      description: 'Turn the rule on',
     },
     {
-      name: 'disable',
+      name: 'no-enable',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Disable the rule',
+      description: 'Turn the rule off',
+    },
+    {
+      // Hidden: the old name of `--no-enable`.
+      name: 'disable',
+      shorthand: null,
+      type: Boolean,
+      deprecated: true,
+      description: 'Deprecated alias for `--no-enable`',
     },
     {
       name: 'destination',
@@ -290,7 +405,7 @@ export const rulesEditSubcommand = {
   examples: [
     {
       name: 'Disable a rule',
-      value: `${packageName} ai-gateway rules edit rule_123 --disable`,
+      value: `${packageName} ai-gateway rules update rule_123 --no-enable`,
     },
   ],
 } as const;
@@ -304,7 +419,7 @@ export const rulesRemoveSubcommand = {
   examples: [
     {
       name: 'Remove a rule',
-      value: `${packageName} ai-gateway rules rm rule_123`,
+      value: `${packageName} ai-gateway rules remove rule_123`,
     },
   ],
 } as const;
@@ -328,10 +443,10 @@ export const rulesSubcommand = {
 export const setupSubcommand = {
   name: 'setup',
   aliases: [],
-  description:
-    'Connect local coding agents (Claude Code, Codex, OpenCode, Pi) to the AI Gateway',
+  description: 'Connect local coding agents to the AI Gateway',
   arguments: [],
   options: [
+    tokenPassOption,
     {
       name: 'agent',
       shorthand: null,
@@ -339,11 +454,11 @@ export const setupSubcommand = {
       argument: 'NAME',
       deprecated: false,
       description:
-        'Coding agent to configure, repeatable (claude-code, codex, opencode, pi)',
+        'Coding agent to configure, repeatable; omit to pick from the detected agents',
     },
     {
       name: 'all',
-      shorthand: null,
+      shorthand: 'a',
       type: Boolean,
       deprecated: false,
       description: 'Configure every supported coding agent',
@@ -357,13 +472,22 @@ export const setupSubcommand = {
       description: 'Use an existing AI Gateway API key instead of creating one',
     },
     {
+      name: 'amount',
+      shorthand: null,
+      type: Number,
+      argument: 'USD',
+      deprecated: false,
+      description:
+        'Quota budget in dollars for a newly created key (minimum 1)',
+    },
+    // Hidden: `--budget` is the old name of `--amount`.
+    {
       name: 'budget',
       shorthand: null,
       type: Number,
       argument: 'AMOUNT',
-      deprecated: false,
-      description:
-        'Quota budget in dollars for a newly created key (minimum 1)',
+      deprecated: true,
+      description: 'Deprecated alias for `--amount`',
     },
     {
       name: 'refresh-period',
@@ -460,7 +584,7 @@ export const setupSubcommand = {
       argument: 'MODE',
       deprecated: false,
       description:
-        'How to apply non-interactively: edit (write files, default) or prompt (emit an agent prompt on stdout; requires the macOS Keychain)',
+        'How to apply non-interactively: edit (write files) or prompt (emit an agent prompt on stdout; requires the macOS Keychain) (default: edit)',
     },
     {
       name: 'base-url',
@@ -476,35 +600,42 @@ export const setupSubcommand = {
   examples: [
     {
       name: 'Connect all detected coding agents (creates a key)',
-      value: `${packageName} ai-gateway coding-agents setup`,
+      value: `${packageName} ai-gateway setup`,
+    },
+    {
+      name: 'Connect Claude Code with a Token Pass key',
+      value: `${packageName} ai-gateway setup --token-pass --agent claude-code --yes`,
     },
     {
       name: 'Emit a prompt to hand to a coding agent instead of writing files',
-      value: `${packageName} ai-gateway coding-agents setup --apply prompt --yes`,
+      value: `${packageName} ai-gateway setup --apply prompt --yes`,
     },
     {
       name: 'Connect specific agents with a budgeted key',
-      value: `${packageName} ai-gateway coding-agents setup --agent claude-code --budget 500 --refresh-period monthly`,
+      value: `${packageName} ai-gateway setup --agent claude-code --amount 500 --refresh-period monthly`,
     },
     {
       name: 'Rotate the key on an already-configured setup',
-      value: `${packageName} ai-gateway coding-agents setup --reconfigure`,
+      value: `${packageName} ai-gateway setup --reconfigure`,
     },
     {
       name: 'Reuse an existing key and preview changes only',
-      value: `${packageName} ai-gateway coding-agents setup --key <key> --dry-run`,
+      placeholders: ['<key>'],
+      value: `${packageName} ai-gateway setup --key <key> --dry-run`,
     },
     {
       name: 'Point an agent at a different gateway base URL',
-      value: `${packageName} ai-gateway coding-agents setup --agent codex --base-url https://preview.ai-gateway.vercel.sh/v1`,
+      value: `${packageName} ai-gateway setup --agent codex --base-url https://preview.ai-gateway.vercel.sh/v1`,
     },
   ],
 } as const;
 
+// The older spelling of `ai-gateway setup`, kept working but not listed.
 export const codingAgentsSubcommand = {
   name: 'coding-agents',
   aliases: [],
   description: 'Connect local coding agents to the AI Gateway',
+  hidden: true,
   arguments: [],
   subcommands: [setupSubcommand],
   options: [],
@@ -516,11 +647,32 @@ export const modelsListSubcommand = {
   aliases: ['ls'],
   description: 'List AI Gateway models',
   arguments: [],
-  options: [formatOption, jsonOption],
+  options: [
+    formatOption,
+    jsonOption,
+    {
+      name: 'virtual',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: "Show only your team's virtual models",
+    },
+    {
+      name: 'no-virtual',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Hide virtual models',
+    },
+  ],
   examples: [
     {
       name: 'List available models',
-      value: `${packageName} ai-gateway models ls`,
+      value: `${packageName} ai-gateway models list`,
+    },
+    {
+      name: "List only your team's virtual models",
+      value: `${packageName} ai-gateway models list --virtual`,
     },
   ],
 } as const;
@@ -549,23 +701,41 @@ export const modelsSubcommand = {
   examples: [],
 } as const;
 
+const budgetDefaultOption = {
+  name: 'default',
+  shorthand: null,
+  type: Boolean,
+  deprecated: false,
+  description:
+    'Target the default budget for the scope, applied to resources of that scope without their own budget',
+} as const;
+
 export const budgetsSetSubcommand = {
   name: 'set',
   aliases: [],
   description:
-    'Create or update an AI Gateway budget for a scope (team, project <name>, user <email>, or api-key <name>)',
+    'Create or update an AI Gateway budget for a scope (team, project <name>, user <email>, or api-key <name>), or the default budget for a scope with --default',
   arguments: [
     { name: 'scope', required: true },
     { name: 'name', required: false },
   ],
   options: [
     {
+      name: 'amount',
+      shorthand: null,
+      type: Number,
+      argument: 'USD',
+      deprecated: false,
+      description: 'Budget limit in dollars (minimum 1)',
+    },
+    // Hidden: `--limit` is the old name of `--amount`.
+    {
       name: 'limit',
       shorthand: null,
       type: Number,
       argument: 'AMOUNT',
-      deprecated: false,
-      description: 'Budget limit in dollars (minimum 1)',
+      deprecated: true,
+      description: 'Deprecated alias for `--amount`',
     },
     {
       name: 'refresh-period',
@@ -576,25 +746,30 @@ export const budgetsSetSubcommand = {
       description:
         'Budget refresh cadence: daily, weekly, monthly, or none (default: monthly)',
     },
+    budgetDefaultOption,
     formatOption,
     jsonOption,
   ],
   examples: [
     {
       name: 'Set a team budget',
-      value: `${packageName} ai-gateway budgets set team --limit 500 --refresh-period monthly`,
+      value: `${packageName} ai-gateway budgets set team --amount 500 --refresh-period monthly`,
     },
     {
       name: 'Set a project budget',
-      value: `${packageName} ai-gateway budgets set project my-project --limit 200`,
+      value: `${packageName} ai-gateway budgets set project my-project --amount 200`,
     },
     {
       name: "Set a user's budget",
-      value: `${packageName} ai-gateway budgets set user teammate@example.com --limit 100`,
+      value: `${packageName} ai-gateway budgets set user teammate@example.com --amount 100`,
     },
     {
       name: "Set an API key's budget",
-      value: `${packageName} ai-gateway budgets set api-key my-key --limit 50`,
+      value: `${packageName} ai-gateway budgets set api-key my-key --amount 50`,
+    },
+    {
+      name: 'Set the default budget for team members without their own',
+      value: `${packageName} ai-gateway budgets set user --default --amount 50 --refresh-period monthly`,
     },
   ],
 } as const;
@@ -603,12 +778,12 @@ export const budgetsInspectSubcommand = {
   name: 'inspect',
   aliases: [],
   description:
-    'Show one AI Gateway budget for a scope (team, project <name>, user <email>, or api-key <name>)',
+    'Show one AI Gateway budget for a scope (team, project <name>, user <email>, or api-key <name>), or the default budget for a scope with --default',
   arguments: [
     { name: 'scope', required: true },
     { name: 'name', required: false },
   ],
-  options: [formatOption, jsonOption],
+  options: [budgetDefaultOption, formatOption, jsonOption],
   examples: [
     {
       name: "Inspect a user's budget",
@@ -616,7 +791,11 @@ export const budgetsInspectSubcommand = {
     },
     {
       name: 'Inspect a project budget as JSON',
-      value: `${packageName} ai-gateway budgets inspect project my-project --format json`,
+      value: `${packageName} ai-gateway budgets inspect project my-project --json`,
+    },
+    {
+      name: 'Inspect the per-member default budget',
+      value: `${packageName} ai-gateway budgets inspect user --default`,
     },
   ],
 } as const;
@@ -626,11 +805,46 @@ export const budgetsListSubcommand = {
   aliases: ['ls'],
   description: 'List AI Gateway budgets',
   arguments: [],
-  options: [formatOption, jsonOption],
+  options: [
+    {
+      name: 'scope-type',
+      shorthand: null,
+      type: String,
+      argument: 'SCOPE',
+      deprecated: false,
+      description:
+        'Only list budgets for one scope: team, project, user, or api-key',
+    },
+    {
+      name: 'defaults',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        "List the team's default budgets instead of individual budgets",
+    },
+    limitOption,
+    nextCursorOption,
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
       name: 'List budgets',
-      value: `${packageName} ai-gateway budgets ls`,
+      value: `${packageName} ai-gateway budgets list`,
+    },
+    {
+      name: 'List user budgets',
+      value: `${packageName} ai-gateway budgets list --scope-type user`,
+    },
+    {
+      name: 'List the default budgets',
+      value: `${packageName} ai-gateway budgets list --defaults`,
+    },
+    {
+      name: 'Fetch the next 50 budgets, using the cursor from pagination.next',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} ai-gateway budgets list --limit 50 --next=<CURSOR> --json`,
     },
   ],
 } as const;
@@ -639,35 +853,40 @@ export const budgetsRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm', 'delete'],
   description:
-    'Remove an AI Gateway budget for a scope (team, project <name>, user <email>, or api-key <name>)',
+    'Remove an AI Gateway budget for a scope (team, project <name>, user <email>, or api-key <name>), or the default budget for a scope with --default',
   arguments: [
     { name: 'scope', required: true },
     { name: 'name', required: false },
   ],
-  options: [yesOption, formatOption, jsonOption],
+  options: [yesOption, budgetDefaultOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Remove the team budget',
-      value: `${packageName} ai-gateway budgets rm team`,
+      value: `${packageName} ai-gateway budgets remove team`,
     },
     {
       name: 'Remove a project budget',
-      value: `${packageName} ai-gateway budgets rm project my-project`,
+      value: `${packageName} ai-gateway budgets remove project my-project`,
     },
     {
       name: "Remove a user's budget",
-      value: `${packageName} ai-gateway budgets rm user teammate@example.com`,
+      value: `${packageName} ai-gateway budgets remove user teammate@example.com`,
     },
     {
       name: "Remove an API key's budget",
-      value: `${packageName} ai-gateway budgets rm api-key my-key`,
+      value: `${packageName} ai-gateway budgets remove api-key my-key`,
+    },
+    {
+      name: 'Remove the default budget for API keys',
+      value: `${packageName} ai-gateway budgets remove api-key --default`,
     },
   ],
 } as const;
 
 const leaderboardFormatOption = {
   name: 'format',
-  shorthand: 'F',
+  shorthand: null,
+  deprecatedShorthand: 'F',
   type: String,
   argument: 'FORMAT',
   deprecated: false,
@@ -675,14 +894,24 @@ const leaderboardFormatOption = {
     'Output format: table, json, or csv (default: table in a terminal, json otherwise)',
 } as const;
 
-const leaderboardOutOption = {
-  name: 'out',
+const leaderboardOutputOption = {
+  name: 'output',
   shorthand: 'o',
   type: String,
-  argument: 'FILE',
+  argument: 'PATH',
   deprecated: false,
   description:
-    'Write the payload to a file instead of stdout (defaults to json; use --format csv for CSV)',
+    'Write the payload to a file instead of stdout (default: json; use --format csv for CSV)',
+} as const;
+
+// Hidden: `--out` is the old name of `--output`.
+const leaderboardOutOption = {
+  name: 'out',
+  shorthand: null,
+  type: String,
+  argument: 'FILE',
+  deprecated: true,
+  description: 'Deprecated alias for `--output`',
 } as const;
 
 const leaderboardModalityOption = {
@@ -723,6 +952,7 @@ export const leaderboardModelsSubcommand = {
     leaderboardMetricOption,
     leaderboardDateOption,
     leaderboardFormatOption,
+    leaderboardOutputOption,
     leaderboardOutOption,
   ],
   examples: [
@@ -732,7 +962,7 @@ export const leaderboardModelsSubcommand = {
     },
     {
       name: 'Export the full model data as CSV',
-      value: `${packageName} ai-gateway leaderboard models --format csv --out models.csv`,
+      value: `${packageName} ai-gateway leaderboard models --format csv --output models.csv`,
     },
   ],
 } as const;
@@ -746,7 +976,7 @@ export const budgetsDefaultsListSubcommand = {
   examples: [
     {
       name: 'List budget defaults',
-      value: `${packageName} ai-gateway budgets defaults ls`,
+      value: `${packageName} ai-gateway budgets defaults list`,
     },
   ],
 } as const;
@@ -759,12 +989,21 @@ export const budgetsDefaultsSetSubcommand = {
   arguments: [{ name: 'scope', required: true }],
   options: [
     {
+      name: 'amount',
+      shorthand: null,
+      type: Number,
+      argument: 'USD',
+      deprecated: false,
+      description: 'Default budget limit in dollars (minimum 1)',
+    },
+    // Hidden: `--limit` is the old name of `--amount`.
+    {
       name: 'limit',
       shorthand: null,
       type: Number,
       argument: 'AMOUNT',
-      deprecated: false,
-      description: 'Default budget limit in dollars (minimum 1)',
+      deprecated: true,
+      description: 'Deprecated alias for `--amount`',
     },
     {
       name: 'refresh-period',
@@ -780,15 +1019,15 @@ export const budgetsDefaultsSetSubcommand = {
   examples: [
     {
       name: 'Set the per-project default',
-      value: `${packageName} ai-gateway budgets defaults set project --limit 200 --refresh-period monthly`,
+      value: `${packageName} ai-gateway budgets defaults set project --amount 200 --refresh-period monthly`,
     },
     {
       name: 'Set the per-api-key default',
-      value: `${packageName} ai-gateway budgets defaults set api-key --limit 50`,
+      value: `${packageName} ai-gateway budgets defaults set api-key --amount 50`,
     },
     {
       name: 'Set the per-member default',
-      value: `${packageName} ai-gateway budgets defaults set user --limit 50`,
+      value: `${packageName} ai-gateway budgets defaults set user --amount 50`,
     },
   ],
 } as const;
@@ -803,7 +1042,7 @@ export const budgetsDefaultsRemoveSubcommand = {
   examples: [
     {
       name: 'Remove the per-project default',
-      value: `${packageName} ai-gateway budgets defaults rm project`,
+      value: `${packageName} ai-gateway budgets defaults remove project`,
     },
   ],
 } as const;
@@ -811,6 +1050,9 @@ export const budgetsDefaultsRemoveSubcommand = {
 export const budgetsDefaultsSubcommand = {
   name: 'defaults',
   aliases: [],
+  // Deprecated: kept routable, hidden from help. `--default` on budgets
+  // set|inspect|remove and `budgets ls --defaults` replace it.
+  hidden: true,
   description:
     'Manage AI Gateway budget defaults (per-project, per-api-key, and per-member spend limits applied by default)',
   arguments: [],
@@ -849,6 +1091,7 @@ export const leaderboardLabsSubcommand = {
     leaderboardMetricOption,
     leaderboardDateOption,
     leaderboardFormatOption,
+    leaderboardOutputOption,
     leaderboardOutOption,
   ],
   examples: [
@@ -864,7 +1107,11 @@ export const leaderboardAppsSubcommand = {
   aliases: [],
   description: 'Show the top apps built on AI Gateway',
   arguments: [],
-  options: [leaderboardFormatOption, leaderboardOutOption],
+  options: [
+    leaderboardFormatOption,
+    leaderboardOutputOption,
+    leaderboardOutOption,
+  ],
   examples: [
     {
       name: 'Show the top apps',
@@ -878,7 +1125,11 @@ export const leaderboardProvidersSubcommand = {
   aliases: [],
   description: 'Show the top inference providers on AI Gateway',
   arguments: [],
-  options: [leaderboardFormatOption, leaderboardOutOption],
+  options: [
+    leaderboardFormatOption,
+    leaderboardOutputOption,
+    leaderboardOutOption,
+  ],
   examples: [
     {
       name: 'Show the top providers as JSON',
@@ -903,6 +1154,204 @@ export const leaderboardSubcommand = {
   examples: [],
 } as const;
 
+export const virtualModelsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List AI Gateway virtual models',
+  arguments: [],
+  options: [
+    {
+      name: 'include-archived',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Include archived virtual models',
+    },
+    limitOption,
+    nextCursorOption,
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'List virtual models',
+      value: `${packageName} ai-gateway virtual-models list`,
+    },
+    {
+      name: 'Fetch the next 50 virtual models, using the cursor from pagination.next',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} ai-gateway virtual-models list --limit 50 --next=<CURSOR> --json`,
+    },
+  ],
+} as const;
+
+export const virtualModelsInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description: 'Show details about an AI Gateway virtual model',
+  arguments: [{ name: 'slug', required: true }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Inspect a virtual model',
+      value: `${packageName} ai-gateway virtual-models inspect my-model`,
+    },
+  ],
+} as const;
+
+const virtualModelConfigOption = {
+  name: 'config',
+  shorthand: null,
+  type: String,
+  argument: 'JSON',
+  deprecated: false,
+  description:
+    'JSON object of virtual model fields, for anything without a dedicated option. Options win over keys set here',
+} as const;
+
+const virtualModelFieldOptions = [
+  {
+    name: 'model',
+    shorthand: null,
+    type: String,
+    argument: 'SLUG',
+    deprecated: false,
+    description: 'Model the virtual model points at (e.g. openai/gpt-5.1)',
+  },
+  {
+    name: 'display-name',
+    shorthand: null,
+    type: String,
+    argument: 'NAME',
+    deprecated: false,
+    description: 'Human-readable name shown in the dashboard',
+  },
+  {
+    name: 'description',
+    shorthand: null,
+    type: String,
+    argument: 'TEXT',
+    deprecated: false,
+    description: 'Description of the virtual model',
+  },
+  {
+    name: 'provider-order',
+    shorthand: null,
+    type: String,
+    argument: 'LIST',
+    deprecated: false,
+    description: 'Comma-separated providers to try, in order',
+  },
+  {
+    name: 'provider-only',
+    shorthand: null,
+    type: String,
+    argument: 'LIST',
+    deprecated: false,
+    description: 'Comma-separated providers to restrict routing to',
+  },
+] as const;
+
+export const virtualModelsCreateSubcommand = {
+  name: 'create',
+  aliases: [],
+  description: 'Create an AI Gateway virtual model',
+  arguments: [{ name: 'slug', required: false }],
+  options: [
+    {
+      name: 'kind',
+      shorthand: null,
+      type: String,
+      argument: 'KIND',
+      deprecated: false,
+      description: 'Virtual model kind: alias or relay (default: alias)',
+    },
+    ...virtualModelFieldOptions,
+    virtualModelConfigOption,
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Create a virtual model interactively',
+      value: `${packageName} ai-gateway virtual-models create`,
+    },
+    {
+      name: 'Create a virtual model in one line',
+      value: `${packageName} ai-gateway virtual-models create my-model --model openai/gpt-5.1`,
+    },
+    {
+      name: 'Create a virtual model with fields that have no option',
+      value: `${packageName} ai-gateway virtual-models create my-model --model openai/gpt-5.1 --config '{"sort":"cost","zeroDataRetention":true}'`,
+    },
+  ],
+} as const;
+
+export const virtualModelsEditSubcommand = {
+  name: 'update',
+  aliases: ['edit'],
+  description: 'Update an AI Gateway virtual model',
+  arguments: [{ name: 'slug', required: true }],
+  options: [
+    ...virtualModelFieldOptions,
+    virtualModelConfigOption,
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Point a virtual model at a different model',
+      value: `${packageName} ai-gateway virtual-models update my-model --model anthropic/claude-sonnet-4.5`,
+    },
+  ],
+} as const;
+
+export const virtualModelsRemoveSubcommand = {
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
+  description: 'Delete an AI Gateway virtual model',
+  arguments: [{ name: 'slug', required: true }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Delete a virtual model',
+      value: `${packageName} ai-gateway virtual-models delete my-model`,
+    },
+  ],
+} as const;
+
+export const virtualModelsRestoreSubcommand = {
+  name: 'restore',
+  aliases: [],
+  description: 'Restore a deleted AI Gateway virtual model',
+  arguments: [{ name: 'slug', required: true }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Restore a deleted virtual model',
+      value: `${packageName} ai-gateway virtual-models restore my-model`,
+    },
+  ],
+} as const;
+
+export const virtualModelsSubcommand = {
+  name: 'virtual-models',
+  aliases: [],
+  description:
+    'Manage AI Gateway virtual models, reusable model configurations callable as vmc/<slug>',
+  arguments: [],
+  subcommands: [
+    virtualModelsCreateSubcommand,
+    virtualModelsListSubcommand,
+    virtualModelsInspectSubcommand,
+    virtualModelsEditSubcommand,
+    virtualModelsRemoveSubcommand,
+    virtualModelsRestoreSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const aiGatewayCommand = {
   name: 'ai-gateway',
   aliases: [],
@@ -912,6 +1361,8 @@ export const aiGatewayCommand = {
     apiKeysSubcommand,
     budgetsSubcommand,
     rulesSubcommand,
+    virtualModelsSubcommand,
+    setupSubcommand,
     codingAgentsSubcommand,
     modelsSubcommand,
     leaderboardSubcommand,

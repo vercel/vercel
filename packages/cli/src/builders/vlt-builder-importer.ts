@@ -11,20 +11,27 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { join } from 'node:path';
-import { install } from '@vltpkg/graph';
+// The vlt packages are only needed to install a Builder that is missing from
+// the cache. They are loaded on demand: importing @vltpkg/graph costs more
+// than the rest of importing an already installed Builder.
 import type { LockfileData } from '@vltpkg/graph';
-import { PackageInfoClient } from '@vltpkg/package-info';
-import { PackageJson } from '@vltpkg/package-json';
+import type { PackageInfoClient } from '@vltpkg/package-info';
 import type { PackageJson as VercelPackageJson } from '@vercel/build-utils';
 import { getCachePath } from '@vercel/cli-config';
 import type { BuilderWithPkg } from '@vercel-internals/builder-orchestration/import-builders';
-import { PathScurry } from 'path-scurry';
+import { createBuilderIndex } from './vlt-builder-graph';
 
 const LOCK_RETRY_MS = 50;
 const LOCK_WAIT_MS = 5 * 60 * 1000;
 const LOCK_EMPTY_GRACE_MS = 1000;
-export const TARBALL_FETCH_TIMEOUT_MS = 2 * 60 * 1000;
-const activeInstallations = new Map<string, Promise<string>>();
+const REMOVE_MAX_RETRIES = 5;
+const REMOVE_RETRY_DELAY_MS = 100;
+interface EnsuredGraph {
+  root: string;
+  installed: boolean;
+}
+
+const activeInstallations = new Map<string, Promise<EnsuredGraph>>();
 
 interface EmbeddedSingleBuilderGraph {
   hash: string;
@@ -41,6 +48,12 @@ interface EmbeddedSingleBuilderGraph {
 export interface EmbeddedBuilderGraphs {
   schemaVersion: 1;
   builders: Record<string, EmbeddedSingleBuilderGraph>;
+}
+
+/** Locates installed Builders without loading the full graphs. */
+export interface EmbeddedBuilderIndex {
+  schemaVersion: 1;
+  builders: Record<string, { hash: string; version: string }>;
 }
 
 // This code-unit ordering must remain byte-identical to canonicalize() in
@@ -169,130 +182,121 @@ export async function acquireLock(
   }
 }
 
-async function installationComplete(
-  root: string,
-  graph: EmbeddedSingleBuilderGraph
-) {
+async function removeInstallation(path: string) {
+  await rm(path, {
+    recursive: true,
+    force: true,
+    maxRetries: REMOVE_MAX_RETRIES,
+    retryDelay: REMOVE_RETRY_DELAY_MS,
+  });
+}
+
+// The marker is written only after a complete installation, so a matching
+// marker means the graph is installed.
+async function installationComplete(root: string, hash: string) {
   try {
     return (
       (await readFile(join(root, '.vercel-builder-graph'), 'utf8')).trim() ===
-      graph.hash
+      hash
     );
   } catch {
     return false;
   }
 }
 
+interface ImportSpan {
+  setAttributes(attrs: Record<string, string | undefined>): void;
+}
+
 type PackageInfoFactory = (
   options: Record<string, unknown>
 ) => PackageInfoClient;
 
-export class EmbeddedPackageInfoClient extends PackageInfoClient {
-  constructor(
-    options?: Record<string, unknown>,
-    readonly fetchTimeoutMs = TARBALL_FETCH_TIMEOUT_MS
-  ) {
-    super(options);
-  }
+const defaultPackageInfoFactory = async (): Promise<PackageInfoFactory> => {
+  const { PackageInfoClient } = await import('@vltpkg/package-info');
+  return options => new PackageInfoClient(options);
+};
 
-  async extract(
-    ...args: Parameters<PackageInfoClient['extract']>
-  ): ReturnType<PackageInfoClient['extract']> {
-    const [rawSpec, target, rawOptions = {}] = args;
-    const spec = rawSpec as { final?: { type?: string } };
-    const options = rawOptions as { integrity?: string; resolved?: string };
-    if (spec.final?.type === 'remote' && options.resolved) {
-      if (!options.integrity) {
-        throw new Error(
-          `Missing integrity for remote Builder dependency ${options.resolved}`
-        );
-      }
-      let response: Response;
-      try {
-        response = await fetch(options.resolved, {
-          signal: AbortSignal.timeout(this.fetchTimeoutMs),
-        });
-      } catch (error: unknown) {
-        const aborted =
-          error instanceof Error &&
-          (error.name === 'TimeoutError' || error.name === 'AbortError');
-        if (aborted) {
-          throw new Error(
-            `Timed out downloading remote Builder dependency ${options.resolved}`
-          );
-        }
-        throw error;
-      }
-      if (!response.ok) {
-        throw new Error(
-          `Could not download remote Builder dependency ${options.resolved}: ${response.status}`
-        );
-      }
-      const bytes = Buffer.from(await response.arrayBuffer());
-      const integrity = `sha512-${createHash('sha512')
-        .update(new Uint8Array(bytes))
-        .digest('base64')}`;
-      if (options.integrity !== integrity) {
-        throw new Error(
-          `Integrity check failed for remote Builder dependency ${options.resolved}`
-        );
-      }
-      const prototype = PackageInfoClient.prototype as PackageInfoClient & {
-        getTarPool(): Promise<{
-          unpack(bytes: Uint8Array, target: string): Promise<void>;
-        }>;
-      };
-      await (await prototype.getTarPool.call(this)).unpack(
-        new Uint8Array(bytes),
-        target
-      );
-      return { resolved: options.resolved, integrity, spec: rawSpec };
-    }
-    return super.extract(...args);
+/**
+ * Remove the per-install vlt package-info cache without failing the install.
+ *
+ * vlt's registry cache writes entries to disk in the background, and
+ * `install()` can resolve before those writes land. Removing the directory
+ * while a write is in flight fails with ENOTEMPTY, so wait for pending writes
+ * first and retry removal. The cache is disposable, so a cleanup failure must
+ * not fail (or mask the error of) the install itself.
+ */
+export async function removePackageInfoCache(
+  packageInfo: Pick<PackageInfoClient, 'getRegistryClient'>,
+  path: string
+) {
+  try {
+    const registryClient = await packageInfo.getRegistryClient();
+    await registryClient.cache.promise();
+  } catch {
+    // Nothing to wait for; fall through to removal.
   }
+  await removeInstallation(path).catch(() => undefined);
 }
 
 async function reifyGraph(
   root: string,
   graph: EmbeddedSingleBuilderGraph,
-  packageInfoFactory: PackageInfoFactory
+  packageInfoFactory: PackageInfoFactory | undefined
 ) {
+  const [{ install }, { PackageJson }, { PathScurry }, createPackageInfo] =
+    await Promise.all([
+      import('@vltpkg/graph'),
+      import('@vltpkg/package-json'),
+      import('path-scurry'),
+      packageInfoFactory ?? defaultPackageInfoFactory(),
+    ]);
   const packageJson = new PackageJson();
-  const packageInfo = packageInfoFactory({
+  const packageInfoCache = join(root, '.vlt-package-info-cache');
+  const packageInfo = createPackageInfo({
     ...graph.lockfile.options,
     projectRoot: root,
     packageJson,
+    cache: packageInfoCache,
   });
-  await install({
-    ...graph.lockfile.options,
-    projectRoot: root,
-    packageJson,
-    packageInfo,
-    scurry: new PathScurry(root),
-    allowScripts: ':not(*)',
-    frozenLockfile: true,
-    cleanInstall: true,
-  });
+  try {
+    await install({
+      ...graph.lockfile.options,
+      projectRoot: root,
+      packageJson,
+      packageInfo,
+      scurry: new PathScurry(root),
+      allowScripts: ':not(*)',
+      frozenLockfile: true,
+      cleanInstall: true,
+    });
+  } finally {
+    await removePackageInfoCache(packageInfo, packageInfoCache);
+  }
 }
 
 async function ensureGraph(
   graph: EmbeddedSingleBuilderGraph,
   cacheRoot: string,
-  packageInfoFactory: PackageInfoFactory
-) {
+  packageInfoFactory: PackageInfoFactory | undefined
+): Promise<EnsuredGraph> {
   validateGraph(graph);
   const root = join(cacheRoot, graph.hash);
   const active = activeInstallations.get(root);
   if (active) return active;
 
   const installation = (async () => {
-    if (await installationComplete(root, graph)) return root;
+    if (await installationComplete(root, graph.hash)) {
+      return { root, installed: false };
+    }
     const lockPath = join(cacheRoot, 'locks', `${graph.hash}.lock`);
     const lock = await acquireLock(lockPath);
     let temporaryRoot: string | undefined;
     try {
-      if (await installationComplete(root, graph)) return root;
-      await rm(root, { recursive: true, force: true });
+      if (await installationComplete(root, graph.hash)) {
+        return { root, installed: false };
+      }
+      await removeInstallation(root);
       // vlt uses absolute directory junction targets on Windows, so moving a
       // completed installation would leave its node_modules links pointing at
       // the removed temporary directory. The lock protects this in-place
@@ -324,12 +328,11 @@ async function ensureGraph(
         await rename(temporaryRoot, root);
       }
       temporaryRoot = undefined;
-      return root;
+      return { root, installed: true };
     } finally {
       await lock.close();
       await unlink(lockPath).catch(() => undefined);
-      if (temporaryRoot)
-        await rm(temporaryRoot, { recursive: true, force: true });
+      if (temporaryRoot) await removeInstallation(temporaryRoot);
     }
   })();
 
@@ -343,36 +346,76 @@ async function ensureGraph(
   return installation;
 }
 
+/**
+ * Imports pinned Builders from the vlt cache. An installed Builder is located
+ * by its graph hash from the index and required directly, the same as from
+ * `node_modules`. Only a missing Builder loads the full graphs and vlt to
+ * install it.
+ */
 export function createVltBuilderImporter({
   graphs,
   loadGraphs = async () => graphs!,
+  loadIndex = async () => createBuilderIndex(await loadGraphs()),
   require,
   cacheRoot = join(getCachePath(), 'builders-vlt'),
-  packageInfoFactory = options => new EmbeddedPackageInfoClient(options),
+  packageInfoFactory,
   debug = () => undefined,
 }: {
   graphs?: EmbeddedBuilderGraphs;
   loadGraphs?: () => Promise<EmbeddedBuilderGraphs>;
+  loadIndex?: () => Promise<EmbeddedBuilderIndex>;
   require: NodeRequire;
   cacheRoot?: string;
   packageInfoFactory?: PackageInfoFactory;
   debug?: (message: string) => void;
 }) {
-  return async function importVltBuilders(
-    specs: ReadonlyMap<string, string>
-  ): Promise<Map<string, BuilderWithPkg>> {
-    if (specs.size === 0) return new Map();
+  const install = async (
+    name: string,
+    expected: { hash: string; version: string }
+  ) => {
     const loadedGraphs = await loadGraphs();
     if (loadedGraphs.schemaVersion !== 1) {
       throw new Error('The embedded vlt Builder graph index is invalid.');
     }
+    const graph = loadedGraphs.builders[name];
+    if (!graph) throw new Error(`No pinned vlt graph exists for ${name}.`);
+    if (graph.hash !== expected.hash || graph.version !== expected.version) {
+      throw new Error(
+        `The embedded vlt Builder index does not match the graph for ${name}.`
+      );
+    }
+    return ensureGraph(graph, cacheRoot, packageInfoFactory);
+  };
+
+  return async function importVltBuilders(
+    specs: ReadonlyMap<string, string>,
+    span?: ImportSpan
+  ): Promise<Map<string, BuilderWithPkg>> {
+    if (specs.size === 0) return new Map();
+    const index = await loadIndex();
+    if (index.schemaVersion !== 1) {
+      throw new Error('The embedded vlt Builder graph index is invalid.');
+    }
     const builders = new Map<string, BuilderWithPkg>();
+    const installedNames: string[] = [];
+    const reusedNames: string[] = [];
+    let ensureMs = 0;
+    let requireMs = 0;
 
     await Promise.all(
       [...specs].map(async ([spec, name]) => {
-        const graph = loadedGraphs.builders[name];
+        const graph = index.builders[name];
         if (!graph) throw new Error(`No pinned vlt graph exists for ${name}.`);
-        const root = await ensureGraph(graph, cacheRoot, packageInfoFactory);
+        const ensureStartedAt = performance.now();
+        const cachedRoot = join(cacheRoot, graph.hash);
+        const { root, installed } = (await installationComplete(
+          cachedRoot,
+          graph.hash
+        ))
+          ? { root: cachedRoot, installed: false }
+          : await install(name, graph);
+        ensureMs += performance.now() - ensureStartedAt;
+        (installed ? installedNames : reusedNames).push(name);
         const pkgPath = require.resolve(`${name}/package.json`, {
           paths: [root],
         });
@@ -388,15 +431,24 @@ export function createVltBuilderImporter({
         }
         const path = require.resolve(name, { paths: [root] });
         debug(`Resolved ${name}@${graph.version} with vlt from ${root}`);
+        const requireStartedAt = performance.now();
+        const builder = require(path);
+        requireMs += performance.now() - requireStartedAt;
         builders.set(spec, {
           path,
           pkgPath,
           pkg: { ...pkg, name },
-          builder: require(path),
+          builder,
           dynamicallyInstalled: true,
         });
       })
     );
+    span?.setAttributes({
+      'builders.vlt.installed': installedNames.sort().join(','),
+      'builders.vlt.reused': reusedNames.sort().join(','),
+      'builders.vlt.ensureMs': String(Math.round(ensureMs)),
+      'builders.vlt.requireMs': String(Math.round(requireMs)),
+    });
     return builders;
   };
 }

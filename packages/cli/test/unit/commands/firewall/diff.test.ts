@@ -28,7 +28,7 @@ describe('firewall diff', () => {
     it('tracks telemetry', async () => {
       client.setArgv('firewall', 'diff', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

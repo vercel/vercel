@@ -1,4 +1,5 @@
 import { getMaxDurationSchema } from './max-duration';
+import { MAX_CONCURRENCY } from './max-concurrency';
 
 const triggerEventSchemaV1 = {
   type: 'object',
@@ -125,6 +126,7 @@ export const getFunctionsSchema = () => ({
         maxConcurrency: {
           type: 'integer',
           minimum: 1,
+          maximum: MAX_CONCURRENCY,
         },
         regions: {
           type: 'array',
@@ -143,6 +145,10 @@ export const getFunctionsSchema = () => ({
           maxLength: 256,
         },
         excludeFiles: {
+          type: 'string',
+          maxLength: 256,
+        },
+        installCommand: {
           type: 'string',
           maxLength: 256,
         },

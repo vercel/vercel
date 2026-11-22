@@ -4,7 +4,9 @@ import {
   parseBudgetScope,
   type BudgetRefreshPeriod,
 } from '../../util/ai-gateway/budgets';
+import { setScopeDefault } from './budgets-scope-default';
 import {
+  describeApiKeyLookupError,
   findApiKeyByIdOrName,
   updateApiKeyQuota,
 } from '../../util/ai-gateway/api-keys';
@@ -22,6 +24,11 @@ import { budgetsSetSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+  withWarnings,
+} from '../../util/renamed-option';
 import { isAPIError } from '../../util/errors-ts';
 import { validateJsonOutput } from '../../util/output-format';
 
@@ -47,49 +54,69 @@ export default async function set(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
-  const limit = opts['--limit'] as number | undefined;
   const refreshPeriod = opts['--refresh-period'] as string | undefined;
+  const isDefault = opts['--default'] as boolean | undefined;
 
   telemetry.trackCliArgumentScope(args[0]);
   telemetry.trackCliArgumentName(args[1]);
-  telemetry.trackCliOptionLimit(limit);
+  telemetry.trackCliOptionAmount(opts['--amount']);
+  telemetry.trackCliOptionLimit(opts['--limit']);
   telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
+  telemetry.trackCliFlagDefault(isDefault);
   telemetry.trackCliOptionFormat(opts['--format']);
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
-  const scopeResult = parseBudgetScope(args);
+  const amount = getRenamedOption<number>(opts, '--amount', '--limit', {
+    json: asJson,
+  });
+  if ('error' in amount) {
+    return reportRenamedOptionError(client, amount.error, { json: asJson });
+  }
+  const limit = amount.value;
+
+  const scopeResult = parseBudgetScope(args, { isDefault });
   if ('error' in scopeResult) {
     output.error(scopeResult.error);
-    return 1;
+    return 2;
   }
   const { scope } = scopeResult;
 
   if (limit === undefined || Number.isNaN(limit) || limit < 1) {
-    output.error('The --limit flag is required and must be at least 1.');
-    return 1;
+    output.error('The --amount option is required and must be at least 1.');
+    return 2;
   }
   if (
     refreshPeriod !== undefined &&
     !REFRESH_PERIODS.includes(refreshPeriod as BudgetRefreshPeriod)
   ) {
     output.error(
-      `The --refresh-period flag must be one of: ${REFRESH_PERIODS.join(', ')}.`
+      `The --refresh-period option must be one of: ${REFRESH_PERIODS.join(', ')}.`
     );
-    return 1;
+    return 2;
   }
 
   if (!(await ensureTeam(client))) {
     return 1;
+  }
+
+  if (scope.isDefault) {
+    return await setScopeDefault(client, {
+      scopeType: scope.scopeType,
+      limit,
+      refreshPeriod: refreshPeriod as BudgetRefreshPeriod | undefined,
+      asJson,
+      warnings: [amount.warning],
+    });
   }
 
   let projectId: string | undefined;
@@ -99,11 +126,7 @@ export default async function set(client: Client, argv: string[]) {
   if (scope.scopeType === 'api-key') {
     const resolved = await findApiKeyByIdOrName(client, scope.name);
     if ('error' in resolved) {
-      output.error(
-        resolved.error === 'ambiguous'
-          ? `Multiple API keys named "${scope.name}" (${resolved.count}). Use the key id instead.`
-          : `API key not found: ${scope.name}`
-      );
+      output.error(describeApiKeyLookupError(scope.name, resolved));
       return 1;
     }
     apiKeyId = resolved.apiKey.id;
@@ -161,7 +184,9 @@ export default async function set(client: Client, argv: string[]) {
     output.stopSpinner();
 
     if (asJson) {
-      client.stdout.write(`${JSON.stringify(budget, null, 2)}\n`);
+      client.stdout.write(
+        `${JSON.stringify(withWarnings(budget, [amount.warning]), null, 2)}\n`
+      );
     } else {
       printAlignedLabel('Set budget', scopeLabel, { gutter: '✓' });
       printAlignedLabel('Limit', `$${budget.limitAmount}`);

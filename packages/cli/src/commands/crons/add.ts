@@ -119,7 +119,7 @@ export default async function add(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { flags } = parsedArgs;
 
@@ -133,9 +133,9 @@ export default async function add(client: Client, argv: string[]) {
   if (!cronPath || !schedule) {
     if (!client.stdin.isTTY) {
       output.error(
-        `Missing required flags. Use ${getCommandName('crons add --path /api/cron --schedule "0 10 * * *"')} in non-interactive mode.`
+        `Missing required options. Use ${getCommandName('crons add --path /api/cron --schedule "0 10 * * *"')} in non-interactive mode.`
       );
-      return 1;
+      return 2;
     }
 
     if (!cronPath) {

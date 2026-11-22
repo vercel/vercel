@@ -1,4 +1,5 @@
 import type Client from '../../util/client';
+import { canPrompt } from '../../util/can-prompt';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -6,9 +7,16 @@ import {
   buildCommandWithGlobalFlags,
   exitWithNonInteractiveError,
   outputAgentError,
+  type ActionRequiredPayload,
 } from '../../util/agent-output';
-import { AGENT_REASON } from '../../util/agent-output-constants';
-import { protectionSubcommand } from './command';
+import {
+  AGENT_ACTION,
+  AGENT_REASON,
+  AGENT_STATUS,
+} from '../../util/agent-output-constants';
+import { getGlobalFlagsFromArgs } from '../../util/arg-common';
+import { getCommandNamePlain } from '../../util/pkg-name';
+import { protectionEnableSubcommand } from './command';
 import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import getProjectByCwdOrLink from '../../util/projects/get-project-by-cwd-or-link';
@@ -81,8 +89,10 @@ export default async function protection(
   argv: string[]
 ): Promise<number> {
   let parsedArgs;
+  // `enable` and `disable` take the same options, which include the bare
+  // command's own.
   const flagsSpecification = getFlagsSpecification(
-    protectionSubcommand.options
+    protectionEnableSubcommand.options
   );
   try {
     parsedArgs = parseArguments(argv, flagsSpecification);
@@ -94,10 +104,10 @@ export default async function protection(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: error instanceof Error ? error.message : String(error),
       },
-      1
+      2
     );
     printError(error);
-    return 1;
+    return 2;
   }
 
   const actionArg = parsedArgs.args[0];
@@ -161,10 +171,10 @@ export default async function protection(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: formatResult.error,
       },
-      1
+      2
     );
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
@@ -211,10 +221,10 @@ export default async function protection(
             },
           ],
         },
-        1
+        2
       );
       output.error(parsed.message);
-      return 1;
+      return 2;
     }
     enableSkewMaxAgeSeconds = parsed.seconds;
   }
@@ -300,10 +310,10 @@ export default async function protection(
             },
           ],
         },
-        1
+        2
       );
       output.error(parsed.message);
-      return 1;
+      return 2;
     }
     protectionPassword = parsed.password;
   }
@@ -325,7 +335,7 @@ export default async function protection(
         status: 'error',
         reason: AGENT_REASON.MISSING_ARGUMENTS,
         message: msg,
-        hint: 'Use `project protection enable|disable` with a protection flag (e.g. --sso, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection).',
+        hint: 'Use `project protection enable|disable` with a protection option (e.g. --sso, --password, --customer-support-code-visibility, --skew, --protection-bypass, or --git-fork-protection).',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -391,6 +401,57 @@ export default async function protection(
     });
     printError(err);
     return 1;
+  }
+
+  const passwordProtection = (
+    project as Project & { passwordProtection?: unknown }
+  ).passwordProtection;
+  if (action === 'enable' && passwordSelected && !passwordProtection) {
+    if (!canPrompt(client)) {
+      const message =
+        'Enabling Password Protection can incur charges. This cannot be confirmed non-interactively: run this command in an interactive terminal and type the project name to confirm, or enable it in the Vercel dashboard.';
+      const globalFlags = getGlobalFlagsFromArgs(client.argv.slice(2)).filter(
+        flag => !flag.startsWith('--non-interactive')
+      );
+      const interactiveCommand = getCommandNamePlain(
+        `project protection enable ${project.id} --password${
+          protectionPassword ? ' --protection-password <password>' : ''
+        }${globalFlags.length ? ` ${globalFlags.join(' ')}` : ''} --non-interactive=false`
+      );
+      const payload: ActionRequiredPayload = {
+        status: AGENT_STATUS.ACTION_REQUIRED,
+        reason: AGENT_REASON.INTERACTIVE_CONFIRMATION_REQUIRED,
+        action: AGENT_ACTION.CONFIRMATION_REQUIRED,
+        message,
+        userActionRequired: true,
+        hint: 'Surface this to the user; activating a paid feature requires interactive confirmation.',
+        next: [
+          {
+            command: interactiveCommand,
+            when: protectionPassword
+              ? 'User runs this in an interactive terminal; replace <password> with the desired protection password.'
+              : 'User runs this command in an interactive terminal.',
+          },
+        ],
+      };
+      if (preferJson) {
+        client.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+      } else {
+        output.error(message);
+      }
+      return 1;
+    }
+
+    output.print(
+      `Enabling Password Protection for ${chalk.bold(project.name)} can incur charges.\n`
+    );
+    const entered = await client.input.text({
+      message: `Type ${project.name} to confirm enabling Password Protection:`,
+    });
+    if (entered !== project.name) {
+      output.log('Canceled');
+      return 0;
+    }
   }
 
   if (action) {

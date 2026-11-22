@@ -39,7 +39,7 @@ export default async function addStore(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -64,7 +64,7 @@ export default async function addStore(
         message,
       });
       output.error(message);
-      return 1;
+      return 2;
     }
   }
 
@@ -92,7 +92,8 @@ export default async function addStore(
     outputAgentError(client, {
       status: 'error',
       reason: 'missing_arguments',
-      message: "Missing required --access flag. Must be 'public' or 'private'.",
+      message:
+        "Missing required --access option. Must be 'public' or 'private'.",
       next: [
         {
           command: buildCommandWithGlobalFlags(
@@ -137,7 +138,7 @@ export default async function addStore(
         ],
       });
       output.error('Missing required argument: name');
-      return 1;
+      return 2;
     }
   }
 

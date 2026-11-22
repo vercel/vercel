@@ -9,7 +9,7 @@ describe('kms update', () => {
     it('tracks telemetry', async () => {
       client.setArgv('kms', 'update', '--help');
       const exitCodePromise = kms(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'kms:update' },
@@ -51,7 +51,7 @@ describe('kms update', () => {
       '--remove-claims-schema'
     );
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput(
       '--claims-schema and --remove-claims-schema conflict'
     );
@@ -61,7 +61,7 @@ describe('kms update', () => {
     useUser();
     client.setArgv('kms', 'update', 'iss_test');
     const exitCode = await kms(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Nothing to update');
   });
 

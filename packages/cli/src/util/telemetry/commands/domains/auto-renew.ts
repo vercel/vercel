@@ -6,6 +6,14 @@ export class DomainsAutoRenewTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof autoRenewSubcommand>
 {
+  trackCliSubcommandEnable(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'enable', value: actual });
+  }
+
+  trackCliSubcommandDisable(actual: string) {
+    this.trackCliSubcommand({ subcommand: 'disable', value: actual });
+  }
+
   trackCliArgumentDomain(domainName: string | undefined) {
     if (domainName) {
       this.trackCliArgument({

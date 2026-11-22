@@ -1,10 +1,6 @@
 import { it, describe, expect } from 'vitest';
 import { Readable } from 'stream';
-import {
-  streamToDigestAsync,
-  sha256,
-  md5,
-} from '../src/fs/stream-to-digest-async';
+import { streamToDigestAsync, sha256 } from '../src/fs/stream-to-digest-async';
 import { createHash } from 'crypto';
 
 describe('streamToDigestAsync', () => {
@@ -68,12 +64,5 @@ describe('sha256', () => {
     expect(sha256('test')).toBe(
       createHash('sha256').update('test').digest('hex')
     );
-  });
-});
-
-describe('md5', () => {
-  it('returns hex md5 of a buffer', () => {
-    const buf = Buffer.from('test');
-    expect(md5(buf)).toBe(createHash('md5').update(buf).digest('hex'));
   });
 });

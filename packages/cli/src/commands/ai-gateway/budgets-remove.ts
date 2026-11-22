@@ -6,7 +6,9 @@ import {
   listScopeBudgetDefaults,
   formatBudgetCap,
 } from '../../util/ai-gateway/budgets';
+import { removeScopeDefault } from './budgets-scope-default';
 import {
+  describeApiKeyLookupError,
   findApiKeyByIdOrName,
   updateApiKeyQuota,
 } from '../../util/ai-gateway/api-keys';
@@ -49,33 +51,39 @@ export default async function remove(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
   const yes = opts['--yes'] as boolean | undefined;
+  const isDefault = opts['--default'] as boolean | undefined;
 
   telemetry.trackCliArgumentScope(args[0]);
   telemetry.trackCliArgumentName(args[1]);
   telemetry.trackCliFlagYes(yes);
+  telemetry.trackCliFlagDefault(isDefault);
   telemetry.trackCliOptionFormat(opts['--format']);
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
-  const scopeResult = parseBudgetScope(args);
+  const scopeResult = parseBudgetScope(args, { isDefault });
   if ('error' in scopeResult) {
     output.error(scopeResult.error);
-    return 1;
+    return 2;
   }
   const { scope } = scopeResult;
 
   if (!(await ensureTeam(client))) {
     return 1;
+  }
+
+  if (scope.isDefault) {
+    return await removeScopeDefault(client, scope.scopeType, { yes, asJson });
   }
 
   let projectId: string | undefined;
@@ -105,11 +113,7 @@ export default async function remove(client: Client, argv: string[]) {
   } else if (scope.scopeType === 'api-key') {
     const resolved = await findApiKeyByIdOrName(client, scope.name);
     if ('error' in resolved) {
-      output.error(
-        resolved.error === 'ambiguous'
-          ? `Multiple API keys named "${scope.name}" (${resolved.count}). Use the key id instead.`
-          : `API key not found: ${scope.name}`
-      );
+      output.error(describeApiKeyLookupError(scope.name, resolved));
       return 1;
     }
     apiKeyId = resolved.apiKey.id;

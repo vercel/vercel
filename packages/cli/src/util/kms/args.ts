@@ -4,7 +4,11 @@ import type Client from '../client';
 import { getGlobalFlagsFromArgs } from '../arg-common';
 import { getCommandName, getCommandNamePlain } from '../pkg-name';
 import { outputAgentError } from '../agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../agent-output-constants';
+import {
+  AGENT_REASON,
+  AGENT_STATUS,
+  getExitCodeForReason,
+} from '../agent-output-constants';
 
 /**
  * Suggested `kms` command with the caller's global flags (`--cwd`, `--scope`,
@@ -45,11 +49,11 @@ export function missingArgument(
         { command: kmsSuggestion(options.usage, client.argv) },
       ],
     },
-    1
+    getExitCodeForReason(options.reason)
   );
   output.error(options.message);
   output.log(`Usage: ${chalk.cyan(getCommandName(options.usage))}`);
-  return 1;
+  return getExitCodeForReason(options.reason);
 }
 
 /** Reports extra positional arguments the subcommand can't interpret. */
@@ -62,12 +66,12 @@ export function invalidArgumentCount(client: Client, usage: string): number {
       reason: AGENT_REASON.INVALID_ARGUMENTS,
       message,
     },
-    1
+    2
   );
   output.error(
     `Invalid number of arguments. Usage: ${chalk.cyan(getCommandName(usage))}`
   );
-  return 1;
+  return 2;
 }
 
 /** Reports a local input failure (bad JSON, unreadable file) uniformly. */
@@ -79,8 +83,8 @@ export function invalidInput(client: Client, message: string): number {
       reason: AGENT_REASON.INVALID_ARGUMENTS,
       message,
     },
-    1
+    2
   );
   output.error(message);
-  return 1;
+  return 2;
 }

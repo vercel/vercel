@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { CodingAgent } from '../types';
 import { mergeJson, pathExists } from '../config-files';
-import { GATEWAY_DEFAULT_MODEL } from '../gateway';
+import { GATEWAY_DEFAULT_MODEL, KEY_PLACEHOLDER } from '../gateway';
 
 /**
  * Cline's provider store is `~/.cline/data/settings/providers.json`, the same
@@ -13,6 +13,7 @@ import { GATEWAY_DEFAULT_MODEL } from '../gateway';
 export const cline: CodingAgent = {
   id: 'cline',
   displayName: 'Cline',
+  needsTopModels: true,
 
   async detect(home) {
     return pathExists(join(home, '.cline'));
@@ -27,6 +28,27 @@ export const cline: CodingAgent = {
 
   buildPlan(ctx) {
     const path = this.configPath(ctx);
+    const defaultModel = ctx.topModels?.[0]?.id ?? GATEWAY_DEFAULT_MODEL;
+    // A fresh timestamp on a no-op run would defeat the "already configured" check.
+    const keepUpdatedAt = (current: string): string | undefined => {
+      try {
+        const providers = (JSON.parse(current) as Record<string, any>)
+          ?.providers?.['vercel-ai-gateway'];
+        const settings = providers?.settings;
+        const sameKey =
+          ctx.apiKey === KEY_PLACEHOLDER || settings?.apiKey === ctx.apiKey;
+        if (
+          sameKey &&
+          settings?.provider === 'vercel-ai-gateway' &&
+          settings?.model === defaultModel &&
+          providers?.tokenSource === 'manual' &&
+          typeof providers?.updatedAt === 'string'
+        ) {
+          return providers.updatedAt;
+        }
+      } catch {}
+      return undefined;
+    };
     return {
       fileChanges: [
         {
@@ -36,6 +58,8 @@ export const cline: CodingAgent = {
           mode: 0o600,
           transform: current => {
             const isNew = !current || !current.trim();
+            const updatedAt =
+              (current && keepUpdatedAt(current)) ?? new Date().toISOString();
             return mergeJson(current, {
               ...(isNew ? { version: 1 } : {}),
               lastUsedProvider: 'vercel-ai-gateway',
@@ -44,9 +68,9 @@ export const cline: CodingAgent = {
                   settings: {
                     provider: 'vercel-ai-gateway',
                     apiKey: ctx.apiKey,
-                    model: GATEWAY_DEFAULT_MODEL,
+                    model: defaultModel,
                   },
-                  updatedAt: new Date().toISOString(),
+                  updatedAt,
                   tokenSource: 'manual',
                 },
               },
@@ -56,7 +80,7 @@ export const cline: CodingAgent = {
       ],
       envExports: [],
       notes: [
-        `Cline will use its native Vercel AI Gateway provider with ${GATEWAY_DEFAULT_MODEL}; switch models in-session or with \`cline auth -p vercel-ai-gateway -m <gateway-model-id>\`.`,
+        `Cline will use its native Vercel AI Gateway provider with ${defaultModel}; switch models in-session or with \`cline auth -p vercel-ai-gateway -m <gateway-model-id>\`.`,
         'In the VS Code extension, pick the Vercel AI Gateway provider under Settings → API Provider.',
       ],
     };

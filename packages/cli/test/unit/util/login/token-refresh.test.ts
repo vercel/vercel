@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import { randomUUID } from 'node:crypto';
-import _fetch, { Request, Response } from '../../../../src/util/fetch';
+import _fetch from '../../../../src/util/fetch';
+import { Request, Response } from '../../../../src/util/fetch-primitives';
 
 import whoami from '../../../../src/commands/whoami';
 import { Chance } from 'chance';
@@ -22,6 +23,14 @@ beforeEach(() => {
   client.cwd = setupTmpDir();
   delete client.config.currentTeam;
   client.nonInteractive = false;
+  // These tests exercise in-memory session changes, not the developer's
+  // saved credentials or global config.
+  vi.spyOn(client, 'persistAuthConfig').mockImplementation(() => {});
+  vi.spyOn(client, 'writeToConfigFile').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('OAuth Token Refresh', () => {

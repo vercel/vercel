@@ -46,7 +46,7 @@ export default async function addGrant(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [issuerId] = args;
@@ -72,7 +72,7 @@ export default async function addGrant(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
@@ -134,7 +134,7 @@ export default async function addGrant(client: Client, argv: string[]) {
     return missingArgument(client, {
       reason: AGENT_REASON.MISSING_ENVIRONMENT,
       message:
-        'At least one environment is required. Pass --environment production, and repeat the flag for more.',
+        'At least one environment is required. Pass --environment production, and repeat the option for more.',
       usage: USAGE,
     });
   }

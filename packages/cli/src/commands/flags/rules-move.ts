@@ -37,7 +37,7 @@ export default async function rulesMove(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -62,7 +62,7 @@ export default async function rulesMove(
     output.log(
       `Example: ${getCommandName('flags rules move my-feature rule_123 --environment production --position 1')}`
     );
-    return 1;
+    return 2;
   }
 
   try {
@@ -71,7 +71,6 @@ export default async function rulesMove(
       flagArg,
       environment,
       promptMessage: 'Select an environment containing the rule:',
-      requireActiveFlag: true,
     });
     if (isExitCodeResult(context)) {
       return context.exitCode;

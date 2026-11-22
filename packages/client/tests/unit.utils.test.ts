@@ -21,6 +21,26 @@ const normalizeWindowsPaths = (files: string[]) => {
 const toAbsolutePaths = (cwd: string, files: string[]) =>
   files.map(p => join(cwd, p));
 
+const defaultVcConfigPath = (cwd: string) =>
+  join(cwd, '.vercel/output/functions/api/example.func/.vc-config.json');
+
+/** Rewrite the gitignored fixture `.vc-config.json` for the duration of `run`. */
+async function withDefaultFilePathMap(
+  cwd: string,
+  filePathMap: Record<string, string>,
+  run: () => Promise<void>
+) {
+  const configPath = defaultVcConfigPath(cwd);
+  const original = await fs.readFile(configPath, 'utf8');
+  const parsed = JSON.parse(original);
+  await fs.writeJson(configPath, { ...parsed, filePathMap });
+  try {
+    await run();
+  } finally {
+    await fs.writeFile(configPath, original);
+  }
+}
+
 describe('instant static file preparation', () => {
   const createFiles = (mode: number): FilesMap => {
     const data = Buffer.from('<html></html>');
@@ -192,31 +212,257 @@ describe('buildFileTree()', () => {
     );
   });
 
-  it('should not re-add `.vercelignore`d files through `filePathMap` when prebuilt=true', async () => {
+  it('should include non-ignored `filePathMap` entries when prebuilt=true', async () => {
     const cwd = fixture('prebuilt-filepathmap-ignore');
-    const { fileList } = await buildFileTree(
+    await withDefaultFilePathMap(
       cwd,
       {
-        isDirectory: true,
-        prebuilt: true,
-        vercelOutputDir: join(cwd, '.vercel/output'),
+        'index.js': 'safe-handler.js',
+        'escaped.txt': '../outside.txt',
       },
-      noop
+      async () => {
+        const { fileList } = await buildFileTree(
+          cwd,
+          {
+            isDirectory: true,
+            prebuilt: true,
+            vercelOutputDir: join(cwd, '.vercel/output'),
+          },
+          noop
+        );
+
+        const normalized = normalizeWindowsPaths(fileList);
+        const included = (rel: string) =>
+          normalizeWindowsPaths([join(cwd, rel)])[0];
+
+        // `safe-handler.js` is not ignored and must still be included
+        expect(normalized).toContain(included('safe-handler.js'));
+        expect(normalized).toContain(
+          included('.vercel/output/functions/api/example.func/.vc-config.json')
+        );
+
+        // `.env` is excluded by `.vercelignore` and is not in this
+        // `filePathMap`, so it must not appear in the upload set
+        expect(normalized).not.toContain(included('.env'));
+      }
     );
+  });
 
-    const normalized = normalizeWindowsPaths(fileList);
-    const included = (rel: string) =>
-      normalizeWindowsPaths([join(cwd, rel)])[0];
-
-    // `safe-handler.js` is not ignored and must still be included
-    expect(normalized).toContain(included('safe-handler.js'));
-    expect(normalized).toContain(
-      included('.vercel/output/functions/api/example.func/.vc-config.json')
+  it('should warn with violations when `filePathMap` entries match `.vercelignore` rules when prebuilt=true', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const extraFuncDir = join(
+      cwd,
+      '.vercel/output/functions/api/ignored-collision.func'
     );
+    const extraConfigPath = join(extraFuncDir, '.vc-config.json');
+    await fs.ensureDir(extraFuncDir);
+    await fs.writeJson(extraConfigPath, {
+      runtime: 'nodejs20.x',
+      handler: 'index.js',
+      filePathMap: {
+        'route.js': 'src/app/api/webhooks/supabase/route.ts',
+        'readme.md': 'README.md',
+        'wrangler.toml': 'wrangler.toml',
+        'leaked.env': '.env',
+      },
+    });
 
-    // `.env` is excluded by `.vercelignore` and must not be re-added
-    // through `filePathMap`
-    expect(normalized).not.toContain(included('.env'));
+    try {
+      const { fileList, warning } = await buildFileTree(
+        cwd,
+        {
+          isDirectory: true,
+          prebuilt: true,
+          vercelOutputDir: join(cwd, '.vercel/output'),
+        },
+        noop
+      );
+
+      expect(warning).toContain(
+        '`.vercelignore` excludes 4 files the prebuilt functions need'
+      );
+      expect(warning).toContain('Uploading without them may fail with ENOENT.');
+      expect(warning).toContain(
+        'README.md (matched `.vercelignore:11`: `*.md`)'
+      );
+      expect(warning).toContain(
+        'src/app/api/webhooks/supabase/route.ts (matched `.vercelignore:10`: `supabase/`)'
+      );
+      expect(warning).toContain(
+        'wrangler.toml (matched `.vercelignore:12`: `wrangler.toml`)'
+      );
+      expect(warning).toContain('.env (matched `.vercelignore:1`: `.env*`)');
+      expect(warning).toContain('outputFileTracingExcludes');
+      expect(warning).not.toContain('safe-handler.js');
+
+      const normalized = normalizeWindowsPaths(fileList);
+      const included = (rel: string) =>
+        normalizeWindowsPaths([join(cwd, rel)])[0];
+      expect(normalized).not.toContain(included('README.md'));
+      expect(normalized).not.toContain(
+        included('src/app/api/webhooks/supabase/route.ts')
+      );
+      expect(normalized).not.toContain(included('wrangler.toml'));
+      expect(normalized).not.toContain(included('.env'));
+    } finally {
+      await fs.remove(extraFuncDir);
+    }
+  });
+
+  it('should report the effective rule after negation', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const vercelIgnorePath = join(cwd, '.vercelignore');
+    const original = await fs.readFile(vercelIgnorePath, 'utf8');
+    await fs.writeFile(vercelIgnorePath, '*.md\n!README.md\nREADME.md\n');
+
+    try {
+      await withDefaultFilePathMap(
+        cwd,
+        { 'readme.md': 'README.md' },
+        async () => {
+          const { warning } = await buildFileTree(
+            cwd,
+            {
+              isDirectory: true,
+              prebuilt: true,
+              vercelOutputDir: join(cwd, '.vercel/output'),
+            },
+            noop
+          );
+
+          expect(warning).toContain(
+            'README.md (matched `.vercelignore:3`: `README.md`)'
+          );
+          expect(warning).not.toContain('`.vercelignore:1`');
+        }
+      );
+    } finally {
+      await fs.writeFile(vercelIgnorePath, original);
+    }
+  });
+
+  it('should support deprecated `.nowignore` rules for prebuilt `filePathMap` collisions', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const vercelIgnorePath = join(cwd, '.vercelignore');
+    const nowIgnorePath = join(cwd, '.nowignore');
+    await fs.rename(vercelIgnorePath, nowIgnorePath);
+
+    try {
+      const { warning } = await buildFileTree(
+        cwd,
+        {
+          isDirectory: true,
+          prebuilt: true,
+          vercelOutputDir: join(cwd, '.vercel/output'),
+        },
+        noop
+      );
+
+      expect(warning).toContain('`.nowignore` (deprecated) excludes 1 file');
+      expect(warning).toContain('.env (matched `.nowignore:1`: `.env*`)');
+      expect(warning).toContain('Remove the colliding rules from `.nowignore`');
+    } finally {
+      await fs.rename(nowIgnorePath, vercelIgnorePath);
+    }
+  });
+
+  it('should cap the warning after 100 ignored `filePathMap` collisions when prebuilt=true', async () => {
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    const extraFuncDir = join(
+      cwd,
+      '.vercel/output/functions/api/many-collisions.func'
+    );
+    const extraConfigPath = join(extraFuncDir, '.vc-config.json');
+    const filePathMap = Object.fromEntries(
+      Array.from({ length: 125 }, (_, i) => {
+        const rel = `ignored-${String(i).padStart(3, '0')}.md`;
+        return [rel, rel];
+      })
+    );
+    await fs.ensureDir(extraFuncDir);
+    await fs.writeJson(extraConfigPath, {
+      runtime: 'nodejs20.x',
+      handler: 'index.js',
+      filePathMap,
+    });
+
+    try {
+      await withDefaultFilePathMap(
+        cwd,
+        {
+          'index.js': 'safe-handler.js',
+        },
+        async () => {
+          const { fileList, warning } = await buildFileTree(
+            cwd,
+            {
+              isDirectory: true,
+              prebuilt: true,
+              vercelOutputDir: join(cwd, '.vercel/output'),
+            },
+            noop
+          );
+
+          expect(warning).toContain(
+            '`.vercelignore` excludes at least 100 files the prebuilt functions need'
+          );
+          expect(warning).toContain('ignored-000.md');
+          expect(warning).toContain('ignored-099.md');
+          expect(warning).toContain('…and more');
+          expect(warning).not.toContain('ignored-100.md');
+          expect(warning).not.toContain('ignored-124.md');
+
+          const normalized = normalizeWindowsPaths(fileList);
+          expect(normalized).toContain(
+            normalizeWindowsPaths([join(cwd, 'safe-handler.js')])[0]
+          );
+        }
+      );
+    } finally {
+      await fs.remove(extraFuncDir);
+    }
+  });
+
+  it('should succeed when ignored paths are omitted from `filePathMap` (outputFileTracingExcludes)', async () => {
+    // Next.js `outputFileTracingExcludes` keeps colliding paths out of
+    // `filePathMap` before `--prebuilt` runs. The `.vercelignore` rules
+    // (`*.md`, `supabase/`, `wrangler.toml`) remain, but because those
+    // files are not in the trace, upload must succeed.
+    const cwd = fixture('prebuilt-filepathmap-ignore');
+    expect(await fs.pathExists(join(cwd, 'README.md'))).toBe(true);
+    expect(
+      await fs.pathExists(join(cwd, 'src/app/api/webhooks/supabase/route.ts'))
+    ).toBe(true);
+    expect(await fs.pathExists(join(cwd, 'wrangler.toml'))).toBe(true);
+
+    await withDefaultFilePathMap(
+      cwd,
+      {
+        'index.js': 'safe-handler.js',
+      },
+      async () => {
+        const { fileList } = await buildFileTree(
+          cwd,
+          {
+            isDirectory: true,
+            prebuilt: true,
+            vercelOutputDir: join(cwd, '.vercel/output'),
+          },
+          noop
+        );
+
+        const normalized = normalizeWindowsPaths(fileList);
+        const included = (rel: string) =>
+          normalizeWindowsPaths([join(cwd, rel)])[0];
+
+        expect(normalized).toContain(included('safe-handler.js'));
+        expect(normalized).not.toContain(included('README.md'));
+        expect(normalized).not.toContain(
+          included('src/app/api/webhooks/supabase/route.ts')
+        );
+        expect(normalized).not.toContain(included('wrangler.toml'));
+      }
+    );
   });
 
   it('should keep `filePathMap` entries under default-ignored dependency dirs when prebuilt=true', async () => {
@@ -238,45 +484,43 @@ describe('buildFileTree()', () => {
         'venv.py': '.venv/lib/python.py',
         pyc: '__pycache__/foo.pyc',
         bin: 'target/release/app',
-        'route.js': 'src/app/api/webhooks/supabase/route.ts',
-        'readme.md': 'README.md',
-        'wrangler.toml': 'wrangler.toml',
-        'example.env': '.env.example',
-        'local.env': '.env.local',
       },
     });
 
     try {
-      const { fileList } = await buildFileTree(
+      await withDefaultFilePathMap(
         cwd,
         {
-          isDirectory: true,
-          prebuilt: true,
-          vercelOutputDir: join(cwd, '.vercel/output'),
+          'index.js': 'safe-handler.js',
+          'escaped.txt': '../outside.txt',
         },
-        noop
-      );
+        async () => {
+          const { fileList } = await buildFileTree(
+            cwd,
+            {
+              isDirectory: true,
+              prebuilt: true,
+              vercelOutputDir: join(cwd, '.vercel/output'),
+            },
+            noop
+          );
 
-      const normalized = normalizeWindowsPaths(fileList);
-      const included = (rel: string) =>
-        normalizeWindowsPaths([join(cwd, rel)])[0];
+          const normalized = normalizeWindowsPaths(fileList);
+          const included = (rel: string) =>
+            normalizeWindowsPaths([join(cwd, rel)])[0];
 
-      // Duplicate source-upload defaults must not drop NFT-traced deps
-      expect(normalized).toContain(included('node_modules/example/index.js'));
-      expect(normalized).toContain(included('.next/server/chunks/foo.js'));
-      expect(normalized).toContain(included('.yarn/cache/foo.zip'));
-      expect(normalized).toContain(included('.pnp.cjs'));
-      expect(normalized).toContain(included('.venv/lib/python.py'));
-      expect(normalized).toContain(included('__pycache__/foo.pyc'));
-      expect(normalized).toContain(included('target/release/app'));
-      // Custom `.vercelignore` rules are still honored
-      expect(normalized).not.toContain(
-        included('src/app/api/webhooks/supabase/route.ts')
+          // Duplicate source-upload defaults must not drop NFT-traced deps
+          expect(normalized).toContain(
+            included('node_modules/example/index.js')
+          );
+          expect(normalized).toContain(included('.next/server/chunks/foo.js'));
+          expect(normalized).toContain(included('.yarn/cache/foo.zip'));
+          expect(normalized).toContain(included('.pnp.cjs'));
+          expect(normalized).toContain(included('.venv/lib/python.py'));
+          expect(normalized).toContain(included('__pycache__/foo.pyc'));
+          expect(normalized).toContain(included('target/release/app'));
+        }
       );
-      expect(normalized).not.toContain(included('README.md'));
-      expect(normalized).not.toContain(included('wrangler.toml'));
-      expect(normalized).not.toContain(included('.env.example'));
-      expect(normalized).not.toContain(included('.env.local'));
     } finally {
       await fs.remove(extraFuncDir);
     }
@@ -309,18 +553,29 @@ describe('buildFileTree()', () => {
     });
 
     try {
-      const { fileList } = await buildFileTree(
+      await withDefaultFilePathMap(
         cwd,
         {
-          isDirectory: true,
-          prebuilt: true,
-          vercelOutputDir: join(cwd, '.vercel/output'),
+          'index.js': 'safe-handler.js',
+          'escaped.txt': '../outside.txt',
         },
-        noop
-      );
+        async () => {
+          const { fileList } = await buildFileTree(
+            cwd,
+            {
+              isDirectory: true,
+              prebuilt: true,
+              vercelOutputDir: join(cwd, '.vercel/output'),
+            },
+            noop
+          );
 
-      const normalized = normalizeWindowsPaths(fileList);
-      expect(normalized).toContain(normalizeWindowsPaths([storeFilePath])[0]);
+          const normalized = normalizeWindowsPaths(fileList);
+          expect(normalized).toContain(
+            normalizeWindowsPaths([storeFilePath])[0]
+          );
+        }
+      );
     } finally {
       await fs.remove(extraFuncDir);
       await fs.remove(join(cwd, 'node_modules/.pnpm'));
@@ -329,19 +584,28 @@ describe('buildFileTree()', () => {
 
   it('should reject `filePathMap` entries that escape the deployment root when prebuilt=true', async () => {
     const cwd = fixture('prebuilt-filepathmap-ignore');
-    const { fileList } = await buildFileTree(
+    await withDefaultFilePathMap(
       cwd,
       {
-        isDirectory: true,
-        prebuilt: true,
-        vercelOutputDir: join(cwd, '.vercel/output'),
+        'index.js': 'safe-handler.js',
+        'escaped.txt': '../outside.txt',
       },
-      noop
-    );
+      async () => {
+        const { fileList } = await buildFileTree(
+          cwd,
+          {
+            isDirectory: true,
+            prebuilt: true,
+            vercelOutputDir: join(cwd, '.vercel/output'),
+          },
+          noop
+        );
 
-    expect(
-      normalizeWindowsPaths(fileList).some(f => f.endsWith('outside.txt'))
-    ).toBe(false);
+        expect(
+          normalizeWindowsPaths(fileList).some(f => f.endsWith('outside.txt'))
+        ).toBe(false);
+      }
+    );
   });
 
   it('monorepo - should find root files but ignore `.vercel/output` files when prebuilt=false', async () => {

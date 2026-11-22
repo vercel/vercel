@@ -1,18 +1,47 @@
 import fs from 'fs-extra';
 import { join, relative, resolve } from 'path';
 import ini from 'ini';
-import git from 'git-last-commit';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import type { GitMetadata, Project } from '@vercel-internals/types';
-import { errorToString, normalizeError } from '@vercel/error-utils';
+import { errorToString } from '@vercel/error-utils';
 import output from '../output-manager';
 import { getGitRootDirectory } from './git-helpers';
+import { getGitExecutable } from './git-executable';
+import { execFileAsync } from './exec-file';
 
 export async function createGitMeta(
   directory: string,
   project?: Project | null
 ): Promise<GitMetadata | undefined> {
-  const gitRoot = getGitRootDirectory({ cwd: directory });
+  const git = await getGitExecutable(directory);
+  // These read-only queries are independent; avoid serializing status behind
+  // repository discovery when Git metadata is on the deployment critical path.
+  const metadata = Promise.allSettled([
+    getLastCommit(directory, git),
+    isDirty(directory),
+  ]);
+  let gitRoot: string;
+  let branch: string;
+  try {
+    // Resolve the worktree root and branch together. A detached HEAD is
+    // reported as HEAD; an unborn branch fails and has no commit metadata.
+    const { stdout, stderr } = await execFileAsync(
+      git,
+      ['rev-parse', '--show-toplevel', '--abbrev-ref', 'HEAD'],
+      { cwd: directory }
+    );
+    if (stderr.trim()) throw new Error(stderr);
+    const lines = stdout.trim().split(/\r?\n/);
+    branch = lines.pop()!;
+    gitRoot = lines.join('\n');
+  } catch (error) {
+    // Drain concurrent Git processes before callers can remove the directory.
+    await metadata;
+    output.debug(
+      `Failed to get last commit. The directory is likely not a Git repo, there are no latest commits, or it is corrupted.\n${errorToString(error)}`
+    );
+    return;
+  }
   const gitConfigPath = join(gitRoot || directory, '.git/config');
 
   // If a Git repository is already connected via `vc git`, use that remote url
@@ -36,10 +65,7 @@ export async function createGitMeta(
     remoteUrl = await getOriginUrl(gitConfigPath);
   }
 
-  const [commitResult, dirtyResult] = await Promise.allSettled([
-    getLastCommit(directory),
-    isDirty(directory),
-  ]);
+  const [commitResult, dirtyResult] = await metadata;
 
   if (commitResult.status === 'rejected') {
     output.debug(
@@ -63,7 +89,7 @@ export async function createGitMeta(
     commitAuthorName: commit.author.name,
     commitAuthorEmail: commit.author.email,
     commitMessage: commit.subject,
-    commitRef: commit.branch,
+    commitRef: branch,
     commitSha: commit.hash,
     dirty,
     rootDirectory: getRootDirectory(directory, gitRoot),
@@ -95,28 +121,28 @@ export function getRootDirectory(
   return rootDirectory === '.' ? '' : rootDirectory;
 }
 
-function getLastCommit(directory: string): Promise<git.Commit> {
-  return new Promise((resolve, reject) => {
-    git.getLastCommit(
-      (err, commit) => {
-        if (err) {
-          return reject(normalizeError(err));
-        }
-
-        resolve(commit);
-      },
-      { dst: directory }
-    );
-  });
+async function getLastCommit(directory: string, git: string) {
+  const commit = await execFileAsync(
+    git,
+    ['log', '-1', '--format=%H%x00%s%x00%an%x00%ae'],
+    { cwd: directory }
+  );
+  if (commit.stderr) throw new Error(commit.stderr);
+  const [hash, subject, name, email] = commit.stdout
+    .replace(/\r?\n$/, '')
+    .split('\0');
+  return { hash, subject, author: { name, email } };
 }
 
-export function isDirty(directory: string): Promise<boolean> {
+export async function isDirty(directory: string): Promise<boolean> {
+  const git = await getGitExecutable(directory);
   return new Promise((resolve, reject) => {
     // note: we specify the `--no-optional-locks` git flag so that `git status`
     // does not perform any "optional" operations such as optimizing the index
     // in the background: https://git-scm.com/docs/git-status#_background_refresh
-    exec(
-      'git --no-optional-locks status -s',
+    execFile(
+      git,
+      ['--no-optional-locks', 'status', '-s'],
       { cwd: directory },
       function (err, stdout, stderr) {
         if (err) {

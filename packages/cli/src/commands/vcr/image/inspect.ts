@@ -91,7 +91,7 @@ export default async function inspect(
       'vcr image inspect <repository> <imageId> --project <name-or-id>'
     );
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);

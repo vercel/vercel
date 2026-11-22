@@ -69,12 +69,15 @@ const OPERATOR_ALIASES: Record<string, SegmentComparator> = {
   after: 'gt',
   gte: 'gte',
   '>=': 'gte',
+  'at-or-after': 'gte',
+  // Legacy alias; "on" only fits dates, not instants. Kept for compatibility.
   'on-or-after': 'gte',
   lt: 'lt',
   '<': 'lt',
   before: 'lt',
   lte: 'lte',
   '<=': 'lte',
+  'at-or-before': 'lte',
   'on-or-before': 'lte',
 };
 

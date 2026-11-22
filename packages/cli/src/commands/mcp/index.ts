@@ -75,12 +75,17 @@ export default async function main(client: Client) {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.flags['--help']) {
-    output.print(help(mcpCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(mcpCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   const project = !!parsedArgs.flags['--project'];
@@ -105,9 +110,9 @@ export default async function main(client: Client) {
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     const invalid = clients.filter(
       c => !MCP_CLIENT_DISPLAY_NAMES.some(v => v === c)
@@ -130,9 +135,9 @@ export default async function main(client: Client) {
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
   }
 

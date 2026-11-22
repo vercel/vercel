@@ -248,7 +248,7 @@ describe('vcr permissions add', () => {
   it('errors when the team argument is missing', async () => {
     client.setArgv('vcr', 'permissions', 'my-app', 'add');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'vcr permissions <repository> add'
     );

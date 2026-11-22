@@ -118,6 +118,22 @@ describe('Client', () => {
       expect(onRetry).not.toHaveBeenCalled();
     });
 
+    it.each([
+      429, 503,
+    ])('does not wait for Retry-After on %i when retries are disabled', async status => {
+      let requestCount = 0;
+      client.scenario.get('/v1/no-retry', (_req, res) => {
+        requestCount++;
+        res.setHeader('Retry-After', '60');
+        res.status(status).json({ error: { message: 'Try again later' } });
+      });
+
+      await expect(
+        client.fetch('/v1/no-retry', { retry: { retries: 0 } })
+      ).rejects.toMatchObject({ status });
+      expect(requestCount).toBe(1);
+    }, 5_000);
+
     it('should return 3xx responses directly when redirect is manual', async () => {
       client.scenario.get('/v1/test-redirect', (_req, res) => {
         res.writeHead(302, { Location: 'https://example.com/target' });

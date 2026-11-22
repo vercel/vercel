@@ -20,23 +20,23 @@ export class VcrTelemetryClient
     });
   }
 
-  trackCliSubcommandAdd(actual: string) {
+  trackCliSubcommandCreate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'add',
+      subcommand: 'create',
       value: actual,
     });
   }
 
-  trackCliSubcommandConfig(actual: string) {
+  trackCliSubcommandUpdate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'config',
+      subcommand: 'update',
       value: actual,
     });
   }
 
-  trackCliSubcommandRm(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'rm',
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -169,6 +169,7 @@ export class VcrTelemetryClient
     }
   }
 
+  /** The old `--public true|false` form. */
   trackCliOptionPublic(value: string | undefined) {
     // Visibility is a bounded boolean ("true" | "false"), so it is safe to
     // record the actual value; anything else is never recorded.
@@ -177,6 +178,18 @@ export class VcrTelemetryClient
         option: 'public',
         value,
       });
+    }
+  }
+
+  trackCliFlagPublic(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('public');
+    }
+  }
+
+  trackCliFlagNoPublic(value: boolean | undefined) {
+    if (value) {
+      this.trackCliFlag('no-public');
     }
   }
 

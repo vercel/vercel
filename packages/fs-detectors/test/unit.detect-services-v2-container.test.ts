@@ -1,4 +1,5 @@
 import { join } from 'path';
+import VirtualFilesystem from './virtual-file-system';
 import {
   LocalFileSystemDetector,
   detectServices,
@@ -52,6 +53,11 @@ describe('detectServices (services) — container detection', () => {
         'Dockerfile.vercel',
       ],
       ['pass-runtime-and-entrypoint', 'Dockerfile', 'Dockerfile'],
+      [
+        'pass-entrypoint-dockerfile-suffix',
+        'Dockerfile.prod',
+        'Dockerfile.prod',
+      ],
     ])('resolves %s to @vercel/container', async (fixture, expectedEntrypoint, expectedSrc) => {
       const result = await detectFixture(fixture);
 
@@ -67,6 +73,28 @@ describe('detectServices (services) — container detection', () => {
       expect(svc.builder.src).toBe(expectedSrc);
       // Images are gone: no prebuilt-image handler should ever be set.
       expect(svc.builder.config).not.toHaveProperty('handler');
+    });
+
+    it.each([
+      'Dockerfile.worker',
+      'Containerfile.scheduler',
+      'worker_Dockerfile',
+    ])('infers container runtime from the explicit suffixed entrypoint %s', async entrypoint => {
+      const fs = new VirtualFilesystem({
+        'vercel.json': JSON.stringify({
+          services: { app: { root: 'app', entrypoint } },
+        }),
+        [`app/${entrypoint}`]: 'FROM scratch',
+      });
+      const result = await detectServices({ fs });
+
+      expect(result.errors).toEqual([]);
+      const [svc] = servicesV2(result.services);
+      expect(svc.runtime).toBe('container');
+      expect(svc.builder).toMatchObject({
+        use: '@vercel/container',
+        src: `app/${entrypoint}`,
+      });
     });
 
     it('prefers a .vercel marker over a plain Dockerfile when auto-detecting', async () => {
@@ -115,18 +143,6 @@ describe('detectServices (services) — container detection', () => {
       const result = await detectFixture(
         'fail-runtime-entrypoint-not-dockerfile'
       );
-
-      expect(servicesV2(result.services)).toEqual([]);
-      expect(result.errors[0]).toMatchObject({
-        code: 'INVALID_SERVICE_CONFIG',
-        serviceName: 'app',
-      });
-    });
-
-    it('rejects a suffixed Dockerfile.* entrypoint (only bare and .vercel are allowed)', async () => {
-      // `Dockerfile.prod` is not one of the blessed names, so a container
-      // service entrypoint pointing at it is rejected rather than built.
-      const result = await detectFixture('fail-entrypoint-dockerfile-suffix');
 
       expect(servicesV2(result.services)).toEqual([]);
       expect(result.errors[0]).toMatchObject({

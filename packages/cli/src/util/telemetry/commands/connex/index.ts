@@ -8,6 +8,20 @@ export class ConnexTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof connexCommand>
 {
+  trackCliSubcommandDiscover(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'discover',
+      value: actual,
+    });
+  }
+
+  trackCliSubcommandCategories(actual: string) {
+    this.trackCliSubcommand({
+      subcommand: 'categories',
+      value: actual,
+    });
+  }
+
   trackCliSubcommandCreate(actual: string) {
     this.trackCliSubcommand({
       subcommand: 'create',
@@ -29,9 +43,9 @@ export class ConnexTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'remove',
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -131,6 +145,16 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliOptionInstallation(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'installation',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionInstallationId(v: string | undefined) {
     if (v) {
       this.trackCliOption({
@@ -146,6 +170,12 @@ export class ConnexTelemetryClient
         option: 'scopes',
         value: this.redactedValue,
       });
+    }
+  }
+
+  trackCliFlagNoDefaultScopes(v: boolean | undefined) {
+    if (v) {
+      this.trackCliFlag('no-default-scopes');
     }
   }
 
@@ -198,23 +228,56 @@ export class ConnexTelemetryClient
     }
   }
 
-  trackCliOptionConnectionMethod(v: string | undefined) {
+  trackCliOptionConnectionMethod(v: string | string[] | undefined) {
+    for (const value of [v ?? []].flat()) {
+      if (value) {
+        this.trackCliOption({
+          option: 'connection-method',
+          // Registry slugs are a finite, non-sensitive set.
+          value,
+        });
+      }
+    }
+  }
+
+  trackCliOptionTarget(v: string | string[] | undefined) {
+    for (const value of [v ?? []].flat()) {
+      if (value) {
+        this.trackCliOption({
+          option: 'target',
+          // Registry target slugs are a finite, non-sensitive set.
+          value,
+        });
+      }
+    }
+  }
+
+  trackCliArgumentQuery(v: string | undefined) {
     if (v) {
-      this.trackCliOption({
-        option: 'connection-method',
-        // Registry slugs are a finite, non-sensitive set.
-        value: v,
+      this.trackCliArgument({
+        arg: 'query',
+        value: this.redactedValue,
       });
     }
   }
 
-  trackCliOptionTarget(v: string | undefined) {
+  trackCliOptionCategory(v: string[] | undefined) {
+    for (const raw of v ?? []) {
+      for (const category of raw.split(',')) {
+        const trimmed = category.trim();
+        if (trimmed) {
+          this.trackCliOption({
+            option: 'category',
+            value: this.redactedValue,
+          });
+        }
+      }
+    }
+  }
+
+  trackCliFlagSupportsTriggers(v: boolean | undefined) {
     if (v) {
-      this.trackCliOption({
-        option: 'target',
-        // Registry target slugs are a finite, non-sensitive set.
-        value: v,
-      });
+      this.trackCliFlag('supports-triggers');
     }
   }
 
@@ -257,6 +320,16 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliOptionGitBranch(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionTriggerBranch(v: string | undefined) {
     if (v) {
       this.trackCliOption({
@@ -329,6 +402,16 @@ export class ConnexTelemetryClient
     }
   }
 
+  trackCliOptionQuery(v: string | undefined) {
+    if (v) {
+      this.trackCliOption({
+        option: 'query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionSearch(v: string | undefined) {
     if (v) {
       this.trackCliOption({

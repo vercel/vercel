@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "@vercel-internals/cli-builder-integration",
-  "version": "1.0.0",
+  "version": "1.0.33",
   "files": [
     "dist"
   ],
@@ -75,12 +75,13 @@
     "@vercel/client": "workspace:*",
     "@vercel/frameworks": "workspace:*",
     "@vercel/fs-detectors": "workspace:*",
-    "@vercel/prepare-flags-definitions": "0.3.0",
+    "@vercel/prepare-flags-definitions": "0.6.1",
     "@vercel/routing-utils": "workspace:*",
     "@vercel-internals/service-topology": "workspace:*",
     "ajv": "6.12.3",
     "fs-extra": "10.0.0",
     "minimatch": "3.1.2",
+    "nostics": "1.1.4",
     "semver": "5.7.2",
     "title": "3.4.1"
   },

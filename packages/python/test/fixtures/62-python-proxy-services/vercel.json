@@ -1,0 +1,37 @@
+{
+  "uploadNowJson": true,
+  "build": {
+    "env": {
+      "VERCEL_PYTHON_PROXY": "1"
+    }
+  },
+  "proxy": {
+    "entrypoint": "proxy:proxy"
+  },
+  "rewrites": [
+    {
+      "source": "/api/a/:path(.*)?",
+      "destination": { "service": "api-a" }
+    },
+    {
+      "source": "/api/b/:path(.*)?",
+      "destination": { "service": "api-b" }
+    }
+  ],
+  "services": {
+    "api-a": {
+      "root": "api-a/",
+      "entrypoint": "pyproject.toml",
+      "rewrites": [
+        { "source": "/api/a/:path(.*)?", "destination": "/:path" }
+      ]
+    },
+    "api-b": {
+      "root": "api-b/",
+      "entrypoint": "pyproject.toml",
+      "rewrites": [
+        { "source": "/api/b/:path(.*)?", "destination": "/:path" }
+      ]
+    }
+  }
+}

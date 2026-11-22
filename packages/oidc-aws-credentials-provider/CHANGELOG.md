@@ -1,5 +1,74 @@
 # @vercel/oidc
 
+## 3.3.16
+
+### Patch Changes
+
+- @vercel/oidc@4.0.4
+
+## 3.3.15
+
+### Patch Changes
+
+- @vercel/oidc@4.0.3
+
+## 3.3.14
+
+### Patch Changes
+
+- @vercel/oidc@4.0.2
+
+## 3.3.13
+
+### Patch Changes
+
+- Updated dependencies [d032cfb]
+  - @vercel/oidc@4.0.1
+
+## 3.3.12
+
+### Patch Changes
+
+- Updated dependencies [baad6f5]
+  - @vercel/oidc@5.0.0
+
+## 3.3.11
+
+### Patch Changes
+
+- Updated dependencies [ec76b68]
+  - @vercel/oidc@4.0.0
+
+## 3.3.10
+
+### Patch Changes
+
+- @vercel/oidc@3.8.10
+
+## 3.3.9
+
+### Patch Changes
+
+- @vercel/oidc@3.8.9
+
+## 3.3.8
+
+### Patch Changes
+
+- @vercel/oidc@3.8.8
+
+## 3.3.7
+
+### Patch Changes
+
+- @vercel/oidc@3.8.7
+
+## 3.3.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.6
+
 ## 3.3.5
 
 ### Patch Changes

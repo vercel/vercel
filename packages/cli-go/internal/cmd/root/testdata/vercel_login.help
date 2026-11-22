@@ -1,0 +1,43 @@
+
+  ▲ vercel login [email or team id] [options]
+
+  Sign in to your Vercel account.                                               
+
+  Global Options:
+
+       --cwd <DIR>            Sets the current working directory for a single   
+                              run of a command                                  
+  -d,  --debug                Debug mode (default off)                          
+  -Q,  --global-config <DIR>  Path to the global `.vercel` directory            
+  -h,  --help                 Output usage information                          
+  -A,  --local-config <FILE>  Path to the local `vercel.json` file              
+       --no-color             No color mode (default off)                       
+       --non-interactive      Run without interactive prompts; when an agent is 
+                              detected this is the default                      
+  -S,  --scope                Set a custom scope                                
+  -v,  --version              Output the version number                         
+
+
+  Examples:
+
+  - Sign in to your Vercel account.
+
+    $ vercel login
+
+  Notes:
+
+  Shows a URL to sign in at, and opens it in your browser when it can (not in   
+  CI).                                                                          
+
+  Saves the login in the global `.vercel` directory (see --global-config), or   
+  the system keyring when configured.                                           
+
+  Keeps the saved team if you can still access it; otherwise uses your default  
+  team.                                                                         
+
+  Related:
+
+  vercel whoami      Shows the username of the currently logged in user.      
+  vercel teams list  Show all teams that you're a member of                   
+
+

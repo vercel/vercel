@@ -33,7 +33,7 @@ describe('redirects add', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = redirects(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -379,7 +379,7 @@ describe('redirects add', () => {
         'Source must be a relative path (starting with /) or an absolute URL'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on invalid destination URL', async () => {
@@ -393,7 +393,7 @@ describe('redirects add', () => {
         'Destination must be a relative path (starting with /) or an absolute URL'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
 
     it('should error on version name that is too long', async () => {
@@ -477,7 +477,7 @@ describe('redirects add', () => {
         'Source and destination are required when using --yes'
       );
 
-      await expect(exitCodePromise).resolves.toEqual(1);
+      await expect(exitCodePromise).resolves.toEqual(2);
     });
   });
 

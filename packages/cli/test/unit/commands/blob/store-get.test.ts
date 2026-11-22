@@ -427,7 +427,7 @@ describe('blob store get', () => {
       }));
 
       const exitCode = await getStore(client, ['--invalid-flag'], noToken);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when store retrieval fails', async () => {

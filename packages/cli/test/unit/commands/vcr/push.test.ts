@@ -83,7 +83,7 @@ describe('vcr push', () => {
     it('tracks telemetry and exits 2', async () => {
       client.setArgv('vcr', 'push', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
           key: 'flag:help',

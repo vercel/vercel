@@ -14,7 +14,8 @@ export const teamCache = new Map<string, Team>();
  * `useCurrentTeam` controls the `teamId` query parameter. The API route
  * `/teams/:teamId` binds the path segment to the same name and overwrites
  * the query value, so both settings resolve the same team today. Pass
- * `false` when the lookup must not depend on that overwrite.
+ * `false` when the lookup must not depend on that overwrite. Since the path
+ * names the team, the lookup never stops to choose one (`teamOptional`).
  */
 export default async function getTeamByIdOrSlug(
   client: Client,
@@ -26,7 +27,7 @@ export default async function getTeamByIdOrSlug(
   if (!team) {
     team = await client.fetch<Team>(
       `/teams/${encodeURIComponent(teamIdOrSlug)}`,
-      { useCurrentTeam }
+      { useCurrentTeam, teamOptional: true }
     );
     teamCache.set(team.id, team);
     teamCache.set(team.slug, team);

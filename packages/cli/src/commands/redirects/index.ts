@@ -25,13 +25,14 @@ import { getFlagsSpecification } from '../../util/get-flags-specification';
 import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { RedirectsTelemetryClient } from '../../util/telemetry/commands/redirects';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 import { getProjectOptionFromArgs } from '../../util/arg-common';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
   'list-versions': getCommandAliases(listVersionsSubcommand),
   add: getCommandAliases(addSubcommand),
-  upload: getCommandAliases(uploadSubcommand),
+  import: getCommandAliases(uploadSubcommand),
   remove: getCommandAliases(removeSubcommand),
   promote: getCommandAliases(promoteSubcommand),
   restore: getCommandAliases(restoreSubcommand),
@@ -52,7 +53,7 @@ export default async function main(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(1);
@@ -65,13 +66,19 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('redirects');
-    output.print(help(redirectsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(redirectsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: redirectsCommand,
         columns: client.stderr.columns,
       })
@@ -87,7 +94,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
@@ -95,31 +102,45 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(listVersionsSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandListVersions(subcommandOriginal);
+      if (subcommandOriginal === 'ls-versions') {
+        warnDeprecatedSubcommand(
+          client,
+          'redirects ls-versions',
+          'redirects list-versions'
+        );
+      }
       return listVersions(client, args);
     case 'add':
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAdd(subcommandOriginal);
       return add(client, args);
-    case 'upload':
+    case 'import':
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(uploadSubcommand);
-        return 2;
+        return 0;
       }
-      telemetry.trackCliSubcommandUpload(subcommandOriginal);
-      return upload(client, args);
+      telemetry.trackCliSubcommandImport(subcommandOriginal);
+      if (subcommandOriginal === 'upload') {
+        warnDeprecatedSubcommand(
+          client,
+          'redirects upload',
+          'redirects import'
+        );
+      }
+      return upload(client, args, subcommandOriginal);
     case 'remove':
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
       return remove(client, args);
@@ -127,7 +148,7 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(promoteSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandPromote(subcommandOriginal);
       return promote(client, args);
@@ -135,13 +156,18 @@ export default async function main(client: Client) {
       if (needHelp) {
         telemetry.trackCliFlagHelp('redirects', subcommandOriginal);
         printHelp(restoreSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRestore(subcommandOriginal);
       return restore(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(redirectsCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(redirectsCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

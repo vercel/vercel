@@ -34,6 +34,16 @@ export class FlagsLsTelemetryClient extends TelemetryClient {
     }
   }
 
+  trackCliOptionMaintainer(maintainerIds: string[] | undefined) {
+    if (maintainerIds && maintainerIds.length > 0) {
+      this.trackCliOption({
+        option: 'maintainer',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionMaintainerId(maintainerIds: string[] | undefined) {
     if (maintainerIds && maintainerIds.length > 0) {
       this.trackCliOption({

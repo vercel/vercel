@@ -9,7 +9,7 @@ describe('git', () => {
 
       client.setArgv(command, '--help');
       const exitCode = await git(client);
-      expect(exitCode, 'exit code for git').toEqual(2);
+      expect(exitCode, 'exit code for git').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

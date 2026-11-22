@@ -45,7 +45,7 @@ export default async function add(
   } catch (err) {
     emitVcrArgParseError(client, err, USAGE);
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -74,7 +74,7 @@ export default async function add(
           },
         ],
       },
-      1
+      2
     );
     return outputError(
       client,

@@ -16,7 +16,7 @@ export function resolveBlobValidUntil({
   if (validUntil !== undefined && validFor !== undefined) {
     return {
       error:
-        'The --valid-until and --valid-for flags are mutually exclusive. Pass only one.',
+        'The --valid-until and --valid-for options are mutually exclusive. Pass only one.',
     };
   }
 

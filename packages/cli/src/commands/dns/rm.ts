@@ -40,11 +40,11 @@ export default async function rm(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags } = parsedArgs;
   const { telemetryEventStore } = client;
@@ -58,7 +58,7 @@ export default async function rm(client: Client, argv: string[]) {
   const [recordId] = args;
   if (args.length !== 1) {
     if (client.nonInteractive) {
-      const cmd = withGlobalFlags(client, 'dns rm <id> --yes');
+      const cmd = withGlobalFlags(client, 'dns remove <id> --yes');
       outputActionRequired(
         client,
         {
@@ -73,15 +73,15 @@ export default async function rm(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
       `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('dns rm <id>')}`
+        `${getCommandName('dns remove <id>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   telemetry.trackCliArgumentId(recordId);

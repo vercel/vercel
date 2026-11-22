@@ -29,6 +29,9 @@ const SchemaFrameworkDetectionItem = {
         matchPackage: {
           type: 'string',
         },
+        fallback: {
+          type: 'boolean',
+        },
       },
     },
   ],
@@ -232,6 +235,7 @@ async function isDemoPublic(demoUrl: string) {
 
 describe('frameworks', () => {
   const skipExamples = [
+    'blitzjs', // legacy preset; example removed due to vulnerable Next.js deps (VULN-5903)
     'dojo',
     'saber',
     'gridsome',
@@ -247,6 +251,18 @@ describe('frameworks', () => {
     'tanstack-start-lovable', // platform variant, no dedicated example
     'services', // project-level preset, no dedicated framework example
   ];
+
+  it('detects standard and Vercel container filenames', () => {
+    const container = frameworkList.find(f => f.slug === 'container');
+
+    expect(container?.detectors?.some).toEqual([
+      { path: 'Dockerfile.vercel' },
+      { path: 'Containerfile.vercel' },
+      { path: 'Dockerfile', fallback: true },
+      { path: 'Containerfile', fallback: true },
+    ]);
+    expect(frameworkList[0]?.slug).toBe('container');
+  });
 
   it('marks Services as stable', () => {
     const services = frameworkList.find(f => f.slug === 'services');

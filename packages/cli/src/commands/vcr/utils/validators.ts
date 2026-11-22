@@ -26,10 +26,10 @@ export function validateVcrJsonOutput(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: fr.error,
       },
-      1
+      2
     );
     output.error(fr.error);
-    return 1;
+    return 2;
   }
   return { jsonOutput: fr.jsonOutput };
 }
@@ -57,7 +57,7 @@ export function validateVcrChoice<T extends string>(
       reason: AGENT_REASON.INVALID_ARGUMENTS,
       message,
     },
-    1
+    2
   );
   return outputError(client, jsonOutput, 'INVALID_ARGUMENTS', message);
 }
@@ -88,7 +88,7 @@ export function requireVcrRepository(
         },
       ],
     },
-    1
+    2
   );
   return outputError(
     client,
@@ -129,7 +129,7 @@ export function requireVcrRepositoryAndTag(
         },
       ],
     },
-    1
+    2
   );
   return outputError(
     client,
@@ -170,7 +170,7 @@ export function requireVcrRepositoryAndImageId(
         },
       ],
     },
-    1
+    2
   );
   return outputError(
     client,

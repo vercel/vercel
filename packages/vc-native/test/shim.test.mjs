@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { describe, expect, test } from 'vitest';
+import { platforms } from '../scripts/platforms.mjs';
 
 const execFileAsync = promisify(execFile);
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,11 +21,33 @@ const packageNames = {
     x64: '@vercel/vc-native-linux-x64',
   },
   win32: {
+    arm64: '@vercel/vc-native-win32-arm64',
     x64: '@vercel/vc-native-win32-x64',
   },
 };
 
 describe('@vercel/vc-native shim', () => {
+  test('publishes native packages for both Windows architectures', () => {
+    expect(platforms.filter(platform => platform.os.includes('win32'))).toEqual(
+      [
+        {
+          name: '@vercel/vc-native-win32-arm64',
+          asset: 'vercel-windows-arm64.exe',
+          os: ['win32'],
+          cpu: ['arm64'],
+          binary: 'vercel.exe',
+        },
+        {
+          name: '@vercel/vc-native-win32-x64',
+          asset: 'vercel-windows-x64.exe',
+          os: ['win32'],
+          cpu: ['x64'],
+          binary: 'vercel.exe',
+        },
+      ]
+    );
+  });
+
   test('postinstall copies the platform package binary into the wrapper bin', async () => {
     const packageName = packageNames[process.platform]?.[process.arch];
     if (!packageName) {

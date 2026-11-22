@@ -1,0 +1,8 @@
+{
+  "schedules": {
+    "nightly": {
+      "schedule": "0 0 * * *",
+      "entrypoint": "api/nightly.py"
+    }
+  }
+}

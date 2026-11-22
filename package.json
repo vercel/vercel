@@ -33,11 +33,12 @@
     "syncpack": "13.0.4",
     "tmp-promise": "1.0.3",
     "ts-eager": "2.0.2",
-    "turbo": "2.10.11-canary.3",
+    "turbo": "2.11.9",
     "typescript": "5.9.3",
     "vite": "6.4.3",
     "vitest": "4.1.10",
-    "ws": "8.18.0"
+    "ws": "8.18.0",
+    "yaml": "2.9.0"
   },
   "scripts": {
     "build": "turbo --no-update-notifier run build:package build:docs",
@@ -47,6 +48,7 @@
     "test-unit": "vitest run --config vitest.config.mts --dir test && turbo --no-update-notifier run test-unit",
     "test-e2e": "turbo --no-update-notifier run test-e2e",
     "test-dev": "turbo --no-update-notifier run test-dev",
+    "test-testserver": "pnpm --filter vercel run test-testserver",
     "build-binary-node": "node packages/cli/scripts/build-binary-node.mjs",
     "lint": "biome lint api internals packages test utils",
     "format": "biome format --write api internals packages test utils",
@@ -54,10 +56,8 @@
     "lint:dependencies": "syncpack lint",
     "prepare": "husky install",
     "pack": "cd utils && node -r ts-eager/register ./pack.ts",
-    "ci:version": "changeset version && node utils/sync-python-version.js && uv lock && pnpm install --no-frozen-lockfile",
-    "ci:publish": "node utils/inject-native-optional-deps.mjs && node utils/publish-runtimes.mjs && bash utils/npm-publish.sh && changeset tag",
-    "ci:version:canary": "node utils/changeset-version-canary.js && pnpm install --no-frozen-lockfile",
-    "ci:publish:canary": "bash utils/npm-publish.sh canary",
+    "ci:version": "node utils/expand-internal-changesets.mjs && changeset version && node utils/sync-python-version.js && uv lock && pnpm install --no-frozen-lockfile",
+    "ci:publish": "node python/publish.mjs --artifacts \"$RELEASE_PAYLOAD_DIR/python\" && bash utils/npm-publish.sh \"$RELEASE_PAYLOAD_DIR/npm\"",
     "type-check": "turbo type-check --concurrency=12 --output-logs=errors-only --summarize --continue"
   },
   "testing": {
@@ -83,6 +83,12 @@
     "arrowParens": "avoid"
   },
   "pnpm": {
-    "neverBuiltDependencies": []
+    "neverBuiltDependencies": [
+      "cpu-features",
+      "ssh2"
+    ],
+    "patchedDependencies": {
+      "@yao-pkg/pkg@6.19.0": "patches/@yao-pkg__pkg@6.19.0.patch"
+    }
   }
 }

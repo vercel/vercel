@@ -69,7 +69,7 @@ describe('integration', () => {
     it('errors when extra arguments are provided', async () => {
       client.setArgv('integration', 'categories', 'extra');
       const exitCode = await integrationCommand(client);
-      expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
+      expect(exitCode, 'exit code for "integrationCommand"').toEqual(2);
 
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain(

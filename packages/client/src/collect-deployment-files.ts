@@ -24,6 +24,7 @@ export interface CollectedDeploymentFiles {
   workPath: string;
   isDirectory: boolean;
   ignoreList: string[];
+  warning?: string;
 }
 
 export function assertDeploymentPath(
@@ -75,7 +76,7 @@ export async function collectDeploymentFiles(
     debug(`Provided 'path' is a single file`);
   }
 
-  const { fileList, ignoreList } = await buildFileTree(
+  const { fileList, ignoreList, warning } = await buildFileTree(
     path,
     clientOptions,
     debug
@@ -104,5 +105,5 @@ export async function collectDeploymentFiles(
     throw err;
   }
 
-  return { fileList, filesMap, workPath, isDirectory, ignoreList };
+  return { fileList, filesMap, workPath, isDirectory, ignoreList, warning };
 }

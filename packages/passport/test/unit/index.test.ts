@@ -1,4 +1,5 @@
-import { describe, expect, test, vi } from 'vitest';
+import { createHash } from 'node:crypto';
+import { describe, expect, expectTypeOf, test, vi } from 'vitest';
 
 vi.mock('jose', () => ({
   createRemoteJWKSet: vi.fn(() => 'jwks'),
@@ -10,12 +11,37 @@ import {
   getIdentity,
   PASSPORT_COOKIE_NAME,
   PASSPORT_HEADER_NAME,
+  PassportIdentityError,
+  requireIdentity,
   verifyIdentity,
+  type PassportIdentityWithRequiredToken,
 } from '../../src';
 
 function createToken(payload: Record<string, unknown>): string {
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
   return `header.${encoded}.signature`;
+}
+
+function createChunkedCookieValues(
+  token: string,
+  chunkSize = 3500
+): Map<string, string> {
+  const checksum = createHash('sha256').update(token).digest('hex');
+  const generation = checksum.slice(0, 32);
+  const chunks = token.match(new RegExp(`.{1,${chunkSize}}`, 'g')) ?? [];
+  const values = new Map<string, string>([
+    [PASSPORT_COOKIE_NAME, `__vc_chunked_v1:${chunks.length}:${checksum}`],
+  ]);
+
+  chunks.forEach((chunk, index) => {
+    values.set(`${PASSPORT_COOKIE_NAME}.${index + 1}.${generation}`, chunk);
+  });
+
+  return values;
+}
+
+function toCookieHeader(values: Map<string, string>): string {
+  return [...values].map(([name, value]) => `${name}=${value}`).join('; ');
 }
 
 function decodeToken(token: string): Record<string, unknown> {
@@ -171,6 +197,124 @@ describe('getIdentity', () => {
     expect(identity?.tokenSource).toBe('cookie');
     expect(identity?.externalSubject).toBe('user_123');
     expect(identity?.verified).toBe(true);
+  });
+
+  test('reassembles a chunked Passport cookie', async () => {
+    const token = createToken({
+      ...payload,
+      groups: ['admin', 'developer', 'support'],
+      padding: 'x'.repeat(4000),
+    });
+    const identity = await getIdentity(
+      { cookieHeader: toCookieHeader(createChunkedCookieValues(token)) },
+      { verifyOptions }
+    );
+
+    expect(identity).toMatchObject({
+      externalSubject: 'user_123',
+      token,
+      tokenSource: 'cookie',
+      verified: true,
+    });
+  });
+
+  test('does not depend on the Proxy writer chunk size', async () => {
+    const token = createToken({ ...payload, padding: 'x'.repeat(8000) });
+    const identity = await getIdentity(
+      {
+        cookieHeader: toCookieHeader(
+          createChunkedCookieValues(token, token.length)
+        ),
+      },
+      { verifyOptions }
+    );
+
+    expect(identity).toMatchObject({ token, verified: true });
+  });
+
+  test('allows the Proxy writer chunk count to grow independently', async () => {
+    const token = createToken({ ...payload, padding: 'x'.repeat(12_000) });
+    const values = createChunkedCookieValues(
+      token,
+      Math.ceil(token.length / 11)
+    );
+    expect(values.get(PASSPORT_COOKIE_NAME)).toContain('__vc_chunked_v1:11:');
+
+    const identity = await getIdentity(
+      { cookieHeader: toCookieHeader(values) },
+      { verifyOptions }
+    );
+
+    expect(identity).toMatchObject({ token, verified: true });
+  });
+
+  test('rejects a chunked Passport cookie with a missing chunk', async () => {
+    const token = createToken({ ...payload, padding: 'x'.repeat(4000) });
+    const values = createChunkedCookieValues(token);
+    const chunkName = [...values.keys()].find(name =>
+      name.startsWith(`${PASSPORT_COOKIE_NAME}.2.`)
+    );
+    expect(chunkName).toBeDefined();
+    values.delete(chunkName!);
+
+    await expect(
+      getIdentity({ cookieHeader: toCookieHeader(values) }, { verifyOptions })
+    ).rejects.toThrow(
+      new PassportIdentityError(
+        'Passport session cookie is missing chunk 2 of 2.'
+      )
+    );
+  });
+
+  test('rejects a chunked Passport cookie manifest above the chunk limit', async () => {
+    await expect(
+      getIdentity(
+        {
+          cookieHeader: `${PASSPORT_COOKIE_NAME}=__vc_chunked_v1:101:${'a'.repeat(64)}`,
+        },
+        { verifyOptions }
+      )
+    ).rejects.toThrow(
+      new PassportIdentityError('Passport session cookie manifest is invalid.')
+    );
+  });
+
+  test('rejects a chunked Passport cookie with a checksum mismatch', async () => {
+    const token = createToken({ ...payload, padding: 'x'.repeat(4000) });
+    const values = createChunkedCookieValues(token);
+    const chunkName = [...values.keys()].find(name =>
+      name.startsWith(`${PASSPORT_COOKIE_NAME}.1.`)
+    );
+    expect(chunkName).toBeDefined();
+    const chunk = values.get(chunkName!)!;
+    values.set(chunkName!, `${chunk[0] === 'x' ? 'y' : 'x'}${chunk.slice(1)}`);
+
+    await expect(
+      getIdentity({ cookieHeader: toCookieHeader(values) }, { verifyOptions })
+    ).rejects.toThrow(
+      new PassportIdentityError(
+        'Passport session cookie checksum does not match its chunks.'
+      )
+    );
+  });
+
+  test('prefers the trusted header over a malformed chunked cookie', async () => {
+    const token = createToken(payload);
+    const identity = await getIdentity(
+      {
+        headers: {
+          cookie: `${PASSPORT_COOKIE_NAME}=__vc_chunked_v1:invalid`,
+          [PASSPORT_HEADER_NAME]: token,
+        },
+      },
+      { verifyOptions }
+    );
+
+    expect(identity).toMatchObject({
+      token,
+      tokenSource: 'header',
+      verified: true,
+    });
   });
 
   test('falls back to a Passport cookie from explicit headers', async () => {
@@ -368,11 +512,73 @@ describe('getIdentity', () => {
   });
 });
 
+describe('requireIdentity', () => {
+  test('returns a token-bearing identity using the supplied input and options', async () => {
+    const token = createToken(payload);
+    const identity = await requireIdentity(
+      new Headers({ [PASSPORT_HEADER_NAME]: token }),
+      { verifyOptions }
+    );
+
+    expect(identity).toMatchObject({
+      externalSubject: 'user_123',
+      token,
+      tokenSource: 'header',
+      verified: true,
+    });
+    expectTypeOf(identity).toEqualTypeOf<PassportIdentityWithRequiredToken>();
+    expectTypeOf(identity.token).toEqualTypeOf<string>();
+  });
+
+  test('supports the default identity lookup without arguments', async () => {
+    const token = createToken(payload);
+    vi.stubEnv('VERCEL_PASSPORT_TOKEN', token);
+
+    try {
+      await expect(requireIdentity()).resolves.toMatchObject({ token });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  test.each([
+    undefined,
+    { token: '' },
+  ])('rejects a missing or empty token: %j', async input => {
+    await expect(
+      requireIdentity(input, { development: false })
+    ).rejects.toThrow(
+      new PassportIdentityError('Passport identity token was not found.')
+    );
+  });
+
+  test('rejects a development identity without a token', async () => {
+    await expect(
+      requireIdentity(undefined, { localIdentity: payload })
+    ).rejects.toThrow(
+      new PassportIdentityError('Passport identity token was not found.')
+    );
+  });
+
+  test('preserves token verification options and errors from getIdentity', async () => {
+    const token = createToken(payload);
+
+    await expect(
+      requireIdentity({ token }, { allowUnverified: false })
+    ).rejects.toThrow(
+      new PassportIdentityError(
+        'Passport identity token verification is disabled and unverified tokens are not allowed.'
+      )
+    );
+  });
+});
+
 describe('verifyIdentity', () => {
   test('verifies an explicit Passport token', async () => {
     const token = createToken(payload);
     const identity = await verifyIdentity(token, verifyOptions);
 
+    expectTypeOf(identity).toEqualTypeOf<PassportIdentityWithRequiredToken>();
     expect(identity).toMatchObject({
       externalSubject: 'user_123',
       subject: payload.sub,
@@ -449,6 +655,29 @@ describe('verifyIdentity', () => {
         cookies: {
           get: name =>
             name === PASSPORT_COOKIE_NAME ? { value: token } : undefined,
+        },
+      },
+      verifyOptions
+    );
+
+    expect(identity).toMatchObject({
+      externalSubject: 'user_123',
+      token,
+      tokenSource: 'cookie',
+      verified: true,
+    });
+  });
+
+  test('verifies a chunked Passport token from an explicit cookie store', async () => {
+    const token = createToken({ ...payload, padding: 'x'.repeat(4000) });
+    const values = createChunkedCookieValues(token);
+    const identity = await verifyIdentity(
+      {
+        cookies: {
+          get: name => {
+            const value = values.get(name);
+            return value === undefined ? undefined : { value };
+          },
         },
       },
       verifyOptions

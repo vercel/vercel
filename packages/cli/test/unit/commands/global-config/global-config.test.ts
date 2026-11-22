@@ -70,8 +70,66 @@ describe('global-config', () => {
     expect(out.id).toBe('ecfg_resolve');
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:get',
+        key: 'subcommand:inspect',
         value: 'get',
+      },
+      {
+        key: 'argument:id-or-slug',
+        value: 'my-store',
+      },
+      {
+        key: 'option:format',
+        value: 'json',
+      },
+    ]);
+    // JSON output keeps stderr clean, so no deprecation warning here.
+    expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+  });
+
+  it('warns when getting a config by the deprecated get name', async () => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
+      res.json([{ id: 'ecfg_resolve', slug: 'my-store' }]);
+    });
+    client.scenario.get('/v1/global-config/ecfg_resolve', (_req, res) => {
+      res.json({
+        id: 'ecfg_resolve',
+        slug: 'my-store',
+        itemCount: 0,
+        digest: 'd',
+      });
+    });
+
+    client.setArgv('global-config', 'get', 'my-store');
+    const exitCode = await globalConfig(client);
+    expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`vercel global-config get` is deprecated. Use `vercel global-config inspect`.'
+    );
+  });
+
+  it('inspects a config without a deprecation warning', async () => {
+    client.scenario.get('/v1/global-config', (_req, res) => {
+      res.json([{ id: 'ecfg_resolve', slug: 'my-store' }]);
+    });
+    client.scenario.get('/v1/global-config/ecfg_resolve', (_req, res) => {
+      res.json({
+        id: 'ecfg_resolve',
+        slug: 'my-store',
+        itemCount: 0,
+        digest: 'd',
+      });
+    });
+
+    client.setArgv('global-config', 'inspect', 'my-store', '--format', 'json');
+    const exitCode = await globalConfig(client);
+    expect(exitCode).toBe(0);
+    const out = JSON.parse(client.stdout.getFullOutput().trim());
+    expect(out.id).toBe('ecfg_resolve');
+    expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      {
+        key: 'subcommand:inspect',
+        value: 'inspect',
       },
       {
         key: 'argument:id-or-slug',
@@ -608,6 +666,67 @@ describe('global-config', () => {
         status: 'error',
         reason: 'not_found',
       });
+    });
+  });
+
+  describe('subcommand name', () => {
+    function useCreation() {
+      client.scenario.post('/v1/global-config', (_req, res) => {
+        res.json({ id: 'ecfg_new', slug: 'flags' });
+      });
+    }
+
+    it('warns when invoked as the deprecated add name', async () => {
+      useCreation();
+      client.setArgv('global-config', 'add', 'flags');
+
+      expect(await globalConfig(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel global-config add` is deprecated. Use `vercel global-config create`.'
+      );
+    });
+
+    it('does not warn when invoked as create', async () => {
+      useCreation();
+      client.setArgv('global-config', 'create', 'flags');
+
+      expect(await globalConfig(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    });
+  });
+
+  describe('delete', () => {
+    beforeEach(() => {
+      client.scenario.get('/v1/global-config', (_req, res) => {
+        res.json([{ id: 'ecfg_del', slug: 'my-store' }]);
+      });
+      client.scenario.delete('/v1/global-config/ecfg_del', (_req, res) => {
+        res.json({});
+      });
+    });
+
+    it.each([
+      'delete',
+      'rm',
+      'del',
+    ])('deletes as %s without a warning', async name => {
+      client.setArgv('global-config', name, 'my-store', '--yes');
+      expect(await globalConfig(client)).toBe(0);
+      await expect(client.stderr).toOutput('Global Config ecfg_del deleted.');
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:delete', value: name },
+        { key: 'argument:id-or-slug', value: 'my-store' },
+        { key: 'flag:yes', value: 'TRUE' },
+      ]);
+    });
+
+    it('warns that remove is deprecated', async () => {
+      client.setArgv('global-config', 'remove', 'my-store', '--yes');
+      expect(await globalConfig(client)).toBe(0);
+      await expect(client.stderr).toOutput(
+        '`vercel global-config remove` is deprecated. Use `vercel global-config delete`.'
+      );
     });
   });
 });

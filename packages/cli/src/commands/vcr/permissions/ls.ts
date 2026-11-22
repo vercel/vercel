@@ -23,6 +23,8 @@ import {
 import { emitVcrArgParseError, handleVcrApiError } from '../utils/errors';
 import { repositoryPermissionsPath } from '../utils/paths';
 import type { RepositoryPermissionList } from './team-refs';
+import { warnDeprecatedOption } from '../../../util/warn-deprecated-subcommand';
+import { printNextPageHint } from '../../../util/pagination';
 
 function printPermissions(list: RepositoryPermissionList): void {
   if (list.permissions.length === 0) {
@@ -45,12 +47,6 @@ function printPermissions(list: RepositoryPermissionList): void {
     .join('\n')
     .replace(/^/gm, '  ');
   output.print(`\n${tableOutput}\n`);
-
-  if (list.nextCursor) {
-    output.log(
-      `More results available. Re-run with \`--next ${list.nextCursor}\`.`
-    );
-  }
 }
 
 export default async function ls(
@@ -71,7 +67,7 @@ export default async function ls(
       'vcr permissions <repository> ls --project <name-or-id>'
     );
     printError(err);
-    return 1;
+    return 2;
   }
 
   const fr = validateVcrJsonOutput(client, parsedArgs.flags);
@@ -90,6 +86,9 @@ export default async function ls(
   telemetry.trackCliOptionLimit(limitFlag);
   telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
   telemetry.trackCliOptionCursor(parsedArgs.flags['--cursor']);
+  if (parsedArgs.flags['--cursor'] !== undefined) {
+    warnDeprecatedOption(client.argv, '--cursor', '--next');
+  }
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
 
   const missingRepository = requireVcrRepository(
@@ -115,7 +114,7 @@ export default async function ls(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: limitResult.message,
       },
-      1
+      2
     );
     return outputError(
       client,
@@ -143,9 +142,11 @@ export default async function ls(
   try {
     const list = await client.fetch<RepositoryPermissionList>(path);
     if (fr.jsonOutput) {
-      client.stdout.write(`${JSON.stringify(list, null, 2)}\n`);
+      const json = { ...list, pagination: { next: list.nextCursor ?? null } };
+      client.stdout.write(`${JSON.stringify(json, null, 2)}\n`);
     } else {
       printPermissions(list);
+      printNextPageHint(client, list.nextCursor ?? null, ['--cursor', '-c']);
     }
     return 0;
   } catch (err) {

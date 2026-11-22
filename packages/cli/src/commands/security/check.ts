@@ -40,7 +40,7 @@ export default async function check(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args: checks, flags: opts } = parsedArgs;
   const unknown = checks.filter(slug => !isKnownCheck(slug));
@@ -63,14 +63,14 @@ export default async function check(client: Client, argv: string[]) {
             client.argv,
             'security check --help'
           ),
-          when: 'See all flags and examples',
+          when: 'See all options and examples',
         },
       ],
     });
     output.error(
       `Unknown check${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ')}. Valid slugs:\n  ${SECURITY_CHECKS.map(check => check.slug).join('\n  ')}`
     );
-    return 1;
+    return 2;
   }
 
   const limit = opts['--limit'];
@@ -90,13 +90,13 @@ export default async function check(client: Client, argv: string[]) {
       ],
     });
     output.error('`--limit` must be a positive integer.');
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 

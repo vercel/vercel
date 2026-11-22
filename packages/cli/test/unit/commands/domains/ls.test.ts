@@ -12,7 +12,7 @@ describe('domains ls', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = domains(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -26,7 +26,7 @@ describe('domains ls', () => {
       client.setArgv('domains', 'ls', '--help');
       const exitCodePromise = domains(client);
       await expect(client.stderr).toOutput('Show all domains in a list');
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
     });
   });
 
@@ -158,6 +158,67 @@ describe('domains ls', () => {
       expect(firstDomain).toHaveProperty('registrar');
       expect(firstDomain).toHaveProperty('nameservers');
       expect(firstDomain).toHaveProperty('createdAt');
+    });
+  });
+  describe('--next cursor', () => {
+    function usePagedApi() {
+      const queries: Record<string, unknown>[] = [];
+      client.scenario.get('/v5/domains', (req, res) => {
+        queries.push(req.query);
+        res.json({
+          domains: [],
+          pagination: { count: 0, next: 1584722256000 },
+        });
+      });
+      return queries;
+    }
+
+    it.each([
+      [['--next', '1584722256178']],
+      [['--next=1584722256178']],
+      [['-N', '1584722256178']],
+    ])('sends %j to the API as the same timestamp as before', async args => {
+      useUser();
+      const queries = usePagedApi();
+      client.setArgv('domains', 'ls', ...args);
+
+      expect(await domains(client)).toBe(0);
+      expect(queries[0].until).toBe('1584722256178');
+      expect(client.stderr.getFullOutput()).toContain(
+        '  Next page:\n    vercel domains ls --next 1584722256000\n'
+      );
+    });
+
+    it('warns when the hidden -N is used, and not with --json', async () => {
+      useUser();
+      usePagedApi();
+      client.setArgv('domains', 'ls', '-N', '1584722256178');
+      expect(await domains(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        '! -N is deprecated. Use --next.'
+      );
+
+      client.reset();
+      useUser();
+      usePagedApi();
+      client.setArgv('domains', 'ls', '-N', '1584722256178', '--json');
+      expect(await domains(client)).toBe(0);
+      expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+      expect(JSON.parse(client.stdout.getFullOutput()).pagination.next).toBe(
+        1584722256000
+      );
+    });
+
+    it('rejects a value that is not a cursor as a usage error', async () => {
+      useUser();
+      const queries = usePagedApi();
+      client.setArgv('domains', 'ls', '--next', 'oops');
+
+      expect(await domains(client)).toBe(2);
+      expect(queries).toHaveLength(0);
+      expect(client.stderr.getFullOutput()).toContain(
+        '--next must be the cursor printed with the previous page.'
+      );
     });
   });
 });

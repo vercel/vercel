@@ -30,7 +30,7 @@ export default async function deleteGroup(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const autoConfirm = !!parsedArgs.flags['--yes'];
@@ -75,9 +75,9 @@ export default async function deleteGroup(client: Client): Promise<number> {
 
   if (!client.stdin.isTTY && !groupFlag) {
     output.error(
-      'Missing required flag --group. Use --group to specify the microfrontends group, or run interactively.'
+      'Missing required option --group. Use --group to specify the microfrontends group, or run interactively.'
     );
-    return 1;
+    return 2;
   }
 
   let selectedGroup: MicrofrontendsGroupResponse;

@@ -28,6 +28,17 @@ const rawWorkerId = Number.parseInt(process.env.VITEST_WORKER_ID || '1', 10);
 const workerId =
   Number.isFinite(rawWorkerId) && rawWorkerId > 0 ? rawWorkerId : 1;
 
+export function getDevResourcePorts(): {
+  queuePort: number;
+  runtimeCachePort: number;
+} {
+  const workerPortBase = BASE_PORT + (workerId - 1) * PORTS_PER_WORKER;
+  return {
+    queuePort: workerPortBase + PORTS_PER_WORKER - 2,
+    runtimeCachePort: workerPortBase + PORTS_PER_WORKER - 1,
+  };
+}
+
 // Vitest may run dev integration files in parallel workers. Keep each worker
 // in its own port range to avoid cross-worker collisions.
 let port = BASE_PORT + (workerId - 1) * PORTS_PER_WORKER;
@@ -597,6 +608,7 @@ export function testFixtureStdio(
 
     let stdout = '';
     let stderr = '';
+    let tornDown = false;
     const readyResolver = createResolver();
     const exitResolver = createResolver();
 
@@ -661,7 +673,7 @@ export function testFixtureStdio(
           );
         }
 
-        if (stderr.includes('Command failed')) {
+        if (!tornDown && stderr.includes('Command failed')) {
           await nukeProcessTree(dev.pid!);
           throw new Error(`Failed for "${directory}" with stderr "${stderr}".`);
         }
@@ -695,6 +707,7 @@ export function testFixtureStdio(
       };
       await fn(helperTestPath, port);
     } finally {
+      tornDown = true;
       // @ts-ignore
       await nukeProcessTree(dev.pid);
       await exitResolver;

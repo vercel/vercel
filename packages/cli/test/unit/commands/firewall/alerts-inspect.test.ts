@@ -47,17 +47,17 @@ describe('firewall alerts inspect', () => {
       series: [
         {
           timestamp: new Date(STARTED - 3_600_000).toISOString(),
-          waf_action: 'allow',
+          wafAction: 'allow',
           value: 3_600,
         },
         {
           timestamp: new Date(STARTED).toISOString(),
-          waf_action: 'allow',
+          wafAction: 'allow',
           value: 10_200,
         },
         {
           timestamp: new Date(STARTED).toISOString(),
-          waf_action: 'deny',
+          wafAction: 'deny',
           value: 134_500,
         },
       ],
@@ -93,7 +93,7 @@ describe('firewall alerts inspect', () => {
   describe('--help', () => {
     it('tracks telemetry', async () => {
       client.setArgv('firewall', 'alerts', 'inspect', '--help');
-      expect(await firewall(client)).toEqual(2);
+      expect(await firewall(client)).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:alerts', value: 'alerts' },
         { key: 'flag:help', value: 'firewall:alerts:inspect' },
@@ -103,7 +103,7 @@ describe('firewall alerts inspect', () => {
 
   it('requires an alert id', async () => {
     client.setArgv('firewall', 'alerts', 'inspect');
-    expect(await firewall(client)).toEqual(1);
+    expect(await firewall(client)).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain('Alert id is required');
   });
 
@@ -126,7 +126,7 @@ describe('firewall alerts inspect', () => {
     expect(firewallActivity.groupRequests).toEqual([ALERT_ID]);
     expect(firewallActivity.queries).toHaveLength(1);
     expect(firewallActivity.queries[0].granularity).toEqual({ minutes: 15 });
-    expect(firewallActivity.queries[0].groupBy).toEqual(['waf_action']);
+    expect(firewallActivity.queries[0].groupBy).toEqual(['wafAction']);
   });
 
   it('inspects a legacy attack-status id', async () => {
@@ -141,7 +141,7 @@ describe('firewall alerts inspect', () => {
       series: [
         {
           timestamp: new Date(STARTED).toISOString(),
-          waf_action: 'deny',
+          wafAction: 'deny',
           [FIREWALL_ROLLUP_COLUMN]: 134_500,
           value: 134_500,
         },
@@ -227,7 +227,7 @@ describe('firewall alerts inspect', () => {
       series: [
         {
           timestamp: new Date(STARTED).toISOString(),
-          waf_action: 'deny',
+          wafAction: 'deny',
           [FIREWALL_ROLLUP_COLUMN]: 134_500,
           value: 134_500,
         },

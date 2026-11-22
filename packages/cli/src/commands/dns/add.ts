@@ -7,7 +7,7 @@ import {
 } from '../../util/errors-ts';
 import addDNSRecord from '../../util/dns/add-dns-record';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import parseAddDNSRecordArgs from '../../util/dns/parse-add-dns-record-args';
 import getDNSData from '../../util/dns/get-dns-data';
 import stamp from '../../util/output/stamp';
@@ -43,11 +43,11 @@ export default async function add(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
   const { args } = parsedArgs;
 
@@ -72,7 +72,7 @@ export default async function add(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
@@ -80,7 +80,7 @@ export default async function add(client: Client, argv: string[]) {
         `${getCommandName('dns --help')}`
       )} for usage.`
     );
-    return 1;
+    return 2;
   }
 
   const addStamp = stamp();
@@ -112,9 +112,9 @@ export default async function add(client: Client, argv: string[]) {
           },
         ],
       },
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
   const telemetryClient = new DnsAddTelemetryClient({
@@ -151,7 +151,7 @@ export default async function add(client: Client, argv: string[]) {
     return 1;
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   const record = await addDNSRecord(client, domain, data);
   if (record instanceof DomainNotFound) {
@@ -209,7 +209,7 @@ export default async function add(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_PORT,
           message: 'Invalid <port> parameter. A number was expected.',
         },
-        1
+        2
       );
     }
     output.error(
@@ -217,7 +217,7 @@ export default async function add(client: Client, argv: string[]) {
         addStamp()
       )}`
     );
-    return 1;
+    return 2;
   }
 
   if (record instanceof DNSInvalidType) {
@@ -229,7 +229,7 @@ export default async function add(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_DNS_TYPE,
           message: `Invalid <type> parameter "${record.meta.type}". Expected one of A, AAAA, ALIAS, CAA, CNAME, MX, SRV, TXT.`,
         },
-        1
+        2
       );
     }
     output.error(
@@ -239,7 +239,7 @@ export default async function add(client: Client, argv: string[]) {
         addStamp()
       )}`
     );
-    return 1;
+    return 2;
   }
 
   if (record instanceof Error) {

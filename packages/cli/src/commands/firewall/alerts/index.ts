@@ -35,7 +35,7 @@ export default async function main(
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -50,16 +50,18 @@ export default async function main(
     telemetry.trackCliFlagHelp('firewall', 'alerts');
     output.print(
       help(alertsSubcommand, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
@@ -71,7 +73,7 @@ export default async function main(
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `alerts:${subcommandOriginal}`);
         printHelp(alertsListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAlertsList(subcommandOriginal);
       return list(client, subArgs);
@@ -79,7 +81,7 @@ export default async function main(
       if (needHelp) {
         telemetry.trackCliFlagHelp('firewall', `alerts:${subcommandOriginal}`);
         printHelp(alertsInspectSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandAlertsInspect(subcommandOriginal);
       return inspect(client, subArgs);
@@ -87,6 +89,7 @@ export default async function main(
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
         help(alertsSubcommand, {
+          stream: client.stderr,
           parent: firewallCommand,
           columns: client.stderr.columns,
         })

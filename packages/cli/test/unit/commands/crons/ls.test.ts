@@ -62,7 +62,7 @@ describe('crons ls', () => {
     it('prints help and tracks telemetry', async () => {
       client.setArgv('crons', 'ls', '--help');
       const exitCode = await crons(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'crons:ls' },
       ]);

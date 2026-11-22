@@ -18,7 +18,7 @@ export async function openClient(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -27,7 +27,7 @@ export async function openClient(
     output.error(
       'Missing connector ID or UID. Usage: vercel connect open <id>'
     );
-    return 1;
+    return 2;
   }
 
   await selectConnexTeam(client, 'Select the team whose connector to open');

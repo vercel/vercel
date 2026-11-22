@@ -89,6 +89,18 @@ export interface ConnectTelegramAdapterConfig {
 }
 
 /**
+ * Partial Microsoft Teams adapter config backed by Vercel Connect.
+ *
+ * Structurally matches the lazy `appId`, scope-aware `token`, and
+ * `webhookVerifier` options of `createTeamsAdapter` from `@chat-adapter/teams`.
+ */
+export interface ConnectTeamsAdapterConfig {
+  appId: ConnectTokenResolver;
+  token: (scope: string | string[], tenantId?: string) => Promise<string>;
+  webhookVerifier: ConnectWebhookVerifier;
+}
+
+/**
  * Partial Sendblue adapter config backed by Vercel Connect.
  *
  * Structurally matches the `accessToken` and `webhookVerifier` options of

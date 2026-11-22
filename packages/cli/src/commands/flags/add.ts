@@ -21,7 +21,15 @@ import type {
   FlagKind,
   FlagVariant,
 } from '../../util/flags/types';
+import { resolveVariantOrThrow } from '../../util/flags/resolve-variant';
+import { normalizeOptionalInput } from '../../util/flags/normalize-optional-input';
+import {
+  STANDARD_ENVIRONMENTS,
+  type StandardEnvironment,
+} from '../../util/target/standard-environments';
 import { getLinkedFlagsProject, getProjectNameFromFlags } from './project';
+
+type EnvironmentVariantSelectors = Partial<Record<StandardEnvironment, string>>;
 
 export default async function create(
   client: Client,
@@ -39,7 +47,7 @@ export default async function create(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -48,18 +56,26 @@ export default async function create(
   if (!slug) {
     output.error('Please provide a slug for the feature flag');
     output.log(`Example: ${getCommandName('flags create my-feature')}`);
-    return 1;
+    return 2;
   }
 
   const kind = (flags['--kind'] as FlagKind | undefined) || 'boolean';
   const description = flags['--description'] as string | undefined;
   const variantInputs = (flags['--variant'] as string[] | undefined) || [];
+  const defaultVariantSelector = normalizeOptionalInput(
+    flags['--default-variant'] as string | undefined
+  );
+  const environmentVariantInputs =
+    (flags['--environment-variant'] as string[] | undefined) || [];
   const projectName = getProjectNameFromFlags(flags);
 
   telemetryClient.trackCliArgumentSlug(slug);
   telemetryClient.trackCliOptionProject(projectName);
   telemetryClient.trackCliOptionKind(kind);
   telemetryClient.trackCliOptionDescription(description);
+  telemetryClient.trackCliOptionVariant(variantInputs);
+  telemetryClient.trackCliOptionDefaultVariant(defaultVariantSelector);
+  telemetryClient.trackCliOptionEnvironmentVariant(environmentVariantInputs);
 
   if (
     kind !== 'boolean' &&
@@ -70,7 +86,17 @@ export default async function create(
     output.error(
       `Invalid kind: ${kind}. Must be one of: boolean, string, number, json`
     );
-    return 1;
+    return 2;
+  }
+
+  let environmentVariantSelectors: EnvironmentVariantSelectors;
+  try {
+    environmentVariantSelectors = parseEnvironmentVariantInputs(
+      environmentVariantInputs
+    );
+  } catch (err) {
+    output.error((err as Error).message);
+    return 2;
   }
 
   const link = await getLinkedFlagsProject(client, projectName);
@@ -97,24 +123,25 @@ export default async function create(
     return 1;
   }
 
+  let environments: CreateFlagRequest['environments'];
+  try {
+    environments = resolveEnvironments(
+      kind,
+      variants,
+      defaultVariantSelector,
+      environmentVariantSelectors
+    );
+  } catch (err) {
+    output.error((err as Error).message);
+    return 2;
+  }
+
   const request: CreateFlagRequest = {
     slug,
     kind,
     description: description || '',
     variants,
-    environments: {
-      production: createEnvironmentConfig(
-        variants[0].id,
-        variants[0].id,
-        false
-      ),
-      preview: createEnvironmentConfig(variants[0].id, variants[0].id, false),
-      development: createEnvironmentConfig(
-        kind === 'boolean' ? variants[1].id : variants[0].id,
-        kind === 'boolean' ? variants[1].id : variants[0].id,
-        false
-      ),
-    },
+    environments,
   };
 
   try {
@@ -164,7 +191,7 @@ async function getVariants(
 
   if (!client.stdin.isTTY) {
     throw new Error(
-      'Missing required flag --variant. Use --variant <value>[=label] (repeat as needed), or run interactively in a terminal.'
+      'Missing required option --variant. Use --variant <value>[=label] (repeat as needed), or run interactively in a terminal.'
     );
   }
 
@@ -205,6 +232,94 @@ async function collectVariantsInteractively(
   }
 
   return variants;
+}
+
+function parseEnvironmentVariantInputs(
+  inputs: string[]
+): EnvironmentVariantSelectors {
+  const selectors: EnvironmentVariantSelectors = {};
+
+  for (const input of inputs) {
+    const separatorIndex = input.indexOf('=');
+    const environment =
+      separatorIndex === -1
+        ? input.trim()
+        : input.slice(0, separatorIndex).trim();
+    const variant =
+      separatorIndex === -1 ? '' : input.slice(separatorIndex + 1).trim();
+
+    if (!environment || !variant) {
+      throw new Error(
+        `Invalid --environment-variant ${chalk.bold(input)}. Use ENVIRONMENT=VARIANT, for example development=true.`
+      );
+    }
+
+    if (!STANDARD_ENVIRONMENTS.includes(environment as StandardEnvironment)) {
+      throw new Error(
+        `Invalid environment in --environment-variant ${chalk.bold(input)}. Must be one of: ${STANDARD_ENVIRONMENTS.join(', ')}`
+      );
+    }
+
+    const standardEnvironment = environment as StandardEnvironment;
+    if (selectors[standardEnvironment] !== undefined) {
+      throw new Error(
+        `--environment-variant was passed more than once for ${chalk.bold(environment)}. Pass each environment once.`
+      );
+    }
+
+    selectors[standardEnvironment] = variant;
+  }
+
+  return selectors;
+}
+
+function resolveEnvironments(
+  kind: FlagKind,
+  variants: FlagVariant[],
+  defaultVariantSelector: string | undefined,
+  environmentVariantSelectors: EnvironmentVariantSelectors
+): CreateFlagRequest['environments'] {
+  const defaultVariant = defaultVariantSelector
+    ? resolveVariantOrThrow(
+        defaultVariantSelector,
+        variants,
+        '--default-variant'
+      )
+    : undefined;
+
+  const environments: CreateFlagRequest['environments'] = {};
+  for (const environment of STANDARD_ENVIRONMENTS) {
+    const selector = environmentVariantSelectors[environment];
+    const variant = selector
+      ? resolveVariantOrThrow(
+          selector,
+          variants,
+          '--environment-variant',
+          `${environment}=${selector}`
+        )
+      : (defaultVariant ??
+        getDefaultEnvironmentVariant(kind, variants, environment));
+
+    environments[environment] = createEnvironmentConfig(
+      variant.id,
+      variant.id,
+      false
+    );
+  }
+
+  return environments;
+}
+
+function getDefaultEnvironmentVariant(
+  kind: FlagKind,
+  variants: FlagVariant[],
+  environment: StandardEnvironment
+): FlagVariant {
+  if (kind === 'boolean' && environment === 'development') {
+    return variants[1];
+  }
+
+  return variants[0];
 }
 
 function createEnvironmentConfig(

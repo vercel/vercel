@@ -22,13 +22,13 @@ export default async function edit(
   try {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
-    return handleCommentsParseError(err, 'edit');
+    return handleCommentsParseError(err, 'update');
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
@@ -43,7 +43,7 @@ export default async function edit(
       client,
       jsonOutput,
       'MISSING_ARGUMENT',
-      'Usage: `vercel comments edit <thread> <message-id> -m <text>` — message IDs are shown in `vercel comments inspect`.'
+      'Usage: `vercel comments update <thread> <message-id> --message <text>` — message IDs are shown in `vercel comments inspect`.'
     );
   }
   const threadRef = parseThreadArg(threadInput);
@@ -73,7 +73,7 @@ export default async function edit(
       client,
       jsonOutput,
       'MISSING_CONTENT',
-      'Pass the new content with -m <text> or --file <path>.'
+      'Pass the new content with --message <text> or --file <path>.'
     );
   }
 
@@ -103,7 +103,7 @@ export default async function edit(
       client.stdout.write(`${JSON.stringify(message, null, 2)}\n`);
       return 0;
     }
-    output.print(`${chalk.green('✓')} Edited message ${messageId}\n`);
+    output.print(`${chalk.green('✓')} Updated message ${messageId}\n`);
     return 0;
   } catch (err) {
     if (isAPIError(err)) {

@@ -31,25 +31,26 @@ export default async function inspect(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
   const [id] = args;
   telemetry.trackCliArgumentId(id);
   telemetry.trackCliOptionFormat(opts['--format']);
+  telemetry.trackCliFlagJson(opts['--json']);
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   if (!id) {
     output.error(
       `${getCommandName('ai-gateway api-keys inspect <id>')} expects an API key id.`
     );
-    return 1;
+    return 2;
   }
 
   if (!(await ensureTeam(client))) {
@@ -92,6 +93,7 @@ function printApiKeyDetails(apiKey: ApiKey, keyDefault?: ScopeBudgetDefault) {
     ['id', apiKey.id],
     ['name', apiKey.name || dim('–')],
     ['key', apiKey.partialKey ? `…${apiKey.partialKey}` : dim('–')],
+    ['token pass', yesNo(apiKey.metadata?.tokenPass ?? false)],
     ['purpose', apiKey.purpose],
     ['project', apiKey.projectId ?? dim('all projects')],
     [

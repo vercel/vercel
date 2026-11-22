@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
+import { getTypedOptionName, parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import getScope from '../../util/get-scope';
@@ -18,6 +18,7 @@ import {
 import { AGENT_REASON } from '../../util/agent-output-constants';
 import { isAPIError } from '../../util/errors-ts';
 import { packageName } from '../../util/pkg-name';
+import { getRenamedOption, withWarnings } from '../../util/renamed-option';
 
 type SelectResult =
   | { ok: true; configuration: Configuration }
@@ -43,7 +44,7 @@ function selectConfiguration(
       return {
         ok: false,
         reason: AGENT_REASON.INVALID_ARGUMENTS,
-        message: `No installation matching --installation-id ${installationId}. Known configuration IDs: ${known}`,
+        message: `No installation matching --installation ${installationId}. Known configuration IDs: ${known}`,
       };
     }
     return { ok: true, configuration: found };
@@ -54,7 +55,7 @@ function selectConfiguration(
     return {
       ok: false,
       reason: AGENT_REASON.INVALID_ARGUMENTS,
-      message: `Multiple installations found for "${integrationSlug}": ${list}. Re-run with --installation-id <id> to select one. Run \`${packageName} integration installations\` to list installation IDs for this team.`,
+      message: `Multiple installations found for "${integrationSlug}": ${list}. Re-run with --installation <id> to select one. Run \`${packageName} integration installations\` to list installation IDs for this team.`,
     };
   }
 
@@ -124,10 +125,10 @@ export async function update(client: Client, argv: string[]) {
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message: msg,
       },
-      1
+      2
     );
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
@@ -136,35 +137,81 @@ export async function update(client: Client, argv: string[]) {
       client,
       formatResult.error,
       AGENT_REASON.INVALID_ARGUMENTS,
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
   const preferJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
-  const plan = parsedArguments.flags['--plan'] as string | undefined;
+  const { flags } = parsedArguments;
+  // The warnings go in the JSON result whenever there is one.
+  const json = preferJson;
+  const billingPlan = getRenamedOption(flags, '--billing-plan', '--plan', {
+    json,
+    typedName: getTypedOptionName(
+      argv,
+      getFlagsSpecification(updateSubcommand.options),
+      '--plan'
+    ),
+  });
+  const authorization = getRenamedOption(
+    flags,
+    '--authorization',
+    '--authorization-id',
+    { json }
+  );
+  const installation = getRenamedOption(
+    flags,
+    '--installation',
+    '--installation-id',
+    { json }
+  );
+  if ('error' in billingPlan) {
+    emitUpdateCliError(
+      client,
+      billingPlan.error,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      2
+    );
+    return 2;
+  }
+  if ('error' in authorization) {
+    emitUpdateCliError(
+      client,
+      authorization.error,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      2
+    );
+    return 2;
+  }
+  if ('error' in installation) {
+    emitUpdateCliError(
+      client,
+      installation.error,
+      AGENT_REASON.INVALID_ARGUMENTS,
+      2
+    );
+    return 2;
+  }
+  const plan = billingPlan.value;
   const projectsRaw = parsedArguments.flags['--projects'] as
     | string[]
     | undefined;
-  const authorizationId = parsedArguments.flags['--authorization-id'] as
-    | string
-    | undefined;
-  const installationId = parsedArguments.flags['--installation-id'] as
-    | string
-    | undefined;
+  const authorizationId = authorization.value;
+  const installationId = installation.value;
 
   if (parsedArguments.args.length < 1) {
     const hadSubcommandOptsFirst =
       (projectsRaw !== undefined && projectsRaw.length > 0) ||
       plan !== undefined;
     const msg = hadSubcommandOptsFirst
-      ? `Put the integration slug immediately after \`update\`, before \`--projects\`, \`--plan\`, or other subcommand options. Example: \`${packageName} integration update neon --projects all\`.`
-      : `You must specify an integration slug after \`update\`. Example: \`${packageName} integration update neon --projects all\` or \`${packageName} integration update neon --plan <plan-id>\`.`;
+      ? `Put the integration slug immediately after \`update\`, before \`--projects\`, \`--billing-plan\`, or other subcommand options. Example: \`${packageName} integration update neon --projects all\`.`
+      : `You must specify an integration slug after \`update\`. Example: \`${packageName} integration update neon --projects all\` or \`${packageName} integration update neon --billing-plan <plan-id>\`.`;
 
-    emitUpdateCliError(client, msg, AGENT_REASON.MISSING_ARGUMENTS, 1, {
+    emitUpdateCliError(client, msg, AGENT_REASON.MISSING_ARGUMENTS, 2, {
       hint: hadSubcommandOptsFirst
-        ? `You used \`--projects\` or \`--plan\` without a preceding integration name. Use \`${packageName} integration update <integration> --projects …\`. Global flags such as \`--cwd\` may appear anywhere.`
+        ? `You used \`--projects\` or \`--billing-plan\` without a preceding integration name. Use \`${packageName} integration update <integration> --projects …\`. Global options such as \`--cwd\` may appear anywhere.`
         : `Run \`${packageName} integration installations\` to list slugs and installation IDs for your team.`,
       next: [
         {
@@ -187,7 +234,7 @@ export async function update(client: Client, argv: string[]) {
         },
       ],
     });
-    return 1;
+    return 2;
   }
   if (parsedArguments.args.length > 1) {
     emitUpdateCliError(
@@ -208,40 +255,43 @@ export async function update(client: Client, argv: string[]) {
   if (hasPlan && projectsRaw !== undefined && projectsRaw.length > 0) {
     emitUpdateCliError(
       client,
-      'Pass either --plan or --projects, not both. See `vercel integration update --help`.',
+      'Pass either --billing-plan or --projects, not both. See `vercel integration update --help`.',
       AGENT_REASON.INVALID_ARGUMENTS,
-      1
+      2
     );
-    return 1;
+    return 2;
   }
   if (!hasPlan && !projectsOutcome) {
     emitUpdateCliError(
       client,
-      'Nothing to update. Pass --plan to change billing plan, or --projects to change project access.',
+      'Nothing to update. Pass --billing-plan to change billing plan, or --projects to change project access.',
       AGENT_REASON.MISSING_ARGUMENTS,
-      1,
+      2,
       {
         hint: `Example: \`${packageName} integration update ${integrationSlug} --projects all\``,
       }
     );
-    return 1;
+    return 2;
   }
   if (projectsOutcome && 'error' in projectsOutcome) {
     emitUpdateCliError(
       client,
       projectsOutcome.error,
       AGENT_REASON.INVALID_ARGUMENTS,
-      1
+      2
     );
-    return 1;
+    return 2;
   }
 
   const hasProjects = Boolean(projectsOutcome && !('error' in projectsOutcome));
 
-  telemetry.trackCliOptionPlan(plan);
-  telemetry.trackCliOptionAuthorizationId(authorizationId);
+  telemetry.trackCliOptionBillingPlan(flags['--billing-plan']);
+  telemetry.trackCliOptionPlan(flags['--plan']);
+  telemetry.trackCliOptionAuthorization(flags['--authorization']);
+  telemetry.trackCliOptionAuthorizationId(flags['--authorization-id']);
   telemetry.trackCliOptionProjects(projectsRaw);
-  telemetry.trackCliOptionInstallationId(installationId);
+  telemetry.trackCliOptionInstallation(flags['--installation']);
+  telemetry.trackCliOptionInstallationId(flags['--installation-id']);
   telemetry.trackCliOptionFormat(
     parsedArguments.flags['--format'] as string | undefined
   );
@@ -322,15 +372,18 @@ export async function update(client: Client, argv: string[]) {
   if (preferJson) {
     client.stdout.write(
       `${JSON.stringify(
-        {
-          integration: integrationSlug,
-          configurationId: selected.configuration.id,
-          updated: true,
-          ...(hasPlan ? { billingPlanId: plan } : {}),
-          ...(hasProjects
-            ? { projects: (body as { projects: 'all' | string[] }).projects }
-            : {}),
-        },
+        withWarnings(
+          {
+            integration: integrationSlug,
+            configurationId: selected.configuration.id,
+            updated: true,
+            ...(hasPlan ? { billingPlanId: plan } : {}),
+            ...(hasProjects
+              ? { projects: (body as { projects: 'all' | string[] }).projects }
+              : {}),
+          },
+          [billingPlan.warning, authorization.warning, installation.warning]
+        ),
         null,
         2
       )}\n`

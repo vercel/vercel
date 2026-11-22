@@ -90,7 +90,7 @@ export function validateIntegerRangeWithDefault(
     return {
       valid: false,
       code: 'INVALID_LIMIT',
-      message: `Please provide a number for flag \`${opts.flag}\`.`,
+      message: `Please provide a number for option \`${opts.flag}\`.`,
     };
   }
 
@@ -122,7 +122,7 @@ export function validateOptionalIntegerRange(
     return {
       valid: false,
       code: opts.code || 'INVALID_LIMIT',
-      message: `Please provide a number for flag \`${opts.flag}\`.`,
+      message: `Please provide a number for option \`${opts.flag}\`.`,
     };
   }
 
@@ -149,6 +149,38 @@ export function writeJsonError(
   client.stdout.write(formatJsonError(code, message));
 }
 
+/**
+ * Error codes for input a command rejected before doing any work. These are
+ * usage errors and exit with code 2.
+ */
+const USAGE_ERROR_CODES: ReadonlySet<string> = new Set([
+  'CONFLICTING_CONTENT',
+  'INVALID_AGGREGATION',
+  'INVALID_ARGUMENTS',
+  'INVALID_ATTACHMENT',
+  'INVALID_GRANULARITY',
+  'INVALID_GROUP_BY',
+  'INVALID_LIMIT',
+  'INVALID_NEXT',
+  'INVALID_RULE_TYPE',
+  'INVALID_STATUS',
+  'INVALID_THREAD',
+  'INVALID_TIME',
+  'INVALID_TIME_RANGE',
+  'MESSAGE_WITH_MULTIPLE_THREADS',
+  'MISSING_ARGUMENT',
+  'MISSING_ARGUMENTS',
+  'MISSING_CONTENT',
+  'MISSING_FLAG',
+  'MISSING_THREAD',
+  'MUTUAL_EXCLUSIVITY',
+]);
+
+/** The exit code for an error `code`: 2 for a usage error, 1 otherwise. */
+export function getExitCodeForErrorCode(code: string): number {
+  return USAGE_ERROR_CODES.has(code) ? 2 : 1;
+}
+
 export function outputError(
   client: Client,
   jsonOutput: boolean,
@@ -160,7 +192,7 @@ export function outputError(
   } else {
     output.error(message);
   }
-  return 1;
+  return getExitCodeForErrorCode(code);
 }
 
 export function handleValidationError(

@@ -1,10 +1,23 @@
-import chalk from 'chalk';
-import { LOGO, NAME } from '@vercel-internals/constants';
-import Table, { type CellOptions } from 'cli-table3';
-import { noBorderChars } from '../util/output/table';
+import { remoteText } from '../util/output/remote-text';
+import { NAME } from '@vercel-internals/constants';
+import {
+  helpColumns,
+  helpCommandNames,
+  helpCommand,
+  helpHeading,
+  helpInlineCommand,
+  helpUsage,
+  helpRows,
+  helpLiterals,
+  helpPlaceholders,
+  type HelpRow,
+  helpSection,
+  wrapHelpText,
+} from '../util/output/help-format';
+import { createHelpTheme, type HelpTheme } from '../util/output/help-theme';
 import { globalCommandOptions } from '../util/arg-common';
+import { getShortFlags } from '../util/get-flags-specification';
 
-const INDENT = ' '.repeat(2);
 const NEWLINE = '\n';
 
 export type PrimitiveConstructor =
@@ -15,71 +28,99 @@ export type PrimitiveConstructor =
 export interface CommandOption {
   readonly name: string;
   readonly shorthand: string | null;
+  /**
+   * An old short form, such as `d` for `--description`. It still parses but
+   * is hidden from help, and `parseArguments` warns when it's used.
+   */
+  readonly deprecatedShorthand?: string;
   readonly type: PrimitiveConstructor | ReadonlyArray<PrimitiveConstructor>;
   readonly argument?: string;
   readonly deprecated: boolean;
   readonly description?: string;
+  /**
+   * An on/off option that used to take a value, such as `--public true`. The
+   * old values still work and warn (see `rewriteLegacyOnOffValues`).
+   */
+  readonly legacyValues?: { readonly on: string; readonly off: string };
+  /**
+   * The command rejects `--x=value` itself, so the entry point's warning for
+   * `--x=false` skips this option (see `getFalseValueWarnings`).
+   */
+  readonly rejectsValue?: true;
 }
 export interface CommandArgument {
   readonly name: string;
   readonly required: boolean;
   readonly multiple?: true;
+  readonly description?: string;
 }
 export interface CommandExample {
   readonly name: string;
   readonly value: string | ReadonlyArray<string>;
+  /** Exact template spans requiring substitution; never inferred from shell text. */
+  readonly placeholders?: ReadonlyArray<string>;
+}
+export interface HelpSection {
+  readonly title: string;
+  readonly rows?: ReadonlyArray<HelpRow>;
+  readonly body: ReadonlyArray<
+    | string
+    | {
+        readonly command: string;
+        readonly placeholders?: ReadonlyArray<string>;
+      }
+  >;
+  /** Shell commands and structured input retain their syntax and indentation. */
+  readonly preformatted?: true;
+  /**
+   * Where the section renders. By default sections follow the examples;
+   * `afterOptions` places it between the command options and global options.
+   */
+  readonly placement?: 'afterOptions';
 }
 export interface Command {
   readonly name: string;
   readonly aliases: ReadonlyArray<string>;
   readonly description: string;
+  /** Keep essential consequences or prerequisites out of faint intro styling. */
+  readonly descriptionTone?: 'normal';
+  /** Concise navigation summary for root and parent command lists. */
+  readonly summary?: string;
   readonly default?: true;
   readonly hidden?: true;
   readonly arguments: ReadonlyArray<CommandArgument>;
   readonly subcommands?: ReadonlyArray<Command>;
   readonly options: ReadonlyArray<CommandOption>;
   readonly examples: ReadonlyArray<CommandExample>;
+  readonly helpSections?: ReadonlyArray<HelpSection>;
+  /** Title of the subcommand list. Defaults to "Commands". */
+  readonly subcommandsTitle?: string;
   readonly disabledGlobalOptions?: ReadonlyArray<string>;
+  /**
+   * Help depends on runtime data, such as an integration's products, so the
+   * command answers `--help` itself instead of the CLI printing static help.
+   */
+  readonly dynamicHelp?: true;
+  /**
+   * The group takes its arguments before its subcommand, as in
+   * `vercel vcr permissions <repository> ls`.
+   */
+  readonly argumentsBeforeSubcommand?: true;
+  /**
+   * The command does work when run without a subcommand, as `vercel link`
+   * does, instead of showing its help like other groups.
+   */
+  readonly runsWithoutSubcommand?: true;
+  /**
+   * Options the command doesn't define go to another program, as `vercel
+   * curl` passes `-v` to curl, so `--version` and `-v` don't print the CLI
+   * version.
+   */
+  readonly forwardsUnknownOptions?: true;
   readonly documentation?: {
     readonly label: string;
     readonly url: string;
   };
-}
-
-// https://github.com/cli-table/cli-table3/pull/303 adds
-// word wrapping per cell but did not include updated types.
-type _CellOptions = CellOptions & {
-  wordWrap?: boolean;
-};
-
-const tableOptions = {
-  chars: noBorderChars,
-  style: {
-    'padding-left': 0,
-    'padding-right': 0,
-  },
-};
-
-// Use the word wrapping ability of cli-table3
-// by creating a one row, one cell, one column table.
-// This allows us to avoid pulling in the word-wrap
-// package which ironically seems to do a worse job.
-function wordWrap(text: string, maxWidth: number) {
-  const _tableOptions = Object.assign({}, tableOptions, {
-    colWidths: [maxWidth],
-    style: {
-      'padding-left': INDENT.length,
-    },
-  });
-  const table = new Table(_tableOptions);
-  table.push([
-    {
-      content: text,
-      wordWrap: true,
-    } as _CellOptions,
-  ]);
-
-  return table.toString();
 }
 
 // Insert spaces in between non-whitespace items only
@@ -104,51 +145,114 @@ export function outputArrayToString(outputArray: (string | null)[]) {
   return outputArray.filter(line => line !== null).join(NEWLINE);
 }
 
+type CommandTreeNode = Pick<Command, 'name' | 'subcommands'> &
+  Partial<Pick<Command, 'arguments' | 'argumentsBeforeSubcommand'>>;
+
+// Full invocation path of every registered command, e.g.
+// `['firewall', 'rules', 'add']`, so help renders the complete command no
+// matter which parent a caller passes.
+const commandPaths = new WeakMap<CommandTreeNode, ReadonlyArray<string>>();
+const commandAncestors = new WeakMap<
+  CommandTreeNode,
+  ReadonlyArray<CommandTreeNode>
+>();
+
+/**
+ * Records the invocation path of every command in the registered tree.
+ * A subcommand object shared by two trees keeps the path it was first
+ * registered under.
+ */
+export function registerCommandPaths(roots: ReadonlyArray<CommandTreeNode>) {
+  const visit = (
+    command: CommandTreeNode,
+    ancestors: ReadonlyArray<CommandTreeNode>
+  ) => {
+    const path = [...ancestors.map(ancestor => ancestor.name), command.name];
+    if (!commandPaths.has(command)) {
+      commandPaths.set(command, path);
+      commandAncestors.set(command, ancestors);
+    }
+    for (const subcommand of command.subcommands ?? []) {
+      visit(subcommand, [...ancestors, command]);
+    }
+  };
+  for (const root of roots) {
+    visit(root, []);
+  }
+}
+
+/**
+ * Returns the registered invocation path of `command`, falling back to
+ * `parent` + `command` for commands outside the registered tree.
+ */
+export function getCommandPath(
+  command: Command,
+  parent?: Command
+): ReadonlyArray<string> {
+  const registered = commandPaths.get(command);
+  if (registered) {
+    return registered;
+  }
+  return parent ? [parent.name, command.name] : [command.name];
+}
+
 /**
  * Example: `▲ vercel deploy [path] [options]`
  * @param command
  * @returns
  */
-export function buildCommandSynopsisLine(command: Command, parent?: Command) {
-  const line: string[] = [INDENT, LOGO, chalk.bold(NAME)];
-  if (parent) {
-    line.push(chalk.bold(parent.name));
-  }
-  line.push(chalk.bold(command.name));
-  const args = command.arguments.slice(0);
+function argumentSynopsis(argument: CommandArgument): string {
+  const value = argument.required ? `<${argument.name}>` : `[${argument.name}]`;
+  return `${value}${argument.multiple ? '...' : ''}`;
+}
 
-  // If there are only subcommands, then there is an implicit "command" argument
+export function buildCommandSynopsisLine(
+  command: Command,
+  parent?: Command,
+  theme = createHelpTheme()
+) {
+  const line: string[] = [helpUsage(theme), theme.reference(NAME)];
+  const ancestors = commandAncestors.get(command) ?? (parent ? [parent] : []);
+  for (const [index, name] of getCommandPath(command, parent).entries()) {
+    line.push(theme.reference(remoteText(name)));
+    const ancestor = ancestors[index];
+    if (ancestor?.argumentsBeforeSubcommand) {
+      for (const argument of ancestor.arguments ?? [])
+        line.push(argumentSynopsis(argument));
+    }
+  }
+  const args = command.arguments.slice(0);
   if (
-    args.length === 0 &&
-    command.subcommands &&
-    command.subcommands.length > 0
+    command.subcommands?.some(subcommand => !subcommand.hidden) &&
+    (args.length === 0 || command.argumentsBeforeSubcommand)
   ) {
     args.push({
       name: 'command',
-      required: !command.subcommands.some(subcommand => subcommand.default),
+      required:
+        !command.runsWithoutSubcommand &&
+        !command.subcommands.some(subcommand => subcommand.default),
     });
   }
 
   if (args.length > 0) {
     for (const argument of args) {
-      let { name } = argument;
-      if (argument.multiple) {
-        name += ' ...';
-      }
-      line.push(argument.required ? name : `[${name}]`);
+      line.push(argumentSynopsis(argument));
     }
   }
-  if (command.options.length > 0) {
+  if (
+    command.options.some(
+      option => !option.deprecated && option.description !== undefined
+    )
+  ) {
     line.push('[options]');
   }
 
-  line.push(NEWLINE);
   return lineToString(line);
 }
 
 export function buildCommandOptionLines(
   commandOptions: ReadonlyArray<CommandOption>,
-  options: BuildHelpOutputOptions,
+  options: HelpLayoutOptions,
   sectionTitle: string
 ) {
   // Filter out deprecated and intentionally undocumented options
@@ -165,187 +269,97 @@ export function buildCommandOptionLines(
     a.name < b.name ? -1 : a.name > b.name ? 1 : 0
   );
 
-  // word wrapping requires the wrapped cell to have a fixed width.
-  // We need to track cell sizes to ensure the final column of cells is
-  // equal to the remainder of unused horizontal space.
-  let maxWidthOfUnwrappedColumns = 0;
-  const rows: (string | undefined | _CellOptions)[][] = [];
-  for (const option of filteredCommandOptions) {
-    const shorthandCell = option.shorthand
-      ? `${INDENT}-${option.shorthand},`
-      : '';
-    let longhandCell = `${INDENT}--${option.name}`;
-
-    if (option.argument) {
-      longhandCell += ` <${option.argument}>`;
-    }
-
-    longhandCell += INDENT;
-
-    const widthOfUnwrappedColumns = shorthandCell.length + longhandCell.length;
-    maxWidthOfUnwrappedColumns = Math.max(
-      widthOfUnwrappedColumns,
-      maxWidthOfUnwrappedColumns
-    );
-
-    rows.push([
-      shorthandCell,
-      longhandCell,
-      {
-        content: option.description,
-        wordWrap: true,
-      },
-    ]);
-  }
-
-  const finalColumnWidth = options.columns - maxWidthOfUnwrappedColumns;
-
-  const table = new Table(
-    Object.assign({}, tableOptions, {
-      colWidths: [null, null, finalColumnWidth],
-    })
+  return helpSection(
+    sectionTitle,
+    helpRows(
+      filteredCommandOptions.map(option => ({
+        syntax: [
+          ...(option.shorthand
+            ? [
+                { text: `-${option.shorthand}`, literal: true as const },
+                { text: ', ' },
+              ]
+            : []),
+          { text: `--${option.name}`, literal: true as const },
+          { text: option.argument ? ` <${option.argument}>` : '' },
+        ],
+        description: option.description ?? '',
+      })),
+      options.columns,
+      options.theme
+    ),
+    options.theme
   );
-
-  table.push(...rows);
-  return [
-    `${INDENT}${chalk.dim(sectionTitle)}:`,
-    NEWLINE,
-    NEWLINE,
-    table.toString(),
-    NEWLINE,
-    NEWLINE,
-  ].join('');
 }
 
 export function buildSubcommandLines(
   subcommands: ReadonlyArray<Command> | undefined,
-  options: BuildHelpOutputOptions
+  options: HelpLayoutOptions,
+  title = 'Commands'
 ) {
-  if (!subcommands) {
-    return null;
-  }
-
-  // word wrapping requires the wrapped cell to have a fixed width.
-  // We need to track cell sizes to ensure the final column of cells is
-  // equal to the remainder of unused horizontal space.
-  let maxWidthOfUnwrappedColumns = 0;
-  const rows: (string | undefined | _CellOptions)[][] = [];
-  for (const command of subcommands) {
-    if (command.hidden) {
-      continue;
-    }
-    const nameCell = `${INDENT}${command.name}`;
-    let argsCell = INDENT;
-
-    argsCell += command.arguments
-      .map(arg => {
-        return arg.required ? arg.name : `[${arg.name}]`;
-      })
-      .join(' ');
-
-    argsCell += INDENT;
-
-    const widthOfUnwrappedColumns = nameCell.length + argsCell.length;
-    maxWidthOfUnwrappedColumns = Math.max(
-      widthOfUnwrappedColumns,
-      maxWidthOfUnwrappedColumns
-    );
-
-    rows.push([
-      nameCell,
-      argsCell,
-      {
-        content: command.default
-          ? `${command.description} ${chalk.bold('(default)')}`
-          : command.description,
-        wordWrap: true,
-      },
-    ]);
-  }
-
-  // Really long descriptions go RIGHT up to the edge, which looks unpleasant.
-  const rightMargin = INDENT.repeat(4).length;
-  const finalColumnWidth =
-    options.columns - maxWidthOfUnwrappedColumns - rightMargin;
-
-  const table = new Table(
-    Object.assign({}, tableOptions, {
-      colWidths: [null, null, finalColumnWidth],
-    })
+  const visible = subcommands?.filter(command => !command.hidden);
+  if (!visible?.length) return null;
+  return helpSection(
+    title,
+    helpRows(
+      visible.map(command => ({
+        syntax: [
+          ...helpLiterals(helpCommandNames(command)),
+          ...command.arguments.map(argument => ({
+            text: ` ${argumentSynopsis(argument)}`,
+          })),
+        ],
+        description: `${command.summary ?? command.description}${command.default ? ' (default)' : ''}`,
+      })),
+      options.columns,
+      options.theme
+    ),
+    options.theme
   );
-
-  if (rows.length === 0) {
-    return null;
-  }
-
-  table.push(...rows);
-  return [
-    `${INDENT}${chalk.dim('Commands')}:`,
-    NEWLINE,
-    NEWLINE,
-    table.toString(),
-    NEWLINE,
-    NEWLINE,
-  ].join('');
 }
 
-export function buildCommandExampleLines(command: Command) {
-  if (!command.examples?.length) {
-    return null;
-  }
-  const outputArray: string[] = [`${INDENT}${chalk.dim('Examples:')}`, ''];
-  for (const example of command.examples) {
-    const nameLine: string[] = [INDENT];
-    nameLine.push(chalk.gray('-'));
-    nameLine.push(example.name);
-    outputArray.push(lineToString(nameLine));
-    outputArray.push('');
-    const buildValueLine = (value: string) => {
-      return lineToString([INDENT, INDENT, chalk.cyan(`$ ${value}`)]);
-    };
-    if (Array.isArray(example.value)) {
-      for (const line of example.value) {
-        outputArray.push(buildValueLine(line));
-      }
-    } else {
-      // The `as string` cast is necessary here since for
-      // some reason the `Array.isArray()` check above is
-      // properly narrowing the `readonly string[]` type
-      outputArray.push(buildValueLine(example.value as string));
-    }
-    outputArray.push('');
-  }
-
-  return outputArrayToString(outputArray);
+export function buildCommandExampleLines(
+  command: Pick<Command, 'examples'>,
+  columns = 80,
+  theme = createHelpTheme()
+) {
+  if (!command.examples?.length) return null;
+  return helpSection(
+    'Examples',
+    command.examples
+      .map(example => {
+        const values = Array.isArray(example.value)
+          ? example.value
+          : [example.value];
+        const placeholders = helpPlaceholders(values, example.placeholders);
+        return [
+          wrapHelpText(example.name, columns),
+          ...values.map(value => helpCommand(value, placeholders, theme)),
+        ].join(NEWLINE);
+      })
+      .join('\n\n'),
+    theme
+  );
 }
 
 export function buildCommandDocumentationLines(
   command: Command,
-  options: BuildHelpOutputOptions
+  options: HelpLayoutOptions & Pick<HelpOptions, 'parent' | 'omitDocumentation'>
 ) {
-  if (options.omitDocumentation) {
-    return null;
-  }
-
+  if (options.omitDocumentation) return null;
   const documentation = command.documentation ?? options.parent?.documentation;
-  if (!documentation) {
-    return null;
-  }
-
-  return outputArrayToString([
-    `${INDENT}${chalk.dim(`${documentation.label}:`)}`,
-    '',
-    lineToString([INDENT, INDENT, chalk.cyan(documentation.url)]),
-    '',
-  ]);
+  if (!documentation) return null;
+  const theme = options.theme;
+  return helpSection(
+    documentation.label,
+    `  ${theme.link(remoteText(documentation.url))}`,
+    theme
+  );
 }
 
-function buildDescriptionLine(
-  command: Command,
-  options: BuildHelpOutputOptions
-) {
-  const wrappingText = wordWrap(command.description, options.columns);
-  return `${wrappingText}${NEWLINE}`;
+interface HelpLayoutOptions {
+  columns: number;
+  theme: HelpTheme;
 }
 
 type BuildHelpOutputOptions = Omit<HelpOptions, 'columns'> & {
@@ -354,38 +368,254 @@ type BuildHelpOutputOptions = Omit<HelpOptions, 'columns'> & {
 
 export function buildHelpOutput(
   command: Command,
-  options: BuildHelpOutputOptions
+  input: BuildHelpOutputOptions
 ) {
-  const filteredGlobalOptions = command.disabledGlobalOptions
-    ? globalCommandOptions.filter(
-        opt => !command.disabledGlobalOptions?.includes(opt.name)
-      )
-    : globalCommandOptions;
-
-  const outputArray: (string | null)[] = [
-    '',
-    buildCommandSynopsisLine(command, options.parent),
-    buildDescriptionLine(command, options),
-    buildSubcommandLines(command.subcommands, options),
-    buildCommandOptionLines(command.options, options, 'Options'),
-    buildCommandOptionLines(filteredGlobalOptions, options, 'Global Options'),
-    buildCommandExampleLines(command),
-    buildCommandDocumentationLines(command, options),
-    '',
-  ];
-
-  return outputArrayToString(outputArray);
+  const options = {
+    ...input,
+    theme: input.theme ?? createHelpTheme(input.stream),
+  };
+  const globalOptions = globalCommandOptions.filter(
+    opt =>
+      'description' in opt && !command.disabledGlobalOptions?.includes(opt.name)
+  );
+  const sections = command.helpSections ?? [];
+  const buildSection = (section: HelpSection) =>
+    helpSection(
+      section.title,
+      [
+        helpRows(section.rows ?? [], options.columns, options.theme),
+        section.body
+          .map(line => {
+            if (typeof line !== 'string') {
+              const placeholders = helpPlaceholders(
+                [line.command],
+                line.placeholders
+              );
+              const hint = placeholders.length
+                ? `${wrapHelpText(`Replace ${placeholders.join(', ')} before running:`, options.columns)}\n`
+                : '';
+              return (
+                hint + helpCommand(line.command, placeholders, options.theme)
+              );
+            }
+            if (line === '') return '';
+            return section.preformatted
+              ? `  ${remoteText(line)}`
+              : wrapHelpText(line, options.columns);
+          })
+          .join(NEWLINE),
+      ]
+        .filter(Boolean)
+        .join(NEWLINE),
+      options.theme
+    );
+  const globalPointer = `See ${helpInlineCommand('vercel --help')}${command.disabledGlobalOptions?.length ? ` (except ${command.disabledGlobalOptions.map(name => `--${name}`).join(', ')})` : ''}`;
+  const globalHelp =
+    `Global Options: ${globalPointer}`.length <= options.columns
+      ? `${helpHeading('Global Options', options.theme)} ${globalPointer}`
+      : helpSection(
+          'Global Options',
+          wrapHelpText(globalPointer, options.columns),
+          options.theme
+        );
+  const header = [
+    buildCommandSynopsisLine(command, options.parent, options.theme),
+    command.descriptionTone === 'normal'
+      ? wrapHelpText(command.description.trim(), options.columns, '')
+      : options.theme.description(
+          wrapHelpText(command.description.trim(), options.columns, '')
+        ),
+  ]
+    .filter(Boolean)
+    .join(NEWLINE);
+  return (
+    [
+      header,
+      buildSubcommandLines(
+        command.subcommands,
+        options,
+        command.subcommandsTitle
+      ),
+      command.arguments.some(argument => argument.description)
+        ? helpSection(
+            'Arguments',
+            helpRows(
+              command.arguments.map(argument => ({
+                syntax: argumentSynopsis(argument),
+                description: argument.description ?? '',
+              })),
+              options.columns,
+              options.theme
+            ),
+            options.theme
+          )
+        : null,
+      buildCommandOptionLines(command.options, options, 'Options'),
+      ...sections
+        .filter(section => section.placement === 'afterOptions')
+        .map(buildSection),
+      globalOptions.length ? globalHelp : null,
+      buildCommandExampleLines(command, options.columns, options.theme),
+      ...sections
+        .filter(section => section.placement !== 'afterOptions')
+        .map(buildSection),
+      buildCommandDocumentationLines(command, options),
+    ]
+      .filter(Boolean)
+      .join('\n\n') + NEWLINE
+  );
 }
 
 export interface HelpOptions {
   columns?: number;
   parent?: Command;
   omitDocumentation?: true;
+  stream: { isTTY?: boolean };
+  theme?: HelpTheme;
 }
 
 export function help(command: Command, options: HelpOptions) {
   return buildHelpOutput(command, {
     ...options,
-    columns: options.columns ?? 80,
+    columns: helpColumns(options.columns),
+    theme: options.theme ?? createHelpTheme(options.stream),
   });
+}
+
+function findOption(
+  token: string,
+  options: ReadonlyArray<CommandOption>
+): CommandOption | undefined {
+  if (token.startsWith('--')) {
+    return options.find(candidate => candidate.name === token.slice(2));
+  }
+  return options.find(candidate => getShortFlags(candidate).includes(token));
+}
+
+function subtreeOptions(command: Command): CommandOption[] {
+  return [
+    ...command.options,
+    ...(command.subcommands ?? []).flatMap(subtreeOptions),
+  ];
+}
+
+// Flags may appear before the subcommand that declares them, as in
+// `vercel firewall --project my-app rules add`, so fall back to the options
+// declared anywhere below the current command.
+function isSubcommandOf(command: Command, token: string | undefined) {
+  return (
+    token !== undefined &&
+    (command.subcommands ?? []).some(
+      subcommand =>
+        subcommand.name === token || subcommand.aliases.includes(token)
+    )
+  );
+}
+
+function optionTakesValue(
+  token: string,
+  walkedOptions: ReadonlyArray<CommandOption>,
+  command: Command,
+  nextToken: string | undefined
+): boolean {
+  const walked = findOption(token, walkedOptions);
+  if (walked) {
+    return walked.type !== Boolean;
+  }
+  // A value-taking flag declared further down wins over a global flag with
+  // the same letter, as in `vercel flags -d "Checkout" create`, unless its
+  // value would be a subcommand, as in `vercel flags -d list`.
+  const below = findOption(token, subtreeOptions(command));
+  const global = findOption(token, globalCommandOptions);
+  if (
+    below &&
+    below.type !== Boolean &&
+    (!global || global.type !== Boolean || !isSubcommandOf(command, nextToken))
+  ) {
+    return true;
+  }
+  return global !== undefined && global.type !== Boolean;
+}
+
+export interface HelpTarget {
+  command: Command;
+  /** Closest ancestor that carries documentation, used as the help fallback. */
+  parent?: Command;
+  /** The subcommand tokens as typed, for telemetry. */
+  typedPath: ReadonlyArray<string>;
+  /**
+   * A token that names no subcommand of a group that takes no arguments, has
+   * no default subcommand, and does no work of its own, as `nope` in
+   * `vercel env nope --help`.
+   */
+  unknownSegment?: string;
+}
+
+/**
+ * Resolves which command a `--help` invocation asks about by walking the
+ * subcommand tokens that follow `root`. Flag values are skipped using the
+ * options of the commands walked so far, and the walk stops at the first
+ * token that is not a subcommand, since that is a positional argument.
+ */
+export function resolveHelpTarget(
+  root: Command,
+  tokens: ReadonlyArray<string>
+): HelpTarget {
+  let command = root;
+  const ancestors: Command[] = [];
+  const typedPath: string[] = [];
+  const options: CommandOption[] = [...root.options];
+  let groupArguments = 0;
+  let unknownSegment: string | undefined;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (token === '--') {
+      break;
+    }
+    if (token.startsWith('-')) {
+      if (
+        !token.includes('=') &&
+        optionTakesValue(token, options, command, tokens[i + 1])
+      ) {
+        i++;
+      }
+      continue;
+    }
+    const subcommand = command.subcommands?.find(
+      candidate => candidate.name === token || candidate.aliases.includes(token)
+    );
+    if (!subcommand) {
+      if (
+        command.argumentsBeforeSubcommand &&
+        groupArguments < command.arguments.length
+      ) {
+        groupArguments++;
+        continue;
+      }
+      if (
+        command.subcommands?.length &&
+        command.arguments.length === 0 &&
+        !command.runsWithoutSubcommand &&
+        !command.subcommands.some(candidate => candidate.default)
+      ) {
+        unknownSegment = token;
+      }
+      break;
+    }
+    ancestors.push(command);
+    typedPath.push(token);
+    options.push(...subcommand.options);
+    command = subcommand;
+    groupArguments = 0;
+  }
+
+  let parent = ancestors[ancestors.length - 1];
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    if (ancestors[i].documentation) {
+      parent = ancestors[i];
+      break;
+    }
+  }
+  return { command, parent, typedPath, unknownSegment };
 }

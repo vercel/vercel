@@ -1,5 +1,11 @@
 # @vercel/frameworks
 
+## 3.35.0
+
+### Minor Changes
+
+- 3520d5c: Detect Dockerfile and Containerfile projects with the Container framework preset while keeping plain filenames lower priority than other framework matches.
+
 ## 3.34.0
 
 ### Minor Changes

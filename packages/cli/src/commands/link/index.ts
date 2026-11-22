@@ -1,10 +1,15 @@
 import type Client from '../../util/client';
 import chalk from 'chalk';
+import { join } from 'path';
 import { parseArguments } from '../../util/get-args';
 import getSubcommand from '../../util/get-subcommand';
 import cmd from '../../util/output/cmd';
 import { ensureLink } from '../../util/link/ensure-link';
-import { addRepoLink, ensureRepoLink } from '../../util/link/repo';
+import {
+  addRepoLink,
+  ensureRepoLink,
+  findRepoRoot,
+} from '../../util/link/repo';
 import { type Command, help } from '../help';
 import { addSubcommand, linkCommand } from './command';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
@@ -16,6 +21,7 @@ import getScope, { detectExplicitScope } from '../../util/get-scope';
 import { isPromptCanceledError } from '../../util/input/prompt-cancellation';
 import pull from '../env/pull';
 import { resolveProjectCwd } from '../../util/projects/find-project-root';
+import { promptExperimentalServicesMigration } from '../../util/services/migrate-experimental-services';
 
 const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
@@ -73,7 +79,7 @@ async function linkProject(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { subcommand, subcommandOriginal } = getSubcommand(
@@ -89,7 +95,11 @@ async function linkProject(client: Client) {
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: linkCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: linkCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -99,7 +109,7 @@ async function linkProject(client: Client) {
     if (parsedArgs.flags['--help']) {
       telemetry.trackCliFlagHelp('link', subcommandOriginal);
       printHelp(addSubcommand);
-      return 2;
+      return 0;
     }
 
     telemetry.trackCliSubcommandAdd(subcommandOriginal);
@@ -125,13 +135,18 @@ async function linkProject(client: Client) {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('link');
-    output.print(help(linkCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(linkCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   telemetry.trackCliFlagRepo(parsedArgs.flags['--repo']);
@@ -159,7 +174,9 @@ async function linkProject(client: Client) {
   }
 
   if (parsedArgs.flags['--repo']) {
-    output.warn(`The ${cmd('--repo')} flag is in alpha, please report issues`);
+    output.warn(
+      `The ${cmd('--repo')} option is in alpha, please report issues`
+    );
     try {
       await ensureRepoLink(client, cwd, { yes, overwrite: true });
     } catch (err) {
@@ -192,6 +209,21 @@ async function linkProject(client: Client) {
     if (typeof link === 'number') {
       return link;
     }
+
+    const projectCwd = await resolveProjectCwd(cwd);
+    const rootDirectory = link.project.rootDirectory;
+    const repoRoot =
+      link.repoRoot ??
+      (rootDirectory ? await findRepoRoot(projectCwd) : undefined);
+    await promptExperimentalServicesMigration({
+      client,
+      cwd: rootDirectory
+        ? join(repoRoot ?? projectCwd, rootDirectory)
+        : (link.repoRoot ?? projectCwd),
+      autoConfirm: yes,
+      nonInteractive: linkNonInteractive,
+      allowConfigExecution: false,
+    });
 
     await refreshOidcTokenAfterLink(client, cwd);
   }

@@ -41,6 +41,28 @@ async function deploy() {
 }
 ```
 
+The optional second argument accepts deployment options, either as an object or
+as a `Promise<DeploymentOptions>`. Use a promise to resolve metadata concurrently
+with local file collection:
+
+```js
+const options = readDeploymentMetadata().then(gitMetadata => ({ gitMetadata }));
+
+for await (const event of createDeployment(
+  { token: process.env.TOKEN, path: '/path/to/project' },
+  options
+)) {
+  // Handle deployment progress.
+}
+```
+
+Start consuming the iterator immediately after creating the promise: the async
+generator begins running on its first iteration. File collection and the
+`hashes-calculated` event can finish before the options resolve, but uploads and
+deployment creation wait for them. If the options reject, iteration throws before
+uploading or creating the deployment. If local file collection fails first, that
+error is reported and a later options rejection is handled internally.
+
 Full list of events:
 
 ```js

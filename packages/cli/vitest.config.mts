@@ -23,8 +23,10 @@ export default mergeConfig(rootConfig, {
     },
   },
   test: {
+    globalSetup: ['./vitest.global-setup.mts'],
     setupFiles: ['./vitest.setup.mts'],
-    exclude: supportsVlt ? [] : vltTests,
+    // The Testserver lane has its own config (vitest.testserver.config.mts).
+    exclude: ['test/testserver/**', ...(supportsVlt ? [] : vltTests)],
   },
   ssr: {
     // Externalize peer dependencies so Vite doesn't try to resolve them

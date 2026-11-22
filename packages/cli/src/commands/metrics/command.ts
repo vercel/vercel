@@ -1,4 +1,11 @@
-import { formatOption, jsonOption, projectOption } from '../../util/arg-common';
+import {
+  environmentOption,
+  formatOption,
+  jsonOption,
+  projectOption,
+  sinceOption,
+  untilOption,
+} from '../../util/arg-common';
 import { packageName } from '../../util/pkg-name';
 
 export const schemaSubcommand = {
@@ -46,7 +53,8 @@ export const metricsCommand = {
   options: [
     {
       name: 'aggregation',
-      shorthand: 'a',
+      shorthand: null,
+      deprecatedShorthand: 'a',
       type: String,
       deprecated: false,
       description:
@@ -63,7 +71,8 @@ export const metricsCommand = {
     },
     {
       name: 'limit',
-      shorthand: 'l',
+      shorthand: 'n',
+      deprecatedShorthand: 'l',
       type: Number,
       deprecated: false,
       description: 'Max groups per time bucket (default: 10)',
@@ -88,8 +97,8 @@ export const metricsCommand = {
       argument: 'asc|desc',
     },
     {
-      name: 'filter',
-      shorthand: 'f',
+      name: 'query',
+      shorthand: 'q',
       type: [String],
       deprecated: false,
       get description() {
@@ -97,38 +106,42 @@ export const metricsCommand = {
           ? 'OData filter expression (repeatable, ANDed together)'
           : 'KQL filter expression (repeatable, ANDed together)';
       },
+      argument: 'TEXT',
+    },
+    // Hidden: `--filter` and `-f` are the old names of `--query`.
+    {
+      name: 'filter',
+      shorthand: 'f',
+      type: [String],
+      deprecated: true,
+      description: 'Deprecated alias for `--query`',
       argument: 'EXPR',
+    },
+    {
+      ...environmentOption,
+      description:
+        'Limit the query to one environment, such as production or preview',
     },
     {
       name: 'prod',
       shorthand: null,
       type: Boolean,
-      deprecated: false,
-      description: 'Limit query to the production environment',
+      deprecated: true,
+      description: 'Deprecated alias for `--environment production`',
     },
     {
-      name: 'since',
-      shorthand: 's',
+      ...sinceOption,
+      description: `${sinceOption.description} (default: 1h ago)`,
+    },
+    untilOption,
+    {
+      name: 'granularity',
+      shorthand: null,
+      deprecatedShorthand: 'g',
       type: String,
       deprecated: false,
       description:
-        'Start time: relative (1h, 30m, 2d) or ISO date (default: 1h)',
-      argument: 'TIME',
-    },
-    {
-      name: 'until',
-      shorthand: 'u',
-      type: String,
-      deprecated: false,
-      description: 'End time (default: now)',
-      argument: 'TIME',
-    },
-    {
-      name: 'granularity',
-      shorthand: 'g',
-      type: String,
-      deprecated: false,
-      description: 'Time bucket size: 5m, 15m, 1h, 1d (default: auto)',
+        'Time bucket size: 1m, 5m, 15m, 1h, 4h, 1d (default: auto; raised when too fine for the time range)',
       argument: 'SIZE',
     },
     {
@@ -175,7 +188,7 @@ export const metricsCommand = {
     return [
       {
         name: '5xx errors by error code in the last hour',
-        value: `${packageName} metrics vercel.function_invocation.count -f "${statusFilter}" --group-by ${errorCode} --since 1h`,
+        value: `${packageName} metrics vercel.function_invocation.count --query "${statusFilter}" --group-by ${errorCode} --since 1h`,
       },
       {
         name: 'Function invocations by HTTP status code',
@@ -183,19 +196,19 @@ export const metricsCommand = {
       },
       {
         name: 'Function duration by route',
-        value: `${packageName} metrics vercel.function_invocation.function_duration_ms -a avg --group-by route --since 1h`,
+        value: `${packageName} metrics vercel.function_invocation.function_duration_ms --aggregation avg --group-by route --since 1h`,
       },
       {
         name: 'AI Gateway costs by provider',
-        value: `${packageName} metrics ${aiGatewayCostMetric} -a sum --group-by ${aiProvider} --since 7d`,
+        value: `${packageName} metrics ${aiGatewayCostMetric} --aggregation sum --group-by ${aiProvider} --since 7d`,
       },
       {
         name: 'Core Web Vitals (LCP) by route',
-        value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d`,
+        value: `${packageName} metrics vercel.speed_insights.lcp_ms --aggregation p75 --environment production --group-by route --since 7d`,
       },
       {
         name: 'Routes with the lowest p75 LCP',
-        value: `${packageName} metrics vercel.speed_insights.lcp_ms -a p75 --prod --group-by route --since 7d --order-by value --order asc`,
+        value: `${packageName} metrics vercel.speed_insights.lcp_ms --aggregation p75 --environment production --group-by route --since 7d --order-by value --order asc`,
       },
       {
         name: canonical
@@ -207,7 +220,7 @@ export const metricsCommand = {
       },
       {
         name: 'Visitors time series from the top 5 countries',
-        value: `${packageName} metrics ${pageViewMetric} -a unique/${visitorId} --group-by country --since 1d --granularity 1h --limit 5`,
+        value: `${packageName} metrics ${pageViewMetric} --aggregation unique/${visitorId} --group-by country --since 1d --granularity 1h --limit 5`,
       },
       {
         name: 'List available metrics',
@@ -215,11 +228,11 @@ export const metricsCommand = {
       },
       {
         name: 'Function executions matching an API route',
-        value: `${packageName} metrics vercel.function_invocation.count -f ${routeFilter} --group-by route --since 1h`,
+        value: `${packageName} metrics vercel.function_invocation.count --query ${routeFilter} --group-by route --since 1h`,
       },
       {
         name: 'Function executions matching multiple filters',
-        value: `${packageName} metrics vercel.function_invocation.count -f "${statusFilter}" -f ${routeFilter} --since 1h`,
+        value: `${packageName} metrics vercel.function_invocation.count --query "${statusFilter}" --query ${routeFilter} --since 1h`,
       },
       {
         name: 'Show schema for a metric prefix',

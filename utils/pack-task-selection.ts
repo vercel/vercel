@@ -63,6 +63,25 @@ export function hoistRegistryDependenciesFromWorkspaceTarballs(
   Object.assign(parent, toAdd);
 }
 
+/**
+ * git short SHAs are hexadecimal, but they occasionally consist entirely of
+ * decimal digits (roughly a 1-in-16 chance per character). Semver treats an
+ * all-digit prerelease identifier as numeric and forbids leading zeroes on
+ * numeric identifiers (see https://semver.org): a sha like `0749271` used
+ * directly as `<version>-0749271` is an invalid version string under strict
+ * parsers (`npm install` failed with `Invalid Version: 0.2.7-0749271`),
+ * while looser parsers instead silently drop the leading zero when they
+ * reformat it, corrupting the identifier (e.g. a vlt-installed package
+ * materializing `10.0.1-749271` instead of the `10.0.1-0749271` that was
+ * actually published, tripping the Builder graph's version check). Prefix
+ * all-digit identifiers with a non-digit so the result always parses as a
+ * stable alphanumeric identifier, regardless of which characters the sha
+ * happens to contain.
+ */
+export function toSemverPreviewIdentifier(id: string): string {
+  return /^[0-9]+$/.test(id) ? `g${id}` : id;
+}
+
 export function pinWorkspacePeerDependencies(
   packageObj: PackageManifest,
   workspaceVersions: ReadonlyMap<string, string>,

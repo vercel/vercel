@@ -1,6 +1,6 @@
 import type Client from '../../util/client';
 import output from '../../output-manager';
-import type { Deployment } from '@vercel-internals/types';
+import { resolveDeployment } from './resolve-deployment';
 
 export async function getDeploymentUrlById(
   client: Client,
@@ -32,9 +32,10 @@ export async function getDeploymentUrlById(
       fullDeploymentId = `dpl_${deploymentIdOrUrl}`;
     }
 
-    const deployment = await client.fetch<Deployment>(
-      `/v13/deployments/${fullDeploymentId}`,
-      { accountId }
+    const deployment = await resolveDeployment(
+      client,
+      fullDeploymentId,
+      accountId
     );
 
     if (!deployment || !deployment.url) {

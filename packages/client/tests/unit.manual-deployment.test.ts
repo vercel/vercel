@@ -278,7 +278,8 @@ describe('manual deployment', () => {
         'test-token',
         expect.objectContaining({
           method: 'POST',
-        })
+        }),
+        undefined
       );
     });
 

@@ -55,7 +55,7 @@ describe('skills', () => {
 
     const exitCode = await skills(client);
 
-    expect(exitCode).toBe(2);
+    expect(exitCode).toBe(0);
     expect(client.stderr.getFullOutput()).toContain('--json');
     expect(client.stderr.getFullOutput()).not.toContain('--format');
   });

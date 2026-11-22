@@ -1,0 +1,33 @@
+{
+  "probes": [
+    {
+      "path": "/block",
+      "status": 403,
+      "mustContain": "blocked"
+    },
+    {
+      "path": "/api/a/hello",
+      "status": 200,
+      "mustContain": "\"service\":\"api-a\"",
+      "responseHeaders": { "x-proxy-ran": "1" }
+    },
+    {
+      "path": "/api/a/deep/path",
+      "status": 200,
+      "mustContain": "\"service\":\"api-a\"",
+      "responseHeaders": { "x-proxy-ran": "1" }
+    },
+    {
+      "path": "/api/b/world",
+      "status": 200,
+      "mustContain": "\"service\":\"api-b\"",
+      "responseHeaders": { "x-proxy-ran": "1" }
+    },
+    {
+      "path": "/api/b/deep/path",
+      "status": 200,
+      "mustContain": "\"service\":\"api-b\"",
+      "responseHeaders": { "x-proxy-ran": "1" }
+    }
+  ]
+}

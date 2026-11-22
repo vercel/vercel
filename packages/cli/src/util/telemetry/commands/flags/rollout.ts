@@ -1,10 +1,10 @@
 import { TelemetryClient } from '../..';
-import { STANDARD_ENVIRONMENTS } from '../../../target/standard-environments';
+import {
+  STANDARD_ENVIRONMENTS,
+  type StandardEnvironment,
+} from '../../../target/standard-environments';
 import type { rolloutSubcommand } from '../../../../commands/flags/command';
 import type { TelemetryMethods } from '../../types';
-
-type StandardEnvironment = (typeof STANDARD_ENVIRONMENTS)[number];
-
 export class FlagsRolloutTelemetryClient
   extends TelemetryClient
   implements TelemetryMethods<typeof rolloutSubcommand>
@@ -71,6 +71,15 @@ export class FlagsRolloutTelemetryClient
     if (stages?.length) {
       this.trackCliOption({
         option: 'stage',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionFinalPercentage(percentage: string | undefined) {
+    if (percentage !== undefined) {
+      this.trackCliOption({
+        option: 'final-percentage',
         value: this.redactedValue,
       });
     }

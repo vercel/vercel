@@ -17,12 +17,13 @@ import { type Command, help } from '../help';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { WebhooksTelemetryClient } from '../../util/telemetry/commands/webhooks';
 import output from '../../output-manager';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   create: ['create', 'add'],
-  get: ['get', 'inspect'],
+  inspect: ['inspect', 'get'],
   ls: ['ls', 'list'],
-  rm: ['rm', 'remove', 'delete'],
+  delete: ['delete', 'rm', 'del', 'remove'],
 };
 
 export default async function main(client: Client) {
@@ -34,7 +35,7 @@ export default async function main(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new WebhooksTelemetryClient({
@@ -52,15 +53,24 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('webhooks');
-    output.print(help(webhooksCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(webhooksCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: webhooksCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: webhooksCommand,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
@@ -70,20 +80,29 @@ export default async function main(client: Client) {
         return printHelp(createSubcommand);
       }
       telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      if (subcommandOriginal === 'add') {
+        warnDeprecatedSubcommand(client, 'webhooks add', 'webhooks create');
+      }
       return create(client, args);
-    case 'get':
+    case 'inspect':
       if (needHelp) {
         telemetry.trackCliFlagHelp('webhooks', subcommandOriginal);
         return printHelp(getSubcommandDef);
       }
-      telemetry.trackCliSubcommandGet(subcommandOriginal);
+      telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      if (subcommandOriginal === 'get') {
+        warnDeprecatedSubcommand(client, 'webhooks get', 'webhooks inspect');
+      }
       return get(client, args);
-    case 'rm':
+    case 'delete':
       if (needHelp) {
         telemetry.trackCliFlagHelp('webhooks', subcommandOriginal);
         return printHelp(removeSubcommand);
       }
-      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      telemetry.trackCliSubcommandDelete(subcommandOriginal);
+      if (subcommandOriginal === 'remove') {
+        warnDeprecatedSubcommand(client, 'webhooks remove', 'webhooks delete');
+      }
       return rm(client, args);
     default:
       if (needHelp) {

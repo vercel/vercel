@@ -29,7 +29,7 @@ describe('ai-gateway rules add', () => {
     it('returns exit code 2', async () => {
       client.setArgv('ai-gateway', 'rules', 'add', '--help');
       const exitCode = await aiGateway(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'subcommand:rules', value: 'rules' },
@@ -208,8 +208,8 @@ describe('ai-gateway rules add', () => {
       useUser();
       client.setArgv('ai-gateway', 'rules', 'add', '--source', 'm');
       const exitCodePromise = aiGateway(client);
-      await expect(client.stderr).toOutput('--type flag is required');
-      expect(await exitCodePromise).toBe(1);
+      await expect(client.stderr).toOutput('--type option is required');
+      expect(await exitCodePromise).toBe(2);
     });
 
     it('rejects an invalid --type', async () => {
@@ -224,16 +224,16 @@ describe('ai-gateway rules add', () => {
         'm'
       );
       const exitCodePromise = aiGateway(client);
-      await expect(client.stderr).toOutput('--type flag is required');
-      expect(await exitCodePromise).toBe(1);
+      await expect(client.stderr).toOutput('--type option is required');
+      expect(await exitCodePromise).toBe(2);
     });
 
     it('requires --source', async () => {
       useUser();
       client.setArgv('ai-gateway', 'rules', 'add', '--type', 'deny');
       const exitCodePromise = aiGateway(client);
-      await expect(client.stderr).toOutput('--source flag is required');
-      expect(await exitCodePromise).toBe(1);
+      await expect(client.stderr).toOutput('--source option is required');
+      expect(await exitCodePromise).toBe(2);
     });
 
     it('requires --destination for a rewrite rule', async () => {
@@ -251,7 +251,7 @@ describe('ai-gateway rules add', () => {
       await expect(client.stderr).toOutput(
         'rewrite rule requires --destination'
       );
-      expect(await exitCodePromise).toBe(1);
+      expect(await exitCodePromise).toBe(2);
     });
 
     it('rejects --destination on a deny rule', async () => {

@@ -31,6 +31,7 @@
       "command": ["node", "utils/gen.js"],
       "inputs": ["utils/gen.js"],
       "outputs": [
+        "turbo-host-cache-key.json",
         "turbo-native-cache-key.json",
         "turbo-platform-cache-key.json"
       ]
@@ -59,7 +60,16 @@
         "--dir",
         "test"
       ],
-      "inputs": ["test/utils/**", "vitest.config.mts"]
+      "inputs": [
+        "test/utils/**",
+        "vitest.config.mts",
+        ".changeset/config.json",
+        "utils/expand-internal-changesets.mjs",
+        "utils/check-npm-packages-exist.mjs",
+        "utils/mirror-preview-tarballs.js",
+        "packages/*/package.json",
+        "internals/*/package.json"
+      ]
     },
     "//#test:utils": {
       "command": [
@@ -72,7 +82,13 @@
         "--dir",
         "utils"
       ],
-      "inputs": ["utils/**", "vitest.config.mts"]
+      "inputs": [
+        "utils/**",
+        "vitest.config.mts",
+        "package.json",
+        ".github/workflows/**",
+        "packages/python-analysis/rust-toolchain.toml"
+      ]
     },
     "build": {
       "dependsOn": ["^build"],
@@ -117,6 +133,20 @@
     "test-unit": {
       "dependsOn": ["^build", "//#generate:cache-keys"],
       "env": ["NODE_VERSION", "VITEST_SHARD"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        {
+          "mode": "dependencyOutputs",
+          "globs": ["turbo-platform-cache-key.json"],
+          "from": ["//#generate:cache-keys"]
+        },
+        "$TURBO_ROOT$/vitest.config.mts"
+      ],
+      "outputLogs": "new-only"
+    },
+    "test-build-integration": {
+      "dependsOn": ["^build", "//#generate:cache-keys"],
+      "env": ["NODE_VERSION"],
       "inputs": [
         "$TURBO_DEFAULT$",
         {

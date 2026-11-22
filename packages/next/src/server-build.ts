@@ -1427,6 +1427,7 @@ export async function serverBuild({
           '___next_launcher.cjs'
         ),
         operationType,
+        affinity: group.affinity,
         memory: group.memory,
         regions: group.regions,
         functionFailoverRegions: group.functionFailoverRegions,

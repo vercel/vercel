@@ -1,6 +1,6 @@
 import plural from 'pluralize';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import param from '../../util/output/param';
 import { getCommandNamePlain } from '../../util/pkg-name';
 import { parseArguments } from '../../util/get-args';
@@ -21,7 +21,7 @@ import type { Issuer } from '../../util/kms/types';
 import { KmsRmTelemetryClient } from '../../util/telemetry/commands/kms/rm';
 import { removeSubcommand } from './command';
 
-const USAGE = 'kms rm <issuerId>';
+const USAGE = 'kms delete <issuerId>';
 
 export default async function rm(client: Client, argv: string[]) {
   const telemetry = new KmsRmTelemetryClient({
@@ -36,7 +36,7 @@ export default async function rm(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [issuerId] = args;
@@ -70,7 +70,7 @@ export default async function rm(client: Client, argv: string[]) {
     );
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   // Resolve the issuer first so the confirmation names what is being deleted.
   if (!client.nonInteractive) {
@@ -159,7 +159,7 @@ export default async function rm(client: Client, argv: string[]) {
     return 0;
   }
 
-  printAlignedLabel('Removed', issuer.name, { gutter: '✓' });
+  printAlignedLabel('Deleted', issuer.name, { gutter: '✓' });
   printAlignedLabel('Issuer', issuer.id);
   printAlignedLabel('Team', contextName);
 

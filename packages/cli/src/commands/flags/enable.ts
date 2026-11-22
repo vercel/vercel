@@ -1,3 +1,4 @@
+import { logArchivedFlagNotice } from '../../util/flags/archived-flag-notice';
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { parseArguments } from '../../util/get-args';
@@ -42,7 +43,7 @@ export default async function enable(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -58,7 +59,7 @@ export default async function enable(
     output.log(
       `Example: ${getCommandName('flags enable my-feature --environment production')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentFlag(flagArg);
@@ -87,12 +88,7 @@ export default async function enable(
     const flag = await getFlag(client, project.id, flagArg);
     output.stopSpinner();
 
-    if (flag.state === 'archived') {
-      output.error(
-        `Flag ${chalk.bold(flag.slug)} is archived and cannot be enabled`
-      );
-      return 1;
-    }
+    logArchivedFlagNotice(flag);
 
     // Only boolean flags can be enabled/disabled via CLI
     if (flag.kind !== 'boolean') {
@@ -124,9 +120,9 @@ export default async function enable(
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
 
     environment = await resolveFlagEnvironment(
@@ -162,10 +158,10 @@ export default async function enable(
     output.stopSpinner();
 
     output.success(
-      `Feature flag ${chalk.bold(flag.slug)} has been enabled in ${chalk.bold(environment)}`
+      `Feature flag ${chalk.bold(flag.slug)} ${flag.state === 'archived' ? 'configuration has been updated' : 'has been enabled'} in ${chalk.bold(environment)}`
     );
     output.log(
-      `  ${chalk.dim('Serving variant:')} ${formatVariantForDisplay(onVariant)}`
+      `  ${chalk.dim(flag.state === 'archived' ? 'Configured variant:' : 'Serving variant:')} ${formatVariantForDisplay(onVariant)}`
     );
   } catch (err) {
     output.stopSpinner();
@@ -187,12 +183,12 @@ export default async function enable(
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     printError(err);
-    return 1;
+    return 2;
   }
 
   return 0;

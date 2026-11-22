@@ -1,6 +1,9 @@
 import { TelemetryClient } from '../..';
 import type { evaluationsSubcommand } from '../../../../commands/flags/command';
-import { isFlagEvaluationsGranularity } from '../../../../commands/flags/evaluations-config';
+import {
+  isFlagEvaluationsDimension,
+  isFlagEvaluationsGranularity,
+} from '../../../../commands/flags/evaluations-config';
 import type { TelemetryMethods } from '../../types';
 
 export class FlagsEvaluationsTelemetryClient
@@ -41,6 +44,21 @@ export class FlagsEvaluationsTelemetryClient
         value: isFlagEvaluationsGranularity(granularity)
           ? granularity
           : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionGroupBy(groupBy: string[] | undefined) {
+    if (groupBy && groupBy.length > 0) {
+      this.trackCliOption({
+        option: 'group-by',
+        value: groupBy
+          .map(dimension =>
+            isFlagEvaluationsDimension(dimension)
+              ? dimension
+              : this.redactedValue
+          )
+          .join(','),
       });
     }
   }

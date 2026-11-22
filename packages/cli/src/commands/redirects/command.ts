@@ -1,5 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { projectOption, yesOption } from '../../util/arg-common';
+import {
+  jsonOption,
+  nextCursorOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const listSubcommand = {
   name: 'list',
@@ -9,26 +14,29 @@ export const listSubcommand = {
   arguments: [],
   options: [
     projectOption,
+    jsonOption,
+    {
+      name: 'query',
+      description: 'Search for redirects by source or destination',
+      shorthand: 'q',
+      type: String,
+      argument: 'TEXT',
+      deprecated: false,
+    },
+    // Hidden: `--search` and `-s` are the old names of `--query`.
     {
       name: 'search',
-      description: 'Search for redirects by source or destination',
+      description: 'Deprecated alias for `--query`',
       shorthand: 's',
       type: String,
       argument: 'QUERY',
-      deprecated: false,
+      deprecated: true,
     },
-    {
-      name: 'next',
-      description: 'Continue from a previous response',
-      shorthand: null,
-      type: Number,
-      argument: 'NUMBER',
-      deprecated: false,
-    },
+    nextCursorOption,
     {
       name: 'limit',
       description: 'Number of redirects per page (default: 50)',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       argument: 'NUMBER',
       deprecated: false,
@@ -57,12 +65,22 @@ export const listSubcommand = {
       deprecated: false,
     },
     {
+      name: 'redirects-version',
+      description: 'List redirects from a specific version',
+      shorthand: null,
+      type: String,
+      argument: 'VERSION',
+      deprecated: false,
+    },
+    // Hidden: `--version` never picked a version. `vercel` reads it as its
+    // own `--version` flag before this command runs, so the value is dropped.
+    {
       name: 'version',
-      description: 'List redirects from a specific version ID',
+      description: 'Use `--redirects-version`',
       shorthand: null,
       type: String,
       argument: 'VERSION_ID',
-      deprecated: false,
+      deprecated: true,
     },
   ],
   examples: [
@@ -72,11 +90,12 @@ export const listSubcommand = {
     },
     {
       name: 'Search for redirects',
-      value: `${packageName} redirects list --search "/old-path"`,
+      value: `${packageName} redirects list --query "/old-path"`,
     },
     {
       name: 'List redirects on page 2',
-      value: `${packageName} redirects list --next 2`,
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} redirects list --next <CURSOR>`,
     },
     {
       name: 'List redirects with custom page size',
@@ -90,7 +109,7 @@ export const listVersionsSubcommand = {
   aliases: ['ls-versions'],
   description: 'List all versions of redirects',
   arguments: [],
-  options: [projectOption],
+  options: [projectOption, jsonOption],
   examples: [
     {
       name: 'List all redirect versions',
@@ -171,9 +190,9 @@ export const addSubcommand = {
 } as const;
 
 export const uploadSubcommand = {
-  name: 'upload',
-  aliases: ['import'],
-  description: 'Upload redirects from a CSV or JSON file',
+  name: 'import',
+  aliases: ['upload'],
+  description: 'Import redirects from a CSV or JSON file',
   arguments: [
     {
       name: 'file',
@@ -187,29 +206,37 @@ export const uploadSubcommand = {
       description: 'Skip confirmation prompt',
     },
     {
-      name: 'overwrite',
+      name: 'force',
       description: 'Replace all existing redirects',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
+    // Hidden: `--overwrite` is the old name of `--force`.
+    {
+      name: 'overwrite',
+      description: 'Deprecated alias for `--force`',
+      shorthand: null,
+      type: Boolean,
+      deprecated: true,
+    },
   ],
   examples: [
     {
-      name: 'Upload redirects from CSV file',
-      value: `${packageName} redirects upload redirects.csv`,
+      name: 'Import redirects from CSV file',
+      value: `${packageName} redirects import redirects.csv`,
     },
     {
-      name: 'Upload redirects from JSON file',
-      value: `${packageName} redirects upload redirects.json`,
+      name: 'Import redirects from JSON file',
+      value: `${packageName} redirects import redirects.json`,
     },
     {
-      name: 'Upload and overwrite existing redirects',
-      value: `${packageName} redirects upload redirects.csv --overwrite`,
+      name: 'Import and overwrite existing redirects',
+      value: `${packageName} redirects import redirects.csv --force`,
     },
     {
-      name: 'Upload without confirmation',
-      value: `${packageName} redirects upload redirects.csv --yes`,
+      name: 'Import without confirmation',
+      value: `${packageName} redirects import redirects.csv --yes`,
     },
   ],
 } as const;
@@ -259,6 +286,7 @@ export const promoteSubcommand = {
   examples: [
     {
       name: 'Promote a redirect version',
+      placeholders: ['<version-id>'],
       value: `${packageName} redirects promote <version-id>`,
     },
   ],
@@ -284,12 +312,14 @@ export const restoreSubcommand = {
   examples: [
     {
       name: 'Restore a redirects version',
+      placeholders: ['<version-id>'],
       value: `${packageName} redirects restore <version-id>`,
     },
   ],
 } as const;
 
 export const redirectsCommand = {
+  descriptionTone: 'normal',
   name: 'redirects',
   aliases: ['redirect'],
   description:

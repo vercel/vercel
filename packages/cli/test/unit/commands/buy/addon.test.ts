@@ -43,7 +43,7 @@ describe('buy addon', () => {
     it('errors when addon name is missing', async () => {
       client.setArgv('buy', 'addon');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('Missing addon name');
       expect(stderr).toContain('custom-environment, observability-plus');
@@ -134,7 +134,7 @@ describe('buy addon', () => {
 
       client.setArgv('buy', 'addon', 'customEnvironment', '1500', '--yes');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       await expect(client.stderr).toOutput(
         'Packs must be between 0 and 3 for this project (0-15 purchased environments)'
       );
@@ -186,7 +186,7 @@ describe('buy addon', () => {
     it('supports the add-on subcommand alias', async () => {
       client.setArgv('buy', 'add-on', '--help');
       const exitCode = await buy(client);
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
       await expect(client.stderr).toOutput('custom-environment');
     });
   });
@@ -375,7 +375,7 @@ describe('buy addon', () => {
       const exitCode = await buy(client);
       const stderr = client.stderr.getFullOutput();
 
-      expect(exitCode).toBe(2);
+      expect(exitCode).toBe(0);
       expect(stderr).toContain('custom-environment');
       expect(stderr).toContain('observability-plus');
       expect(stderr).not.toContain('customEnvironment');

@@ -1,0 +1,19 @@
+{
+  "probes": [
+    {"path": "/api/as_handler.py?query=hello%20%40world", "mustContain": "query=hello%20%40world", "responseHeaders": {"content-type": "text/plain"}},
+    {"path": "/api/as_handler.py?hello=%2F", "mustContain": "?hello=%2F", "responseHeaders": {"content-type": "text/plain"}},
+    {"path": "/api/as_handler.py?say=hello%20world", "mustContain": "?say=hello%20world", "responseHeaders": {"content-type": "text/plain"}},
+    {"path": "/api/as_handler.py?say%20hello=nice", "mustContain": "?say%20hello=nice", "responseHeaders": {"content-type": "text/plain"}},
+    {"path": "/api/as_handler.py?%E6%82%A8%E5%A5%BD=%2F", "mustContain": "%E6%82%A8%E5%A5%BD=%2F", "responseHeaders": {"content-type": "text/plain"}},
+    {"path": "/api/as_flask.py?query=hello%20%40world", "mustContain": "query=hello%20%40world", "responseHeaders": {"content-type": "text/plain; charset=utf-8"}},
+    {"path": "/api/as_flask.py?hello=%2F", "mustContain": "?hello=%2F", "responseHeaders": {"content-type": "text/plain; charset=utf-8"}},
+    {"path": "/api/as_flask.py?say=hello%20world", "mustContain": "?say=hello%20world", "responseHeaders": {"content-type": "text/plain; charset=utf-8"}},
+    {"path": "/api/as_flask.py?say%20hello=nice", "mustContain": "?say%20hello=nice", "responseHeaders": {"content-type": "text/plain; charset=utf-8"}},
+    {"path": "/api/as_flask.py?%E6%82%A8%E5%A5%BD=%2F", "mustContain": "%E6%82%A8%E5%A5%BD=%2F", "responseHeaders": {"content-type": "text/plain; charset=utf-8"}},
+    {"path": "/api?hello=/", "mustContain": "path:  query: {'hello': '/'}", "responseHeaders": {"content-type": "text/html; charset=utf-8"}},
+    {"path": "/api/custom?hello=/", "mustContain": "path: custom query: {'hello': '/'}", "responseHeaders": {"content-type": "text/html; charset=utf-8"}},
+    {"path": "/api/unicode", "method": "POST", "body": {"name": "Χριστοφορε"}, "status": 200, "mustContain": "hello, \\u03a7\\u03c1\\u03b9\\u03c3\\u03c4\\u03bf\\u03c6\\u03bf\\u03c1\\u03b5", "responseHeaders": {"content-type": "application/json"}},
+    {"path": "/api/env", "mustContain": "RANDOMNESS_PLACEHOLDER:env", "responseHeaders": {"content-type": "text/html; charset=utf-8"}},
+    {"logMustContain": "Using python version: 3.12"}
+  ]
+}

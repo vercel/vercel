@@ -368,7 +368,7 @@ describe('integration', () => {
           '--format=xml'
         );
         const exitCode = await integrationCommand(client);
-        expect(exitCode, 'exit code for "integration"').toEqual(1);
+        expect(exitCode, 'exit code for "integration"').toEqual(2);
         await expect(client.stderr).toOutput(
           'Error: Invalid output format: "xml"'
         );
@@ -392,7 +392,7 @@ describe('integration', () => {
 
         client.setArgv('integration', 'balance');
         const exitCode = await integrationCommand(client);
-        expect(exitCode, 'exit code for "integration"').toEqual(1);
+        expect(exitCode, 'exit code for "integration"').toEqual(2);
         await expect(client.stderr).toOutput(
           'Error: You must pass an integration slug'
         );
@@ -406,7 +406,7 @@ describe('integration', () => {
 
         client.setArgv('integration', 'balance', 'acme', 'acme2');
         const exitCode = await integrationCommand(client);
-        expect(exitCode, 'exit code for "integration"').toEqual(1);
+        expect(exitCode, 'exit code for "integration"').toEqual(2);
         await expect(client.stderr).toOutput(
           'Error: Cannot specify more than one integration at a time'
         );

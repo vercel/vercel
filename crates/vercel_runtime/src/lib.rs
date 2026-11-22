@@ -145,13 +145,16 @@ impl AppState {
     pub fn new(log_context: LogContext) -> Self {
         Self {
             log_context,
-            awaiter: AWAITER.clone(),
+            awaiter: Awaiter::new(),
         }
     }
 
     /// Register a background future to keep running after the response has been
-    /// sent. The future is spawned immediately and awaited at process shutdown
-    /// (bounded by [`awaiter::WAIT_UNTIL_TIMEOUT`]).
+    /// sent. The future is spawned immediately, and the request's `end` IPC
+    /// message is delayed until its background work settles, bounded by the
+    /// function's `maxDuration`. Work is also tracked from registration for
+    /// process shutdown, even without IPC. In `vc dev`, shutdown waits up to
+    /// [`awaiter::WAIT_UNTIL_TIMEOUT`] seconds.
     ///
     /// This future runs regardless of whether the handler succeeded or errored.
     /// A panic in the future is isolated from the rest of the runtime.
@@ -159,7 +162,7 @@ impl AppState {
     where
         F: std::future::Future<Output = ()> + Send + 'static,
     {
-        self.awaiter.wait_until(future);
+        self.awaiter.wait_until(AWAITER.track(future));
     }
 }
 
@@ -355,10 +358,9 @@ where
         let (stream, _) = tokio::select! {
             accepted = listener.accept() => accepted?,
             _ = &mut shutdown => {
-                // Drain background `waitUntil` work, then exit. The per-request
-                // `end` IPC message has already been sent for each completed
-                // request, so this only affects background tasks. This mirrors
-                // the Node.js runtime's `onExit` behavior.
+                // Drain background `waitUntil` work and pending `end` messages,
+                // then exit. Work is tracked even without IPC or before its
+                // handler returns.
                 //
                 // In `vc dev` (signalled by `VERCEL_DEV=1`) we bound the drain by
                 // `WAIT_UNTIL_TIMEOUT` so a hung task cannot keep the dev process
@@ -426,6 +428,8 @@ where
                         async move {
                             #[cfg(unix)]
                             let ipc_stream_for_end = app_state.log_context.ipc_stream.clone();
+                            #[cfg(unix)]
+                            let request_awaiter = app_state.awaiter.clone();
 
                             if req.uri().path() == "/_vercel/ping" {
                                 let response = hyper::Response::builder()
@@ -462,15 +466,20 @@ where
                                 }
                             };
 
-                            // Send end message via IPC
+                            // Return the response immediately, but keep this invocation
+                            // active until its background work settles. Track the end
+                            // task globally so shutdown also waits for its IPC message.
                             #[cfg(unix)]
                             if let (Some(ipc_stream), Some(inv_id), Some(req_id)) =
-                                (&ipc_stream_for_end, &invocation_id, &request_id)
+                                (ipc_stream_for_end, invocation_id, request_id)
                             {
-                                let end_message = EndMessage::new(inv_id.clone(), *req_id, None);
-                                if let Err(_e) = send_message(ipc_stream, end_message) {
-                                    // Failed to send end message
-                                }
+                                AWAITER.wait_until(async move {
+                                    request_awaiter.awaiting().await;
+                                    let end_message = EndMessage::new(inv_id, req_id, None);
+                                    if let Err(_e) = send_message(&ipc_stream, end_message) {
+                                        // Failed to send end message
+                                    }
+                                });
                             }
 
                             Ok::<_, Infallible>(response)
@@ -481,10 +490,8 @@ where
                 // hyper injects `hyper::upgrade::OnUpgrade` into the request
                 // extensions and drives the upgraded connection after the 101,
                 // which framework extractors (e.g. axum's `WebSocketUpgrade`)
-                // rely on. The per-request `end` IPC message is already sent
-                // right after the handler returns its response, so for a 101 it
-                // fires at accept time, matching the detached-upgrade flow used
-                // by the Node.js and Python runtimes.
+                // rely on. The upgraded connection does not delay `end`; only
+                // explicitly registered background work extends the invocation.
                 .with_upgrades()
                 .await
             {

@@ -4,7 +4,7 @@ import { VALID_DURATIONS, VALID_ALGORITHMS } from './condition-types';
 /**
  * Build a FirewallRuleAction from CLI flags.
  * Returns the action object on success, or an error string on validation failure.
- * Shared between `rules add` and `rules edit` flag mode.
+ * Shared between `rules add` and `rules update` flag mode.
  */
 export function buildActionFromFlags(
   flags: Record<string, unknown>,

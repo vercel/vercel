@@ -1,18 +1,14 @@
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { isAutoUpdateEnabled } from '../../util/updates';
-import { getCommandName } from '../../util/pkg-name';
+import { isNativeAutoUpdateEnabled } from './native-auto-update';
 import {
-  CURL_INSTALL_COMMAND,
   describeManager,
   describeRuntime,
   getVersionContext,
 } from '../../util/version-context';
 
-/**
- * Default action for `vc version`: show the current version and how the CLI
- * is installed/managed.
- */
+/** Show the active CLI and how it is installed and updated. */
 export default async function status(client: Client): Promise<number> {
   const context = await getVersionContext();
 
@@ -21,37 +17,33 @@ export default async function status(client: Client): Promise<number> {
   output.print(`Managed by: ${describeManager(context)}\n`);
 
   if (context.manager === 'installer') {
+    output.print(
+      `Active version: ${context.activeVersion ?? context.version}\n`
+    );
     if (context.prBuild) {
       const sha = context.prBuild.sha
         ? ` (${context.prBuild.sha.slice(0, 12)})`
         : '';
-      output.print(
-        `Build: PR #${context.prBuild.number}${sha} — a mutable pre-release build, not the v${context.version} release\n`
-      );
-    } else if (
-      context.linkedVersion &&
-      context.linkedVersion !== context.version
-    ) {
-      output.print(`Linked version: ${context.linkedVersion}\n`);
+      output.print(`Active build: PR #${context.prBuild.number}${sha}\n`);
     }
-    if (context.pinnedVersion) {
+    if (context.pendingProduction) {
       output.print(
-        `Pinned: yes (${context.pinnedVersion}) — automatic updates and update notices are paused until you run ${getCommandName('version use latest')}\n`
+        `Pending production: ${context.pendingProduction.version} (production/${context.pendingProduction.slot})\n`
       );
     }
-  } else {
-    output.print(`Upgrade command: ${context.upgradeCommand}\n`);
     output.print(
-      `Tip: the recommended way to manage the Vercel CLI is the installer: ${CURL_INSTALL_COMMAND}\n`
+      `Automatic updates: ${isNativeAutoUpdateEnabled(client.config) ? 'Enabled' : 'Disabled'}\n`
+    );
+  } else {
+    if (context.upgradeCommand !== undefined) {
+      output.print(`Upgrade command: ${context.upgradeCommand}\n`);
+    } else {
+      output.print(`${context.upgradeError.message}\n`);
+    }
+    output.print(
+      `Automatic updates: ${isAutoUpdateEnabled(client.config) ? 'Enabled' : 'Disabled'}\n`
     );
   }
-
-  const autoUpdates = isAutoUpdateEnabled(client.config);
-  const pinnedNote =
-    autoUpdates && context.manager === 'installer' && context.pinnedVersion;
-  output.print(
-    `Automatic updates: ${autoUpdates ? 'Enabled' : 'Disabled'}${pinnedNote ? ' (paused while pinned)' : ''}\n`
-  );
 
   return 0;
 }

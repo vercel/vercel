@@ -1,8 +1,8 @@
 import type {
   Flag,
   FlagEnvironmentConfig,
-  FlagOutcome,
   FlagRolloutOutcome,
+  FlagServingOutcome,
   FlagSplitOutcome,
 } from './types';
 
@@ -90,7 +90,7 @@ function collectEnvironmentReferencePaths(
 }
 
 function collectOutcomeReferencePaths(
-  outcome: FlagOutcome | FlagSplitOutcome | FlagRolloutOutcome | undefined,
+  outcome: FlagServingOutcome | undefined,
   basePath: string,
   trackedVariantIds: Set<string>,
   references: Map<string, Set<string>>

@@ -648,7 +648,7 @@ describe('integration add (auto-provision)', () => {
       );
 
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
     });
 
     it('should only list the addendum when integration has no privacy or EULA', async () => {
@@ -712,6 +712,47 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
+    it('should print the server reason and the setup URL', async () => {
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+      const exitCodePromise = integrationCommand(client);
+
+      await expect(client.stderr).toOutput(
+        'Additional setup required: Metadata field "region" is required'
+      );
+      await expect(client.stderr).toOutput(
+        'Visit this URL if the browser does not open: https://vercel.com/acme/~/integrations/checkout/acme?'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(1);
+      expect(openMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should emit action_required JSON without opening a browser when non-interactive', async () => {
+      vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+        throw new Error(`exit:${code ?? 0}`);
+      }) as () => never);
+      useAutoProvision({ responseKey: 'metadata' });
+
+      client.nonInteractive = true;
+      client.setArgv('integration', 'add', 'acme', '-m', 'region=us-east-1');
+
+      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+
+      expect(openMock).not.toHaveBeenCalled();
+      const payload = JSON.parse(client.stdout.getFullOutput().trim());
+      expect(payload.status).toBe('action_required');
+      expect(payload.reason).toBe('integration_setup_required');
+      expect(payload.message).toContain('Metadata field "region" is required');
+      expect(payload.verification_uri).toMatch(
+        /^https:\/\/vercel\.com\/acme\/~\/integrations\/checkout\/acme\?/
+      );
+      expect(payload.userActionRequired).toBe(true);
+      expect(payload.next?.[0]?.command).toContain('integration list');
+    });
+
     it('should forward --metadata to browser fallback URL', async () => {
       useAutoProvision({ responseKey: 'metadata' });
 
@@ -725,7 +766,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -754,7 +795,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -812,7 +853,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -848,7 +889,7 @@ describe('integration add (auto-provision)', () => {
 
       // After provisioning attempt, falls back to browser
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -905,7 +946,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -943,7 +984,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -975,7 +1016,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1010,7 +1051,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1049,7 +1090,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1076,7 +1117,7 @@ describe('integration add (auto-provision)', () => {
         'Error: Missing required metadata: region.'
       );
       await expect(client.stderr).toOutput(
-        'Provide -m region=us-west-1 to provision directly from the CLI.'
+        'Provide --meta region=us-west-1 to provision directly from the CLI.'
       );
       await expect(client.stderr).toOutput(
         'Run `vercel integration add acme --help` for all metadata options.'
@@ -1245,7 +1286,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1273,7 +1314,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1300,7 +1341,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1325,7 +1366,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1348,7 +1389,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'Additional setup required. Opening browser...'
+        'Opening browser to finish setup...'
       );
 
       const exitCode = await exitCodePromise;
@@ -1419,7 +1460,7 @@ describe('integration add (auto-provision)', () => {
     it('should error when no integration argument was passed', async () => {
       client.setArgv('integration', 'add');
       const exitCode = await integrationCommand(client);
-      expect(exitCode, 'exit code for "integration"').toEqual(1);
+      expect(exitCode, 'exit code for "integration"').toEqual(2);
       await expect(client.stderr).toOutput(
         'Error: You must pass an integration slug'
       );
@@ -1437,7 +1478,7 @@ describe('integration add (auto-provision)', () => {
         '--cwd',
         '/tmp/example'
       );
-      await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+      await expect(integrationCommand(client)).rejects.toThrow('exit:2');
       const payload = JSON.parse(client.stdout.getFullOutput().trim());
       expect(payload).toMatchObject({
         status: 'error',
@@ -1455,7 +1496,7 @@ describe('integration add (auto-provision)', () => {
     it('should error when more than one integration argument was passed', async () => {
       client.setArgv('integration', 'add', 'acme', 'acme-two');
       const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput(
         'Cannot install more than one integration at a time'
       );
@@ -1565,7 +1606,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme-two-products');
       (client.stdin as any).isTTY = false;
       const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('has multiple products');
       expect(stderr).toContain('acme-two-products/acme-a');
@@ -1856,7 +1897,7 @@ describe('integration add (auto-provision)', () => {
     it('should error on empty product slug after slash', async () => {
       client.setArgv('integration', 'add', 'acme/');
       const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput(
         'Error: Invalid format. Expected: <integration-name>/<product-slug>'
       );
@@ -1865,7 +1906,7 @@ describe('integration add (auto-provision)', () => {
     it('should error on empty integration slug before slash', async () => {
       client.setArgv('integration', 'add', '/product');
       const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       await expect(client.stderr).toOutput(
         'Error: Invalid format. Expected: <integration-name>/<product-slug>'
       );
@@ -1903,7 +1944,8 @@ describe('integration add (auto-provision)', () => {
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('icfg_marketplace_1');
       expect(stderr).toContain('icfg_external_1');
-      expect(stderr).toContain('--installation-id');
+      expect(stderr).toContain('Re-run with --installation to select one');
+      expect(stderr).not.toContain('--installation-id');
     });
 
     it('should include externalId and status in the installation list', async () => {
@@ -1980,7 +2022,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'vercel integration add acme-two-products/acme-a --installation-id'
+        'vercel integration add acme-two-products/acme-a --installation icfg_'
       );
 
       const exitCode = await exitCodePromise;
@@ -1996,7 +2038,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
-        'vercel integration add acme --installation-id'
+        'vercel integration add acme --installation icfg_'
       );
 
       const exitCode = await exitCodePromise;
@@ -2010,7 +2052,7 @@ describe('integration add (auto-provision)', () => {
       const exitCodePromise = install(client);
 
       await expect(client.stderr).toOutput(
-        'vercel install acme --installation-id'
+        'vercel install acme --installation icfg_'
       );
 
       const exitCode = await exitCodePromise;
@@ -2025,7 +2067,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('install', 'acme-two-products');
       (client.stdin as any).isTTY = false;
       const exitCode = await install(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('vercel install acme-two-products/');
       expect(stderr).not.toContain('vercel integration add');
@@ -2037,7 +2079,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme-two-products');
       (client.stdin as any).isTTY = false;
       const exitCode = await integrationCommand(client);
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       const stderr = client.stderr.getFullOutput();
       expect(stderr).toContain('vercel integration add acme-two-products/');
     });
@@ -2070,8 +2112,10 @@ describe('integration add (auto-provision)', () => {
   });
 
   describe('--environment flag', () => {
+    let requestBodies: unknown[];
+
     beforeEach(() => {
-      useAutoProvision({ responseKey: 'provisioned' });
+      ({ requestBodies } = useAutoProvision({ responseKey: 'provisioned' }));
     });
 
     it('should connect to only production when --environment production is specified', async () => {
@@ -2140,23 +2184,24 @@ describe('integration add (auto-provision)', () => {
       );
     });
 
-    it('should deduplicate repeated environment values', async () => {
+    it('should resolve a Custom Environment slug for integration add', async () => {
       useProject({
         ...defaultProject,
         id: 'vercel-integration-add',
         name: 'vercel-integration-add',
+        customEnvironments: [
+          {
+            id: 'env_qa123',
+            slug: 'qa',
+            type: 'preview',
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
       });
       const cwd = setupUnitFixture('vercel-integration-add');
       client.cwd = cwd;
-      client.setArgv(
-        'integration',
-        'add',
-        'acme',
-        '--environment',
-        'production',
-        '--environment',
-        'production'
-      );
+      client.setArgv('integration', 'add', 'acme', '--environment', 'qa');
       const exitCodePromise = integrationCommand(client);
 
       await expect(client.stderr).toOutput(
@@ -2169,7 +2214,42 @@ describe('integration add (auto-provision)', () => {
         client,
         'vercel-integration-add',
         'resource_123',
-        ['production'],
+        ['env_qa123'],
+        undefined
+      );
+    });
+
+    it('should accept a Custom Environment stable ID for the install alias', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+        customEnvironments: [
+          {
+            id: 'env_qa123',
+            slug: 'qa',
+            type: 'preview',
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('install', 'acme', '--environment', 'env_qa123');
+      const exitCodePromise = install(client);
+
+      await expect(client.stderr).toOutput(
+        'Acme Product successfully provisioned: acme-gray-apple'
+      );
+
+      const exitCode = await exitCodePromise;
+      expect(exitCode).toEqual(0);
+      expect(connectMock).toHaveBeenCalledWith(
+        client,
+        'vercel-integration-add',
+        'resource_123',
+        ['env_qa123'],
         undefined
       );
     });
@@ -2231,25 +2311,112 @@ describe('integration add (auto-provision)', () => {
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
-        'Error: Invalid environment value: "staging". Must be one of: production, preview, development'
+        'Error: Invalid environment value: "staging". Must be one of: production, preview, development. Custom Environment slugs and IDs require a linked project.'
       );
+      expect(requestBodies).toHaveLength(0);
     });
 
-    it('should error on multiple invalid environment values', async () => {
+    it('should reject an unknown Custom Environment slug for the linked project', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
       client.setArgv(
         'integration',
         'add',
         'acme',
         '--environment',
-        'staging',
-        '--environment',
-        'test'
+        'unknown-slug'
       );
       const exitCode = await integrationCommand(client);
       expect(exitCode).toEqual(1);
       await expect(client.stderr).toOutput(
-        'Error: Invalid environment value: "staging", "test". Must be one of: production, preview, development'
+        'Error: Invalid environment value: "unknown-slug". Must be one of: production, preview, development, or a Custom Environment slug or ID from project vercel-integration-add.'
       );
+      expect(requestBodies).toHaveLength(0);
+    });
+
+    it('should reject an unknown or foreign-project ID for the install alias', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+        customEnvironments: [
+          {
+            id: 'env_qa123',
+            slug: 'qa',
+            type: 'preview',
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv('install', 'acme', '--environment', 'env_foreign456');
+      const exitCode = await install(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Invalid environment value: "env_foreign456". Must be one of: production, preview, development, or a Custom Environment slug or ID from project vercel-integration-add.'
+      );
+      expect(requestBodies).toHaveLength(0);
+    });
+
+    it('should reject an environment specified more than once', async () => {
+      client.setArgv(
+        'integration',
+        'add',
+        'acme',
+        '--environment',
+        'production',
+        '--environment',
+        'production'
+      );
+      const exitCode = await integrationCommand(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Duplicate environment selection: "production" was specified more than once. Specify each environment only once.'
+      );
+      expect(requestBodies).toHaveLength(0);
+    });
+
+    it('should reject a Custom Environment selected by both slug and ID through the install alias', async () => {
+      useProject({
+        ...defaultProject,
+        id: 'vercel-integration-add',
+        name: 'vercel-integration-add',
+        customEnvironments: [
+          {
+            id: 'env_qa123',
+            slug: 'qa',
+            type: 'preview',
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ],
+      });
+      const cwd = setupUnitFixture('vercel-integration-add');
+      client.cwd = cwd;
+      client.setArgv(
+        'install',
+        'acme',
+        '--environment',
+        'qa',
+        '--environment',
+        'env_qa123'
+      );
+      const exitCode = await install(client);
+
+      expect(exitCode).toEqual(1);
+      await expect(client.stderr).toOutput(
+        'Error: Duplicate environment selection: "qa" and "env_qa123" refer to the same environment. Specify each environment only once.'
+      );
+      expect(requestBodies).toHaveLength(0);
     });
   });
 
@@ -2452,6 +2619,8 @@ describe('integration add (auto-provision)', () => {
         id: 'vercel-integration-add',
         name: 'vercel-integration-add',
       });
+      expect(jsonOutput.connected).toBe(true);
+      expect(jsonOutput.connectError).toBeNull();
       expect(jsonOutput.environments).toEqual([
         'production',
         'preview',
@@ -2477,6 +2646,8 @@ describe('integration add (auto-provision)', () => {
       expect(exitCode).toEqual(0);
       const jsonOutput = JSON.parse(client.stdout.getFullOutput());
       expect(jsonOutput.resource.id).toBe('resource_123');
+      expect(jsonOutput.connected).toBe(false);
+      expect(jsonOutput.connectError).toBe('Connection refused');
       expect(jsonOutput.warnings).toEqual([
         'Failed to connect to project: Connection refused',
       ]);
@@ -2524,7 +2695,7 @@ describe('integration add (auto-provision)', () => {
       client.setArgv('integration', 'add', 'acme', '--format=xml');
       const exitCode = await integrationCommand(client);
 
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
       expect(client.stdout.getFullOutput()).toBe('');
     });
 
@@ -2836,6 +3007,122 @@ describe('integration add (auto-provision)', () => {
 
       const exitCode = await exitCodePromise;
       expect(exitCode).toEqual(0);
+    });
+  });
+});
+
+describe('integration add renamed options', () => {
+  // Runs `integration add` (or `install`) with a fresh client, recording the
+  // provisioning request.
+  async function run(
+    command: 'integration add' | 'install',
+    ...args: string[]
+  ) {
+    client.reset();
+    useUser({ id: 'user_1', username: 'tester' });
+    const teams = useTeams('team_dummy');
+    const team = Array.isArray(teams) ? teams[0] : teams.teams[0];
+    client.config.currentTeam = team.id;
+    const { requestBodies } = useAutoProvision({ responseKey: 'provisioned' });
+    client.setArgv(...command.split(' '), 'acme', ...args);
+    const exitCode =
+      command === 'install'
+        ? await install(client)
+        : await integrationCommand(client);
+    return {
+      exitCode,
+      body: requestBodies[0],
+      stdout: client.stdout.getFullOutput(),
+      stderr: client.stderr.getFullOutput(),
+    };
+  }
+
+  // Repeated keys keep the last value, so the order of the values matters.
+  const meta = ['region=us-east-1', 'region=us-west-1'];
+
+  describe.each(['integration add', 'install'] as const)('%s', command => {
+    it.each([
+      [
+        '--metadata',
+        ['--metadata', meta[0], '--metadata', meta[1]],
+        ['--meta', meta[0], '--meta', meta[1]],
+      ],
+      [
+        '-m',
+        ['-m', meta[0], '-m', meta[1]],
+        ['--meta', meta[0], '--meta', meta[1]],
+      ],
+      [
+        '-m',
+        ['-m', meta[0], '--metadata', meta[1]],
+        ['--meta', meta[0], '--meta', meta[1]],
+      ],
+      ['--plan', ['--plan', 'pro'], ['--billing-plan', 'pro']],
+      ['-p', ['-p', 'pro'], ['--billing-plan', 'pro']],
+      [
+        '--installation-id',
+        ['--installation-id', 'icfg_1'],
+        ['--installation', 'icfg_1'],
+      ],
+    ])('still accepts %s, with one warning', async (typed, oldArgs, newArgs) => {
+      const now = await run(command, ...newArgs);
+      const before = await run(command, ...oldArgs);
+      const name = newArgs[0];
+
+      expect(now.exitCode).toBe(0);
+      expect(now.stderr).not.toContain('deprecated');
+      expect(before.exitCode).toBe(now.exitCode);
+      expect(before.body).toEqual(now.body);
+      expect(before.stdout).toBe(now.stdout);
+      expect(before.stderr.match(/deprecated/g)).toHaveLength(1);
+      expect(before.stderr).toContain(
+        `! ${typed} is deprecated. Use ${name}.\n`
+      );
+    });
+
+    it('sends the new names in the provisioning request', async () => {
+      const result = await run(
+        command,
+        '--meta',
+        meta[0],
+        '--billing-plan',
+        'pro',
+        '--installation',
+        'icfg_1'
+      );
+
+      expect(result.exitCode).toBe(0);
+      expect(result.body).toMatchObject({
+        metadata: { region: 'us-east-1' },
+        billingPlanId: 'pro',
+        installationId: 'icfg_1',
+      });
+    });
+
+    it.each([
+      [
+        ['--meta', meta[0], '--metadata', meta[1]],
+        "Can't use --meta with --metadata.",
+      ],
+      [['--meta', meta[0], '-m', meta[1]], "Can't use --meta with -m."],
+      [
+        ['--billing-plan', 'pro', '--plan', 'pro'],
+        "Can't use --billing-plan with --plan.",
+      ],
+      [
+        ['--billing-plan', 'pro', '-p', 'pro'],
+        "Can't use --billing-plan with -p.",
+      ],
+      [
+        ['--installation', 'icfg_1', '--installation-id', 'icfg_1'],
+        "Can't use --installation with --installation-id.",
+      ],
+    ])('rejects %j before provisioning', async (args, message) => {
+      const result = await run(command, ...args);
+
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toContain(message);
+      expect(result.body).toBeUndefined();
     });
   });
 });

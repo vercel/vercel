@@ -30,6 +30,28 @@ export class EnvLsTelemetryClient
     }
   }
 
+  trackCliOptionEnvironment(environment: string | undefined) {
+    if (environment) {
+      this.trackCliOption({
+        option: 'environment',
+        value: STANDARD_ENVIRONMENTS.includes(
+          environment as CustomEnvironmentType
+        )
+          ? environment
+          : this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionGitBranch(gitBranch: string | undefined) {
+    if (gitBranch) {
+      this.trackCliOption({
+        option: 'git-branch',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagGuidance(guidance: boolean | undefined) {
     if (guidance) {
       this.trackCliFlag('guidance');

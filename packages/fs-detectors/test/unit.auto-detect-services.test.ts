@@ -374,8 +374,11 @@ describe('detectServices with auto-detection', () => {
       expect(result.source).toBe('configured');
       expect(result.services).toHaveLength(1);
       expect(result.services[0].name).toBe('api');
-      expect(result.services[0].routePrefix).toBe('/api');
-      expect(result.services[0].routePrefixSource).toBe('configured');
+      expect(result.services[0]).toHaveProperty('routePrefix', '/api');
+      expect(result.services[0]).toHaveProperty(
+        'routePrefixSource',
+        'configured'
+      );
     });
   });
 
@@ -506,7 +509,7 @@ describe('detectServices with auto-detection', () => {
       );
       expect(backend).toBeDefined();
       expect(backend?.schema).toBe('experimentalServicesV2');
-      expect(backend?.root).toBe('backend');
+      expect(backend).toHaveProperty('root', 'backend');
 
       // V2 auto-detect generates top-level service rewrites from mountPath.
       // Next.js is a BFF framework, so backend gets /api/backend prefix.

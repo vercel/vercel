@@ -33,9 +33,42 @@ export class DevTelemetryClient
     }
   }
 
+  trackCliOptionQueuePort(port: string | undefined) {
+    if (port) {
+      this.trackCliOption({
+        option: 'queue-port',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionRuntimeCachePort(port: string | undefined) {
+    if (port) {
+      this.trackCliOption({
+        option: 'runtime-cache-port',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  trackCliOptionSchedulesPort(port: string | undefined) {
+    if (port) {
+      this.trackCliOption({
+        option: 'schedules-port',
+        value: this.redactedValue,
+      });
+    }
+  }
+
   trackCliFlagYes(yes: boolean | undefined) {
     if (yes) {
       this.trackCliFlag('yes');
+    }
+  }
+
+  trackCliFlagTunnel(tunnel: boolean | undefined) {
+    if (tunnel) {
+      this.trackCliFlag('tunnel');
     }
   }
 
@@ -53,5 +86,12 @@ export class DevTelemetryClient
 
   trackOidcTokenRefresh(count: number) {
     super.trackOidcTokenRefresh(count);
+  }
+
+  trackError(code: string | undefined) {
+    // 'Diagnostic' is nostics' default name for a codeless wrapped error which is not a real code.
+    if (code && code !== 'Diagnostic') {
+      this.trackErrorCode(code);
+    }
   }
 }

@@ -169,7 +169,7 @@ async function writeBuildResult(
   );
 }
 
-function isEdgeFunction(v: any): v is EdgeFunction {
+export function isEdgeFunction(v: any): v is EdgeFunction {
   return v?.type === 'EdgeFunction';
 }
 
@@ -233,6 +233,55 @@ function injectServiceEnvVars(
  */
 function stripDuplicateSlashes(path: string): string {
   return normalize(path).replace(/(^\/|\/$)/g, '');
+}
+
+/**
+ * Output path of a v3 build result's scalar output.
+ *
+ * V2 services are already isolated under `services/<name>`, so scalar runtime
+ * outputs can use the natural `index` path. V1 services still share one output
+ * directory and require their internal namespace. Everything else uses the
+ * source path, minus its extension under zero-config.
+ */
+export function getV3OutputPath(
+  build: Pick<Builder, 'src' | 'config'>,
+  service?: Service
+): string {
+  if (service && isExperimentalServiceV2(service)) {
+    return 'index';
+  }
+  if (service && typeof service.runtime === 'string') {
+    return stripDuplicateSlashes(getInternalServiceFunctionPath(service.name));
+  }
+  const src = build.src;
+  if (typeof src !== 'string') {
+    throw new Error(`Expected "build.src" to be a string`);
+  }
+  // A schedule function is written where the schedule plan put it, not where
+  // its first source file happens to live.
+  const scheduleOutputPath = build.config?.scheduleFunction?.outputPath;
+  if (scheduleOutputPath) {
+    const normalizedOutputPath = posix.normalize(
+      scheduleOutputPath.replace(/\\/g, '/')
+    );
+    if (
+      posix.isAbsolute(normalizedOutputPath) ||
+      /^[A-Za-z]:\//.test(normalizedOutputPath) ||
+      normalizedOutputPath === '.' ||
+      normalizedOutputPath === '..' ||
+      normalizedOutputPath.startsWith('../')
+    ) {
+      throw new Error(
+        `Invalid schedule function output path "${scheduleOutputPath}"`
+      );
+    }
+    return stripDuplicateSlashes(normalizedOutputPath);
+  }
+
+  const ext = extname(src);
+  return stripDuplicateSlashes(
+    build.config?.zeroConfig ? src.substring(0, src.length - ext.length) : src
+  );
 }
 
 async function resolveFunctionConfiguration(
@@ -568,20 +617,7 @@ async function writeBuildResultV3(args: {
     service
   );
 
-  const ext = extname(src);
-  // V2 services are already isolated under `services/<name>`, so scalar
-  // runtime outputs can use the natural `index` path. V1 services still share
-  // one output directory and require their internal namespace.
-  const path =
-    service && isExperimentalServiceV2(service)
-      ? 'index'
-      : service && typeof service.runtime === 'string'
-        ? stripDuplicateSlashes(getInternalServiceFunctionPath(service.name))
-        : stripDuplicateSlashes(
-            build.config?.zeroConfig
-              ? src.substring(0, src.length - ext.length)
-              : src
-          );
+  const path = getV3OutputPath(build, service);
   if (isContainerImage(output)) {
     injectServiceEnvVars(
       output,

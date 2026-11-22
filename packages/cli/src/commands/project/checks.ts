@@ -55,11 +55,11 @@ export default async function checks(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (
@@ -74,7 +74,7 @@ export default async function checks(
         reason: AGENT_REASON.INVALID_ARGUMENTS,
         message:
           'To create a check, run `vercel project checks add [name]` with `--file` or `--check-name` / `--requires`.',
-        hint: 'Use `project checks add`, not `project checks`, when passing create flags.',
+        hint: 'Use `project checks add`, not `project checks`, when passing create options.',
         next: [
           {
             command: buildCommandWithGlobalFlags(
@@ -120,11 +120,11 @@ export default async function checks(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: formatResult.error,
         },
-        1
+        2
       );
     }
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || Boolean(client.nonInteractive);
 
@@ -140,12 +140,12 @@ export default async function checks(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: `\`--blocks\` must be one of: ${BLOCKING_STAGES.join(', ')}`,
         },
-        1
+        2
       );
       output.error(
         `\`--blocks\` must be one of: ${BLOCKING_STAGES.join(', ')}`
       );
-      return 1;
+      return 2;
     }
   }
 

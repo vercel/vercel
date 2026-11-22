@@ -42,7 +42,7 @@ describe('integration', () => {
     it('should track subcommand usage', async () => {
       client.setArgv('integration', 'open');
       const exitCode = await integrationCommand(client);
-      expect(exitCode, 'exit code for "integrationCommand"').toEqual(1);
+      expect(exitCode, 'exit code for "integrationCommand"').toEqual(2);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -172,7 +172,7 @@ describe('integration', () => {
             });
             client.setArgv('integration', 'open', 'acme', '--format=xml');
             const exitCode = await integrationCommand(client);
-            expect(exitCode, 'exit code for "integration"').toEqual(1);
+            expect(exitCode, 'exit code for "integration"').toEqual(2);
             await expect(client.stderr).toOutput(
               'Error: Invalid output format: "xml"'
             );
@@ -323,7 +323,7 @@ describe('integration', () => {
         it('should error when no argument is passed', async () => {
           client.setArgv('integration', 'open');
           const exitCode = await integrationCommand(client);
-          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          expect(exitCode, 'exit code for "integration"').toEqual(2);
           await expect(client.stderr).toOutput(
             'Error: You must pass an integration name'
           );
@@ -332,7 +332,7 @@ describe('integration', () => {
         it('should error when too many arguments are passed', async () => {
           client.setArgv('integration', 'open', 'acme', 'resource', 'extra');
           const exitCode = await integrationCommand(client);
-          expect(exitCode, 'exit code for "integration"').toEqual(1);
+          expect(exitCode, 'exit code for "integration"').toEqual(2);
           await expect(client.stderr).toOutput('Error: Too many arguments');
         });
 

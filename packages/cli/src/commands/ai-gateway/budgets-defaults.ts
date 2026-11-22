@@ -17,6 +17,7 @@ import output from '../../output-manager';
 import { getCommandAliases } from '..';
 import { AiGatewayBudgetsDefaultsTelemetryClient } from '../../util/telemetry/commands/ai-gateway/budgets-defaults';
 import { printError } from '../../util/error';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(budgetsDefaultsListSubcommand),
@@ -41,7 +42,7 @@ export default async function budgetsDefaults(client: Client) {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const subArgs = parsedArgs.args.slice(3);
@@ -58,14 +59,18 @@ export default async function budgetsDefaults(client: Client) {
       subcommandOriginal
     );
     output.print(
-      help(budgetsDefaultsSubcommand, { columns: client.stderr.columns })
+      help(budgetsDefaultsSubcommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: budgetsDefaultsSubcommand,
         columns: client.stderr.columns,
       })
@@ -80,7 +85,7 @@ export default async function budgetsDefaults(client: Client) {
           subcommandOriginal
         );
         printHelp(budgetsDefaultsListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);
       return list(client, args);
@@ -91,7 +96,7 @@ export default async function budgetsDefaults(client: Client) {
           subcommandOriginal
         );
         printHelp(budgetsDefaultsSetSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandSet(subcommandOriginal);
       return set(client, args);
@@ -102,14 +107,24 @@ export default async function budgetsDefaults(client: Client) {
           subcommandOriginal
         );
         printHelp(budgetsDefaultsRemoveSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      if (subcommandOriginal === 'delete') {
+        warnDeprecatedSubcommand(
+          client,
+          'ai-gateway budgets defaults delete',
+          'ai-gateway budgets defaults remove'
+        );
+      }
       return remove(client, args);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
-        help(budgetsDefaultsSubcommand, { columns: client.stderr.columns })
+        help(budgetsDefaultsSubcommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
       );
       return 2;
   }

@@ -4,6 +4,10 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 
+const requestHeaders = vi.hoisted(() => ({
+  current: {} as Record<string, string>,
+}));
+
 vi.mock('@vercel/cli-config', async importOriginal => ({
   ...(await importOriginal<typeof import('@vercel/cli-config')>()),
   getGlobalPathConfig: vi.fn(),
@@ -15,7 +19,7 @@ vi.mock('@vercel/cli-exec', () => ({
 }));
 vi.mock('./token-io');
 vi.mock('./get-context', () => ({
-  getContext: () => ({ headers: {} }),
+  getContext: () => ({ headers: requestHeaders.current }),
 }));
 
 import { findRootDir, getUserDataDir } from './token-io';
@@ -35,8 +39,10 @@ describe('getVercelOidcToken - Error Scenarios', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
+    requestHeaders.current = {};
 
     process.env.VERCEL_OIDC_TOKEN = undefined;
+    delete process.env.VERCEL_OIDC_TOKEN_FILE;
     const random = `test-${randomUUID()}`;
 
     rootDir = path.join(os.tmpdir(), random);
@@ -216,6 +222,143 @@ describe('getVercelOidcToken - Error Scenarios', () => {
 
     const token = await getVercelOidcToken();
     expect(token).toBe(validToken);
+  });
+
+  test('reads the Vercel OIDC token file on each call after rotation', async () => {
+    delete process.env.VERCEL_OIDC_TOKEN;
+    const tokenFile = path.join(rootDir, 'oidc-token');
+    process.env.VERCEL_OIDC_TOKEN_FILE = tokenFile;
+    const firstToken = createValidToken('first');
+    const secondToken = createValidToken('second');
+
+    fs.writeFileSync(tokenFile, `${firstToken}\n`);
+    expect(await getVercelOidcToken()).toBe(firstToken);
+    fs.writeFileSync(tokenFile, `${secondToken}\n`);
+    expect(await getVercelOidcToken()).toBe(secondToken);
+  });
+
+  test('prefers the advertised file over a static environment token', async () => {
+    process.env.VERCEL_OIDC_TOKEN = createValidToken('stale');
+    const tokenFile = path.join(rootDir, 'oidc-token');
+    process.env.VERCEL_OIDC_TOKEN_FILE = tokenFile;
+    const currentToken = createValidToken('current');
+    fs.writeFileSync(tokenFile, currentToken);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    expect(
+      await getVercelOidcToken({
+        team: teamId,
+        project: projectId,
+        expirationBufferMs: 60_000,
+      })
+    ).toBe(currentToken);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test('keeps the request token ahead of the advertised file', async () => {
+    const requestToken = createValidToken('request');
+    requestHeaders.current = { 'x-vercel-oidc-token': requestToken };
+    process.env.VERCEL_OIDC_TOKEN_FILE = path.join(rootDir, 'missing-token');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    expect(
+      await getVercelOidcToken({
+        team: teamId,
+        project: projectId,
+        expirationBufferMs: 60_000,
+      })
+    ).toBe(requestToken);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  test('includes the file path when the Vercel OIDC token file is empty', async () => {
+    delete process.env.VERCEL_OIDC_TOKEN;
+    const tokenFile = path.join(rootDir, 'oidc-token');
+    process.env.VERCEL_OIDC_TOKEN_FILE = tokenFile;
+    fs.writeFileSync(tokenFile, ' \n');
+
+    await expect(getVercelOidcToken()).rejects.toThrow(
+      `The Vercel OIDC token file is empty: ${tokenFile}`
+    );
+  });
+
+  test('rejects a missing advertised token file instead of using the environment token', async () => {
+    process.env.VERCEL_OIDC_TOKEN = createValidToken('environment');
+    process.env.VERCEL_OIDC_TOKEN_FILE = path.join(rootDir, 'missing-token');
+
+    await expect(getVercelOidcToken()).rejects.toThrow('ENOENT');
+  });
+
+  test('refreshes an expired file token using the provided team and project', async () => {
+    delete process.env.VERCEL_OIDC_TOKEN;
+    const tokenFile = path.join(rootDir, 'oidc-token');
+    process.env.VERCEL_OIDC_TOKEN_FILE = tokenFile;
+    fs.writeFileSync(tokenFile, createExpiredToken());
+    fs.writeFileSync(
+      path.join(cliDataDir, 'auth.json'),
+      JSON.stringify({ token: 'test-auth-token' })
+    );
+
+    const refreshedToken = createValidToken('refreshed');
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify({ token: refreshedToken }))
+      );
+
+    expect(await getVercelOidcToken({ team: teamId, project: projectId })).toBe(
+      refreshedToken
+    );
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `https://api.vercel.com/v1/projects/${projectId}/token?source=vercel-oidc-refresh&teamId=${teamId}`,
+      expect.objectContaining({ method: 'POST' })
+    );
+  });
+
+  test('refreshes a file token within the expiration buffer before audience exchange', async () => {
+    delete process.env.VERCEL_OIDC_TOKEN;
+    const tokenFile = path.join(rootDir, 'oidc-token');
+    process.env.VERCEL_OIDC_TOKEN_FILE = tokenFile;
+    fs.writeFileSync(
+      tokenFile,
+      createValidToken('near-expiry', Math.floor(Date.now() / 1000) + 30)
+    );
+    fs.writeFileSync(
+      path.join(cliDataDir, 'auth.json'),
+      JSON.stringify({ token: 'test-auth-token' })
+    );
+
+    const refreshedToken = createValidToken('refreshed');
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ token: refreshedToken }))
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ token: 'audience-specific-token' }))
+      );
+
+    expect(
+      await getVercelOidcToken({
+        team: teamId,
+        project: projectId,
+        expirationBufferMs: 60_000,
+        audience: 'custom-audience',
+        jti: 'custom-jti',
+        skipCache: true,
+      })
+    ).toBe('audience-specific-token');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://oidc.vercel.com/~token',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          token: refreshedToken,
+          aud: 'custom-audience',
+          jti: 'custom-jti',
+        }),
+      })
+    );
   });
 
   test('should refresh when token is expired but all configs are valid', async () => {
@@ -424,14 +567,17 @@ function createExpiredToken(): string {
   return `${header}.${payload}.fake_signature`;
 }
 
-function createValidToken(value = 'valid-token'): string {
+function createValidToken(
+  value = 'valid-token',
+  expiresAt = Math.floor(Date.now() / 1000) + 43200
+): string {
   const header = Buffer.from(
     JSON.stringify({ alg: 'RS256', typ: 'JWT' })
   ).toString('base64url');
   const payload = Buffer.from(
     JSON.stringify({
       sub: 'test-sub',
-      exp: Math.floor(Date.now() / 1000) + 43200,
+      exp: expiresAt,
       iat: Math.floor(Date.now() / 1000),
     })
   ).toString('base64url');

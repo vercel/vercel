@@ -9,8 +9,7 @@
   "updateInternalDependencies": "patch",
   "ignore": [
     "api",
-    "examples",
-    "@vercel-internals/*"
+    "examples"
   ],
   "privatePackages": {
     "version": true,

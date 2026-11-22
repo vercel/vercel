@@ -236,6 +236,74 @@ describe('writeBuildResult()', () => {
       await fs.remove(workPath);
     }
   });
+
+  it('writes onMiss to .prerender-config.json', async () => {
+    const workPath = await getWriteableDirectory();
+    const outputDir = join(workPath, '.vercel', 'output');
+    const build = {
+      src: 'index.js',
+      use: '@vercel/node',
+      config: { zeroConfig: true },
+    };
+    const runtimeBuilder: BuilderV2 = {
+      version: 2,
+      build: async () => {
+        throw new Error('not used by writeBuildResult');
+      },
+    };
+    const lambda = new Lambda({
+      files: {
+        'index.js': new FileBlob({ data: 'module.exports = {}' }),
+      },
+      handler: 'index.handler',
+      runtime: 'nodejs22.x',
+    });
+
+    try {
+      await writeBuildResult({
+        repoRootPath: workPath,
+        outputDir,
+        buildResult: {
+          output: {
+            dynamic: new Prerender({
+              expiration: 1,
+              fallback: null,
+              lambda,
+              bypassToken: 'some-long-bypass-token-to-make-it-work',
+              onMiss: 'dynamic',
+            }),
+            // A route without the field (an older framework, or one that
+            // wants the current blocking behavior) must not gain a default:
+            // absence is what means sync.
+            blocking: new Prerender({
+              expiration: 1,
+              fallback: null,
+              lambda,
+              bypassToken: 'some-long-bypass-token-to-make-it-work',
+            }),
+          },
+        },
+        build,
+        builder: runtimeBuilder,
+        builderPkg: { name: '@vercel/node' },
+        vercelConfig: null,
+        standalone: false,
+        workPath,
+      });
+
+      const dynamic = await fs.readJSON(
+        join(outputDir, 'functions/dynamic.prerender-config.json')
+      );
+      expect(dynamic.onMiss).toBe('dynamic');
+
+      const blocking = await fs.readJSON(
+        join(outputDir, 'functions/blocking.prerender-config.json')
+      );
+      expect(blocking).not.toHaveProperty('onMiss');
+    } finally {
+      await fs.remove(workPath);
+    }
+  });
 });
 
 describe('filesWithoutFsRefs()', () => {

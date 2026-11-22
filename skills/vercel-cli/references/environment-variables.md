@@ -1,58 +1,17 @@
 # Environment Variables
 
-## Scoping
+Variables are scoped to environments and can have preview-branch overrides. Inspect the intended target and metadata without exposing values unnecessarily; JSON output can contain plain values even when sensitive variables are redacted.
 
-Env vars are scoped to **environments**: production, preview (can be branch-specific), and development.
+## Values and Local Files
 
-Variables can be plain text or sensitive (encrypted, not readable after creation).
+Environment pull writes an application env file; project pull writes settings and environment data under `.vercel/`. They serve different consumers. The default `.env.local` pull updates ignore rules, but a custom filename must already be excluded from source control.
 
-## Inspecting Env Vars
+Pulling cannot recover stored Secret values. A redacted Secret preserves an existing local value or produces `[SENSITIVE]`; that placeholder is not a credential. Obtain a usable value through the appropriate secret owner rather than passing the placeholder to an application.
 
-`vercel env ls` shows configured variable names, targets, and metadata. Plain values may appear in JSON output; sensitive values are not readable after creation.
+See the [Environment Variables documentation](https://vercel.com/docs/projects/environment-variables) for dashboard setup.
 
-For metadata-oriented investigations, start with:
+## Local Development
 
-```bash
-# Run from a linked project directory
-vercel env ls --format json
-vercel env ls production --format json
-```
+Use the project's existing development workflow when it is sufficient. For development that uses a linked Vercel project, choose the settings and environment pull format consumed by the process. The CLI's local-only development mode can run without linking; do not require remote setup for that workflow.
 
-If CLI output does not include required metadata, use `vercel api` after checking available endpoints with `vercel api list`. Do not invent unsupported `env ls` scope/project flags; link or switch scope first when the command requires project context.
-
-## Managing Env Vars
-
-```bash
-vercel env add API_KEY production                              # interactive prompt for value
-vercel env add API_KEY production --value "secret" --yes       # non-interactive
-echo "secret" | vercel env add TOKEN production --yes          # pipe value from stdin
-vercel env ls                                                  # list all
-vercel env update API_KEY production --value "new-secret" --yes  # non-interactive update
-vercel env rm API_KEY preview --yes                            # remove from preview
-```
-
-Note: `environment` is a **positional argument**, not a flag.
-
-In non-interactive / agent mode, `env add` and `env update` require the value via `--value` or stdin. Without one of these, the command exits with an `action_required` payload asking you to re-run with `--value <value> --yes`.
-
-## Pulling Locally
-
-```bash
-vercel env pull                   # writes to .env.local
-vercel env pull .env.development  # writes to custom file
-```
-
-The CLI adds `.env*` to `.gitignore` only when writing the default `.env.local`. Before using another filename, verify that source control excludes it.
-
-`vercel pull` instead downloads environment data and project settings under `.vercel/`, including `.vercel/.env.<environment>.local`.
-
-## Running with Env Vars
-
-Inject env vars into a subprocess without writing to a file:
-
-```bash
-vercel env run -- npm test
-vercel env run -e preview -- next dev
-```
-
-The `--` separator is required before the command.
+When using a linked project, verify the resolved project from the actual working directory before pulling data or starting the server. Repository mappings can select a different project than the app directory suggests; see [project targeting](../SKILL.md#project-targeting). Inspection and pull can trigger browser login or team SAML re-authentication; wait for completion rather than trying unrelated credentials or targets.

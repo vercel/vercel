@@ -28,6 +28,7 @@ import {
   isSymbolicLink,
   walkParentDirs,
   execCommand,
+  findMatchingFunction,
   getEnvForPackageManager,
   scanParentDirs,
   isBunVersion,
@@ -41,6 +42,7 @@ import type {
   BuildV3,
   NodeVersion,
   BuildResultV3,
+  WorkspaceInstallTarget,
 } from '@vercel/build-utils';
 import { getConfig, type BaseFunctionConfig } from '@vercel/static-config';
 
@@ -106,8 +108,18 @@ async function downloadInstallAndBundle({
     projectCreatedAt: config.projectSettings?.createdAt,
   });
 
+  const functionInstallCommand = findMatchingFunction(config.functions, [
+    entrypoint,
+  ])?.functionConfig?.installCommand;
   const installCommand = config.projectSettings?.installCommand;
-  if (typeof installCommand === 'string' && considerBuildCommand) {
+  if (typeof functionInstallCommand === 'string') {
+    await runFunctionInstallCommand({
+      installCommand: functionInstallCommand,
+      workPath,
+      spawnEnv,
+      meta,
+    });
+  } else if (typeof installCommand === 'string' && considerBuildCommand) {
     if (installCommand.trim()) {
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
@@ -118,12 +130,20 @@ async function downloadInstallAndBundle({
       console.log(`Skipping "install" command...`);
     }
   } else {
+    const workspaceInstallTargets = Array.isArray(meta.workspaceInstallTargets)
+      ? meta.workspaceInstallTargets.filter(
+          (target): target is WorkspaceInstallTarget =>
+            Boolean(target && typeof target === 'object')
+        )
+      : [];
     await runNpmInstall(
       entrypointFsDirname,
       [],
       { env: spawnEnv },
       meta,
-      config.projectSettings?.createdAt
+      config.projectSettings?.createdAt,
+      undefined,
+      { targets: workspaceInstallTargets }
     );
   }
   const entrypointPath = downloadedFiles[entrypoint].fsPath;
@@ -136,6 +156,60 @@ async function downloadInstallAndBundle({
     lockfilePath,
     lockfileVersion,
   };
+}
+
+const pendingFunctionInstalls = new WeakMap<
+  Set<string>,
+  Map<string, Promise<void>>
+>();
+
+async function runFunctionInstallCommand({
+  installCommand,
+  workPath,
+  spawnEnv,
+  meta,
+}: {
+  installCommand: string;
+  workPath: string;
+  spawnEnv: NodeJS.ProcessEnv;
+  meta: Meta;
+}) {
+  if (!installCommand.trim()) {
+    console.log(`Skipping "install" command...`);
+    return;
+  }
+  if (meta.isDev) {
+    debug('Skipping dependency installation because dev mode is enabled');
+    return;
+  }
+
+  // Several functions usually share one glob, so run each command once per root.
+  const ran =
+    meta.functionInstallCommandSet instanceof Set
+      ? (meta.functionInstallCommandSet as Set<string>)
+      : new Set<string>();
+  meta.functionInstallCommandSet = ran;
+  const key = `${workPath}\0${installCommand}`;
+  if (ran.has(key)) {
+    return;
+  }
+
+  const pending =
+    pendingFunctionInstalls.get(ran) ?? new Map<string, Promise<void>>();
+  pendingFunctionInstalls.set(ran, pending);
+  let install = pending.get(key);
+  if (!install) {
+    console.log(`Running "install" command: \`${installCommand}\`...`);
+    install = execCommand(installCommand, { env: spawnEnv, cwd: workPath })
+      .then(() => {
+        ran.add(key);
+      })
+      .finally(() => {
+        pending.delete(key);
+      });
+    pending.set(key, install);
+  }
+  await install;
 }
 
 function renameTStoJS(path: string) {
@@ -445,6 +519,7 @@ export const build = async ({
   config = {},
   meta = {},
   service,
+  diagnosticsValues,
   span,
   considerBuildCommand = false,
   entrypointCallback,
@@ -555,7 +630,9 @@ export const build = async ({
       `Middleware runtime for "${entrypoint}": ${middleware.runtime} (${middleware.reason})`
     );
     if (isEdgeFunction) {
-      console.warn(edgeMiddlewareDeprecationWarning(entrypoint));
+      console.warn(
+        `\x1b[33m\x1b[1mWARNING! \x1b[22m${edgeMiddlewareDeprecationWarning(entrypoint)}\x1b[39m`
+      );
     }
   } else if (runtime) {
     isEdgeFunction = isEdgeRuntime(runtime);
@@ -652,11 +729,7 @@ export const build = async ({
       config.helpers === false || process.env.NODEJS_HELPERS === '0'
     );
 
-    // AWS custom handlers can't stream responses. The canonical gate
-    // lives in `@vercel/build-utils`'s `getLambdaSupportsStreaming`, but
-    // the build-container picks that up on its own rollout cadence —
-    // until then this build-time signal is what protects users on the
-    // Node builder. Keep this in sync with the central gate.
+    /** AWS custom handlers return response objects and cannot stream. */
     let supportsResponseStreaming: boolean | undefined;
     if (awsLambdaHandler) {
       supportsResponseStreaming = false;
@@ -757,7 +830,7 @@ export const build = async ({
       cliType,
       lockfilePath,
       lockfileVersion,
-      framework: config.framework ?? undefined,
+      framework: diagnosticsValues?.framework,
       serviceType: service ? getReportedServiceType(service) : undefined,
     });
   } catch (err) {

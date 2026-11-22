@@ -32,7 +32,7 @@ export default async function sdkKeysLs(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { flags } = parsedArgs;
@@ -71,7 +71,7 @@ export default async function sdkKeysLs(
     } else if (keys.length === 0) {
       output.log(`No SDK keys found for ${projectSlugLink}`);
       output.log(
-        `\nCreate one with: ${getCommandName('flags sdk-keys add --type server --environment production')}`
+        `\nCreate one with: ${getCommandName('flags sdk-keys create --type server --environment production')}`
       );
     } else {
       output.log(

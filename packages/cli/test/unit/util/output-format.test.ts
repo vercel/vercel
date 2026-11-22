@@ -219,7 +219,7 @@ describe('output-format', () => {
       expect(formatOption.shorthand).toBe('F');
       expect(formatOption.type).toBe(String);
       expect(formatOption.argument).toBe('FORMAT');
-      expect(formatOption.deprecated).toBe(false);
+      expect(formatOption.deprecated).toBe(true);
       expect(formatOption.description).toBe('Specify the output format (json)');
     });
   });

@@ -29,7 +29,7 @@ export default async function contract(client: Client): Promise<number> {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const telemetry = new ContractTelemetryClient({
@@ -40,14 +40,19 @@ export default async function contract(client: Client): Promise<number> {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('contract');
-    print(help(contractCommand, { columns: client.stderr.columns }));
+    print(
+      help(contractCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
     return 0;
   }
 
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 

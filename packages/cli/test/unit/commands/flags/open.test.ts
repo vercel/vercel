@@ -45,7 +45,7 @@ describe('flags open', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = flags(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -123,7 +123,7 @@ describe('flags open', () => {
     const exitCodePromise = flags(client);
 
     await expect(client.stderr).toOutput('Error: Too many arguments.');
-    await expect(exitCodePromise).resolves.toEqual(1);
+    await expect(exitCodePromise).resolves.toEqual(2);
     expect(openMock).not.toHaveBeenCalled();
   });
 });

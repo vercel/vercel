@@ -3,7 +3,7 @@ import {
   formatOption,
   jsonOption,
   limitOption,
-  nextOption,
+  nextCursorOption,
   yesOption,
 } from '../../util/arg-common';
 
@@ -14,7 +14,7 @@ export const setSubcommand = {
   default: true,
   arguments: [
     {
-      name: 'id-or-url',
+      name: 'deployment',
       required: true,
     },
     {
@@ -31,7 +31,7 @@ export const listSubcommand = {
   aliases: ['ls'],
   description: 'Show all aliases',
   arguments: [],
-  options: [limitOption, nextOption, formatOption, jsonOption],
+  options: [limitOption, nextCursorOption, formatOption, jsonOption],
   examples: [],
 } as const;
 

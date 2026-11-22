@@ -1,19 +1,14 @@
-import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { PackageInfoClient } from '@vltpkg/package-info';
+import { describe, expect, it } from 'vitest';
 import { getWriteableDirectory } from '@vercel/build-utils';
 import { remove } from 'fs-extra';
+import { existsSync } from 'node:fs';
 import {
   acquireLock,
-  EmbeddedPackageInfoClient,
+  removePackageInfoCache,
 } from '../../../src/builders/vlt-builder-importer';
 import { partitionBuilderSpecs } from '../../../src/builders/vlt-builder-routing';
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 describe('vlt Builder lock', () => {
   it('steals a lock whose holder is no longer running', async () => {
@@ -82,70 +77,6 @@ describe('vlt Builder lock', () => {
   });
 });
 
-describe('vlt Builder importer', () => {
-  it('times out hung remote tarball downloads', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(
-        (_url: string, init?: { signal?: AbortSignal }) =>
-          new Promise((_resolve, reject) => {
-            init?.signal?.addEventListener('abort', () => {
-              reject(init.signal?.reason);
-            });
-          })
-      )
-    );
-    const client = new EmbeddedPackageInfoClient({}, 20);
-    await expect(
-      client.extract({ final: { type: 'remote' } } as never, '/tmp/target', {
-        resolved: 'https://preview.example/tarballs/builder.tgz',
-        integrity: 'sha512-test',
-      } as never)
-    ).rejects.toThrow(
-      'Timed out downloading remote Builder dependency https://preview.example/tarballs/builder.tgz'
-    );
-  });
-
-  it('fetches and verifies remote tarballs without the registry cache', async () => {
-    const bytes = new TextEncoder().encode('remote tarball');
-    const integrity = `sha512-${createHash('sha512')
-      .update(bytes)
-      .digest('base64')}`;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => new Response(bytes))
-    );
-    const unpack = vi.fn(async () => undefined);
-    const prototype = PackageInfoClient.prototype as PackageInfoClient & {
-      getTarPool(): Promise<{ unpack: typeof unpack }>;
-    };
-    vi.spyOn(prototype, 'getTarPool').mockResolvedValue({ unpack });
-    const client = new EmbeddedPackageInfoClient();
-    const spec = { final: { type: 'remote' } };
-
-    await expect(
-      client.extract(spec as never, '/tmp/target', {
-        resolved: 'https://preview.example/tarballs/builder.tgz',
-        integrity,
-      } as never)
-    ).resolves.toMatchObject({ integrity, resolved: expect.any(String) });
-    expect(unpack).toHaveBeenCalledWith(bytes, '/tmp/target');
-
-    await expect(
-      client.extract(spec as never, '/tmp/target', {
-        resolved: 'https://preview.example/tarballs/builder.tgz',
-      } as never)
-    ).rejects.toThrow('Missing integrity for remote Builder dependency');
-
-    await expect(
-      client.extract(spec as never, '/tmp/target', {
-        resolved: 'https://preview.example/tarballs/builder.tgz',
-        integrity: 'sha512-wrong',
-      } as never)
-    ).rejects.toThrow('Integrity check failed for remote Builder dependency');
-  });
-});
-
 describe('vlt Builder routing', () => {
   it('routes only managed bare and latest specs into vlt', () => {
     const managedNames = new Set(['@vercel/node', '@vercel/next']);
@@ -170,5 +101,57 @@ describe('vlt Builder routing', () => {
         'https://example.com/builder.tgz',
       ]),
     });
+  });
+});
+
+describe('vlt package-info cache cleanup', () => {
+  it('waits for pending registry cache writes before removing the cache', async () => {
+    const dir = await getWriteableDirectory();
+    const cache = join(dir, '.vlt-package-info-cache');
+    const registryCache = join(cache, 'registry-client');
+    try {
+      await mkdir(registryCache, { recursive: true });
+      let cacheExistedWhenWriteLanded = false;
+      const packageInfo = {
+        getRegistryClient: async () =>
+          ({
+            cache: {
+              // Simulates vlt's background write landing after install().
+              promise: async () => {
+                await new Promise(resolve => setTimeout(resolve, 20));
+                cacheExistedWhenWriteLanded = existsSync(registryCache);
+                await writeFile(join(registryCache, 'late-entry'), 'data');
+              },
+            },
+          }) as never,
+      };
+
+      await removePackageInfoCache(packageInfo, cache);
+
+      expect(cacheExistedWhenWriteLanded).toBe(true);
+      expect(existsSync(cache)).toBe(false);
+    } finally {
+      await remove(dir);
+    }
+  });
+
+  it('still removes the cache when the registry client is unavailable', async () => {
+    const dir = await getWriteableDirectory();
+    const cache = join(dir, '.vlt-package-info-cache');
+    try {
+      await mkdir(join(cache, 'registry-client'), { recursive: true });
+      const packageInfo = {
+        getRegistryClient: async () => {
+          throw new Error('registry client failed to load');
+        },
+      };
+
+      await expect(
+        removePackageInfoCache(packageInfo, cache)
+      ).resolves.toBeUndefined();
+      expect(existsSync(cache)).toBe(false);
+    } finally {
+      await remove(dir);
+    }
   });
 });

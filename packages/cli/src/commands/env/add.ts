@@ -1,5 +1,9 @@
 import chalk from 'chalk';
-import type { CustomEnvironment, ProjectLinked } from '@vercel-internals/types';
+import type {
+  CustomEnvironment,
+  ProjectEnvVariable,
+  ProjectLinked,
+} from '@vercel-internals/types';
 import type Client from '../../util/client';
 import addEnvRecord from '../../util/env/add-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
@@ -8,6 +12,7 @@ import {
   envTargetChoices,
   isValidEnvTarget,
   parseEnvTargetArg,
+  resolveEnvTargetInput,
 } from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
 import { CHECKBOX_INSTRUCTIONS } from '../../util/input/checkbox-instructions';
@@ -43,6 +48,7 @@ import { quoteArg } from '../../util/flags/quote-arg';
 import {
   outputActionRequired,
   outputAgentError,
+  getLinkSuggestionArgs,
   buildCommandWithYes,
   buildEnvAddCommandWithPreservedArgs,
   getPreservedArgsForEnvAdd,
@@ -107,9 +113,9 @@ function getTargetCompatibilityError(
   const hasSensitiveCapable = envTargets.some(t => t !== 'development');
 
   if (!isSensitive && policyOn && hasSensitiveCapable) {
-    return `Your team requires sensitive Environment Variables for Production and Preview. To add a non-sensitive value, target the Development Environment only. Run ${getCommandName(
-      'env add'
-    )} with the development target instead.`;
+    return `Your team requires sensitive Environment Variables for Production and Preview. To add a non-sensitive value, add it to the Development Environment only. Run ${getCommandName(
+      'env add --environment development'
+    )} instead.`;
   }
 
   return null;
@@ -141,7 +147,7 @@ function resolveFinalType(
  * Replaces safe placeholders in an env add command template. Secret values stay
  * as placeholders so suggested commands never echo them.
  *
- * Placeholders: `<name>` (env key), `<git-branch>`, target placeholder from
+ * Placeholders: `<name>` (env key), `<BRANCH>`, target placeholder from
  * `getEnvTargetPlaceholder()`, and `<value>`.
  */
 function fillEnvAddTemplate(
@@ -158,12 +164,8 @@ function fillEnvAddTemplate(
     .split(targetPlaceholder)
     .join(opts.envTargetArg ? quoteArg(opts.envTargetArg) : targetPlaceholder)
     .replace(
-      /<git-branch>/g,
-      opts.envGitBranch ? quoteArg(opts.envGitBranch) : '<git-branch>'
-    )
-    .replace(
-      /<gitbranch>/g,
-      opts.envGitBranch ? quoteArg(opts.envGitBranch) : '<gitbranch>'
+      /<BRANCH>/g,
+      opts.envGitBranch ? quoteArg(opts.envGitBranch) : '<BRANCH>'
     )
     .replace(/<value>/g, '<value>');
 }
@@ -178,7 +180,7 @@ function multiTargetSuggestion(
   return {
     command: buildEnvAddCommandWithPreservedArgs(
       argv,
-      `env add ${envName} ${targets.join(',')} --value "<value>"${flag} --yes`
+      `env add ${envName} --environment ${targets.join(',')} --value "<value>"${flag} --yes`
     ),
     when: addNoSensitive
       ? 'Add one non-sensitive variable to all listed environments'
@@ -293,23 +295,25 @@ export default async function add(client: Client, argv: string[]) {
           reason: 'invalid_arguments',
           message: err instanceof Error ? err.message : String(err),
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags: opts } = parsedArgs;
 
-  const stdInput = await readStandardInput(client.stdin);
   const valueFromFlag =
     typeof opts['--value'] === 'string' ? opts['--value'] : undefined;
-  let [envName, envTargetArg] = args;
+  // `--value` is the value, so don't wait on stdin for one.
+  const stdInput =
+    valueFromFlag === undefined ? await readStandardInput(client.stdin) : '';
+  let [envName] = args;
+  const positionalEnvironment = args[1];
   const positionalGitBranch = args[2];
   const optionGitBranch =
     typeof opts['--git-branch'] === 'string' ? opts['--git-branch'] : undefined;
-  let envGitBranch = optionGitBranch ?? positionalGitBranch;
   const forceSensitive = Boolean(opts['--sensitive']);
   const forceEncrypted = Boolean(opts['--no-sensitive']);
   const typeOption = resolveEnvVarTypeOption({
@@ -329,8 +333,9 @@ export default async function add(client: Client, argv: string[]) {
     },
   });
   telemetryClient.trackCliArgumentName(envName);
-  telemetryClient.trackCliArgumentEnvironment(envTargetArg);
+  telemetryClient.trackCliArgumentEnvironment(positionalEnvironment);
   telemetryClient.trackCliArgumentGitBranch(positionalGitBranch);
+  telemetryClient.trackCliOptionEnvironment(opts['--environment']);
   telemetryClient.trackCliOptionGitBranch(optionGitBranch);
   telemetryClient.trackCliOptionValue(
     valueFromFlag === undefined ? undefined : '<redacted>'
@@ -385,42 +390,62 @@ export default async function add(client: Client, argv: string[]) {
           reason: 'conflicting_type_flags',
           message: typeConflictMessage,
         },
-        1
+        2
       );
     }
     output.fatal(typeConflictMessage);
-    return 1;
+    return 2;
   }
 
-  if (positionalGitBranch && optionGitBranch) {
-    output.error(
-      'Git branch was provided twice. Use either `--git-branch <git-branch>` or the legacy third argument.'
-    );
-    return 1;
+  const envTargetInput = resolveEnvTargetInput(client, {
+    environment: opts['--environment'],
+    gitBranch: optionGitBranch,
+    legacyEnvironment: positionalEnvironment,
+    legacyGitBranch: positionalGitBranch,
+  });
+  if ('error' in envTargetInput) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: envTargetInput.error,
+        },
+        2
+      );
+    }
+    output.error(envTargetInput.error);
+    return 2;
   }
+  const envTargetArg = envTargetInput.environment;
+  let envGitBranch = envTargetInput.gitBranch;
 
   if (args.length > 3) {
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> ${getEnvTargetPlaceholder()} --git-branch <git-branch>`
+        `env add <name> --environment ${getEnvTargetPlaceholder()} --git-branch <BRANCH>`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
-      `Invalid number of arguments. Usage: ${getCommandName(
-        `env add <name> <target> --git-branch <git-branch> < <file>`
+      `Can't read the value from stdin without a name and --environment. Usage: ${getCommandName(
+        `env add <name> --environment <environment> --git-branch <BRANCH> < <file>`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   let envTargets: string[] = envTargetArg
     ? parseEnvTargetArg(envTargetArg)
     : [];
   let resolvedLink: ProjectLinked | undefined;
+  let envRecordsAndCustomEnvironments:
+    | [{ envs: ProjectEnvVariable[] }, CustomEnvironment[]]
+    | undefined;
 
   // Non-interactive: resolve link and choices once, then report all missing requirements in a single JSON (no iteration)
   if (client.nonInteractive) {
@@ -444,30 +469,15 @@ export default async function add(client: Client, argv: string[]) {
         'link',
         '--scope',
         '<scope>',
-        ...linkPreserved,
+        ...getLinkSuggestionArgs(linkPreserved),
       ];
       let envAddRetryArgv = redactEnvValueArgs(client.argv);
       if (envTargetArg === 'preview' && envGitBranch === undefined) {
-        const argvArgs = client.argv.slice(2);
-        const addIdx = argvArgs.indexOf('add');
-        if (addIdx !== -1) {
-          let pos = addIdx + 1;
-          let positionals = 0;
-          while (
-            pos < argvArgs.length &&
-            positionals < 3 &&
-            !argvArgs[pos].startsWith('-')
-          ) {
-            positionals++;
-            pos++;
-          }
-          const insertAt = 2 + pos;
-          envAddRetryArgv = redactEnvValueArgs([
-            ...client.argv.slice(0, insertAt),
-            '<gitbranch>',
-            ...client.argv.slice(insertAt),
-          ]);
-        }
+        envAddRetryArgv = redactEnvValueArgs([
+          ...client.argv,
+          '--git-branch',
+          '<BRANCH>',
+        ]);
       }
       outputAgentError(
         client,
@@ -490,10 +500,11 @@ export default async function add(client: Client, argv: string[]) {
     const { project } = link;
     const org = link.org;
     client.config.currentTeam = org.type === 'team' ? org.id : undefined;
-    const [{ envs }, customEnvironments] = await Promise.all([
+    envRecordsAndCustomEnvironments = await Promise.all([
       getEnvRecords(client, project.id, 'vercel-cli:env:add'),
       getCustomEnvironments(client, project.id),
     ]);
+    const [{ envs }, customEnvironments] = envRecordsAndCustomEnvironments;
     const matchingEnvs = envs.filter(r => r.key === envName);
     const existingTargets = new Set<string>();
     const existingCustomEnvs = new Set<string>();
@@ -525,11 +536,11 @@ export default async function add(client: Client, argv: string[]) {
     if (valueFromFlag === undefined && !stdInput) missing.push('missing_value');
     if (!envTargetArg && choices.length > 0)
       missing.push('missing_environment');
-    // When nonInteractive and exactly two positionals (name, preview), treat as "all Preview branches"; otherwise require branch
+    // When nonInteractive with a name and an explicit preview environment, treat as "all Preview branches"; otherwise require branch
     if (
       envTargetArg === 'preview' &&
       envGitBranch === undefined &&
-      !(client.nonInteractive && args.length === 2)
+      !(client.nonInteractive && envName !== undefined)
     ) {
       missing.push('git_branch_required');
     }
@@ -540,10 +551,10 @@ export default async function add(client: Client, argv: string[]) {
         if (m === 'missing_environment')
           return 'environment (production, preview, development, or a comma-separated list)';
         if (m === 'git_branch_required')
-          return '`--git-branch <git-branch>` for Preview, or omit for all Preview branches';
+          return '`--git-branch <BRANCH>` for Preview, or omit for all Preview branches';
         return m;
       });
-      const fullTemplate = `env add <name> ${getEnvTargetPlaceholder()} --value "<value>" --yes`;
+      const fullTemplate = `env add <name> --environment ${getEnvTargetPlaceholder()} --value "<value>" --yes`;
       const filledTemplate = fillEnvAddTemplate(fullTemplate, {
         envName,
         envTargetArg,
@@ -567,11 +578,11 @@ export default async function add(client: Client, argv: string[]) {
         (valueFromFlag !== undefined || stdInput)
       ) {
         const branchSpecific = fillEnvAddTemplate(
-          'env add <name> preview --git-branch <git-branch> --value "<value>" --yes',
+          'env add <name> --environment preview --git-branch <BRANCH> --value "<value>" --yes',
           { envName, envTargetArg: 'preview' }
         );
         const branchAll = fillEnvAddTemplate(
-          'env add <name> preview --value "<value>" --yes',
+          'env add <name> --environment preview --value "<value>" --yes',
           { envName, envTargetArg: 'preview' }
         );
         next.push(
@@ -655,7 +666,7 @@ export default async function add(client: Client, argv: string[]) {
           'link',
           '--scope',
           '<scope>',
-          ...linkPreserved,
+          ...getLinkSuggestionArgs(linkPreserved),
         ];
         outputAgentError(
           client,
@@ -703,11 +714,11 @@ export default async function add(client: Client, argv: string[]) {
             reason: 'invalid_type',
             message: publicPrefixError,
           },
-          1
+          2
         );
       }
       output.fatal(publicPrefixError);
-      return 1;
+      return 2;
     }
   }
 
@@ -753,17 +764,17 @@ export default async function add(client: Client, argv: string[]) {
 
     const privateCommand = buildEnvAddCommandWithPreservedArgs(
       client.argv,
-      `env add ${nameWithoutPrefix} ${
+      `env add ${nameWithoutPrefix} --environment ${
         envTargetArg ?? getEnvTargetPlaceholder()
       } --type secret --value "<value>" --yes`
     );
     const publicCommand = buildEnvAddCommandWithPreservedArgs(
       client.argv,
-      `env add ${envName} ${
+      `env add ${envName} --environment ${
         envTargetArg ?? getEnvTargetPlaceholder()
       } --type config --value "<value>" --yes`
     );
-    const humanTargetArg = envTargetArg ? ` ${envTargetArg}` : '';
+    const humanTargetArg = envTargetArg ? ` --environment ${envTargetArg}` : '';
     const privateHumanCommand = buildHumanEnvAddCommand(
       client.argv,
       `env add ${nameWithoutPrefix}${humanTargetArg} --type secret`
@@ -859,11 +870,11 @@ export default async function add(client: Client, argv: string[]) {
       outputAgentError(
         client,
         { status: 'error', reason: 'invalid_type', message },
-        1
+        2
       );
     }
     output.fatal(message);
-    return 1;
+    return 2;
   }
   if (
     project.framework === 'sveltekit' ||
@@ -897,11 +908,11 @@ export default async function add(client: Client, argv: string[]) {
       outputAgentError(
         client,
         { status: 'error', reason: 'invalid_type', message },
-        1
+        2
       );
     }
     output.fatal(message);
-    return 1;
+    return 2;
   }
   if (customSveltePublicPrefix !== undefined) {
     printEnvAddWarning(
@@ -912,10 +923,13 @@ export default async function add(client: Client, argv: string[]) {
   }
   const skipConfirm =
     opts['--yes'] || !!stdInput || valueFromFlag !== undefined;
-  const [{ envs }, customEnvironments] = await Promise.all([
-    getEnvRecords(client, project.id, 'vercel-cli:env:add'),
-    getCustomEnvironments(client, project.id),
-  ]);
+  // Non-interactive mode already fetched these to report missing inputs.
+  const [{ envs }, customEnvironments] =
+    envRecordsAndCustomEnvironments ??
+    (await Promise.all([
+      getEnvRecords(client, project.id, 'vercel-cli:env:add'),
+      getCustomEnvironments(client, project.id),
+    ]));
 
   if (envTargets.length > 0) {
     const resolved: string[] = [];
@@ -948,11 +962,11 @@ export default async function add(client: Client, argv: string[]) {
         outputAgentError(
           client,
           { status: 'error', reason: 'invalid_environment', message },
-          1
+          2
         );
       }
       output.error(message);
-      return 1;
+      return 2;
     }
     envTargets = resolved;
   }
@@ -1005,7 +1019,7 @@ export default async function add(client: Client, argv: string[]) {
       `The variable ${param(
         envName
       )} has already been added to all Environments. To remove, run ${getCommandName(
-        `env rm ${envName}${projectFlag}`
+        `env remove ${envName}${projectFlag}`
       )}.`
     );
     return 1;
@@ -1091,7 +1105,7 @@ export default async function add(client: Client, argv: string[]) {
           {
             command: buildEnvAddCommandWithPreservedArgs(
               client.argv,
-              `env add ${envName} development --value "<value>" --yes`
+              `env add ${envName} --environment development --value "<value>" --yes`
             ),
             when: 'Add as non-sensitive to Development only',
           },
@@ -1155,12 +1169,12 @@ export default async function add(client: Client, argv: string[]) {
         status: 'action_required',
         reason: 'missing_value',
         message:
-          'In non-interactive mode provide the value via --value or stdin. Example: vercel env add <name> <environment> --value "<value>" --yes',
+          'In non-interactive mode provide the value via --value or stdin. Example: vercel env add <name> --environment <environment> --value "<value>" --yes',
         next: [
           {
             command: buildEnvAddCommandWithPreservedArgs(
               client.argv,
-              `env add <name> ${getEnvTargetPlaceholder()} --value "<value>" --yes`
+              `env add <name> --environment ${getEnvTargetPlaceholder()} --value "<value>" --yes`
             ),
           },
         ],
@@ -1207,16 +1221,16 @@ export default async function add(client: Client, argv: string[]) {
         ...envChoices.slice(0, 5).map(c => ({
           command: buildEnvAddCommandWithPreservedArgs(
             client.argv,
-            `env add ${envName} ${c.value} --value "<value>" --yes`
+            `env add ${envName} --environment ${c.value} --value "<value>" --yes`
           ),
         }))
       );
       outputActionRequired(client, {
         status: 'action_required',
         reason: 'missing_environment',
-        message: `Specify one or more environments (comma-separated). Add as argument or use: ${buildEnvAddCommandWithPreservedArgs(
+        message: `Specify one or more environments (comma-separated) with --environment: ${buildEnvAddCommandWithPreservedArgs(
           client.argv,
-          `env add ${envName} <environment>[,<environment>] --value "<value>" --yes`
+          `env add ${envName} --environment <environment>[,<environment>] --value "<value>" --yes`
         )}`,
         choices: envChoices.map(c => ({
           id: c.value,
@@ -1247,13 +1261,13 @@ export default async function add(client: Client, argv: string[]) {
   }
 
   // Skip the Git branch prompt when `--yes` is set (all Preview branches) or
-  // when non-interactive with only name+preview positionals.
+  // when non-interactive with a name and an explicit preview environment.
   if (
     envGitBranch === undefined &&
     envTargets.length === 1 &&
     envTargets[0] === 'preview' &&
     !opts['--yes'] &&
-    !(client.nonInteractive && args.length === 2)
+    !(client.nonInteractive && envTargetArg !== undefined)
   ) {
     if (client.nonInteractive) {
       outputActionRequired(
@@ -1261,19 +1275,19 @@ export default async function add(client: Client, argv: string[]) {
         {
           status: 'action_required',
           reason: 'git_branch_required',
-          message: `Add ${envName} to which Git branch for Preview? Pass branch as third argument, or omit for all Preview branches.`,
+          message: `Add ${envName} to which Git branch for Preview? Pass --git-branch, or omit it for all Preview branches.`,
           next: [
             {
               command: buildEnvAddCommandWithPreservedArgs(
                 client.argv,
-                `env add ${envName} preview --git-branch <git-branch> --value "<value>" --yes`
+                `env add ${envName} --environment preview --git-branch <BRANCH> --value "<value>" --yes`
               ),
               when: 'Add to a specific Git branch',
             },
             {
               command: buildEnvAddCommandWithPreservedArgs(
                 client.argv,
-                `env add ${envName} preview --value "<value>" --yes`
+                `env add ${envName} --environment preview --value "<value>" --yes`
               ),
               when: 'Add to all Preview branches',
             },
@@ -1327,23 +1341,23 @@ export default async function add(client: Client, argv: string[]) {
       const privateName = envName.slice(publicPrefix.length);
       const privateCommand = buildEnvAddCommandWithPreservedArgs(
         client.argv,
-        `env add ${privateName} ${envTargets.join(
+        `env add ${privateName} --environment ${envTargets.join(
           ','
         )} --type secret --value "<value>" --yes`
       );
       const publicCommand = buildEnvAddCommandWithPreservedArgs(
         client.argv,
-        `env add ${envName} ${envTargets.join(
+        `env add ${envName} --environment ${envTargets.join(
           ','
         )} --type config --value "<value>" --yes`
       );
       const privateHumanCommand = buildHumanEnvAddCommand(
         client.argv,
-        `env add ${privateName} ${envTargets.join(',')} --type secret`
+        `env add ${privateName} --environment ${envTargets.join(',')} --type secret`
       );
       const publicHumanCommand = buildHumanEnvAddCommand(
         client.argv,
-        `env add ${envName} ${envTargets.join(',')} --type config`
+        `env add ${envName} --environment ${envTargets.join(',')} --type config`
       );
       const message =
         publicPrefix === ''
@@ -1495,14 +1509,14 @@ export default async function add(client: Client, argv: string[]) {
             {
               command: buildEnvAddCommandWithPreservedArgs(
                 client.argv,
-                `env add ${envName} production --type secret --value "<production-value>" --yes`
+                `env add ${envName} --environment production --type secret --value "<production-value>" --yes`
               ),
               when: 'Set the Production Secret',
             },
             {
               command: buildEnvAddCommandWithPreservedArgs(
                 client.argv,
-                `env add ${envName} ${envTargets
+                `env add ${envName} --environment ${envTargets
                   .filter(target => target !== 'production')
                   .join(
                     ','
@@ -1538,11 +1552,11 @@ export default async function add(client: Client, argv: string[]) {
           reason: 'invalid_type',
           message: visibilityError,
         },
-        1
+        2
       );
     }
     output.fatal(visibilityError);
-    return 1;
+    return 2;
   }
 
   try {

@@ -1,0 +1,62 @@
+{
+  "uploadNowJson": true,
+  "projectSettings": {
+    "framework": "services"
+  },
+  "build": {
+    "env": {
+      "VERCEL_EXPERIMENTAL_BUILDPACK_GO": "1"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path(.*)?",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/admin/:path(.*)?",
+      "destination": {
+        "service": "admin"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ],
+  "services": {
+    "frontend": {
+      "root": "frontend/",
+      "rewrites": [
+        {
+          "source": "/(.*)",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    "backend": {
+      "root": "backend/",
+      "entrypoint": "main.go",
+      "rewrites": [
+        {
+          "source": "/api/:path(.*)?",
+          "destination": "/:path"
+        }
+      ]
+    },
+    "admin": {
+      "root": "admin/",
+      "runtime": "go",
+      "rewrites": [
+        {
+          "source": "/admin/:path(.*)?",
+          "destination": "/:path"
+        }
+      ]
+    }
+  }
+}

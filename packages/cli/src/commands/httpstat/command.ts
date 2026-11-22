@@ -1,9 +1,10 @@
 import { packageName } from '../../util/pkg-name';
-import { yesOption } from '../../util/arg-common';
+import { deploymentOption, yesOption } from '../../util/arg-common';
 
 export const httpstatCommand = {
   name: 'httpstat',
   aliases: [],
+  summary: 'Show deployment HTTP timing',
   description:
     'Execute httpstat with automatic deployment URL and protection bypass to visualize HTTP timing statistics.',
   arguments: [
@@ -12,20 +13,15 @@ export const httpstatCommand = {
       required: true,
     },
   ],
+  // Options it doesn't define go to httpstat.
+  forwardsUnknownOptions: true,
   options: [
     {
       ...yesOption,
       description:
         'Skip confirmation when linking is required (e.g. in non-interactive mode)',
     },
-    {
-      name: 'deployment',
-      shorthand: null,
-      type: String,
-      deprecated: false,
-      description: 'The deployment ID or URL to target',
-      argument: 'ID|URL',
-    },
+    deploymentOption,
     {
       name: 'protection-bypass',
       shorthand: null,
@@ -50,11 +46,12 @@ export const httpstatCommand = {
       value: `${packageName} httpstat /api/status --deployment ERiL45NJvP8ghWxgbvCM447bmxwV`,
     },
     {
-      name: 'Use curl flags after the separator',
+      name: 'Use curl options after the separator',
       value: `${packageName} httpstat /api/test -- -H "Content-Type: application/json" -X PUT`,
     },
     {
       name: 'Use with protection bypass secret',
+      placeholders: ['<secret>'],
       value: `${packageName} httpstat /api/protected --protection-bypass <secret>`,
     },
   ],

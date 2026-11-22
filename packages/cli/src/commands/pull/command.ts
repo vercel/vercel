@@ -1,14 +1,17 @@
 import { packageName } from '../../util/pkg-name';
 import { getEnvTargetPlaceholder } from '../../util/env/env-target';
-import { projectOption, yesOption } from '../../util/arg-common';
+import {
+  gitBranchOption,
+  projectOption,
+  yesOption,
+} from '../../util/arg-common';
 import type { getFlagsSpecification } from '../../util/get-flags-specification';
 import type { parseArguments } from '../../util/get-args';
 
 export const pullCommand = {
   name: 'pull',
   aliases: [],
-  description:
-    'Pull latest environment variables and project settings from Vercel. ',
+  description: 'Pull Environment Variables and project settings into .vercel',
   arguments: [
     {
       name: 'project-path',
@@ -18,26 +21,23 @@ export const pullCommand = {
   options: [
     {
       name: 'environment',
-      description: 'Deployment environment [development]',
-      argument: 'TARGET',
-      shorthand: null,
+      description: 'Deployment environment (default: development)',
+      argument: 'ENVIRONMENT',
+      shorthand: 'e',
       type: String,
       deprecated: false,
     },
     {
-      name: 'git-branch',
+      ...gitBranchOption,
       description:
         'Specify the Git branch to pull specific Environment Variables for',
-      argument: 'NAME',
-      shorthand: null,
-      type: String,
-      deprecated: false,
     },
+    // Hidden: deprecated alias of `--environment production`.
     {
       name: 'prod',
       shorthand: null,
       type: Boolean,
-      deprecated: false,
+      deprecated: true,
     },
     {
       ...yesOption,
@@ -57,6 +57,7 @@ export const pullCommand = {
     },
     {
       name: 'Pull for a specific environment',
+      placeholders: [getEnvTargetPlaceholder()],
       value: `${packageName} pull --environment=${getEnvTargetPlaceholder()}`,
     },
     {
@@ -64,7 +65,7 @@ export const pullCommand = {
       value: `${packageName} pull --environment=preview --git-branch=feature-branch`,
     },
     {
-      name: 'If you want to download environment variables to a specific file, use `vercel env pull` instead',
+      name: 'Pull Environment Variables into an application env file with `vercel env pull`',
       value: `${packageName} env pull`,
     },
   ],

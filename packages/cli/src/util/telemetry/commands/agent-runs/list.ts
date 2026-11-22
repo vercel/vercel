@@ -6,6 +6,16 @@ export class AgentRunsListTelemetryClient
   extends AgentRunsQueryTelemetryClient
   implements TelemetryMethods<typeof listSubcommand>
 {
+  trackCliOptionQuery(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: 'query',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionSearch(value: string | undefined) {
     if (value) {
       this.trackCliOption({
@@ -15,11 +25,12 @@ export class AgentRunsListTelemetryClient
     }
   }
 
-  trackCliOptionNext(value: number | undefined) {
-    if (typeof value === 'number') {
+  trackCliOptionNext(value: string | undefined) {
+    if (value !== undefined) {
+      // A legacy page number is safe to record; a cursor is not.
       this.trackCliOption({
         option: 'next',
-        value: String(value),
+        value: /^\d+$/.test(value) ? value : this.redactedValue,
       });
     }
   }

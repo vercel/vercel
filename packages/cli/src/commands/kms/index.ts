@@ -37,6 +37,7 @@ import {
   updateGrantSubcommand,
   updateSubcommand,
 } from './command';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   list: getCommandAliases(listSubcommand),
@@ -44,7 +45,7 @@ const COMMAND_CONFIG = {
   add: getCommandAliases(addSubcommand),
   import: getCommandAliases(importSubcommand),
   update: getCommandAliases(updateSubcommand),
-  remove: getCommandAliases(removeSubcommand),
+  delete: getCommandAliases(removeSubcommand),
   'add-key': getCommandAliases(addKeySubcommand),
   'import-key': getCommandAliases(importKeySubcommand),
   'activate-key': getCommandAliases(activateKeySubcommand),
@@ -63,7 +64,7 @@ export default async function main(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new KmsTelemetryClient({
@@ -81,15 +82,24 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('kms');
-    output.print(help(kmsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(kmsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: kmsCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: kmsCommand,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
@@ -106,13 +116,19 @@ export default async function main(client: Client) {
         return printHelp(inspectSubcommand);
       }
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      if (subcommandOriginal === 'get') {
+        warnDeprecatedSubcommand(client, 'kms get', 'kms inspect');
+      }
       return inspect(client, args);
     case 'add':
       if (needHelp) {
         telemetry.trackCliFlagHelp('kms', subcommandOriginal);
         return printHelp(addSubcommand);
       }
-      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      if (subcommandOriginal === 'add') {
+        warnDeprecatedSubcommand(client, 'kms add', 'kms create');
+      }
       return add(client, args);
     case 'import':
       if (needHelp) {
@@ -128,12 +144,15 @@ export default async function main(client: Client) {
       }
       telemetry.trackCliSubcommandUpdate(subcommandOriginal);
       return update(client, args);
-    case 'remove':
+    case 'delete':
       if (needHelp) {
         telemetry.trackCliFlagHelp('kms', subcommandOriginal);
         return printHelp(removeSubcommand);
       }
-      telemetry.trackCliSubcommandRemove(subcommandOriginal);
+      telemetry.trackCliSubcommandDelete(subcommandOriginal);
+      if (subcommandOriginal === 'remove') {
+        warnDeprecatedSubcommand(client, 'kms remove', 'kms delete');
+      }
       return rm(client, args);
     case 'add-key':
       if (needHelp) {
@@ -183,13 +202,25 @@ export default async function main(client: Client) {
         return printHelp(removeGrantSubcommand);
       }
       telemetry.trackCliSubcommandRemoveGrant(subcommandOriginal);
+      if (subcommandOriginal !== 'remove-grant') {
+        warnDeprecatedSubcommand(
+          client,
+          `kms ${subcommandOriginal}`,
+          'kms remove-grant'
+        );
+      }
       return rmGrant(client, args);
     default:
       // Bare `vercel kms` runs the default subcommand. Anything else reaching
       // here is a mistyped subcommand, not an argument to `list`.
       if (args.length > 0) {
         output.error(getInvalidSubcommand(COMMAND_CONFIG));
-        output.print(help(kmsCommand, { columns: client.stderr.columns }));
+        output.print(
+          help(kmsCommand, {
+            stream: client.stderr,
+            columns: client.stderr.columns,
+          })
+        );
         return 2;
       }
       telemetry.trackCliSubcommandList(subcommandOriginal);

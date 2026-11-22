@@ -1,13 +1,16 @@
 import { getCommandAliases } from '..';
 import output from '../../output-manager';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 import type Client from '../../util/client';
-import { parseArguments } from '../../util/get-args';
+import { isArgumentError, parseArguments } from '../../util/get-args';
 import { printError } from '../../util/error';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import getSubcommand from '../../util/get-subcommand';
 import { ConnexTelemetryClient } from '../../util/telemetry/commands/connex';
 import { type Command, type HelpOptions, help } from '../help';
 import {
+  discoverSubcommand,
+  categoriesSubcommand,
   createSubcommand,
   updateSubcommand,
   listSubcommand,
@@ -20,6 +23,8 @@ import {
   contactsSubcommand,
   connexCommand,
 } from './command';
+import { discover } from './discover';
+import { categories } from './categories';
 import { create } from './create';
 import { printCreateDynamicHelp } from './create-help';
 import { update } from './update';
@@ -39,13 +44,15 @@ import { AGENT_REASON } from '../../util/agent-output-constants';
 import { packageName } from '../../util/pkg-name';
 
 const COMMAND_CONFIG = {
+  discover: getCommandAliases(discoverSubcommand),
+  categories: getCommandAliases(categoriesSubcommand),
   create: getCommandAliases(createSubcommand),
   update: getCommandAliases(updateSubcommand),
   list: getCommandAliases(listSubcommand),
   token: getCommandAliases(tokenSubcommand),
   attach: getCommandAliases(attachSubcommand),
   detach: getCommandAliases(detachSubcommand),
-  remove: getCommandAliases(removeSubcommand),
+  delete: getCommandAliases(removeSubcommand),
   'revoke-tokens': getCommandAliases(revokeTokensSubcommand),
   open: getCommandAliases(openSubcommand),
   contacts: getCommandAliases(contactsSubcommand),
@@ -77,6 +84,20 @@ export default async function connex(client: Client): Promise<number> {
       help(command, {
         ...options,
         columns: client.stderr.columns,
+        stream: client.stderr,
+        parent: connexCommand,
+      })
+    );
+  }
+
+  // `connect create` renders dynamic help itself, so it follows the same
+  // `--help` contract as the rest of the CLI: stdout and exit code 0.
+  function printHelpToStdout(command: Command, options?: HelpOptions) {
+    client.stdout.write(
+      help(command, {
+        ...options,
+        columns: client.stdout.columns ?? client.stderr.columns,
+        stream: client.stdout,
         parent: connexCommand,
       })
     );
@@ -87,6 +108,7 @@ export default async function connex(client: Client): Promise<number> {
     output.print(
       help(connexCommand, {
         columns: client.stderr.columns,
+        stream: client.stderr,
       })
     );
     return 0;
@@ -105,11 +127,11 @@ export default async function connex(client: Client): Promise<number> {
             client,
             findHelpServiceArg(subArgs),
             createSubcommand,
-            (cmd, helpOptions) => printHelp(cmd, helpOptions)
+            printHelpToStdout
           );
 
           if (!printed) {
-            printHelp(createSubcommand);
+            printHelpToStdout(createSubcommand);
           }
           return 0;
         }
@@ -149,6 +171,9 @@ export default async function connex(client: Client): Promise<number> {
         telemetry.trackCliOptionTriggerProject(
           createParsedArgs.flags['--trigger-project']
         );
+        telemetry.trackCliOptionGitBranch(
+          createParsedArgs.flags['--git-branch']
+        );
         telemetry.trackCliOptionTriggerBranch(
           createParsedArgs.flags['--trigger-branch']
         );
@@ -187,6 +212,57 @@ export default async function connex(client: Client): Promise<number> {
           updateParsedArgs.flags
         );
       }
+      case 'discover': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
+          printHelp(discoverSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandDiscover(subcommandOriginal);
+
+        const discoverParsedArgs = parseArguments(
+          subArgs,
+          getFlagsSpecification(discoverSubcommand.options)
+        );
+        telemetry.trackCliArgumentQuery(discoverParsedArgs.args[0]);
+        telemetry.trackCliOptionCategory(
+          discoverParsedArgs.flags['--category']
+        );
+        telemetry.trackCliOptionConnectionMethod(
+          discoverParsedArgs.flags['--connection-method']
+        );
+        telemetry.trackCliOptionTarget(discoverParsedArgs.flags['--target']);
+        telemetry.trackCliFlagSupportsTriggers(
+          discoverParsedArgs.flags['--supports-triggers']
+        );
+        telemetry.trackCliOptionLimit(discoverParsedArgs.flags['--limit']);
+        telemetry.trackCliOptionNext(discoverParsedArgs.flags['--next']);
+        telemetry.trackCliOptionFormat(discoverParsedArgs.flags['--format']);
+        return await discover(
+          client,
+          discoverParsedArgs.args,
+          discoverParsedArgs.flags
+        );
+      }
+      case 'categories': {
+        if (needHelp) {
+          telemetry.trackCliFlagHelp('connect', subcommandOriginal);
+          printHelp(categoriesSubcommand);
+          return 0;
+        }
+        telemetry.trackCliSubcommandCategories(subcommandOriginal);
+
+        const categoriesParsedArgs = parseArguments(
+          subArgs,
+          getFlagsSpecification(categoriesSubcommand.options)
+        );
+        telemetry.trackCliOptionFormat(categoriesParsedArgs.flags['--format']);
+        return await categories(
+          client,
+          categoriesParsedArgs.args,
+          categoriesParsedArgs.flags
+        );
+      }
       case 'list': {
         if (needHelp) {
           telemetry.trackCliFlagHelp('connect', subcommandOriginal);
@@ -202,6 +278,7 @@ export default async function connex(client: Client): Promise<number> {
         );
         telemetry.trackCliOptionLimit(listParsedArgs.flags['--limit']);
         telemetry.trackCliOptionNext(listParsedArgs.flags['--next']);
+        telemetry.trackCliOptionQuery(listParsedArgs.flags['--query']);
         telemetry.trackCliOptionSearch(listParsedArgs.flags['--search']);
         telemetry.trackCliOptionService(listParsedArgs.flags['--service']);
         telemetry.trackCliOptionType(listParsedArgs.flags['--type']);
@@ -220,10 +297,16 @@ export default async function connex(client: Client): Promise<number> {
         const tokenParsedArgs = parseArguments(subArgs, tokenFlagsSpec);
         telemetry.trackCliArgumentId(tokenParsedArgs.args[0]);
         telemetry.trackCliOptionSubject(tokenParsedArgs.flags['--subject']);
+        telemetry.trackCliOptionInstallation(
+          tokenParsedArgs.flags['--installation']
+        );
         telemetry.trackCliOptionInstallationId(
           tokenParsedArgs.flags['--installation-id']
         );
         telemetry.trackCliOptionScopes(tokenParsedArgs.flags['--scopes']);
+        telemetry.trackCliFlagNoDefaultScopes(
+          tokenParsedArgs.flags['--no-default-scopes']
+        );
         telemetry.trackCliFlagYes(tokenParsedArgs.flags['--yes']);
         telemetry.trackCliOptionFormat(tokenParsedArgs.flags['--format']);
         return await token(client, tokenParsedArgs.args, tokenParsedArgs.flags);
@@ -244,6 +327,9 @@ export default async function connex(client: Client): Promise<number> {
         );
         telemetry.trackCliOptionProject(attachParsedArgs.flags['--project']);
         telemetry.trackCliFlagTriggers(attachParsedArgs.flags['--triggers']);
+        telemetry.trackCliOptionGitBranch(
+          attachParsedArgs.flags['--git-branch']
+        );
         telemetry.trackCliOptionTriggerBranch(
           attachParsedArgs.flags['--trigger-branch']
         );
@@ -281,13 +367,16 @@ export default async function connex(client: Client): Promise<number> {
           detachParsedArgs.flags
         );
       }
-      case 'remove': {
+      case 'delete': {
         if (needHelp) {
           telemetry.trackCliFlagHelp('connect', subcommandOriginal);
           printHelp(removeSubcommand);
           return 0;
         }
-        telemetry.trackCliSubcommandRemove(subcommandOriginal);
+        telemetry.trackCliSubcommandDelete(subcommandOriginal);
+        if (subcommandOriginal === 'remove') {
+          warnDeprecatedSubcommand(client, 'connect remove', 'connect delete');
+        }
 
         const removeFlagsSpec = getFlagsSpecification(removeSubcommand.options);
         const removeParsedArgs = parseArguments(subArgs, removeFlagsSpec);
@@ -390,8 +479,8 @@ export default async function connex(client: Client): Promise<number> {
       }
     }
   } catch (err) {
-    printError(err);
-    return 1;
+    printError(err, client);
+    return isArgumentError(err) ? 2 : 1;
   }
 }
 

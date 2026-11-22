@@ -1,8 +1,6 @@
 import chalk from 'chalk';
-import { Separator } from '@inquirer/checkbox';
 import pluralize from 'pluralize';
 import { homedir } from 'os';
-import slugify from '@sindresorhus/slugify';
 import { basename, join } from 'path';
 import { normalizePath, traverseUpDirectories } from '@vercel/build-utils';
 import { lstat, readJSON, outputJSON } from 'fs-extra';
@@ -11,14 +9,10 @@ import { VERCEL_DIR, VERCEL_DIR_REPO, writeReadme } from '../projects/link';
 import { getRemoteUrls } from '../create-git-meta';
 import link from '../output/link';
 import type { EmojiLabel } from '../emoji';
-import selectOrg from '../input/select-org';
 import { addToGitIgnore } from './add-to-gitignore';
 import type Client from '../client';
 import type { Framework } from '@vercel/frameworks';
 import type { Project } from '@vercel-internals/types';
-import createProject from '../projects/create-project';
-import { repoInfoToUrl } from '../git/repo-info-to-url';
-import { connectGitProvider, parseRepoUrl } from '../git/connect-git-provider';
 import { getGitConfigPath, getGitRootDirectory } from '../git-helpers';
 import output from '../../output-manager';
 import { printAlignedLabel } from '../output/print-aligned-label';
@@ -122,28 +116,30 @@ export async function resolveGitRemote(
       );
     }
   } else {
-    const remoteNames = Object.keys(remoteUrls).sort();
-    if (remoteNames.length === 1) {
-      remoteName = remoteNames[0];
-    } else {
-      const defaultRemote = remoteNames.includes('origin')
-        ? 'origin'
-        : remoteNames[0];
-      if (yes) {
-        remoteName = defaultRemote;
-      } else {
-        remoteName = await client.input.select({
-          message: 'Which Git remote should be used?',
-          choices: remoteNames.map(name => {
-            return { name: name, value: name };
-          }),
-          default: defaultRemote,
-        });
-      }
-    }
+    remoteName = await selectGitRemote(client, Object.keys(remoteUrls), yes);
   }
 
   return { rootPath, remoteName, repoUrl: remoteUrls[remoteName] };
+}
+
+/** Selects from a non-empty list of local Git remote names. */
+export async function selectGitRemote(
+  client: Client,
+  names: string[],
+  yes = false
+): Promise<string> {
+  const remoteNames = [...names].sort();
+  const defaultRemote = remoteNames.includes('origin')
+    ? 'origin'
+    : remoteNames[0];
+  if (remoteNames.length === 1 || yes) {
+    return defaultRemote;
+  }
+  return client.input.select({
+    message: 'Which Git remote should be used?',
+    choices: remoteNames.map(name => ({ name, value: name })),
+    default: defaultRemote,
+  });
 }
 
 export async function fetchProjectsForRepoUrl(
@@ -245,6 +241,14 @@ async function discoverRepoProjects(
   | { remoteName: string; projects: RepoProjectConfig[]; orgSlug: string }
   | undefined
 > {
+  const { Separator } = await import('@inquirer/checkbox');
+  const { default: slugify } = await import('@sindresorhus/slugify');
+  const { default: selectOrg } = await import('../input/select-org');
+  const { default: createProject } = await import('../projects/create-project');
+  const { repoInfoToUrl } = await import('../git/repo-info-to-url');
+  const { connectGitProvider, parseRepoUrl } = await import(
+    '../git/connect-git-provider'
+  );
   // Detect the projects on the filesystem out of band, so that
   // they will be ready by the time the projects are listed
   const detectedProjectsPromise = import('../projects/detect-projects')

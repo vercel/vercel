@@ -1,10 +1,15 @@
 export {
+  detectDaemons,
   detectServices,
   generateServiceRewrites,
   generateServicesRoutes,
+  resolveAllConfiguredServices,
   resolveAllConfiguredServicesV2,
   resolveConfiguredServiceV2,
   validateServiceConfigV2,
+  hasLegacyServicesConfig,
+  migrateExperimentalServices,
+  planExperimentalServicesMigration,
   autoDetectServices,
   isStaticBuild,
   isRouteOwningBuilder,
@@ -20,6 +25,10 @@ export {
 export type {
   AutoDetectOptions,
   AutoDetectResult,
+  ExperimentalServicesMigrationPlan,
+  LegacyServicesConfig,
+  MigrateExperimentalServicesOptions,
+  ServicesMigrationNote,
   DetectServicesOptions,
   DetectServicesResult,
   DetectServicesSource,
@@ -41,4 +50,5 @@ export type {
   ServiceDetectionError,
   ConfiguredServices,
   ConfiguredServicesType,
+  DetectedDaemon,
 } from '@vercel/fs-detectors';

@@ -5,6 +5,7 @@ import type { Lambda, LambdaAffinity, LambdaArchitecture } from './lambda';
 import type { Prerender } from './prerender';
 import type { EdgeFunction } from './edge-function';
 import type { ContainerImage } from './container-image';
+import type { DaemonConfig, DaemonOutput } from './daemons';
 import type { Span } from './trace';
 import type {
   HasField,
@@ -29,6 +30,33 @@ export interface FileBase {
 
 export interface Files {
   [filePath: string]: File;
+}
+
+/** Data surrounding file content in a build-output upload. */
+export interface ExtendedBodyData {
+  prefix: string;
+  suffix: string;
+}
+
+export interface ScheduleFunctionEntrypoint {
+  /** Runtime-specific entrypoint locator from `vercel.json`. */
+  entrypoint: string;
+  /** Project-relative source file that contains the entrypoint. */
+  sourceFile: string;
+  /** Names of the schedules that dispatch to this entrypoint, in config order. */
+  scheduleNames: string[];
+}
+
+/**
+ * One function built from schedule entrypoints. Runtimes that pack several
+ * entrypoints into a single function receive them all here and dispatch on
+ * the schedule name at runtime; runtimes that build one function per
+ * entrypoint receive exactly one.
+ */
+export interface ScheduleFunctionBuildConfig {
+  /** Function output path every schedule in this build targets. */
+  outputPath: string;
+  entrypoints: [ScheduleFunctionEntrypoint, ...ScheduleFunctionEntrypoint[]];
 }
 
 export interface Config {
@@ -58,12 +86,22 @@ export interface Config {
   middlewareMatcher?: string | string[];
   /** Owning service name; scopes per-function config such as the v2beta consumer. */
   serviceName?: string;
+  /** Buildpack runtime slug (e.g. "ruby"). */
+  buildpack?: string;
+  /** Set when this build produces a function for schedule entrypoints. */
+  scheduleFunction?: ScheduleFunctionBuildConfig;
+  /** Set when this build produces the named daemon. */
+  daemon?: DaemonConfig & { name: string };
   [key: string]: unknown;
 }
 
 export type { HasField };
 
 export interface Meta {
+  daemonContext?: {
+    projectRoot: string;
+    daemons: Record<string, DaemonConfig>;
+  };
   isDev?: boolean;
   devCacheDir?: string;
   skipDownload?: boolean;
@@ -155,6 +193,14 @@ export interface BuildOptions {
     /** Cron schedule expression(s) (e.g., "0 0 * * *"). Only present for cron services. */
     schedule?: string | string[];
   };
+
+  /** Values to report in diagnostics output. Does not affect the build. */
+  diagnosticsValues?: DiagnosticsValues;
+}
+
+export interface DiagnosticsValues {
+  /** Framework slug to report (e.g. "fastapi"). */
+  framework?: string;
 }
 
 export interface PrepareCacheOptions {
@@ -498,12 +544,20 @@ export interface BuilderFunctions {
     runtime?: string;
     includeFiles?: string;
     excludeFiles?: string;
+    /**
+     * Overrides how dependencies are installed for this function. An empty
+     * string skips the install. Only honored by `@vercel/node`.
+     */
+    installCommand?: string;
     experimentalTriggers?: TriggerEventInput[];
     supportsCancellation?: boolean;
   };
 }
 
 export interface ProjectSettings {
+  vercelFlags?: {
+    enabledAt?: number;
+  };
   framework?: string | null;
   devCommand?: string | null;
   installCommand?: string | null;
@@ -546,6 +600,67 @@ export type GetDevSidecars = (
   options: GetDevSidecarsOptions
 ) => Promise<DevSidecar[]>;
 
+/** A deployment function identity and its local execution target. */
+export interface DevFunction {
+  /** Build output function path, without a leading slash or .func suffix. */
+  outputPath: string;
+  /** Source path relative to workPath, when this is a source-backed function. */
+  sourceFile?: string;
+  invocation:
+    | {
+        type: 'http';
+        /** Root-relative pathname within the owning dev server, including basePath. */
+        pathname: string;
+      }
+    | {
+        type: 'entrypoint';
+        /** Select this builder entrypoint directly, without public URL routing. */
+        entrypoint: string;
+      };
+  /** Normalized deployment trigger metadata, including Queue consumer identity. */
+  experimentalTriggers?: TriggerEvent[];
+}
+
+export interface GetDevManifestOptions {
+  /** Absolute project or service root. */
+  workPath: string;
+  /** Original builder entry, before source expansion or dev-command filtering. */
+  build: Builder;
+  /** Real source paths relative to workPath, using forward slashes. No aliases. */
+  files: string[];
+  /** Resolved authored configuration for this scope, including functions. */
+  config: Config;
+  /** Effective development environment. Do not mutate this object. */
+  env: Env;
+}
+
+export interface DevManifest {
+  /** Complete replacement snapshot for the invoking builder scope. */
+  functions: DevFunction[];
+  /** Native framework schedules keyed by name, using the static Build Output API schema. */
+  schedules?: Schedules;
+  /** Authored functions keys resolved by this provider, for unmatched diagnostics. */
+  matchedFunctionPatterns: string[];
+}
+
+/**
+ * Discover deployment function identities and optional native schedules without
+ * starting an application server, scheduler, or delivery loop. The host owns
+ * runtime origins, readiness, and trigger registration. Functions do not need a
+ * Queue trigger to be discoverable; direct Schedule targets use outputPath.
+ * Called before framework builders are filtered for a native dev command, and
+ * again on source/config/environment changes. An empty snapshot removes this
+ * owner's registrations. Errors must leave the last valid snapshot in place.
+ * An absent hook permits the host's conventional per-entrypoint fallback; an
+ * explicitly empty manifest is authoritative and must not enable that fallback.
+ */
+export type GetDevManifest = (
+  options: GetDevManifestOptions
+) => Promise<DevManifest>;
+
+/** Return plain-text startup warnings without starting a development server. */
+export type GetDevWarnings = (options: BuildOptions) => Promise<string[]>;
+
 /*
  * This is a builder whose build output version may dynamically change.
  */
@@ -557,6 +672,8 @@ export interface BuilderVX {
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
   getDevSidecars?: GetDevSidecars;
+  getDevManifest?: GetDevManifest;
+  getDevWarnings?: GetDevWarnings;
 }
 
 export interface BuilderV2 {
@@ -567,6 +684,8 @@ export interface BuilderV2 {
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
   getDevSidecars?: GetDevSidecars;
+  getDevManifest?: GetDevManifest;
+  getDevWarnings?: GetDevWarnings;
 }
 
 export interface BuilderV3 {
@@ -577,6 +696,8 @@ export interface BuilderV3 {
   shouldServe?: ShouldServe;
   startDevServer?: StartDevServer;
   getDevSidecars?: GetDevSidecars;
+  getDevManifest?: GetDevManifest;
+  getDevWarnings?: GetDevWarnings;
 }
 
 type ImageFormat = 'image/avif' | 'image/webp';
@@ -660,6 +781,10 @@ export interface BuildResultBuildOutput {
    * @example "/path/to/.vercel/output"
    */
   buildOutputPath: string;
+  framework?: {
+    slug: string;
+    version: string;
+  };
 }
 
 export interface Cron {
@@ -667,31 +792,48 @@ export interface Cron {
   schedule: string;
 }
 
-export interface ScheduleExpression {
-  /** Cron expression describing when the schedule fires (REQUIRED) */
-  cron: string;
-  /** Maximum random delay applied to each firing, e.g. "5m" (OPTIONAL) */
-  jitter?: string;
-}
+export type ScheduleRequestMethod = 'GET' | 'POST';
 
-export type ScheduleTarget =
+/**
+ * A schedule without its name, which is its key in `schedules`.
+ */
+export type ScheduleDefinition = {
+  /** Cron expression describing when the schedule fires (REQUIRED) */
+  schedule: string;
+  /** IANA timezone for cron evaluation, e.g. "America/New_York". Defaults to UTC. */
+  timezone?: string;
+  /** Maximum random delay applied to each firing, from 1 to 15 whole minutes (OPTIONAL) */
+  jitter?: number;
+} & (
   | {
-      /** Build output path of the function to invoke, e.g. "api/cron" */
+      /** Deployment path to invoke over HTTP, like `crons[].path`. Must start with `/`. */
+      path: string;
+      /** HTTP method used to invoke `path`. Defaults to `POST`. */
+      requestMethod?: ScheduleRequestMethod;
+    }
+  | {
+      /**
+       * Build output path of the function to invoke, e.g. "api/cron". With
+       * `service`, the path within that service.
+       */
       function: string;
+      /** Service that owns `function`, from `services` (OPTIONAL) */
+      service?: string;
     }
   | {
       /** Name of the queue topic to publish to */
       topic: string;
-    };
+    }
+);
 
-export interface Schedule {
+/** Schedules keyed by name, as in Build Output `config.json#schedules`. */
+export type Schedules = Record<string, ScheduleDefinition>;
+
+/** A schedule with its name. */
+export type Schedule = {
   /** Unique name of the schedule within the deployment (REQUIRED) */
   name: string;
-  expression: ScheduleExpression;
-  target: ScheduleTarget;
-  /** Payload delivered with each firing (OPTIONAL) */
-  payload?: unknown;
-}
+} & ScheduleDefinition;
 
 export interface ServiceQueueTopic {
   topic: string;
@@ -872,6 +1014,17 @@ export interface FunctionFramework {
   version?: string;
 }
 
+export interface AfterCacheCondition {
+  type: 'request.header' | 'cache.response.header';
+  key: string;
+  value?: HasField[number]['value'];
+}
+
+export interface AfterCacheBypassRule {
+  name?: string;
+  hasAll: AfterCacheCondition[];
+}
+
 /**
  * When a Builder implements `version: 2`, the `build()` function is expected
  * to return this type.
@@ -879,6 +1032,8 @@ export interface FunctionFramework {
 export interface BuildResultV2Typical {
   // TODO: use proper `Route` type from `routing-utils` (perhaps move types to a common package)
   routes?: any[];
+  /** Bypass cached responses when every condition in any rule matches. */
+  afterCacheBypass?: AfterCacheBypassRule[];
   images?: Images;
   output: {
     [key: string]: File | Lambda | Prerender | EdgeFunction | ContainerImage;
@@ -901,6 +1056,8 @@ export interface BuildResultV2Typical {
    */
   deploymentId?: string;
   crons?: Cron[];
+  /** Daemon descriptors, written to `daemons/<name>/.vc-config.json`. */
+  daemons?: Record<string, DaemonOutput>;
 }
 
 export type BuildResultVX =

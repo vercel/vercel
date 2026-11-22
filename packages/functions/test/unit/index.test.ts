@@ -23,6 +23,7 @@ describe('@vercel/functions', () => {
     'metric',
     'next',
     'rewrite',
+    'upgradeWebSocket',
     'waitUntil',
   ];
 
@@ -42,6 +43,23 @@ describe('@vercel/functions', () => {
       .esm(code)
       .then(output => JSON.parse(output));
     expect(exportedMethods).toEqual(EXPECTED_METHODS);
+  });
+
+  test.each([
+    [
+      'CommonJS',
+      "const { upgradeWebSocket, experimental_upgradeWebSocket } = require('@vercel/functions')",
+      evalScript,
+    ],
+    [
+      'ESM',
+      "import { upgradeWebSocket, experimental_upgradeWebSocket } from '@vercel/functions'",
+      evalScript.esm,
+    ],
+  ])('preserves the deprecated WebSocket alias in %s', async (_, imports, run) => {
+    const code = `${imports}; console.log(JSON.stringify(typeof upgradeWebSocket === 'function' && experimental_upgradeWebSocket === upgradeWebSocket))`;
+
+    expect(await run(code)).toBe('true');
   });
 });
 

@@ -3,7 +3,7 @@ import { client } from '../../../mocks/client';
 import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 import type { FetchOptions } from '../../../../src/util/client';
 import fs from 'fs-extra';
-import { Response } from '../../../../src/util/fetch';
+import { Response } from '../../../../src/util/fetch-primitives';
 import { join } from 'path';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import type { MockInstance } from 'vitest';
@@ -46,7 +46,7 @@ describe('init', () => {
 
       client.setArgv(command, '--help');
       const exitCodePromise = init(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -77,6 +77,11 @@ describe('init', () => {
     expect(promiseResult).toEqual(0);
     const contents = await fs.readdirSync(join(cwd, 'astro'));
     expect(contents).toContain('package.json');
+    // The examples API is public, so an agent is never asked for a team.
+    expect(mock.mock.calls.map(([, opts]) => opts?.teamOptional)).toEqual([
+      true,
+      true,
+    ]);
   });
   describe('when stdin is not a TTY', () => {
     it('should exit 0 with a helpful message when no framework argument is provided', async () => {

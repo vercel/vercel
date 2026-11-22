@@ -77,9 +77,9 @@ export default async function agentInit(
     }
   } else if (!yes && !client.stdin.isTTY) {
     output.error(
-      'Missing required flag --yes. Use --yes to skip confirmation, or run interactively in a terminal.'
+      'Missing required option --yes. Use --yes to skip confirmation, or run interactively in a terminal.'
     );
-    return 1;
+    return 2;
   }
 
   output.spinner(`Writing Vercel best practices to ${targetFile}`);

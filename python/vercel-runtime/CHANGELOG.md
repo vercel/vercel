@@ -1,5 +1,42 @@
 # vercel-runtime
 
+## 0.24.1
+
+### Patch Changes
+
+- a4c0116: Update uv and uv_build to 0.13.5, including rejection of certificate chains containing compromised eMudhra intermediate keys.
+
+## 0.24.0
+
+### Minor Changes
+
+- 85020a6: When `VERCEL_IPC_PATH` is `/opt/vercel/ipc.sock`, ASGI apps now send `server-started` once lifespan startup completes and the server accepts connections, so the platform can hold traffic until the application is ready and cold start timings include lifespan startup. If the application reports a lifespan startup failure there, the runtime reports an unrecoverable error instead of announcing readiness and then exiting. Elsewhere, including AWS Lambda, the runtime still sends `server-started` before lifespan startup, so lifespan startup does not consume Lambda's Init phase budget.
+
+## 0.23.3
+
+### Patch Changes
+
+- be7f5aa: Preserve TCP socket metadata so ASGI responses use TCP_NODELAY.
+- 80fe638: Enable TCP_NODELAY for WSGI and `BaseHTTPRequestHandler` responses.
+
+## 0.23.2
+
+### Patch Changes
+
+- 6434298: `vercel dev` serves schedule functions without uvicorn's reloader. Each firing already runs the script as a fresh process.
+
+## 0.23.1
+
+### Patch Changes
+
+- 7102082: Add `vercel_runtime.schedules`, which runs a Python schedule entrypoint as a script once per firing. One function can serve several schedules; the dispatched schedule name selects the script. The script runs as `__main__` with its metadata in `VERCEL_SCHEDULE_*` environment variables; exit status 0 marks the firing successful. Output and `logging` records are attributed to the invocation, and the script is stopped before the function deadline.
+
+## 0.23.0
+
+### Minor Changes
+
+- 0c45a22: Increase reload delay for python asgi dev server when watchfiles is not installed
+
 ## 0.22.1
 
 ### Patch Changes

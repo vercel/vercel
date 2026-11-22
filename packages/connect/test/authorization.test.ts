@@ -117,7 +117,10 @@ describe('startAuthorization', () => {
     expect(JSON.parse(init.body as string)).not.toHaveProperty('returnUrl');
   });
 
-  it('posts token exchange subjects on authorization requests', async () => {
+  it.each([
+    { token: 'passport.jwt' },
+    { type: 'token', token: 'passport.jwt' },
+  ] as const)('posts normalized token exchange subjects on authorization requests: %j', async subject => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         request: 'req_123',
@@ -128,12 +131,7 @@ describe('startAuthorization', () => {
 
     await startAuthorization(
       CONNECTOR,
-      {
-        subject: {
-          type: 'token',
-          token: 'passport.jwt',
-        },
-      },
+      { subject },
       { vercelToken: 'vercel_token' }
     );
 

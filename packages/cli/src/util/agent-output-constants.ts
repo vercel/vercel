@@ -28,9 +28,18 @@ export const AGENT_REASON = {
   PROJECT_NOT_FOUND: 'project_not_found',
   MISSING_SCOPE: 'missing_scope',
   SCOPE_NOT_ACCESSIBLE: 'scope_not_accessible',
+  /** Agents can't change the team saved for the human (`vercel switch`). */
+  AGENT_CANNOT_SWITCH: 'agent_cannot_switch',
   API_ERROR: 'api_error',
+  STDIN_ERROR: 'stdin_error',
+  RATE_LIMITED: 'rate_limited',
+  /** A request never got a response (offline, DNS, timeout). */
+  NETWORK_ERROR: 'network_error',
+  /** An argument names a command that doesn't exist. Usage error. */
+  UNKNOWN_COMMAND: 'unknown_command',
   // Flags
   SEGMENT_IN_USE: 'segment_in_use',
+  ENTITY_IN_USE: 'entity_in_use',
   // Env
   MISSING_REQUIREMENTS: 'missing_requirements',
   MISSING_NAME: 'missing_name',
@@ -47,6 +56,15 @@ export const AGENT_REASON = {
   ROUTE_GENERATION_FAILED: 'route_generation_failed',
   // DNS
   DOMAIN_NOT_FOUND: 'domain_not_found',
+  /** `--amount` no longer matches the price of a domain purchase or renewal */
+  PRICE_CHANGED: 'price_changed',
+  /** Two selectors (e.g. `VERCEL_ORG_ID` and `--scope`) name different teams */
+  CONFLICT: 'conflict',
+  DOMAIN_NOT_AVAILABLE: 'domain_not_available',
+  TLD_NOT_SUPPORTED: 'tld_not_supported',
+  PAYMENT_FAILED: 'payment_failed',
+  /** A charge may or may not have gone through; inspect before retrying */
+  UNKNOWN_OUTCOME: 'unknown_outcome',
   DNS_RECORD_NOT_FOUND: 'dns_record_not_found',
   INCOMPLETE_RECORD: 'incomplete_record',
   PERMISSION_DENIED: 'permission_denied',
@@ -65,6 +83,8 @@ export const AGENT_REASON = {
   /** User must accept marketplace integration terms in the browser before install can continue. */
   INTEGRATION_TERMS_ACCEPTANCE_REQUIRED:
     'integration_terms_acceptance_required',
+  /** Marketplace provisioning needs a browser step (plan, billing, or other setup) before the resource exists. */
+  INTEGRATION_SETUP_REQUIRED: 'integration_setup_required',
   /** Integration uninstall blocked because team-scoped resources still exist. */
   HAS_RESOURCES: 'has_resources',
   /** User must claim a sandbox marketplace resource (e.g. Stripe, Shopify) in the browser. */
@@ -104,15 +124,88 @@ export const AGENT_REASON = {
   /** Immediate revocation only applies to a key already scheduled for revocation. */
   KEY_NOT_REVOKING: 'key_not_revoking',
   NO_CHANGES_REQUESTED: 'no_changes_requested',
+  // Vercel CI
+  GIT_REPOSITORY_REQUIRED: 'git_repository_required',
+  CI_RUN_NOT_FOUND: 'ci_run_not_found',
+  CI_RUN_IN_PROGRESS: 'ci_run_in_progress',
+  CI_RUN_NOT_RETRYABLE: 'ci_run_not_retryable',
+  // Schedules
+  SCHEDULES_NOT_ENABLED: 'schedules_not_enabled',
+  SCHEDULE_ALREADY_EXISTS: 'schedule_already_exists',
+  SCHEDULE_SINGLE_AT_PASSED: 'schedule_single_at_passed',
+  SCHEDULE_ALREADY_ACTIVE: 'schedule_already_active',
+  STATIC_SCHEDULE: 'static_schedule',
+  INVALID_CRON_EXPRESSION: 'invalid_cron_expression',
+  INVALID_JITTER: 'invalid_jitter',
+  JITTER_EXCEEDS_CADENCE: 'jitter_exceeds_cadence',
+  SINGLE_AT_TOO_SOON: 'single_at_too_soon',
+  SCHEDULE_PAYLOAD_TOO_LARGE: 'payload_too_large',
+  SCHEDULE_PAYLOAD_STORE_FAILED: 'payload_store_failed',
+  SCHEDULE_SERVICE_UNAVAILABLE: 'service_unavailable',
+  SCHEDULE_SERVICE_ERROR: 'service_error',
   // Redirects
   REDIRECT_NOT_FOUND: 'redirect_not_found',
   VERSION_NOT_FOUND: 'version_not_found',
   VERSION_ALREADY_LIVE: 'version_already_live',
   VERSION_IS_STAGING: 'version_is_staging',
   PLAN_UPGRADE_REQUIRED: 'plan_upgrade_required',
+  /** The account's plan doesn't include the feature, or a plan limit was reached */
+  PLAN_LIMIT: 'plan_limit',
   NOT_TEAM_MEMBER: 'not_team_member',
   INVALID_ROLE_COMBINATION: 'invalid_role_combination',
+  // Logs
+  TARGET_CONFLICT: 'target_conflict',
+  // Warning reasons (JSON `warnings` entries and JSONL `warning` lines)
+  DEPRECATED: 'deprecated',
+  LIMIT_CLAMPED: 'limit_clamped',
+  METRICS_UNAVAILABLE: 'metrics_unavailable',
+  STREAM_GAP: 'stream_gap',
+  /** A list couldn't be read in full, so some items may be missing */
+  INCOMPLETE_RESULTS: 'incomplete_results',
 } as const;
+
+/**
+ * Reasons for input the CLI rejected before doing any work: an unknown or
+ * malformed flag, a missing or invalid argument. These are usage errors and
+ * exit with code 2; every other failure exits with code 1.
+ */
+const USAGE_ERROR_REASONS: ReadonlySet<string> = new Set([
+  'invalid_arguments',
+  'missing_arguments',
+  'unknown_command',
+  'missing_command',
+  'invalid_environment',
+  'invalid_type',
+  'missing_id',
+  'missing_value',
+  'missing_name',
+  'missing_flags',
+  'missing_clients',
+  'invalid_clients',
+  'conflicting_type_flags',
+  'missing_environment',
+  'invalid_slug',
+  'invalid_name',
+  'invalid_alert_thresholds',
+  'invalid_budget',
+  'invalid_dns_type',
+  'invalid_event',
+  'invalid_expiration',
+  'invalid_port',
+  'invalid_refresh_period',
+  'invalid_role_combination',
+  'invalid_url',
+  'missing_events',
+  'missing_issuer_id',
+  'missing_key_id',
+  'missing_key',
+  'missing_url',
+]);
+
+/** The exit code for a failure: 2 for a usage error, 1 for anything else. */
+export function getExitCodeForReason(reason: string | undefined): number {
+  return reason !== undefined && USAGE_ERROR_REASONS.has(reason) ? 2 : 1;
+}
 
 /** action field for ActionRequiredPayload (what kind of action is needed) */
 export const AGENT_ACTION = {

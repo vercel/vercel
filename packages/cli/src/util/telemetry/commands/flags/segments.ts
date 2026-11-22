@@ -29,9 +29,9 @@ export class FlagsSegmentsTelemetryClient extends TelemetryClient {
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'rm',
+      subcommand: 'delete',
       value: actual,
     });
   }

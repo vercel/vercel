@@ -43,7 +43,7 @@ export default async function reply(
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
@@ -58,7 +58,7 @@ export default async function reply(
       client,
       jsonOutput,
       'MISSING_THREAD',
-      'Pass a thread ID or URL: `vercel comments reply <thread> -m <text>`.'
+      'Pass a thread ID or URL: `vercel comments reply <thread> --message <text>`.'
     );
   }
   const threadRef = parseThreadArg(threadInput);

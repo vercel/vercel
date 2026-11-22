@@ -28,7 +28,7 @@ export default async function copy(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   if (!parsedArgs.args || parsedArgs.args.length < 2) {
@@ -37,7 +37,7 @@ export default async function copy(
         'blob copy fromUrlOrPathname toPathname'
       )}`
     );
-    return 1;
+    return 2;
   }
 
   const {

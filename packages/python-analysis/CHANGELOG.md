@@ -1,5 +1,23 @@
 # @vercel/python-analysis
 
+## 0.15.2
+
+### Patch Changes
+
+- 7fea9e0: Pin the Rust toolchain to 1.96.1 and make the `build:wasm` Turbo task cacheable. Its hash covers the Rust sources, the wasm build script, the output-affecting Rust env vars, and the build host's OS and CPU.
+
+## 0.15.1
+
+### Patch Changes
+
+- bdb4ecb: Bundle `@renovatebot/pep440` instead of installing it, so installing the Vercel CLI no longer prints an `EBADENGINE` warning on Node versions outside that package's `engines` range, such as Node 25.
+
+## 0.15.0
+
+### Minor Changes
+
+- 3d616ad: Normalize dependency group names when loading manifest.
+
 ## 0.14.0
 
 ### Minor Changes

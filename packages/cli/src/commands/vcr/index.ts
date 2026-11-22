@@ -38,13 +38,14 @@ import {
   permissionsRmSubcommand,
   permissionsClearSubcommand,
 } from './permissions/command';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 
 const COMMAND_CONFIG = {
   ls: getCommandAliases(listSubcommand),
   inspect: getCommandAliases(inspectSubcommand),
   add: getCommandAliases(addSubcommand),
-  config: getCommandAliases(configSubcommand),
-  rm: getCommandAliases(removeSubcommand),
+  update: getCommandAliases(configSubcommand),
+  delete: getCommandAliases(removeSubcommand),
   login: getCommandAliases(loginSubcommand),
   build: getCommandAliases(buildSubcommand),
   push: getCommandAliases(pushSubcommand),
@@ -68,7 +69,7 @@ export default async function vcr(client: Client): Promise<number> {
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { subcommand, args, subcommandOriginal } = getSubcommand(
@@ -79,7 +80,11 @@ export default async function vcr(client: Client): Promise<number> {
 
   function printHelp(command: Command): void {
     output.print(
-      help(command, { parent: vcrCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: vcrCommand,
+        columns: client.stderr.columns,
+      })
     );
   }
 
@@ -88,66 +93,66 @@ export default async function vcr(client: Client): Promise<number> {
       case 'ls':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(listSubcommand);
-        return 2;
+        return 0;
       case 'inspect':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(inspectSubcommand);
-        return 2;
+        return 0;
       case 'add':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(addSubcommand);
-        return 2;
-      case 'config':
+        return 0;
+      case 'update':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(configSubcommand);
-        return 2;
-      case 'rm':
+        return 0;
+      case 'delete':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(removeSubcommand);
-        return 2;
+        return 0;
       case 'login':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(loginSubcommand);
-        return 2;
+        return 0;
       case 'build':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(buildSubcommand);
-        return 2;
+        return 0;
       case 'push':
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         printHelp(pushSubcommand);
-        return 2;
+        return 0;
       case 'tag': {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         const nested = args[0];
         if (nested === 'ls' || nested === 'list') {
           printHelp(tagsLsSubcommand);
-          return 2;
+          return 0;
         }
         if (nested === 'inspect' || nested === 'get') {
           printHelp(tagsInspectSubcommand);
-          return 2;
+          return 0;
         }
         printHelp(tagsAggregateCommand);
-        return 2;
+        return 0;
       }
       case 'image': {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
         const nested = args[0];
         if (nested === 'ls' || nested === 'list') {
           printHelp(imageLsSubcommand);
-          return 2;
+          return 0;
         }
         if (nested === 'inspect' || nested === 'get') {
           printHelp(imageInspectSubcommand);
-          return 2;
+          return 0;
         }
-        if (nested === 'rm' || nested === 'remove' || nested === 'delete') {
+        if (getCommandAliases(imageRmSubcommand).includes(nested)) {
           printHelp(imageRmSubcommand);
-          return 2;
+          return 0;
         }
         printHelp(imageAggregateCommand);
-        return 2;
+        return 0;
       }
       case 'permissions': {
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
@@ -159,6 +164,7 @@ export default async function vcr(client: Client): Promise<number> {
         function printPermissionsActionHelp(command: Command): void {
           output.print(
             help(command, {
+              stream: client.stderr,
               parent: { ...vcrCommand, name: 'vcr permissions repository' },
               columns: client.stderr.columns,
             })
@@ -166,27 +172,32 @@ export default async function vcr(client: Client): Promise<number> {
         }
         if (hasAction(PERMISSIONS_ACTIONS.ls)) {
           printPermissionsActionHelp(permissionsLsSubcommand);
-          return 2;
+          return 0;
         }
         if (hasAction(PERMISSIONS_ACTIONS.add)) {
           printPermissionsActionHelp(permissionsAddSubcommand);
-          return 2;
+          return 0;
         }
         if (hasAction(PERMISSIONS_ACTIONS.rm)) {
           printPermissionsActionHelp(permissionsRmSubcommand);
-          return 2;
+          return 0;
         }
         if (hasAction(PERMISSIONS_ACTIONS.clear)) {
           printPermissionsActionHelp(permissionsClearSubcommand);
-          return 2;
+          return 0;
         }
         printHelp(permissionsAggregateCommand);
-        return 2;
+        return 0;
       }
       default:
         telemetry.trackCliFlagHelp('vcr', subcommandOriginal);
-        output.print(help(vcrCommand, { columns: client.stderr.columns }));
-        return 2;
+        output.print(
+          help(vcrCommand, {
+            stream: client.stderr,
+            columns: client.stderr.columns,
+          })
+        );
+        return 0;
     }
   }
 
@@ -196,15 +207,27 @@ export default async function vcr(client: Client): Promise<number> {
       return (await import('./ls')).default(client, args, telemetry);
     case 'inspect':
       telemetry.trackCliSubcommandInspect(subcommandOriginal);
+      if (subcommandOriginal === 'get') {
+        warnDeprecatedSubcommand(client, 'vcr get', 'vcr inspect');
+      }
       return (await import('./inspect')).default(client, args, telemetry);
     case 'add':
-      telemetry.trackCliSubcommandAdd(subcommandOriginal);
+      telemetry.trackCliSubcommandCreate(subcommandOriginal);
+      if (subcommandOriginal === 'add') {
+        warnDeprecatedSubcommand(client, 'vcr add', 'vcr create');
+      }
       return (await import('./add')).default(client, args, telemetry);
-    case 'config':
-      telemetry.trackCliSubcommandConfig(subcommandOriginal);
+    case 'update':
+      telemetry.trackCliSubcommandUpdate(subcommandOriginal);
+      if (subcommandOriginal === 'config') {
+        warnDeprecatedSubcommand(client, 'vcr config', 'vcr update');
+      }
       return (await import('./config')).default(client, args, telemetry);
-    case 'rm':
-      telemetry.trackCliSubcommandRm(subcommandOriginal);
+    case 'delete':
+      telemetry.trackCliSubcommandDelete(subcommandOriginal);
+      if (subcommandOriginal === 'remove') {
+        warnDeprecatedSubcommand(client, 'vcr remove', 'vcr delete');
+      }
       return (await import('./rm')).default(client, args, telemetry);
     case 'login':
       telemetry.trackCliSubcommandLogin(subcommandOriginal);
@@ -226,7 +249,12 @@ export default async function vcr(client: Client): Promise<number> {
       return (await import('./permissions')).default(client, args, telemetry);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
-      output.print(help(vcrCommand, { columns: client.stderr.columns }));
+      output.print(
+        help(vcrCommand, {
+          stream: client.stderr,
+          columns: client.stderr.columns,
+        })
+      );
       return 2;
   }
 }

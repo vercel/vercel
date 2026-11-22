@@ -30,7 +30,7 @@ describe('routes restore', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = routes(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -45,7 +45,7 @@ describe('routes restore', () => {
     useUpdateRouteVersion();
     client.setArgv('routes', 'restore');
     const exitCode = await routes(client);
-    expect(exitCode, 'exit code for missing argument').toEqual(1);
+    expect(exitCode, 'exit code for missing argument').toEqual(2);
     await expect(client.stderr).toOutput(
       'Missing required argument: version-id'
     );
@@ -74,7 +74,7 @@ describe('routes restore', () => {
     useRoutesWithDiffForPublish();
     client.setArgv('routes', 'restore', 'nonexistent-version', '--yes');
     const exitCode = await routes(client);
-    expect(exitCode, 'exit code for nonexistent version').toEqual(1);
+    expect(exitCode, 'exit code for nonexistent version').toEqual(2);
     await expect(client.stderr).toOutput('"nonexistent-version" not found');
   });
 
@@ -83,7 +83,7 @@ describe('routes restore', () => {
     useRoutesWithDiffForPublish();
     client.setArgv('routes', 'restore', 'live-version', '--yes');
     const exitCode = await routes(client);
-    expect(exitCode, 'exit code for live version').toEqual(1);
+    expect(exitCode, 'exit code for live version').toEqual(2);
     await expect(client.stderr).toOutput('is currently live');
   });
 
@@ -92,7 +92,7 @@ describe('routes restore', () => {
     useRoutesWithDiffForPublish();
     client.setArgv('routes', 'restore', 'staging-version', '--yes');
     const exitCode = await routes(client);
-    expect(exitCode, 'exit code for staging version').toEqual(1);
+    expect(exitCode, 'exit code for staging version').toEqual(2);
     await expect(client.stderr).toOutput('is staged');
   });
 
@@ -162,7 +162,7 @@ describe('routes restore', () => {
     // Partial ID matches multiple versions
     client.setArgv('routes', 'restore', 'abc12345', '--yes');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('Multiple versions match');
   });
 });

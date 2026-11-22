@@ -1,5 +1,7 @@
-import { vercelOidc } from 'eve/channels/auth';
-
+import {
+  createConnectWebhookVerifier,
+  type ConnectWebhookVerifier,
+} from '../chat/webhook-verifier.js';
 import {
   getToken,
   type ConnectOptions,
@@ -11,7 +13,7 @@ export interface ConnectLinqCredentials {
   /** Short-lived API key for outbound Linq API calls. */
   apiKey: () => Promise<string>;
   /** Verifies webhooks forwarded by Vercel Connect. */
-  webhookVerifier: ReturnType<typeof vercelOidc>;
+  webhookVerifier: ConnectWebhookVerifier;
 }
 
 /**
@@ -47,6 +49,6 @@ export function connectLinqCredentials(
   return {
     apiKey: () =>
       getToken(connector, { ...params, subject: { type: 'app' } }, options),
-    webhookVerifier: vercelOidc(),
+    webhookVerifier: createConnectWebhookVerifier(),
   };
 }

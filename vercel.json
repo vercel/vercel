@@ -58,6 +58,15 @@
           "value": "public, max-age=60, s-maxage=300, stale-while-revalidate=300"
         }
       ]
+    },
+    {
+      "source": "/tarballs/(.*)\\.tgz",
+      "headers": [
+        {
+          "key": "content-type",
+          "value": "application/gzip"
+        }
+      ]
     }
   ]
 }

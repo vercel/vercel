@@ -45,13 +45,13 @@ export async function claim(client: Client, argv: string[]) {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
   const skipConfirmation = !!parsedArguments.flags['--yes'];
@@ -65,7 +65,7 @@ export async function claim(client: Client, argv: string[]) {
     output.error(
       'Too many arguments. Usage: `vercel integration resource claim [name]`.'
     );
-    return 1;
+    return 2;
   }
 
   const resourceNameArg: string | undefined = parsedArguments.args[0];

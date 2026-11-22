@@ -48,7 +48,7 @@ describe('env add', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = env(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -335,7 +335,7 @@ describe('env add', () => {
         await expect(client.stderr).toOutput(
           '`--sensitive` and `--no-sensitive` cannot be used together'
         );
-        await expect(exitCodePromise).resolves.toBe(1);
+        await expect(exitCodePromise).resolves.toBe(2);
       });
 
       it('rejects conflicting type flags before project resolution', async () => {
@@ -352,7 +352,7 @@ describe('env add', () => {
           'secret'
         );
 
-        await expect(env(client)).resolves.toBe(1);
+        await expect(env(client)).resolves.toBe(2);
         const fullOutput = stripAnsi(client.stderr.getFullOutput());
         expect(fullOutput).toContain(
           '`--type config` cannot be used with `--sensitive`'
@@ -648,7 +648,7 @@ describe('env add', () => {
         );
         const exitCodePromise = env(client);
         await expect(client.stderr).toOutput('cannot be a Secret');
-        await expect(exitCodePromise).resolves.toBe(1);
+        await expect(exitCodePromise).resolves.toBe(2);
       });
 
       it('rejects an explicit Secret for the linked framework public prefix', async () => {
@@ -665,7 +665,7 @@ describe('env add', () => {
           '--yes'
         );
 
-        await expect(env(client)).resolves.toBe(1);
+        await expect(env(client)).resolves.toBe(2);
         const fullOutput = stripAnsi(client.stderr.getFullOutput());
         expect(fullOutput).toContain('`NUXT_ENV_` exposes this value');
         expect(fullOutput).not.toContain('! `NUXT_ENV_`');
@@ -720,7 +720,7 @@ describe('env add', () => {
         await expect(env(client)).resolves.toBe(1);
         const fullOutput = stripAnsi(client.stderr.getFullOutput());
         expect(fullOutput).toContain(
-          'The `--type` flag must be either `config` or `secret`'
+          'The `--type` option must be either `config` or `secret`'
         );
         expect(fullOutput).not.toContain('Value?');
       });
@@ -757,7 +757,7 @@ describe('env add', () => {
         expect(stripAnsi(client.stderr.getFullOutput())).toContain(
           '`--visibility` is deprecated. Use `--type` instead.'
         );
-        await expect(exitCodePromise).resolves.toBe(1);
+        await expect(exitCodePromise).resolves.toBe(2);
       });
 
       it('uses explicit --visibility when provided', async () => {
@@ -1457,7 +1457,7 @@ describe('env add', () => {
         await expect(client.stderr).toOutput(
           'Invalid environment: custom-env-name'
         );
-        await expect(exitCodePromise).resolves.toEqual(1);
+        await expect(exitCodePromise).resolves.toEqual(2);
       });
 
       describe('[gitBranch]', () => {
@@ -1569,8 +1569,174 @@ describe('env add', () => {
 
           const exitCode = await env(client);
 
-          expect(exitCode).toEqual(1);
-          await expect(client.stderr).toOutput('Git branch was provided twice');
+          expect(exitCode).toEqual(2);
+          await expect(client.stderr).toOutput(
+            "Can't use a Git branch argument with --git-branch. Use --git-branch."
+          );
+        });
+
+        it('adds to the environment and Git branch given with --environment and --git-branch', async () => {
+          const addEnvRecordModule = await import(
+            '../../../../src/util/env/add-env-record'
+          );
+          const spy = vi
+            .spyOn(addEnvRecordModule, 'default')
+            .mockResolvedValue(undefined);
+
+          client.setArgv(
+            'env',
+            'add',
+            'FLAG_ENVIRONMENT',
+            '--environment',
+            'preview',
+            '--git-branch',
+            'branchName',
+            '--value',
+            'testvalue',
+            '--no-sensitive',
+            '--yes'
+          );
+
+          await expect(env(client)).resolves.toEqual(0);
+          expect(spy.mock.calls[0][6]).toEqual(['preview']);
+          expect(spy.mock.calls[0][7]).toBe('branchName');
+          expect(client.stderr.getFullOutput()).not.toContain('deprecated');
+          expect(client.telemetryEventStore).toHaveTelemetryEvents([
+            { key: 'subcommand:add', value: 'add' },
+            { key: 'argument:name', value: '[REDACTED]' },
+            { key: 'option:environment', value: 'preview' },
+            { key: 'option:git-branch', value: '[REDACTED]' },
+            { key: 'option:value', value: '[REDACTED]' },
+            { key: 'flag:no-sensitive', value: 'TRUE' },
+            { key: 'flag:yes', value: 'TRUE' },
+          ]);
+
+          spy.mockRestore();
+        });
+
+        it('accepts a repeated and comma-separated -e', async () => {
+          const addEnvRecordModule = await import(
+            '../../../../src/util/env/add-env-record'
+          );
+          const spy = vi
+            .spyOn(addEnvRecordModule, 'default')
+            .mockResolvedValue(undefined);
+
+          client.setArgv(
+            'env',
+            'add',
+            'REPEATED_ENVIRONMENT',
+            '-e',
+            'production',
+            '-e',
+            'preview,development',
+            '--value',
+            'testvalue',
+            '--no-sensitive',
+            '--yes'
+          );
+
+          await expect(env(client)).resolves.toEqual(0);
+          expect(spy.mock.calls[0][6]).toEqual([
+            'production',
+            'preview',
+            'development',
+          ]);
+
+          spy.mockRestore();
+        });
+
+        it('keeps the environment and Git branch arguments working with deprecation warnings', async () => {
+          const addEnvRecordModule = await import(
+            '../../../../src/util/env/add-env-record'
+          );
+          const spy = vi
+            .spyOn(addEnvRecordModule, 'default')
+            .mockResolvedValue(undefined);
+
+          client.setArgv(
+            'env',
+            'add',
+            'LEGACY_ARGUMENTS',
+            'preview',
+            'branchName',
+            '--value',
+            'testvalue',
+            '--no-sensitive',
+            '--yes'
+          );
+
+          await expect(env(client)).resolves.toEqual(0);
+          expect(spy.mock.calls[0][6]).toEqual(['preview']);
+          expect(spy.mock.calls[0][7]).toBe('branchName');
+          const stderr = client.stderr.getFullOutput();
+          expect(stderr).toContain(
+            'The environment argument is deprecated. Use --environment.'
+          );
+          expect(stderr).toContain(
+            'The Git branch argument is deprecated. Use --git-branch.'
+          );
+
+          spy.mockRestore();
+        });
+
+        it('rejects an environment provided as both a flag and positional argument', async () => {
+          client.setArgv(
+            'env',
+            'add',
+            'DUPLICATE_ENVIRONMENT',
+            'preview',
+            '--environment',
+            'production',
+            '--value',
+            'testvalue',
+            '--yes'
+          );
+
+          const exitCode = await env(client);
+
+          expect(exitCode).toEqual(2);
+          await expect(client.stderr).toOutput(
+            "Can't use an environment argument with --environment."
+          );
+        });
+
+        it('reports an environment given both ways as JSON in non-interactive mode', async () => {
+          const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+            throw new Error('exit');
+          });
+          client.nonInteractive = true;
+          client.setArgv(
+            'env',
+            'add',
+            'DUPLICATE_ENVIRONMENT',
+            'preview',
+            '--environment',
+            'production',
+            '--value',
+            'testvalue',
+            '--yes'
+          );
+
+          await expect(env(client)).rejects.toThrow('exit');
+          expect(JSON.parse(client.stdout.getFullOutput())).toMatchObject({
+            status: 'error',
+            reason: 'invalid_arguments',
+          });
+
+          exitSpy.mockRestore();
+        });
+
+        it('names --environment when stdin has no environment', async () => {
+          client.stdin.isTTY = false;
+          client.setArgv('env', 'add', 'STDIN_NO_ENVIRONMENT');
+          const exitCodePromise = env(client);
+          setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
+
+          await expect(exitCodePromise).resolves.toEqual(2);
+          expect(client.stderr.getFullOutput()).toContain(
+            "Can't read the value from stdin without a name and --environment."
+          );
         });
 
         it('uses all Preview branches without prompting when --yes is set', async () => {
@@ -1709,11 +1875,62 @@ describe('env add', () => {
         expect(payload.next[0].command).toContain('<scope>');
         expect(payload.next[0].command).not.toMatch(/--value/);
         expect(payload.next[1].command).toMatch(/env add/);
-        expect(payload.next[1].command).toContain('<gitbranch>');
+        expect(payload.next[1].command).toContain('--git-branch <BRANCH>');
         expect(payload.next[1].command).toContain(
           '--cwd=../../../test-custom-deployment-id'
         );
         expect(payload.next[1].command).toContain('--non-interactive');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+        vi.restoreAllMocks();
+      });
+
+      it('keeps env-only options out of the link suggestion when not linked', async () => {
+        const linkModule = await import('../../../../src/util/projects/link');
+        vi.spyOn(linkModule, 'getLinkedProject').mockResolvedValue({
+          status: 'not_linked',
+          org: null,
+          project: null,
+        });
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'VAR',
+          '-e',
+          'preview',
+          '--git-branch',
+          'feat-1',
+          '--type',
+          'config',
+          '--value',
+          'secret',
+          '--yes',
+          '--cwd=/tmp',
+          '--non-interactive'
+        );
+
+        await expect(env(client)).rejects.toThrow('exit');
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        const [linkCommand, retryCommand] = payload.next.map(
+          (next: { command: string }) => next.command
+        );
+        expect(linkCommand).toMatch(/vercel link --scope <scope>/);
+        expect(linkCommand).toContain('--cwd=/tmp');
+        expect(linkCommand).not.toMatch(
+          /--environment|-e |--git-branch|feat-1/
+        );
+        expect(retryCommand).toMatch(
+          /env add VAR -e preview --git-branch feat-1/
+        );
 
         exitSpy.mockRestore();
         logSpy.mockRestore();
@@ -1908,6 +2125,64 @@ describe('env add', () => {
           'Environments    Preview'
         );
         expect(client.stderr.getFullOutput()).not.toContain('my-secret-value');
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('uses --environment preview and no branch as all Preview branches', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'PREVIEW_VAR',
+          '--environment',
+          'preview',
+          '--value',
+          'my-secret-value',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).resolves.toBe(0);
+        expect(logSpy).not.toHaveBeenCalled();
+        expect(client.stderr.getFullOutput()).toContain(
+          'Environments    Preview'
+        );
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('suggests --environment when the environment is missing', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'NO_ENVIRONMENT',
+          '--value',
+          'value',
+          '--yes'
+        );
+        const exitCodePromise = env(client);
+
+        await expect(exitCodePromise).rejects.toThrow('exit');
+        const payload = JSON.parse(
+          logSpy.mock.calls[logSpy.mock.calls.length - 1][0]
+        );
+        for (const { command } of payload.next) {
+          expect(command).toMatch(/env add NO_ENVIRONMENT --environment /);
+        }
 
         exitSpy.mockRestore();
         logSpy.mockRestore();
@@ -2110,6 +2385,237 @@ describe('env add', () => {
           exitSpy.mockRestore();
           logSpy.mockRestore();
         }
+      });
+
+      it('does not wait on stdin when --value is given', async () => {
+        const readStandardInputModule = await import(
+          '../../../../src/util/input/read-standard-input'
+        );
+        // A stdin that never sends data or ends.
+        const readSpy = vi
+          .spyOn(readStandardInputModule, 'default')
+          .mockReturnValue(new Promise<string>(() => {}));
+        const envName = 'VALUE_FLAG_OPEN_STDIN';
+        client.nonInteractive = true;
+        client.stdin.isTTY = false;
+        client.setArgv(
+          'env',
+          'add',
+          envName,
+          '--environment',
+          'production',
+          '--value',
+          'testvalue',
+          '--yes'
+        );
+
+        try {
+          const result = await Promise.race([
+            env(client),
+            new Promise(resolve => setTimeout(resolve, 2000, 'still waiting')),
+          ]);
+          expect(result).toEqual(0);
+          expect(readSpy).not.toHaveBeenCalled();
+          expect(envs.find(e => e.key === envName)?.value).toBe('testvalue');
+        } finally {
+          readSpy.mockRestore();
+          const savedEnvIndex = envs.findIndex(e => e.key === envName);
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
+      });
+
+      it('uses --value over piped stdin', async () => {
+        const envName = 'VALUE_FLAG_AND_STDIN';
+        client.nonInteractive = true;
+        client.stdin.isTTY = false;
+        client.setArgv(
+          'env',
+          'add',
+          envName,
+          '--environment',
+          'production',
+          '--value',
+          'from-flag',
+          '--yes'
+        );
+
+        try {
+          const exitCodePromise = env(client);
+          setImmediate(() => client.stdin.emit('data', 'from-stdin'));
+          await expect(exitCodePromise).resolves.toEqual(0);
+          expect(envs.find(e => e.key === envName)?.value).toBe('from-flag');
+        } finally {
+          const savedEnvIndex = envs.findIndex(e => e.key === envName);
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
+      });
+
+      it('reads a piped value without --value', async () => {
+        const envName = 'PIPED_VALUE';
+        client.nonInteractive = true;
+        client.stdin.isTTY = false;
+        client.setArgv(
+          'env',
+          'add',
+          envName,
+          '--environment',
+          'production',
+          '--yes'
+        );
+
+        try {
+          const exitCodePromise = env(client);
+          setImmediate(() => client.stdin.emit('data', 'piped-value\n'));
+          await expect(exitCodePromise).resolves.toEqual(0);
+          expect(envs.find(e => e.key === envName)?.value).toBe('piped-value');
+          expect(client.stderr.getFullOutput()).toContain(
+            'Removed trailing newline from stdin input'
+          );
+        } finally {
+          const savedEnvIndex = envs.findIndex(e => e.key === envName);
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
+      });
+
+      it('rejects a piped value without a name', async () => {
+        client.nonInteractive = true;
+        client.stdin.isTTY = false;
+        client.setArgv('env', 'add', '--environment', 'production', '--yes');
+        const exitCodePromise = env(client);
+        setImmediate(() => client.stdin.emit('data', 'value-via-stdin'));
+
+        await expect(exitCodePromise).resolves.toEqual(2);
+        expect(client.stderr.getFullOutput()).toContain(
+          "Can't read the value from stdin without a name and --environment."
+        );
+      });
+
+      it('requests the env list and custom environments once', async () => {
+        const fetchSpy = vi.spyOn(client, 'fetch');
+        const envName = 'FETCH_ONCE_VAR';
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          envName,
+          '--environment',
+          'production',
+          '--value',
+          'testvalue',
+          '--yes'
+        );
+
+        try {
+          await expect(env(client)).resolves.toEqual(0);
+          const getUrls = fetchSpy.mock.calls
+            .filter(([, opts]) => !opts?.method || opts.method === 'GET')
+            .map(([url]) => String(url));
+          expect(
+            getUrls.filter(url =>
+              url.startsWith(`/v10/projects/${testProject.id}/env?`)
+            )
+          ).toHaveLength(1);
+          expect(
+            getUrls.filter(
+              url => url === `/projects/${testProject.id}/custom-environments`
+            )
+          ).toHaveLength(1);
+        } finally {
+          fetchSpy.mockRestore();
+          const savedEnvIndex = envs.findIndex(
+            currentEnv => currentEnv.key === envName
+          );
+          if (savedEnvIndex !== -1) {
+            envs.splice(savedEnvIndex, 1);
+          }
+        }
+      });
+
+      it('reports every missing input in one response', async () => {
+        const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+          throw new Error('exit');
+        });
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+        client.nonInteractive = true;
+        client.setArgv('env', 'add');
+        await expect(env(client)).rejects.toThrow('exit');
+        expect(
+          JSON.parse(logSpy.mock.calls[logSpy.mock.calls.length - 1][0])
+        ).toMatchObject({
+          status: 'action_required',
+          reason: 'missing_requirements',
+          missing: ['missing_name', 'missing_value', 'missing_environment'],
+        });
+
+        client.setArgv('env', 'add', '--environment', 'preview');
+        await expect(env(client)).rejects.toThrow('exit');
+        expect(
+          JSON.parse(logSpy.mock.calls[logSpy.mock.calls.length - 1][0])
+        ).toMatchObject({
+          status: 'action_required',
+          reason: 'missing_requirements',
+          missing: ['missing_name', 'missing_value', 'git_branch_required'],
+        });
+
+        exitSpy.mockRestore();
+        logSpy.mockRestore();
+      });
+
+      it('rejects a variable that is already in every environment', async () => {
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'REDIS_CONNECTION_STRING',
+          '--environment',
+          'production',
+          '--value',
+          'testvalue',
+          '--yes'
+        );
+
+        await expect(env(client)).resolves.toEqual(1);
+        expect(client.stderr.getFullOutput()).toContain(
+          'has already been added to all Environments'
+        );
+      });
+
+      it('overwrites a variable that is already in every environment with --force', async () => {
+        const addEnvRecordModule = await import(
+          '../../../../src/util/env/add-env-record'
+        );
+        const spy = vi
+          .spyOn(addEnvRecordModule, 'default')
+          .mockResolvedValue(undefined);
+
+        client.nonInteractive = true;
+        client.setArgv(
+          'env',
+          'add',
+          'REDIS_CONNECTION_STRING',
+          '--environment',
+          'production',
+          '--value',
+          'testvalue',
+          '--force',
+          '--yes'
+        );
+
+        await expect(env(client)).resolves.toEqual(0);
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy.mock.calls[0][2]).toBe('true');
+        expect(stripAnsi(client.stderr.getFullOutput())).toMatch(
+          /Overrode\s+REDIS_CONNECTION_STRING/
+        );
+
+        spy.mockRestore();
       });
     });
 

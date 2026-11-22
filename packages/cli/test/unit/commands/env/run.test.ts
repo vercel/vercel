@@ -35,7 +35,7 @@ describe('env run', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = env(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -89,10 +89,10 @@ describe('env run', () => {
       const exitCodePromise = env(client);
 
       await expect(client.stderr).toOutput(
-        'No command provided. Use `--` to separate vercel flags from your command.'
+        'No command provided. Use `--` to separate vercel options from your command.'
       );
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
     });
 
     it('returns structured guidance when a command is missing in non-interactive mode', async () => {
@@ -129,10 +129,10 @@ describe('env run', () => {
       const exitCodePromise = env(client);
 
       await expect(client.stderr).toOutput(
-        'No command provided. Use `--` to separate vercel flags from your command.'
+        'No command provided. Use `--` to separate vercel options from your command.'
       );
       const exitCode = await exitCodePromise;
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(2);
     });
 
     it('should error when project is not linked', async () => {

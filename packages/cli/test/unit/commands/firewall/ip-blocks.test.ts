@@ -82,7 +82,7 @@ describe('firewall ip-blocks', () => {
     it('tracks help telemetry', async () => {
       client.setArgv('firewall', 'ip-blocks', 'list', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
     });
   });
 
@@ -191,7 +191,7 @@ describe('firewall ip-blocks', () => {
       client.setArgv('firewall', 'ip-blocks', 'block', '--yes');
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Missing required argument');
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should include notes in request body', async () => {
@@ -282,6 +282,23 @@ describe('firewall ip-blocks', () => {
       expect(capturedRequests.patchDraft?.id).toBe('ip_001');
     });
 
+    it('warns that the rm alias is deprecated', async () => {
+      const active = createConfig({
+        ips: [createIpRule(1)],
+      });
+      useListFirewallConfigs(active, null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv('firewall', 'ip-blocks', 'rm', '10.0.0.1', '--yes');
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput(
+        '`vercel firewall ip-blocks rm` is deprecated. Use `vercel firewall ip-blocks unblock`.'
+      );
+      expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.action).toBe('ip.remove');
+    });
+
     it('should stage IP block removal by ID with --yes', async () => {
       const active = createConfig({
         ips: [createIpRule(1)],
@@ -316,7 +333,7 @@ describe('firewall ip-blocks', () => {
       client.setArgv('firewall', 'ip-blocks', 'unblock', '--yes');
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Missing required argument');
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should disambiguate with --hostname when same IP on multiple hosts', async () => {

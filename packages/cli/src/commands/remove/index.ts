@@ -6,7 +6,7 @@ import Now from '../../util';
 import getAliases from '../../util/alias/get-aliases';
 import elapsed from '../../util/output/elapsed';
 import { normalizeURL } from '../../util/url';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import { isValidName } from '../../util/is-valid-name';
 import removeProject from '../../util/projects/remove-project';
 import getProjectByIdOrName from '../../util/projects/get-project-by-id-or-name';
@@ -44,13 +44,18 @@ export default async function remove(client: Client) {
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   if (parsedArgs.flags['--help']) {
     telemetryClient.trackCliFlagHelp('remove');
-    output.print(help(removeCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(removeCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   const ids = parsedArgs.args.slice(1);
@@ -69,8 +74,13 @@ export default async function remove(client: Client) {
 
   if (ids.length < 1) {
     error(`${getCommandName('rm')} expects at least one argument`);
-    output.print(help(removeCommand, { columns: client.stderr.columns }));
-    return 1;
+    output.print(
+      help(removeCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 2;
   }
 
   const invalidName = ids.find(name => !isValidName(name));
@@ -79,10 +89,10 @@ export default async function remove(client: Client) {
     error(
       `The provided argument "${invalidName}" is not a valid deployment or project`
     );
-    return 1;
+    return 2;
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   output.spinner(
     `Fetching deployment(s) ${ids
@@ -205,7 +215,12 @@ export default async function remove(client: Client) {
 
   const now = new Now({
     client,
-    currentTeam,
+    // `currentTeam` was read before the lookups above, which is where a run
+    // that ignores the saved team picks its team. `Now` sends its own
+    // requests, so give it the picked team.
+    currentTeam: client.ignoresSavedTeam
+      ? await client.resolveCurrentTeam()
+      : currentTeam,
   });
   const start = Date.now();
 

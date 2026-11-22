@@ -77,7 +77,7 @@ describe('flags rm', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = flags(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -97,7 +97,7 @@ describe('flags rm', () => {
     expect(exitCode).toEqual(0);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:rm',
+        key: 'subcommand:delete',
         value: 'rm',
       },
       {
@@ -111,6 +111,24 @@ describe('flags rm', () => {
     ]);
   });
 
+  it.each([
+    ['delete', false],
+    ['del', false],
+    ['remove', true],
+  ])('runs as %s (deprecated: %s)', async (name, deprecated) => {
+    testFlags[0].state = 'archived';
+
+    client.setArgv('flags', name, testFlags[0].slug, '--yes');
+    expect(await flags(client)).toEqual(0);
+    const warning =
+      '`vercel flags remove` is deprecated. Use `vercel flags delete`.';
+    if (deprecated) {
+      expect(client.stderr.getFullOutput()).toContain(warning);
+    } else {
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    }
+  });
+
   it('errors in non-interactive mode without --yes', async () => {
     testFlags[0].state = 'archived';
     (client.stdin as any).isTTY = false;
@@ -118,9 +136,9 @@ describe('flags rm', () => {
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --yes'
+      'Missing required option --yes'
     );
   });
 
@@ -135,7 +153,7 @@ describe('flags rm', () => {
   it('errors without flag argument', async () => {
     client.setArgv('flags', 'rm');
     const exitCode = await flags(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
   });
 
   it('errors when flag is not found', async () => {

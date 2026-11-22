@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/packages/container/src/buildpacks/**",
+        "$TURBO_ROOT$/packages/container/test/fixtures/ruby/**",
+        "$TURBO_ROOT$/packages/container/test/fixtures/go/**",
+        "$TURBO_ROOT$/packages/container/test/fixtures/rust/**"
+      ]
+    },
+    "test-unit": {
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/packages/container/src/buildpacks/**",
+        "$TURBO_ROOT$/packages/container/test/fixtures/ruby/**",
+        "$TURBO_ROOT$/packages/container/test/fixtures/go/**",
+        "$TURBO_ROOT$/packages/container/test/fixtures/rust/**"
+      ]
+    }
+  }
+}

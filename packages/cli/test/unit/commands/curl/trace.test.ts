@@ -9,7 +9,8 @@ import { client } from '../../../mocks/client';
 import curl from '../../../../src/commands/curl';
 import { useUser } from '../../../mocks/user';
 import { useProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
+import { createTeam, useTeams } from '../../../mocks/team';
+import { setupTmpDir } from '../../../helpers/setup-unit-fixture';
 
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
@@ -244,7 +245,7 @@ describe('curl --trace', () => {
     // Default mode: stderr carries the follow-up command line
     const stderr = client.stderr.getFullOutput();
     expect(stderr).toContain(
-      `Run \`vercel traces get ${REQUEST_ID}\` to fetch the trace.`
+      `Run \`vercel traces inspect ${REQUEST_ID}\` to fetch the trace.`
     );
 
     // --trace was tracked
@@ -288,6 +289,44 @@ describe('curl --trace', () => {
     expect(captured.query?.teamId).toBe('team_target');
   });
 
+  it('discovers the trace team from a protected URL with a supplied bypass', async () => {
+    client.cwd = setupTmpDir();
+    client.authConfig.userId = USER_ID;
+    client.config.currentTeam = 'team_wrong';
+    useTeams('team_wrong');
+    createTeam('team_target');
+    client.scenario.get('/v13/deployments/:host', (req, res) => {
+      if (req.query.teamId !== 'team_target') {
+        return res.status(404).json({ error: { code: 'not_found' } });
+      }
+      res.json({
+        id: DEPLOYMENT_ID,
+        url: PREVIEW_ALIAS,
+        projectId: 'prj_target',
+        ownerId: 'team_target',
+        target: null,
+      });
+    });
+    const captured = makeCaptured();
+    mockSessionEndpoint(captured);
+    installSpawnMock();
+    client.setArgv(
+      'curl',
+      '--trace',
+      `https://${PREVIEW_ALIAS}/api/hello`,
+      '--protection-bypass',
+      'caller-secret'
+    );
+
+    expect(await curl(client)).toBe(0);
+    expect(captured.query?.teamId).toBe('team_target');
+    expect(captured.value).toEqual({
+      projectId: 'prj_target',
+      hostname: PREVIEW_ALIAS,
+    });
+    expect(client.config.currentTeam).toBe('team_wrong');
+  });
+
   it('--json: JSON envelope to stdout, no trace lines on stderr', async () => {
     await setupLinkedProject();
     mockDeploymentLookup({ target: null });
@@ -322,7 +361,7 @@ describe('curl --trace', () => {
 
     const stderr = client.stderr.getFullOutput();
     expect(stderr).not.toContain('Trace request id:');
-    expect(stderr).not.toContain('vercel traces get');
+    expect(stderr).not.toContain('vercel traces inspect');
 
     writeSpy.mockRestore();
   });

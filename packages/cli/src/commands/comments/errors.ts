@@ -27,7 +27,7 @@ export function handleCommentsParseError(
   output.log(
     `Run ${getCommandName(`comments ${subcommandName} --help`)} for usage.`
   );
-  return 1;
+  return 2;
 }
 
 /**

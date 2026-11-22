@@ -6,7 +6,7 @@ import { printError } from '../../util/error';
 import { validateJsonOutput } from '../../util/output-format';
 import { validateLsArgs } from '../../util/validate-ls-args';
 import { exitWithNonInteractiveError } from '../../util/agent-output';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import table from '../../util/output/table';
 import output from '../../output-manager';
@@ -37,12 +37,12 @@ export default async function listCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, {
+      exitWithNonInteractiveError(client, error, 2, {
         variant: 'global-config',
       });
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -59,7 +59,7 @@ export default async function listCmd(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
   telemetry.trackCliOptionFormat(flags['--format']);
@@ -78,7 +78,7 @@ export default async function listCmd(
     return 0;
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   output.print(
     `${gray(`${rows.length} Global Config${rows.length === 1 ? '' : 's'} found under ${contextName} ${stamp()}`)}\n`
   );

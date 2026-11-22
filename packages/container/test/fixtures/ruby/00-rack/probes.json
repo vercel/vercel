@@ -1,0 +1,15 @@
+{
+  "probes": [
+    {
+      "path": "/",
+      "status": 200,
+      "bodyMustBe": "hello from the Vercel Rack buildpack\n",
+      "responseHeaders": {
+        "content-type": "text/plain"
+      }
+    },
+    {
+      "logMustContain": "Default web process: bundle exec puma"
+    }
+  ]
+}

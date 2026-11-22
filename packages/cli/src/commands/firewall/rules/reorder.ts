@@ -10,6 +10,7 @@ import {
   detectExistingDraft,
   offerAutoPublish,
   resolveFirewallScope,
+  refuseManagedBotMutation,
   mapFirewallApiError,
 } from '../shared';
 import { formatActionDisplay } from '../../../util/firewall/format';
@@ -23,7 +24,7 @@ export default async function reorder(client: Client, argv: string[]) {
     argv,
     rulesReorderSubcommand,
     client,
-    'rules reorder'
+    'rules move'
   );
   if (typeof parsed === 'number') return parsed;
 
@@ -32,6 +33,9 @@ export default async function reorder(client: Client, argv: string[]) {
 
   let identifier = parsed.args[0] as string | undefined;
 
+  const reserved = refuseManagedBotMutation(client, scope, identifier, 'move');
+  if (reserved !== null) return reserved;
+
   output.spinner(`Fetching rules for ${chalk.bold(scope.displayName)}`);
 
   const { active, draft } = await listFirewallConfigs(client, scope);
@@ -39,7 +43,7 @@ export default async function reorder(client: Client, argv: string[]) {
 
   if (currentRules.length < 2) {
     output.stopSpinner();
-    output.error('Need at least 2 rules to reorder.');
+    output.error('Need at least 2 rules to move one.');
     return 1;
   }
 
@@ -58,7 +62,7 @@ export default async function reorder(client: Client, argv: string[]) {
               {
                 command: withGlobalFlags(
                   client,
-                  'firewall rules reorder <name-or-id> --first --yes'
+                  'firewall rules move <name-or-id> --first --yes'
                 ),
                 when: 'replace <name-or-id>',
               },
@@ -68,17 +72,17 @@ export default async function reorder(client: Client, argv: string[]) {
               },
             ],
           },
-          1
+          2
         );
       }
       output.error(
-        `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules reorder <name-or-id> --position N --yes', scope)}`
+        `Rule name or ID is required. Usage: ${withGlobalFlags(client, 'firewall rules move <name-or-id> --position N --yes', scope)}`
       );
-      return 1;
+      return 2;
     }
 
     const selectedId = await client.input.select({
-      message: 'Select a rule to reorder:',
+      message: 'Select a rule to move:',
       choices: currentRules.map((r, i) => ({
         value: r.id,
         name: `${i + 1}. ${r.name} [${r.active ? 'Enabled' : 'Disabled'}] — ${formatActionDisplay(r.action)}`,
@@ -116,10 +120,10 @@ export default async function reorder(client: Client, argv: string[]) {
           next: matches.map(r => ({
             command: withGlobalFlags(
               client,
-              `firewall rules reorder "${r.id}" --first --yes`,
+              `firewall rules move "${r.id}" --first --yes`,
               scope
             ),
-            when: `reorder "${r.name}"`,
+            when: `move "${r.name}"`,
           })),
         });
       }
@@ -174,7 +178,7 @@ export default async function reorder(client: Client, argv: string[]) {
   } else if (flagPosition !== undefined) {
     if (flagPosition < 1) {
       output.error('Position must be at least 1.');
-      return 1;
+      return 2;
     }
     if (flagPosition > currentRules.length) {
       output.error(
@@ -193,12 +197,12 @@ export default async function reorder(client: Client, argv: string[]) {
             status: 'error',
             reason: 'missing_arguments',
             message:
-              'A position flag is required. Use --position N, --first, or --last.',
+              'A position option is required. Use --position N, --first, or --last.',
             next: [
               {
                 command: withGlobalFlags(
                   client,
-                  `firewall rules reorder "${rule.name}" --first --yes`,
+                  `firewall rules move "${rule.name}" --first --yes`,
                   scope
                 ),
                 when: 'move to first position',
@@ -206,20 +210,20 @@ export default async function reorder(client: Client, argv: string[]) {
               {
                 command: withGlobalFlags(
                   client,
-                  `firewall rules reorder "${rule.name}" --last --yes`,
+                  `firewall rules move "${rule.name}" --last --yes`,
                   scope
                 ),
                 when: 'move to last position',
               },
             ],
           },
-          1
+          2
         );
       }
       output.error(
-        `A position flag is required. Use --position N, --first, or --last.`
+        `A position option is required. Use --position N, --first, or --last.`
       );
-      return 1;
+      return 2;
     }
 
     // Show current order
@@ -270,7 +274,7 @@ export default async function reorder(client: Client, argv: string[]) {
   }
 
   const reorderStamp = stamp();
-  output.spinner('Staging reorder');
+  output.spinner('Staging move');
 
   try {
     const hadExistingDraft = await detectExistingDraft(client, scope);
@@ -291,7 +295,7 @@ export default async function reorder(client: Client, argv: string[]) {
 
     return 0;
   } catch (e: unknown) {
-    output.error(mapFirewallApiError(e, scope, 'Failed to reorder rule'));
+    output.error(mapFirewallApiError(e, scope, 'Failed to move rule'));
     return 1;
   }
 }

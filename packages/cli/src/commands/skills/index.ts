@@ -173,7 +173,7 @@ export default async function skills(client: Client) {
     );
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new SkillsTelemetryClient({
@@ -184,8 +184,13 @@ export default async function skills(client: Client) {
 
   if (parsedArgs.flags['--help']) {
     telemetry.trackCliFlagHelp('skills');
-    output.print(help(skillsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(skillsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   telemetry.trackCliFlagJson(parsedArgs.flags['--json']);
@@ -195,7 +200,7 @@ export default async function skills(client: Client) {
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 

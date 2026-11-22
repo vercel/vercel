@@ -1,6 +1,7 @@
 import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import del from '../../../../src/commands/blob/del';
+import blob from '../../../../src/commands/blob';
 import * as blobModule from '@vercel/blob';
 import * as getBlobRWTokenModule from '../../../../src/util/blob/token';
 import type { BlobRWToken } from '../../../../src/util/blob/token';
@@ -31,6 +32,8 @@ describe('blob del', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     client.reset();
+    // Most tests run without a terminal, where a delete still goes ahead.
+    client.stdin.isTTY = false;
 
     // Default successful mocks
     mockedGetBlobRWToken.mockResolvedValue({
@@ -177,13 +180,13 @@ describe('blob del', () => {
       }));
 
       const exitCode = await del(client, ['--invalid-flag'], testAuth);
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
     });
 
     it('should return 1 when no arguments are provided', async () => {
       const exitCode = await del(client, [], testAuth);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       expect(mockedBlob.del).not.toHaveBeenCalled();
       expect(mockedOutput.success).not.toHaveBeenCalled();
     });
@@ -236,7 +239,7 @@ describe('blob del', () => {
     it('should not track telemetry when no arguments provided', async () => {
       const exitCode = await del(client, [], testAuth);
 
-      expect(exitCode).toBe(1);
+      expect(exitCode).toBe(2);
       // Should not have any telemetry events since arguments are missing
       expect(client.telemetryEventStore).not.toHaveTelemetryEvents([
         {
@@ -281,6 +284,102 @@ describe('blob del', () => {
           token: testToken,
         });
       }
+    });
+  });
+
+  describe('subcommand name', () => {
+    it.each([
+      'delete',
+      'del',
+      'rm',
+    ])('deletes as %s without a warning', async name => {
+      client.setArgv('blob', name, 'test-file.txt', '--yes');
+
+      expect(await blob(client)).toBe(0);
+      expect(mockedBlob.del).toHaveBeenCalledWith(['test-file.txt'], {
+        token: testToken,
+        ifMatch: undefined,
+      });
+      expect(mockedOutput.warning).not.toHaveBeenCalled();
+      expect(client.telemetryEventStore).toHaveTelemetryEvents([
+        { key: 'subcommand:delete', value: name },
+        { key: 'argument:urlsOrPathnames', value: '[REDACTED]' },
+        { key: 'flag:yes', value: 'TRUE' },
+      ]);
+    });
+
+    it('warns that remove is deprecated', async () => {
+      client.setArgv('blob', 'remove', 'test-file.txt', '--yes');
+
+      expect(await blob(client)).toBe(0);
+      expect(mockedBlob.del).toHaveBeenCalled();
+      expect(mockedOutput.warning).toHaveBeenCalledWith(
+        '`vercel blob remove` is deprecated. Use `vercel blob delete`.'
+      );
+    });
+  });
+
+  describe('confirmation', () => {
+    const noTerminalWarning =
+      'Deleting blobs without a terminal will need --yes in a future major version. Add --yes to keep this working.';
+
+    beforeEach(() => {
+      client.stdin.isTTY = true;
+    });
+
+    it('asks before deleting one blob', async () => {
+      client.input.confirm = vi.fn().mockResolvedValue(true);
+
+      expect(await del(client, ['test-file.txt'], testAuth)).toBe(0);
+      expect(client.input.confirm).toHaveBeenCalledWith(
+        'Delete test-file.txt? This cannot be undone.',
+        false
+      );
+      expect(mockedBlob.del).toHaveBeenCalled();
+    });
+
+    it('lists the blobs before deleting several', async () => {
+      client.input.confirm = vi.fn().mockResolvedValue(true);
+      const files = Array.from({ length: 7 }, (_, i) => `file${i}.txt`);
+
+      expect(await del(client, files, testAuth)).toBe(0);
+      expect(mockedOutput.print).toHaveBeenCalledWith('  file0.txt\n');
+      expect(mockedOutput.print).toHaveBeenCalledWith('  file4.txt\n');
+      expect(mockedOutput.print).not.toHaveBeenCalledWith('  file5.txt\n');
+      expect(mockedOutput.print).toHaveBeenCalledWith('  and 2 more\n');
+      expect(client.input.confirm).toHaveBeenCalledWith(
+        'Delete 7 blobs? This cannot be undone.',
+        false
+      );
+    });
+
+    it('deletes nothing when the prompt is declined', async () => {
+      client.input.confirm = vi.fn().mockResolvedValue(false);
+
+      expect(await del(client, ['test-file.txt'], testAuth)).toBe(130);
+      expect(mockedOutput.log).toHaveBeenCalledWith(
+        'Canceled. Nothing was changed.'
+      );
+      expect(mockedBlob.del).not.toHaveBeenCalled();
+    });
+
+    it('skips the prompt with --yes', async () => {
+      client.input.confirm = vi.fn();
+
+      expect(await del(client, ['test-file.txt', '--yes'], testAuth)).toBe(0);
+      expect(client.input.confirm).not.toHaveBeenCalled();
+      expect(mockedOutput.warning).not.toHaveBeenCalled();
+      expect(mockedBlob.del).toHaveBeenCalled();
+    });
+
+    it('still deletes without a terminal, with a warning', async () => {
+      client.stdin.isTTY = false;
+      client.input.confirm = vi.fn();
+
+      expect(await del(client, ['test-file.txt'], testAuth)).toBe(0);
+      expect(client.input.confirm).not.toHaveBeenCalled();
+      expect(mockedOutput.warning).toHaveBeenCalledWith(noTerminalWarning);
+      expect(mockedBlob.del).toHaveBeenCalled();
     });
   });
 });

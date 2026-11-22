@@ -2,8 +2,15 @@ import chalk from 'chalk';
 import table from '../../util/output/table';
 import output from '../../output-manager';
 import elapsed from '../../util/output/elapsed';
-import { formatCurrency, formatQuantity } from '../../util/billing/format';
+import { formatUsageAmount, formatUsageQuantity } from './format';
 import type { OutputOptions, BreakdownPeriod } from './types';
+import {
+  formatServiceCost,
+  formatServiceName,
+  outputHiddenServicesHint,
+  outputUsageHeader,
+  visibleServices,
+} from './output-utils';
 
 function getPeriodLabel(period: BreakdownPeriod): string {
   switch (period) {
@@ -13,8 +20,6 @@ function getPeriodLabel(period: BreakdownPeriod): string {
       return 'Weekly';
     case 'monthly':
       return 'Monthly';
-    default:
-      return 'Period';
   }
 }
 
@@ -24,58 +29,57 @@ export function outputBreakdown({
   startTime,
 }: OutputOptions): void {
   const { print, log } = output;
-
   const periodLabel = getPeriodLabel(breakdownPeriod!);
 
-  log(
-    `${periodLabel} Usage for ${chalk.bold(data.contextName)} ${elapsed(Date.now() - startTime)}`
-  );
-  log('');
-  const periodSuffix = data.usingDefaults ? ' (current month)' : '';
-  log(
-    `${chalk.gray('Period:')} ${data.fromDisplay} to ${data.toDisplay}${periodSuffix}`
-  );
-  log(`${chalk.gray('Charges processed:')} ${data.chargeCount}`);
-  log(`${chalk.gray('Pricing unit:')} ${data.pricingUnit}`);
-  log('');
-
-  const sortedServices = [...data.services.entries()].sort(
-    (a, b) => b[1].billedCost - a[1].billedCost
+  outputUsageHeader(
+    data,
+    `${periodLabel} usage`,
+    elapsed(Date.now() - startTime)
   );
 
-  if (sortedServices.length === 0) {
+  const sortedPeriods = [...data.periodUsage.keys()].sort();
+  if (sortedPeriods.length === 0) {
     log('No usage data found for this period.');
     return;
   }
 
-  const quantityHeader =
-    data.pricingUnit === 'USD' ? 'Usage (USD)' : data.pricingUnit;
-
-  // Sort periods chronologically
-  const sortedPeriods = [...data.periodUsage.keys()].sort();
-
+  let hiddenCount = 0;
   for (const periodKey of sortedPeriods) {
     const periodData = data.periodUsage.get(periodKey)!;
-    const sortedPeriodServices = [...periodData.services.entries()].sort(
-      (a, b) => b[1].billedCost - a[1].billedCost
+    const allServices = [...periodData.services.entries()];
+    const sortedServices = visibleServices(periodData.services).sort(
+      (a, b) => b[1].cost - a[1].cost
     );
+    hiddenCount += allServices.length - sortedServices.length;
+    if (sortedServices.length === 0) continue;
 
     log(
-      `${chalk.bold(chalk.cyan(periodKey))} (Total: ${formatQuantity(periodData.totalPricingQuantity, data.pricingUnit)}, ${formatCurrency(periodData.totalBilledCost)})`
+      `${chalk.bold(chalk.cyan(periodKey))} (${formatUsageAmount(
+        periodData.totalCost,
+        data.costUnit
+      )})`
     );
 
-    const headers = ['Service', quantityHeader, 'Billed Cost'];
-    const rows = sortedPeriodServices.map(([name, svc]) => [
-      name,
-      formatQuantity(svc.pricingQuantity, svc.pricingUnit),
-      formatCurrency(svc.billedCost),
+    const rows = sortedServices.map(([name, service]) => [
+      formatServiceName(name, service),
+      formatUsageQuantity(service.quantity, service.unit, {
+        compact: true,
+        showSmallValues: true,
+        singularUnit: service.singularUnit,
+        unitKind: service.unitKind,
+      }),
+      formatServiceCost(service, data.costUnit),
     ]);
-
     const tablePrint = table(
-      [headers.map(h => chalk.bold(chalk.gray(h))), ...rows],
-      { hsep: 4, align: ['l', 'r', 'r'] }
+      [
+        ['Service', 'Usage', 'Cost'].map(header =>
+          chalk.bold(chalk.gray(header))
+        ),
+        ...rows,
+      ],
+      { hsep: 4, align: ['l', 'l', 'r'] }
     ).replace(/^/gm, '  ');
-
     print(`${tablePrint}\n`);
   }
+  outputHiddenServicesHint(hiddenCount);
 }

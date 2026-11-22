@@ -3,7 +3,6 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "dependsOn": ["^build", "vercel_runtime#build"],
       "outputLogs": "new-only",
       "outputs": ["dist/**", "bin/**"]
     },

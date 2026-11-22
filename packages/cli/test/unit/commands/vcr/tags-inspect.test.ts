@@ -79,7 +79,7 @@ describe('vcr tag inspect', () => {
     it('tracks telemetry', async () => {
       client.setArgv('vcr', 'tag', 'inspect', '--help');
       const exitCode = await vcr(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -153,7 +153,7 @@ describe('vcr tag inspect', () => {
   it('errors when the tag argument is missing', async () => {
     client.setArgv('vcr', 'tag', 'inspect', 'my-app');
     const exitCode = await vcr(client);
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('vcr tag inspect');
   });
 

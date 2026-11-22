@@ -31,7 +31,7 @@ export default async function endpoints(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { flags: opts, args } = parsedArgs;
 
@@ -43,13 +43,13 @@ export default async function endpoints(client: Client, argv: string[]) {
     output.error(
       `Specify a model. Run ${getCommandName('ai-gateway models ls')} to see available models.`
     );
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   return renderResource<ModelWithEndpoints>(client, {

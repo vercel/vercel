@@ -3,14 +3,16 @@ import type {
   AnalyzedTrace,
   RepeatedOp,
   Span,
+  SpanStatusCode,
   Trace,
   TreeNode,
 } from './types';
 
 export const MAX_TREE_DEPTH = 256;
 
-// OpenTelemetry status: 0 = unset/OK, 1 = error.
-export const SPAN_STATUS_ERROR = 1;
+export const SPAN_STATUS_UNSET: SpanStatusCode = 'Unset';
+export const SPAN_STATUS_OK: SpanStatusCode = 'Ok';
+export const SPAN_STATUS_ERROR: SpanStatusCode = 'Error';
 
 // Attribute keys promoted into row-level hints, in priority order. Tree rows
 // show only the first match; error entries show every match.

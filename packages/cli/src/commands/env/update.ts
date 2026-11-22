@@ -2,7 +2,10 @@ import chalk from 'chalk';
 import type Client from '../../util/client';
 import updateEnvRecord from '../../util/env/update-env-record';
 import getEnvRecords from '../../util/env/get-env-records';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import {
+  getEnvTargetPlaceholder,
+  resolveEnvTargetInput,
+} from '../../util/env/env-target';
 import readStandardInput from '../../util/input/read-standard-input';
 import param from '../../util/output/param';
 import { isKnownError } from '../../util/env/known-error';
@@ -55,6 +58,7 @@ import {
   outputAgentError,
   buildCommandWithYes,
   buildEnvUpdateCommandWithPreservedArgs,
+  getLinkSuggestionArgs,
   getPreservedArgsForEnvUpdate,
   redactEnvValueArgs,
 } from '../../util/agent-output';
@@ -125,11 +129,11 @@ export default async function update(client: Client, argv: string[]) {
           reason: 'invalid_arguments',
           message: err instanceof Error ? err.message : String(err),
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags: opts } = parsedArgs;
@@ -137,7 +141,7 @@ export default async function update(client: Client, argv: string[]) {
   const valueFromFlag =
     typeof opts['--value'] === 'string' ? opts['--value'] : undefined;
   const stdInput = await readStandardInput(client.stdin);
-  let [envName, envTargetArg, envGitBranch] = args;
+  let [envName] = args;
   const typeOption = resolveEnvVarTypeOption({
     type: typeof opts['--type'] === 'string' ? opts['--type'] : undefined,
     visibility:
@@ -155,8 +159,10 @@ export default async function update(client: Client, argv: string[]) {
     },
   });
   telemetryClient.trackCliArgumentName(envName);
-  telemetryClient.trackCliArgumentEnvironment(envTargetArg);
-  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
+  telemetryClient.trackCliArgumentEnvironment(args[1]);
+  telemetryClient.trackCliArgumentGitBranch(args[2]);
+  telemetryClient.trackCliOptionEnvironment(opts['--environment']);
+  telemetryClient.trackCliOptionGitBranch(opts['--git-branch']);
   telemetryClient.trackCliFlagSensitive(opts['--sensitive']);
   telemetryClient.trackCliFlagYes(opts['--yes']);
   telemetryClient.trackCliOptionValue(
@@ -188,6 +194,29 @@ export default async function update(client: Client, argv: string[]) {
     printEnvUpdateWarning(ENV_VISIBILITY_DEPRECATION_MESSAGE);
   }
 
+  const envTargetInput = resolveEnvTargetInput(client, {
+    environment: opts['--environment'],
+    gitBranch: opts['--git-branch'],
+    legacyEnvironment: args[1],
+    legacyGitBranch: args[2],
+  });
+  if ('error' in envTargetInput) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: envTargetInput.error,
+        },
+        2
+      );
+    }
+    output.error(envTargetInput.error);
+    return 2;
+  }
+  const { environment: envTargetArg, gitBranch: envGitBranch } = envTargetInput;
+
   if (explicitType === 'config' && opts['--sensitive']) {
     const message =
       '`--type config` cannot be used with `--sensitive`. Pick one.';
@@ -199,11 +228,11 @@ export default async function update(client: Client, argv: string[]) {
           reason: 'conflicting_type_flags',
           message,
         },
-        1
+        2
       );
     }
     output.fatal(message);
-    return 1;
+    return 2;
   }
 
   if (args.length > 3) {
@@ -214,27 +243,27 @@ export default async function update(client: Client, argv: string[]) {
           status: 'error',
           reason: 'invalid_arguments',
           message: `Invalid number of arguments. Usage: \`${getCommandNamePlain(
-            `env update <name> ${getEnvTargetPlaceholder()} <gitbranch>`
+            `env update <name> --environment ${getEnvTargetPlaceholder()} --git-branch <BRANCH>`
           )}\``,
         },
-        1
+        2
       );
     }
     output.error(
       `Invalid number of arguments. Usage: ${getCommandName(
-        `env update <name> ${getEnvTargetPlaceholder()} <gitbranch>`
+        `env update <name> --environment ${getEnvTargetPlaceholder()} --git-branch <BRANCH>`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   if (stdInput && (!envName || !envTargetArg)) {
     output.error(
-      `Invalid number of arguments. Usage: ${getCommandName(
-        `env update <name> <target> <gitbranch> < <file>`
+      `Can't read the value from stdin without a name and --environment. Usage: ${getCommandName(
+        `env update <name> --environment <environment> --git-branch <BRANCH> < <file>`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   // Non-interactive: report all missing requirements in one shot (like env add)
@@ -246,13 +275,13 @@ export default async function update(client: Client, argv: string[]) {
       const parts = missing.map(m =>
         m === 'missing_name' ? 'name' : '--value or stdin'
       );
-      // Production does not use branch; only preview/development use optional <gitbranch>
+      // Production does not use branch; only preview/development use optional <BRANCH>
       const targetPart = envTargetArg || getEnvTargetPlaceholder();
       const branchPart =
         envTargetArg === 'preview' || envTargetArg === 'development'
-          ? ' <gitbranch>'
+          ? ' --git-branch <BRANCH>'
           : '';
-      const template = `env update ${envName || '<name>'} ${targetPart}${branchPart} --value <value> --yes`;
+      const template = `env update ${envName || '<name>'} --environment ${targetPart}${branchPart} --value <value> --yes`;
       outputActionRequired(
         client,
         {
@@ -292,12 +321,12 @@ export default async function update(client: Client, argv: string[]) {
             {
               command: buildEnvUpdateCommandWithPreservedArgs(
                 client.argv,
-                `env update <name> ${getEnvTargetPlaceholder()} --value <value> --yes`
+                `env update <name> --environment ${getEnvTargetPlaceholder()} --value <value> --yes`
               ),
             },
           ],
         },
-        1
+        2
       );
     } else {
       envName = await client.input.text({
@@ -325,7 +354,7 @@ export default async function update(client: Client, argv: string[]) {
         'link',
         '--scope',
         '<scope>',
-        ...preserved,
+        ...getLinkSuggestionArgs(preserved),
       ];
       outputAgentError(
         client,
@@ -411,7 +440,7 @@ export default async function update(client: Client, argv: string[]) {
           {
             status: 'error',
             reason: 'env_not_found',
-            message: `No Environment Variable ${envName} found matching the specified target/branch.`,
+            message: `No Environment Variable ${envName} found matching the specified environment and Git branch.`,
           },
           1
         );
@@ -431,12 +460,12 @@ export default async function update(client: Client, argv: string[]) {
           {
             status: 'action_required',
             reason: 'multiple_envs',
-            message: `Multiple Environment Variables match ${envName}. Specify target and/or branch to update one.`,
+            message: `Multiple Environment Variables match ${envName}. Specify --environment and/or --git-branch to update one.`,
             next: [
               {
                 command: buildEnvUpdateCommandWithPreservedArgs(
                   client.argv,
-                  `env update ${envName} ${getEnvTargetPlaceholder()} <gitbranch> --value "<value>" --yes`
+                  `env update ${envName} --environment ${getEnvTargetPlaceholder()} --git-branch <BRANCH> --value "<value>" --yes`
                 ),
               },
             ],
@@ -469,12 +498,12 @@ export default async function update(client: Client, argv: string[]) {
         {
           status: 'action_required',
           reason: 'multiple_envs',
-          message: `Multiple Environment Variables match ${envName}. Specify target and/or branch to update one.`,
+          message: `Multiple Environment Variables match ${envName}. Specify --environment and/or --git-branch to update one.`,
           next: [
             {
               command: buildEnvUpdateCommandWithPreservedArgs(
                 client.argv,
-                `env update ${envName} ${getEnvTargetPlaceholder()} <gitbranch> --value "<value>" --yes`
+                `env update ${envName} --environment ${getEnvTargetPlaceholder()} --git-branch <BRANCH> --value "<value>" --yes`
               ),
             },
           ],
@@ -540,7 +569,7 @@ export default async function update(client: Client, argv: string[]) {
     const addTargetArg =
       formatTargetArg(allTargets, customEnvironments) || removeTargetArg;
     const removeBranchArg = selectedEnv.gitBranch
-      ? ` ${quoteArg(selectedEnv.gitBranch)}`
+      ? ` --git-branch ${quoteArg(selectedEnv.gitBranch)}`
       : '';
     const addBranchArg = selectedEnv.gitBranch
       ? ` --git-branch ${quoteArg(selectedEnv.gitBranch)}`
@@ -558,16 +587,16 @@ export default async function update(client: Client, argv: string[]) {
         ? ` ${humanGlobalFlags.map(quoteArg).join(' ')}`
         : '';
     const removeCommand = getCommandNamePlain(
-      `env rm ${envName} ${removeTargetArg}${removeBranchArg} --yes${globalSuffix}`
+      `env remove ${envName} --environment ${removeTargetArg}${removeBranchArg} --yes${globalSuffix}`
     );
     const addCommand = getCommandNamePlain(
-      `env add ${envName} ${addTargetArg}${addBranchArg} --type config --value "<value>" --yes${globalSuffix}`
+      `env add ${envName} --environment ${addTargetArg}${addBranchArg} --type config --value "<value>" --yes${globalSuffix}`
     );
     const removeHumanCommand = getCommandNamePlain(
-      `env rm ${envName} ${removeTargetArg}${removeBranchArg}${humanGlobalSuffix}`
+      `env remove ${envName} --environment ${removeTargetArg}${removeBranchArg}${humanGlobalSuffix}`
     );
     const addHumanCommand = getCommandNamePlain(
-      `env add ${envName} ${addTargetArg}${addBranchArg} --type config${humanGlobalSuffix}`
+      `env add ${envName} --environment ${addTargetArg}${addBranchArg} --type config${humanGlobalSuffix}`
     );
     const message =
       'A Secret cannot be changed to Config. To store this value as Config, remove the variable and add it again with `--type config`.';
@@ -634,7 +663,7 @@ export default async function update(client: Client, argv: string[]) {
       const addTargetArg =
         formatTargetArg(allTargets, customEnvironments) || removeTargetArg;
       const removeBranchArg = selectedEnv.gitBranch
-        ? ` ${quoteArg(selectedEnv.gitBranch)}`
+        ? ` --git-branch ${quoteArg(selectedEnv.gitBranch)}`
         : '';
       const addBranchArg = selectedEnv.gitBranch
         ? ` --git-branch ${quoteArg(selectedEnv.gitBranch)}`
@@ -655,19 +684,19 @@ export default async function update(client: Client, argv: string[]) {
         publicPrefix === ''
           ? undefined
           : getCommandNamePlain(
-              `env add ${privateName} ${addTargetArg}${addBranchArg} --type secret --value "<value>" --yes${globalSuffix}`
+              `env add ${privateName} --environment ${addTargetArg}${addBranchArg} --type secret --value "<value>" --yes${globalSuffix}`
             );
       const removeCommand = getCommandNamePlain(
-        `env rm ${envName} ${removeTargetArg}${removeBranchArg} --yes${globalSuffix}`
+        `env remove ${envName} --environment ${removeTargetArg}${removeBranchArg} --yes${globalSuffix}`
       );
       const addHumanCommand =
         publicPrefix === ''
           ? undefined
           : getCommandNamePlain(
-              `env add ${privateName} ${addTargetArg}${addBranchArg} --type secret${humanGlobalSuffix}`
+              `env add ${privateName} --environment ${addTargetArg}${addBranchArg} --type secret${humanGlobalSuffix}`
             );
       const removeHumanCommand = getCommandNamePlain(
-        `env rm ${envName} ${removeTargetArg}${removeBranchArg}${humanGlobalSuffix}`
+        `env remove ${envName} --environment ${removeTargetArg}${removeBranchArg}${humanGlobalSuffix}`
       );
       if (client.nonInteractive) {
         outputAgentError(
@@ -689,7 +718,7 @@ export default async function update(client: Client, argv: string[]) {
                 ]
               : [],
           },
-          1
+          2
         );
       }
       output.fatal(publicPrefixError);
@@ -701,7 +730,7 @@ export default async function update(client: Client, argv: string[]) {
           `  Remove the public Config:\n    ${removeHumanCommand}\n`
         );
       }
-      return 1;
+      return 2;
     }
   }
 
@@ -745,7 +774,7 @@ export default async function update(client: Client, argv: string[]) {
     if (client.nonInteractive) {
       const branchPart =
         envTargetArg === 'preview' || envTargetArg === 'development'
-          ? ' <gitbranch>'
+          ? ' --git-branch <BRANCH>'
           : '';
       const targetPart = envTargetArg || getEnvTargetPlaceholder();
       outputActionRequired(
@@ -754,17 +783,17 @@ export default async function update(client: Client, argv: string[]) {
           status: 'action_required',
           reason: 'missing_value',
           message:
-            'In non-interactive mode, provide the new value with `--value` or stdin. Example: `vercel env update <name> <environment> --value "<value>" --yes`',
+            'In non-interactive mode, provide the new value with `--value` or stdin. Example: `vercel env update <name> --environment <environment> --value "<value>" --yes`',
           next: [
             {
               command: buildEnvUpdateCommandWithPreservedArgs(
                 client.argv,
-                `env update ${envName} ${targetPart}${branchPart} --value <value> --yes`
+                `env update ${envName} --environment ${targetPart}${branchPart} --value <value> --yes`
               ),
             },
           ],
         },
-        1
+        2
       );
     }
     envValue = await promptEnvUpdateValue(client, envName, shouldMaskValue);
@@ -846,7 +875,7 @@ export default async function update(client: Client, argv: string[]) {
         const addTargetArg =
           formatTargetArg(allTargets, customEnvironments) || removeTargetArg;
         const removeBranchArg = selectedEnv.gitBranch
-          ? ` ${quoteArg(selectedEnv.gitBranch)}`
+          ? ` --git-branch ${quoteArg(selectedEnv.gitBranch)}`
           : '';
         const addBranchArg = selectedEnv.gitBranch
           ? ` --git-branch ${quoteArg(selectedEnv.gitBranch)}`
@@ -859,10 +888,10 @@ export default async function update(client: Client, argv: string[]) {
             ? ` ${humanGlobalFlags.map(quoteArg).join(' ')}`
             : '';
         const addPrivateCommand = getCommandNamePlain(
-          `env add ${privateName} ${addTargetArg}${addBranchArg} --type secret${humanGlobalSuffix}`
+          `env add ${privateName} --environment ${addTargetArg}${addBranchArg} --type secret${humanGlobalSuffix}`
         );
         const removePublicCommand = getCommandNamePlain(
-          `env rm ${envName} ${removeTargetArg}${removeBranchArg}${humanGlobalSuffix}`
+          `env remove ${envName} --environment ${removeTargetArg}${removeBranchArg}${humanGlobalSuffix}`
         );
         const selectedAction = await client.input.select({
           message: 'How should this variable be stored?',
@@ -980,11 +1009,11 @@ export default async function update(client: Client, argv: string[]) {
           reason: 'invalid_type',
           message: visibilityError,
         },
-        1
+        2
       );
     }
     output.fatal(visibilityError);
-    return 1;
+    return 2;
   }
 
   if (!opts['--yes']) {

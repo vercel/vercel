@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import { DomainNotFound, InvalidDomain } from '../../util/errors-ts';
 import stamp from '../../util/output/stamp';
 import importZonefile from '../../util/dns/import-zonefile';
@@ -36,15 +36,15 @@ export default async function importZone(client: Client, argv: string[]) {
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message: err instanceof Error ? err.message : String(err),
         },
-        1
+        2
       );
     }
     printError(err);
-    return 1;
+    return 2;
   }
   const { args } = parsedArgs;
   const { telemetryEventStore } = client;
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   const telemetry = new DnsImportTelemetryClient({
     opts: {
       store: telemetryEventStore,
@@ -68,7 +68,7 @@ export default async function importZone(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
@@ -76,7 +76,7 @@ export default async function importZone(client: Client, argv: string[]) {
         `${getCommandName('dns import <domain> <zonefile>')}`
       )}`
     );
-    return 1;
+    return 2;
   }
 
   const addStamp = stamp();

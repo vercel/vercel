@@ -17,8 +17,8 @@ export const listSubcommand = {
 } as const;
 
 export const addSubcommand = {
-  name: 'add',
-  aliases: ['create'],
+  name: 'create',
+  aliases: ['add'],
   description: 'Create a Global Config store',
   arguments: [
     {
@@ -42,14 +42,14 @@ export const addSubcommand = {
   examples: [
     {
       name: 'Create a store with slug `flags`',
-      value: `${packageName} global-config add flags`,
+      value: `${packageName} global-config create flags`,
     },
   ],
 } as const;
 
 export const getSubcommand = {
-  name: 'get',
-  aliases: ['inspect'],
+  name: 'inspect',
+  aliases: ['get'],
   description: 'Show metadata for a Global Config (id `ecfg_…` or slug)',
   arguments: [
     {
@@ -97,8 +97,8 @@ export const updateSubcommand = {
 } as const;
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm', 'delete'],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete a Global Config store',
   arguments: [
     {
@@ -113,7 +113,7 @@ export const removeSubcommand = {
 export const itemsSubcommand = {
   name: 'items',
   aliases: [],
-  description: 'List items in a Global Config, or fetch one item with `--key`',
+  description: 'List items in a Global Config, or show one item with `--key`',
   arguments: [
     {
       name: 'id-or-slug',
@@ -125,11 +125,12 @@ export const itemsSubcommand = {
     jsonOption,
     {
       name: 'key',
-      shorthand: 'k',
+      shorthand: null,
+      deprecatedShorthand: 'k',
       type: String,
       argument: 'KEY',
       deprecated: false,
-      description: 'When set, fetch a single item by key',
+      description: 'When set, show a single item by key',
     },
   ],
   examples: [],
@@ -192,9 +193,9 @@ export const backupsSubcommand = {
       name: 'backup-version',
       shorthand: null,
       type: String,
-      argument: 'VERSION_ID',
+      argument: 'VERSION',
       deprecated: false,
-      description: 'Fetch a single backup by version id',
+      description: 'Show a single backup by version ID',
     },
     {
       name: 'restore',
@@ -207,7 +208,7 @@ export const backupsSubcommand = {
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       argument: 'NUMBER',
       deprecated: false,
@@ -219,7 +220,8 @@ export const backupsSubcommand = {
       type: String,
       argument: 'CURSOR',
       deprecated: false,
-      description: 'Pagination cursor from a previous backup list response',
+      description:
+        'Show the next page using the cursor from the previous output',
     },
   ],
   examples: [
@@ -229,10 +231,12 @@ export const backupsSubcommand = {
     },
     {
       name: 'Inspect a backup as JSON',
+      placeholders: ['<version-id>'],
       value: `${packageName} global-config backups my-store --backup-version <version-id> --json`,
     },
     {
       name: 'Restore a backup',
+      placeholders: ['<version-id>'],
       value: `${packageName} global-config backups my-store --restore <version-id> --yes`,
     },
   ],

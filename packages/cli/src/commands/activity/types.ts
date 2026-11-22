@@ -34,7 +34,7 @@ export default async function types(
     parsedArgs = parseArguments(client.argv.slice(2), flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const flags = parsedArgs.flags as { '--format'?: string };
@@ -44,7 +44,7 @@ export default async function types(
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   const jsonOutput = formatResult.jsonOutput;

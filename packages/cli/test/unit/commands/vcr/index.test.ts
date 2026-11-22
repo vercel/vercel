@@ -9,7 +9,7 @@ describe('vcr', () => {
 
       client.setArgv(command, '--help');
       const exitCode = await vcr(client);
-      expect(exitCode, 'exit code for vcr').toEqual(2);
+      expect(exitCode, 'exit code for vcr').toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

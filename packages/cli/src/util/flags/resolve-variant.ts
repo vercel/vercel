@@ -108,12 +108,13 @@ export function resolveVariant(
 export function resolveVariantOrThrow(
   input: string,
   variants: FlagVariant[],
-  optionName: string
+  optionName: string,
+  displayInput: string = input
 ): FlagVariant {
   const result = resolveVariant(input, variants);
   if (result.error || !result.variant) {
     throw new Error(
-      `${optionName} ${chalk.bold(input)} is invalid. ${result.error || 'Variant not found.'}`
+      `${optionName} ${chalk.bold(displayInput)} is invalid. ${result.error || 'Variant not found.'}`
     );
   }
 

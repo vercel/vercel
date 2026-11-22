@@ -8,7 +8,10 @@ import type {
 import type Client from '../../util/client';
 import formatTable from '../../util/format-table';
 import getEnvRecords from '../../util/env/get-env-records';
-import { getEnvTargetPlaceholder } from '../../util/env/env-target';
+import {
+  getEnvTargetPlaceholder,
+  resolveEnvTargetInput,
+} from '../../util/env/env-target';
 import stamp from '../../util/output/stamp';
 import { getCommandName } from '../../util/pkg-name';
 import ellipsis from '../../util/output/ellipsis';
@@ -22,12 +25,12 @@ import { listSubcommand } from './command';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
-import { resolveProjectContext } from '../../util/projects/resolve-project-context';
+import { resolveProjectContextWithEnvRequests } from './linked-env-requests';
 import { determineAgent } from '@vercel/detect-agent';
 import { suggestNextCommands } from '../../util/suggest-next-commands';
 import { isGuidanceEnabled } from '../../util/guidance/is-enabled';
 import { validateLsArgs } from '../../util/validate-ls-args';
-import { withGlobalFlags } from '../../util/agent-output';
+import { outputAgentError, withGlobalFlags } from '../../util/agent-output';
 import { isSecretEnvVar } from '../../util/env/env-var-config-secret-ui';
 
 export default async function ls(client: Client, argv: string[]) {
@@ -43,7 +46,7 @@ export default async function ls(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
   const { args, flags } = parsedArgs;
 
@@ -53,33 +56,65 @@ export default async function ls(client: Client, argv: string[]) {
     maxArgs: 2,
     exitCode: 1,
     usageString: getCommandName(
-      `env ls ${getEnvTargetPlaceholder()} <gitbranch>`
+      `env ls --environment ${getEnvTargetPlaceholder()} --git-branch <BRANCH>`
     ),
   });
   if (validationResult !== 0) {
     return validationResult;
   }
 
-  const [envTarget, envGitBranch] = args;
+  telemetryClient.trackCliArgumentEnvironment(args[0]);
+  telemetryClient.trackCliArgumentGitBranch(args[1]);
+  telemetryClient.trackCliOptionEnvironment(flags['--environment']);
+  telemetryClient.trackCliOptionGitBranch(flags['--git-branch']);
+
+  const envTargetInput = resolveEnvTargetInput(client, {
+    environment: flags['--environment'],
+    gitBranch: flags['--git-branch'],
+    legacyEnvironment: args[0],
+    legacyGitBranch: args[1],
+  });
+  if ('error' in envTargetInput) {
+    if (client.nonInteractive) {
+      outputAgentError(
+        client,
+        {
+          status: 'error',
+          reason: 'invalid_arguments',
+          message: envTargetInput.error,
+        },
+        2
+      );
+    }
+    output.error(envTargetInput.error);
+    return 2;
+  }
+  const { environment: envTarget, gitBranch: envGitBranch } = envTargetInput;
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
-  telemetryClient.trackCliArgumentEnvironment(envTarget);
-  telemetryClient.trackCliArgumentGitBranch(envGitBranch);
   telemetryClient.trackCliFlagGuidance(flags['--guidance']);
   telemetryClient.trackCliOptionFormat(flags['--format']);
   const projectName = flags['--project'];
   telemetryClient.trackCliOptionProject(projectName);
 
-  const link = await resolveProjectContext({
+  const sendEnvRequests = (client: Client, projectId: string) =>
+    Promise.all([
+      getEnvRecords(client, projectId, 'vercel-cli:env:ls', {
+        target: envTarget,
+        gitBranch: envGitBranch,
+      }),
+      getCustomEnvironments(client, projectId),
+    ]);
+  const { link, early } = await resolveProjectContextWithEnvRequests(
     client,
-    projectNameOrId: projectName,
-    commandName: 'env ls',
-  });
+    { projectNameOrId: projectName, commandName: 'env ls' },
+    sendEnvRequests
+  );
   if (link.status === 'error') {
     return link.exitCode;
   } else if (link.status === 'not_linked') {
@@ -93,15 +128,10 @@ export default async function ls(client: Client, argv: string[]) {
 
   const { project, org } = link;
 
-  const lsStamp = stamp();
+  const lsStamp = stamp(early?.sentAt);
 
-  const [envsResult, customEnvs] = await Promise.all([
-    getEnvRecords(client, project.id, 'vercel-cli:env:ls', {
-      target: envTarget,
-      gitBranch: envGitBranch,
-    }),
-    getCustomEnvironments(client, project.id),
-  ]);
+  const [envsResult, customEnvs] = await (early?.result() ??
+    sendEnvRequests(client, project.id));
   const { envs } = envsResult;
 
   const projectSlugLink = formatProject(org.slug, project.name);
@@ -150,7 +180,7 @@ export default async function ls(client: Client, argv: string[]) {
         },
         {
           description: 'Remove an Environment Variable',
-          command: withGlobalFlags(client, 'env rm', {
+          command: withGlobalFlags(client, 'env remove', {
             preserveProject: true,
           }),
         },

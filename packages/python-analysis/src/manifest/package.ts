@@ -7,13 +7,17 @@ import { PythonAnalysisError } from '../util/error';
 import type { AbsPath, RelPath } from '../util/fs';
 import { isSubpath, normalizePath, readFileTextIfExists } from '../util/fs';
 import { parsePep440Constraint } from './pep440';
+import { normalizePackageName } from './pep508';
 import type { PipfileLike, PipfileLockLike } from './pipfile/types';
 import { PipfileLikeSchema, PipfileLockLikeSchema } from './pipfile/schema';
 import {
   convertPipfileLockToPyprojectToml,
   convertPipfileToPyprojectToml,
 } from './pipfile-parser';
-import type { PyProjectToml } from './pyproject/types';
+import type {
+  PyProjectDependencyGroups,
+  PyProjectToml,
+} from './pyproject/types';
 import { PyProjectTomlSchema } from './pyproject/schema';
 import type { PythonConstraint, PythonRequest } from './python-specifiers';
 import { convertRequirementsToPyprojectToml } from './requirements-txt-parser';
@@ -464,7 +468,45 @@ async function loadPythonManifest(
     }
   }
 
+  if (manifest != null) {
+    normalizeDependencyGroups(manifest);
+  }
+
   return manifest;
+}
+
+/**
+ * Normalize [dependency-groups] names in place.
+ *
+ * Group names use the same normalization as package names:
+ * https://packaging.python.org/en/latest/specifications/dependency-groups/
+ */
+function normalizeDependencyGroups(manifest: PythonManifest): void {
+  const groups = manifest.data['dependency-groups'];
+  if (groups == null) {
+    return;
+  }
+
+  const normalized: PyProjectDependencyGroups = {};
+  for (const [name, entries] of Object.entries(groups)) {
+    const key = normalizePackageName(name);
+    if (Object.prototype.hasOwnProperty.call(normalized, key)) {
+      throw new PythonAnalysisError({
+        message: `duplicate dependency group "${key}": group names must be unique after normalization`,
+        code: 'PYTHON_DUPLICATE_DEPENDENCY_GROUP',
+        path: manifest.path,
+      });
+    }
+    normalized[key] = entries.map(entry =>
+      typeof entry === 'string'
+        ? entry
+        : {
+            ...entry,
+            'include-group': normalizePackageName(entry['include-group']),
+          }
+    );
+  }
+  manifest.data['dependency-groups'] = normalized;
 }
 
 /**

@@ -5,8 +5,10 @@ import { addSubcommand } from '../integration/command';
 export const installCommand: Command = {
   name: 'install',
   aliases: ['i'],
+  summary: 'Install a marketplace integration',
   description:
     'Install an integration from the marketplace (alias for `integration add`)',
+  dynamicHelp: true,
   arguments: [
     {
       name: 'integration',

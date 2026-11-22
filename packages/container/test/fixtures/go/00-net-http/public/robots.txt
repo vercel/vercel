@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+# public RANDOMNESS_PLACEHOLDER

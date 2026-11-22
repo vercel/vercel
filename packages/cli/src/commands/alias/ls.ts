@@ -3,11 +3,15 @@ import ms from 'ms';
 import table from '../../util/output/table';
 import type Client from '../../util/client';
 import getAliases from '../../util/alias/get-aliases';
-import getScope from '../../util/get-scope';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
+import { getContextName } from '../../util/get-scope';
+import {
+  getPaginationOpts,
+  InvalidNextError,
+} from '../../util/get-pagination-opts';
 import stamp from '../../util/output/stamp';
 import getCommandFlags from '../../util/get-command-flags';
-import { getCommandName } from '../../util/pkg-name';
+import { getCommandNamePlain } from '../../util/pkg-name';
+import { printNextPageCommand } from '../../util/pagination';
 import { validateJsonOutput } from '../../util/output-format';
 import { AliasListTelemetryClient } from '../../util/telemetry/commands/alias/list';
 import output from '../../output-manager';
@@ -27,7 +31,7 @@ export default async function ls(client: Client, argv: string[]) {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags: opts } = parsedArguments;
@@ -40,7 +44,7 @@ export default async function ls(client: Client, argv: string[]) {
     return validationResult;
   }
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   const telemetryClient = new AliasListTelemetryClient({
     opts: {
@@ -52,20 +56,20 @@ export default async function ls(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
   try {
     paginationOptions = getPaginationOpts(opts);
-    const [next, limit] = paginationOptions;
+    const [, limit] = paginationOptions;
 
-    telemetryClient.trackCliOptionNext(next);
+    telemetryClient.trackCliOptionNext(opts['--next']);
     telemetryClient.trackCliOptionLimit(limit);
     telemetryClient.trackCliOptionFormat(opts['--format']);
   } catch (err: unknown) {
     output.prettyError(err);
-    return 1;
+    return err instanceof InvalidNextError ? 2 : 1;
   }
 
   const lsStamp = stamp();
@@ -97,10 +101,8 @@ export default async function ls(client: Client, argv: string[]) {
 
     if (pagination.next) {
       const flags = getCommandFlags(opts, ['_', '--next', '--format']);
-      output.log(
-        `To display the next page run ${getCommandName(
-          `alias ls${flags} --next ${pagination.next}`
-        )}`
+      printNextPageCommand(
+        getCommandNamePlain(`alias ls${flags} --next ${pagination.next}`)
       );
     }
   }

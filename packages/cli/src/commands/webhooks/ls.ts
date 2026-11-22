@@ -4,7 +4,7 @@ import plural from 'pluralize';
 
 import type Client from '../../util/client';
 import getWebhooks from '../../util/webhooks/get-webhooks';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import stamp from '../../util/output/stamp';
 import formatTable from '../../util/format-table';
 import { validateJsonOutput } from '../../util/output-format';
@@ -32,7 +32,7 @@ export default async function ls(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
 
@@ -51,11 +51,11 @@ export default async function ls(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
 
   const lsStamp = stamp();
 
@@ -82,7 +82,7 @@ export default async function ls(client: Client, argv: string[]) {
           message: `${webhooks.length} webhook(s) found.`,
           next: [
             {
-              command: getCommandNamePlain('webhooks get <id>'),
+              command: getCommandNamePlain('webhooks inspect <id>'),
               when: 'Inspect a webhook',
             },
           ],

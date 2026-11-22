@@ -30,21 +30,23 @@ types, so installing it never pulls in the Chat SDK.
 | `connectNotionAdapter`   | `@chat-adapter/notion`      | `token`                     | `notion/acme-notion`     |
 | `connectTelegramAdapter` | `@chat-adapter/telegram`    | `botToken`                  | `telegram/acme-telegram` |
 | `connectSendblueAdapter` | `chat-adapter-sendblue`     | `accessToken`               | `sendblue/acme-agent`    |
+| `connectTeamsAdapter`    | `@chat-adapter/teams`       | `appId`, `token`            | `microsoft-teams/my-bot` |
 
 Each helper has the signature `(connector, params?, options?)`:
 
 - `connector` — the connector UID (`slack/acme-slack`) or id (`scl_...`).
 - `params` — `ConnectTokenParams` minus `subject` (pinned to `{ type: 'app' }`).
-  Forward `installationId`, `scopes`, `validityBufferMs`, etc.
+  Forward `installationId`, `scopes`, `validityBufferMs`, etc. Teams also omits
+  `scopes`: the adapter selects the token resource for each API call.
 - `options` — `ConnectOptions` (for example `vercelToken` for non-Vercel
   runtimes).
 
 ## Setup
 
 The trigger-forwarding steps below apply to Slack, Discord, GitHub, Linear, Linq,
-and Sendblue. Notion and Telegram Connect are outbound-only: create and attach
-the connector without triggers, then use each provider's native webhook
-verification or polling.
+Sendblue, and Microsoft Teams. Notion and Telegram Connect are outbound-only:
+create and attach the connector without triggers, then use each provider's
+native webhook verification or polling.
 
 ### 1. Create a connector with triggers
 
@@ -202,6 +204,44 @@ connectSendblueAdapter('sendblue/acme-agent', {
 It also verifies Connect trigger-forwarded webhooks with Vercel OIDC. Omit
 `SENDBLUE_API_KEY`, `SENDBLUE_API_SECRET`, `SENDBLUE_FROM_NUMBER`, and
 `SENDBLUE_WEBHOOK_SECRET` when using this helper.
+
+### Microsoft Teams
+
+```ts
+import { createTeamsAdapter } from '@chat-adapter/teams';
+import { connectTeamsAdapter } from '@vercel/connect/chat';
+
+createTeamsAdapter({
+  ...connectTeamsAdapter('microsoft-teams/my-bot'),
+});
+```
+
+Use a Teams adapter release that supports lazy `appId` and `webhookVerifier`;
+the helper requires both capabilities. Create the managed Microsoft Teams
+connector in the Vercel dashboard and forward its triggers to
+`/api/webhooks/teams`.
+
+The helper resolves the public bot app ID from connector metadata. The adapter's
+`token` callback requests separate app-scoped tokens for Bot Framework
+(`https://api.botframework.com/.default`) and Microsoft Graph
+(`https://graph.microsoft.com/.default`). Connect caches and refreshes each token
+independently. The adapter supplies the scopes, so callers cannot override them
+in helper params.
+
+Graph reads require the bot's resource-specific permissions to be granted when
+the bot is installed in a team. Obtaining a Graph token does not grant access to
+every team or chat. Installation and permission errors propagate from Connect.
+Connect selects the managed bot's home tenant; the callback's tenant argument
+does not select a different tenant, and `installationId` identifies a team
+installation rather than changing the bot's identity.
+
+Omit `TEAMS_APP_ID`, `TEAMS_APP_PASSWORD`, and `TEAMS_APP_TENANT_ID` when using
+this helper. Connect retains the managed app's federated credential and verifies
+Microsoft's native JWT before forwarding activities. The adapter verifies the
+forwarded Vercel OIDC token instead. The webhook route remains unchanged.
+
+Chat initializes the lazy app ID automatically before handling webhooks. For
+outbound calls outside a webhook handler, await `bot.initialize()` first.
 
 ### Notion
 

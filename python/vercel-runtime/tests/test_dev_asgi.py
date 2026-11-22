@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import unittest
-from typing import Any
+from typing import Any, cast
+from unittest import mock
 
 from vercel_runtime import dev, get_deadline
 from vercel_runtime.invocation_hooks import (
@@ -10,6 +11,7 @@ from vercel_runtime.invocation_hooks import (
     _reset_invocation_hooks,
     run_on_next_invocation,
 )
+from vercel_runtime.schedules import create_schedule_scripts_app
 
 
 class TestDevAsgiAppScopes(unittest.IsolatedAsyncioTestCase):
@@ -103,6 +105,24 @@ class TestDevAsgiAppScopes(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(observed["headers"], [])
         self.assertIsNone(get_deadline())
+
+
+class TestDevAsgiServer(unittest.TestCase):
+    def setUp(self) -> None:
+        self._original_app = dev._asgi_user_app
+
+    def tearDown(self) -> None:
+        dev._asgi_user_app = self._original_app
+
+    def test_schedule_supervisor_runs_without_reload(self) -> None:
+        dev._asgi_user_app = cast(
+            "Any", create_schedule_scripts_app({"tick": "jobs/tick.py"})
+        )
+        with mock.patch("vercel_runtime._vendor.uvicorn.run") as run:
+            dev._start_asgi("127.0.0.1", 3000)
+
+        run.assert_called_once()
+        self.assertNotIn("reload", run.call_args.kwargs)
 
 
 class TestDevWsgiApp(unittest.TestCase):

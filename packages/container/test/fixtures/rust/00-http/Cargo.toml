@@ -1,0 +1,9 @@
+[package]
+name = "http-fixture"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# No dependencies on purpose: this fixture is the fast smoke test for the Rust
+# buildpack, so it must not pay for a crates.io resolve or a dependency compile.
+[dependencies]

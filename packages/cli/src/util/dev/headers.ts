@@ -1,4 +1,4 @@
-import { Headers } from '../fetch';
+import type { Headers } from '../fetch';
 import type {
   IncomingHttpHeaders,
   OutgoingHttpHeaders,
@@ -8,7 +8,7 @@ import type {
 export function nodeHeadersToFetchHeaders(
   nodeHeaders: IncomingHttpHeaders | OutgoingHttpHeaders
 ): Headers {
-  const headers = new Headers();
+  const headers = new globalThis.Headers();
   for (const [name, value] of Object.entries(nodeHeaders)) {
     if (Array.isArray(value)) {
       for (const val of value) {
@@ -111,7 +111,7 @@ export function applyOverriddenHeaders(
   // Headers from a native fetch network response are immutable. Work with a
   // mutable copy because the middleware control headers must be removed before
   // the remaining response headers are forwarded to the request and client.
-  const headers = new Headers(respHeaders);
+  const headers = new globalThis.Headers(respHeaders);
   const overriddenHeaders = headers.get('x-middleware-override-headers');
   if (!overriddenHeaders) {
     return headers;

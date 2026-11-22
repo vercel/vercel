@@ -10,6 +10,7 @@ export type {
   Framework,
   FunctionConfig,
   CronJob,
+  ScheduleDefinition,
   GitDeploymentConfig,
   GitConfig,
   GithubConfig,

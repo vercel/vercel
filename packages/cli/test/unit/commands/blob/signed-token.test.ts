@@ -194,7 +194,7 @@ describe('blob signed-token', () => {
     expect(exitCode).toBe(1);
     expect(mockedBlob.issueSignedToken).not.toHaveBeenCalled();
     expect(mockedOutput.error).toHaveBeenCalledWith(
-      'The --valid-until and --valid-for flags are mutually exclusive. Pass only one.'
+      'The --valid-until and --valid-for options are mutually exclusive. Pass only one.'
     );
   });
 

@@ -16,7 +16,7 @@ describe('webhooks rm', () => {
 
       client.setArgv(command, subcommand, '--help');
       const exitCodePromise = webhooks(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -30,7 +30,7 @@ describe('webhooks rm', () => {
   it('should show error when no id provided', async () => {
     client.setArgv('webhooks', 'rm');
     const exitCode = await webhooks(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
     await expect(client.stderr).toOutput('expects one argument');
   });
 
@@ -81,7 +81,7 @@ describe('webhooks rm', () => {
         'vercel webhooks ls --cwd /tmp --non-interactive'
       );
       expect(payload.next[1].command).toBe(
-        'vercel webhooks rm <id> --yes --cwd /tmp --non-interactive'
+        'vercel webhooks delete <id> --yes --cwd /tmp --non-interactive'
       );
     });
 
@@ -123,7 +123,7 @@ describe('webhooks rm', () => {
       expect(payload).toMatchObject({
         status: 'ok',
         webhook: { id: 'hook_test123', url: 'https://example.com/webhook' },
-        message: expect.stringMatching(/removed/),
+        message: expect.stringMatching(/deleted/),
       });
     });
   });
@@ -140,11 +140,11 @@ describe('webhooks rm', () => {
   it('tracks subcommand invocation', async () => {
     client.setArgv('webhooks', 'rm');
     const exitCode = await webhooks(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
 
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       {
-        key: 'subcommand:remove',
+        key: 'subcommand:delete',
         value: 'rm',
       },
     ]);
@@ -160,14 +160,14 @@ describe('webhooks rm', () => {
       client.setArgv('webhooks', 'rm', 'hook_test123');
       const exitCodePromise = webhooks(client);
       await expect(client.stderr).toOutput(
-        'Are you sure you want to remove webhook'
+        'Are you sure you want to delete webhook'
       );
       client.stdin.write('y\n');
       await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:remove',
+          key: 'subcommand:delete',
           value: 'rm',
         },
         {
@@ -189,7 +189,7 @@ describe('webhooks rm', () => {
         expect(exitCode).toEqual(0);
         // Verify output contains success message
         const output = client.stderr.getFullOutput();
-        expect(output).toContain('removed');
+        expect(output).toContain('deleted');
       });
 
       it('should track usage of the --yes flag', async () => {
@@ -204,7 +204,7 @@ describe('webhooks rm', () => {
 
         expect(client.telemetryEventStore).toHaveTelemetryEvents([
           {
-            key: 'subcommand:remove',
+            key: 'subcommand:delete',
             value: 'rm',
           },
           {
@@ -221,17 +221,20 @@ describe('webhooks rm', () => {
   });
 
   describe('remove alias', () => {
-    it('should work with remove alias', async () => {
+    it('warns that remove is deprecated', async () => {
       useUser();
       useWebhook('hook_test123');
       useDeleteWebhook('hook_test123');
       client.setArgv('webhooks', 'remove', 'hook_test123', '--yes');
       const exitCode = await webhooks(client);
       expect(exitCode).toEqual(0);
+      await expect(client.stderr).toOutput(
+        '`vercel webhooks remove` is deprecated. Use `vercel webhooks delete`.'
+      );
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:remove',
+          key: 'subcommand:delete',
           value: 'remove',
         },
         {
@@ -246,8 +249,22 @@ describe('webhooks rm', () => {
     });
   });
 
-  describe('delete alias', () => {
-    it('should work with delete alias', async () => {
+  describe('delete', () => {
+    it.each([
+      'delete',
+      'rm',
+      'del',
+    ])('runs as %s without a warning', async name => {
+      useUser();
+      useWebhook('hook_test123');
+      useDeleteWebhook('hook_test123');
+      client.setArgv('webhooks', name, 'hook_test123', '--yes');
+      const exitCode = await webhooks(client);
+      expect(exitCode).toEqual(0);
+      expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
+    });
+
+    it('tracks delete telemetry', async () => {
       useUser();
       useWebhook('hook_test123');
       useDeleteWebhook('hook_test123');
@@ -257,7 +274,7 @@ describe('webhooks rm', () => {
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
-          key: 'subcommand:remove',
+          key: 'subcommand:delete',
           value: 'delete',
         },
         {

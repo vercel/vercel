@@ -1,6 +1,21 @@
+import stripAnsi from 'strip-ansi';
 import type Client from '../../util/client';
 import output from '../../output-manager';
+import { clientObservabilityPlanRecovery } from '../../util/metrics/plan-gate';
+import {
+  getErrorRecovery,
+  type ErrorRecovery,
+} from '../../util/error-recovery';
+import { buildCommandWithGlobalFlags } from '../../util/agent-output';
+import {
+  agentErrorMetadata,
+  trackAgentError,
+} from '../../util/telemetry/agent-error';
 import type { QueryMetadata, MetricsQueryResponse } from './types';
+import {
+  withWarnings,
+  type DeprecatedOptionWarning,
+} from '../../util/renamed-option';
 
 export function getRollupColumnName(
   metric: string,
@@ -26,7 +41,8 @@ export function getResolvedOrderMetadata(
 
 export function formatQueryJson(
   query: QueryMetadata,
-  response: MetricsQueryResponse
+  response: MetricsQueryResponse,
+  warnings: ReadonlyArray<DeprecatedOptionWarning | undefined> = []
 ): string {
   const orderMetadata = getResolvedOrderMetadata(query, response);
   const queryWithResponseMetadata: QueryMetadata = {
@@ -35,12 +51,15 @@ export function formatQueryJson(
   };
 
   return JSON.stringify(
-    {
-      query: queryWithResponseMetadata,
-      summary: response.summary ?? [],
-      data: response.data ?? [],
-      ...orderMetadata,
-    },
+    withWarnings(
+      {
+        query: queryWithResponseMetadata,
+        summary: response.summary ?? [],
+        data: response.data ?? [],
+        ...orderMetadata,
+      },
+      warnings
+    ),
     null,
     2
   );
@@ -49,7 +68,12 @@ export function formatQueryJson(
 export function formatErrorJson(
   code: string,
   message: string,
-  allowedValues?: string[]
+  allowedValues?: string[],
+  recovery: ErrorRecovery & {
+    next?: Array<{ command: string; when?: string }>;
+    cliVersion?: string;
+    invocationId?: string;
+  } = {}
 ): string {
   const error: { code: string; message: string; allowedValues?: string[] } = {
     code,
@@ -58,7 +82,33 @@ export function formatErrorJson(
   if (allowedValues && allowedValues.length > 0) {
     error.allowedValues = allowedValues;
   }
-  return JSON.stringify({ error }, null, 2);
+  return JSON.stringify({ error: { ...error, ...recovery } }, null, 2);
+}
+
+function projectSelectorFromArgv(argv: string[]): string | undefined {
+  const args = argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg.startsWith('--project=')) {
+      return arg.slice('--project='.length);
+    }
+    if (arg === '--project' && i + 1 < args.length) {
+      return args[i + 1];
+    }
+  }
+}
+
+/** True when the hint is only the command `next` already prints. */
+function hintRestatesCommand(
+  hint: string,
+  steps: Array<{ command: string }> | undefined
+): boolean {
+  if (!steps?.length) return false;
+  const plain = stripAnsi(hint).replace(/`/g, '').trim();
+  return steps.some(step => {
+    const command = step.command.trim();
+    return command === plain || command.startsWith(`${plain} `);
+  });
 }
 
 export function handleApiError(
@@ -67,10 +117,15 @@ export function handleApiError(
     code?: string;
     serverMessage?: string;
     allowedValues?: string[];
+    retryAfterMs?: number | 'never';
+    action?: string;
+    resource?: string;
+    meta?: { reason?: string };
   },
   jsonOutput: boolean,
   client: Client,
-  overrides: Partial<Record<number, { code?: string; message: string }>> = {}
+  overrides: Partial<Record<number, { code?: string; message: string }>> = {},
+  target: { scope?: string; projectName?: string } = {}
 ): number {
   let code: string;
   let message: string;
@@ -85,7 +140,7 @@ export function handleApiError(
         code = err.code || 'PAYMENT_REQUIRED';
         message =
           err.serverMessage ||
-          'This feature requires an Observability Plus subscription. Upgrade at https://vercel.com/dashboard/settings/billing';
+          'This feature requires an Observability Plus subscription.';
         break;
       case 429:
         code = err.code || 'RATE_LIMITED';
@@ -96,7 +151,9 @@ export function handleApiError(
       case 403:
         code = 'FORBIDDEN';
         message =
-          'You do not have permission to query metrics for this project/team.';
+          err.serverMessage && err.serverMessage !== 'Response Error'
+            ? err.serverMessage
+            : 'You do not have permission to query metrics for this project/team.';
         break;
       case 500:
         code = 'INTERNAL_ERROR';
@@ -117,10 +174,67 @@ export function handleApiError(
     }
   }
 
-  if (jsonOutput) {
-    client.stdout.write(formatErrorJson(code, message, err.allowedValues));
+  const billing =
+    err.status === 402
+      ? clientObservabilityPlanRecovery(
+          client,
+          err,
+          message,
+          target.projectName ?? projectSelectorFromArgv(client.argv),
+          target.scope
+        )
+      : undefined;
+  // The shared hint names the same commands unscoped; use the one that
+  // matches `next` so a person is not told to buy on another team.
+  const recovery: ErrorRecovery = {
+    ...getErrorRecovery({ ...err, serverMessage: message }, client),
+    ...(billing && { hint: billing.hint }),
+  };
+  const next = billing?.command
+    ? [
+        {
+          command: buildCommandWithGlobalFlags(
+            client.argv.filter(
+              arg => !/^(?:--yes|--force|-y)(?:=|$)/.test(arg)
+            ),
+            billing.command,
+            undefined,
+            {
+              excludeFlags: billing.excludeFlags,
+              preserveProject: billing.preserveProject,
+            }
+          ),
+          when: billing.when,
+        },
+      ]
+    : undefined;
+  if (recovery.hint && hintRestatesCommand(recovery.hint, next)) {
+    delete recovery.hint;
+  }
+  const details = {
+    ...recovery,
+    ...(next && { next }),
+    ...agentErrorMetadata(client),
+  };
+  trackAgentError(client, {
+    reason:
+      err.status === 403
+        ? 'forbidden'
+        : err.status === 402
+          ? 'payment_required'
+          : err.status === 429
+            ? 'rate_limited'
+            : code,
+    ...recovery,
+  });
+  if (jsonOutput || client.nonInteractive) {
+    client.stdout.write(
+      formatErrorJson(code, message, err.allowedValues, details)
+    );
   } else {
-    output.error(message);
+    output.fatal(message);
+    if (recovery.hint) output.print(`  ${recovery.hint}\n`);
+    for (const step of next ?? []) output.print(`  ${step.command}\n`);
     if (err.allowedValues && err.allowedValues.length > 0) {
       output.print(`\nAvailable values: ${err.allowedValues.join(', ')}\n`);
     }

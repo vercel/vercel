@@ -13,9 +13,13 @@ import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
 import { isAPIError } from '../../util/errors-ts';
-import { getCommandNamePlain } from '../../util/pkg-name';
+import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
+import {
+  getRenamedOption,
+  reportRenamedOptionError,
+} from '../../util/renamed-option';
 import {
   buildQuota,
   isValidRefreshPeriod,
@@ -28,12 +32,6 @@ import {
   presetToExpiresAt,
   VALID_EXPIRY_VALUES,
 } from '../../util/ai-gateway/expiry';
-import {
-  listBudgets,
-  listScopeBudgetDefaults,
-  formatBudgetCap,
-} from '../../util/ai-gateway/budgets';
-import getUser from '../../util/get-user';
 
 export default async function create(client: Client, argv: string[]) {
   const telemetry = new AiGatewayApiKeysCreateTelemetryClient({
@@ -48,27 +46,90 @@ export default async function create(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { flags: opts } = parsedArgs;
 
   const name = opts['--name'] as string | undefined;
-  const budget = opts['--budget'] as number | undefined;
+  const amountFlag = opts['--amount'] as number | undefined;
+  const budgetFlag = opts['--budget'] as number | undefined;
+  const limitFlag = opts['--limit'] as number | undefined;
   const refreshPeriod = opts['--refresh-period'] as string | undefined;
   const includeByok = opts['--include-byok'] as boolean | undefined;
   const alertThresholdsInput = opts['--alert-thresholds'] as string | undefined;
   const expiration = opts['--expiration'] as string | undefined;
   const zdrExempt = opts['--zdr-exempt'] as boolean | undefined;
   const bypassAll = opts['--bypass-all-settings'] as boolean | undefined;
+  const tokenPass = opts['--token-pass'] as boolean | undefined;
 
   telemetry.trackCliOptionName(name);
-  telemetry.trackCliOptionBudget(budget);
+  telemetry.trackCliOptionAmount(amountFlag);
+  telemetry.trackCliOptionBudget(budgetFlag);
+  telemetry.trackCliOptionLimit(limitFlag);
   telemetry.trackCliOptionRefreshPeriod(refreshPeriod);
   telemetry.trackCliFlagIncludeByok(includeByok);
   telemetry.trackCliOptionAlertThresholds(alertThresholdsInput);
   telemetry.trackCliOptionExpiration(expiration);
   telemetry.trackCliFlagZdrExempt(zdrExempt);
   telemetry.trackCliFlagBypassAllSettings(bypassAll);
+  telemetry.trackCliFlagTokenPass(tokenPass);
+
+  if (tokenPass && (zdrExempt || bypassAll)) {
+    const message =
+      'Cannot combine --token-pass with --zdr-exempt or --bypass-all-settings. Remove the exemption options to create a Token Pass key.';
+    outputAgentError(
+      client,
+      {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.INVALID_ARGUMENTS,
+        message,
+        next: [
+          {
+            command: getCommandNamePlain(
+              'ai-gateway api-keys create --token-pass'
+            ),
+          },
+        ],
+      },
+      2
+    );
+    output.error(message);
+    return 2;
+  }
+
+  if (budgetFlag !== undefined && limitFlag !== undefined) {
+    const message =
+      'Pass only one of --limit or --budget. (Both are deprecated; use --amount.)';
+    outputAgentError(
+      client,
+      {
+        status: AGENT_STATUS.ERROR,
+        reason: AGENT_REASON.INVALID_BUDGET,
+        message,
+        next: [
+          {
+            command: getCommandNamePlain(
+              'ai-gateway api-keys create --amount 500'
+            ),
+          },
+        ],
+      },
+      2
+    );
+    output.error(message);
+    return 2;
+  }
+  // `--limit` and `--budget` are both old names of `--amount`, and the check
+  // above keeps them apart.
+  const amount = getRenamedOption<number>(
+    opts,
+    '--amount',
+    budgetFlag !== undefined ? '--budget' : '--limit'
+  );
+  if ('error' in amount) {
+    return reportRenamedOptionError(client, amount.error);
+  }
+  const budget = amount.value;
 
   if (budget !== undefined && budget < 1) {
     const message = 'Budget must be a positive number in dollars (minimum 1).';
@@ -81,15 +142,15 @@ export default async function create(client: Client, argv: string[]) {
         next: [
           {
             command: getCommandNamePlain(
-              'ai-gateway api-keys create --budget 500'
+              'ai-gateway api-keys create --amount 500'
             ),
           },
         ],
       },
-      1
+      2
     );
     output.error(message);
-    return 1;
+    return 2;
   }
 
   if (refreshPeriod && !isValidRefreshPeriod(refreshPeriod)) {
@@ -108,10 +169,10 @@ export default async function create(client: Client, argv: string[]) {
           },
         ],
       },
-      1
+      2
     );
     output.error(message);
-    return 1;
+    return 2;
   }
 
   let alertThresholds: number[] | undefined;
@@ -133,10 +194,10 @@ export default async function create(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
       output.error(message);
-      return 1;
+      return 2;
     }
     alertThresholds = result.values;
   }
@@ -157,10 +218,10 @@ export default async function create(client: Client, argv: string[]) {
           },
         ],
       },
-      1
+      2
     );
     output.error(message);
-    return 1;
+    return 2;
   }
   const expiresAt =
     expiration !== undefined ? presetToExpiresAt(expiration) : undefined;
@@ -172,7 +233,7 @@ export default async function create(client: Client, argv: string[]) {
     alertThresholds,
   });
 
-  if (!client.config.currentTeam) {
+  if (!(await client.resolveCurrentTeam())) {
     if (!client.stdin.isTTY) {
       output.error(
         'No team selected. Use `vercel --scope <team-slug> ai-gateway api-keys create` or run `vercel switch` first.'
@@ -191,6 +252,7 @@ export default async function create(client: Client, argv: string[]) {
 
   // `bypassAll` subsumes `zdr` but both facts are kept when passed together.
   const metadata: ApiKeyMetadata = {
+    ...(tokenPass && { tokenPass: true as const }),
     ...(zdrExempt && { zdr: { enableNonZdrModels: true as const } }),
     ...(bypassAll && { bypassAll: true as const }),
   };
@@ -211,12 +273,20 @@ export default async function create(client: Client, argv: string[]) {
       `API key ${chalk.bold(result.apiKey.name)} (${result.apiKey.id}) created ${createStamp()}`
     );
 
-    // Name the caps that apply beyond the key's own budget.
-    const caps = await inheritedCapsLine(client, {
-      hasOwnBudget: budget !== undefined,
-    });
-    if (caps) {
-      output.log(caps);
+    // Interim static copy: the computed notice listed every budget on the
+    // team, which on large teams hung create for seconds to minutes (or 500'd
+    // after the key existed). The computed notice returns once the budgets
+    // list is fast.
+    output.log(
+      budget !== undefined
+        ? `Spend on this key also counts toward any user and team budgets. List them with ${getCommandName('ai-gateway budgets list')}.`
+        : `No key budget set. Spend still counts toward any API key default, user, and team budgets. List them with ${getCommandName('ai-gateway budgets list')}.`
+    );
+
+    if (client.isAgent) {
+      output.log(
+        `Prefer OIDC over long-lived API keys: code on Vercel can authenticate to AI Gateway with VERCEL_OIDC_TOKEN, and local development can get one with ${getCommandName('link')} and ${getCommandName('env pull')}. Revoke this key with ${getCommandName(`ai-gateway api-keys revoke ${result.apiKey.id} --yes`)} if you don't need it.`
+      );
     }
 
     return 0;
@@ -227,77 +297,5 @@ export default async function create(client: Client, argv: string[]) {
       return 1;
     }
     throw err;
-  }
-}
-
-// Best-effort: null when nothing applies or a lookup fails; never throws.
-// An own budget overrides the api-key default; user and team caps always stack.
-async function inheritedCapsLine(
-  client: Client,
-  { hasOwnBudget }: { hasOwnBudget: boolean }
-): Promise<string | null> {
-  try {
-    const [defaults, budgets, user] = await Promise.all([
-      listScopeBudgetDefaults(client),
-      listBudgets(client),
-      getUser(client),
-    ]);
-
-    const parts: string[] = [];
-
-    const keyDefault = defaults.find(
-      d => d.scopeType === 'api-key' && d.active !== false
-    );
-    if (keyDefault && !hasOwnBudget) {
-      parts.push(
-        `the API key default (${formatBudgetCap(keyDefault.limitAmount, keyDefault.refreshPeriod)})`
-      );
-    }
-
-    const userBudget = budgets.find(
-      b =>
-        (b.scopeType as string) === 'user' &&
-        b.active &&
-        (b.scopeId === user.id || b.scopeId === `usr_${user.id}`)
-    );
-    if (userBudget) {
-      parts.push(
-        `your user budget (${formatBudgetCap(userBudget.limitAmount, userBudget.refreshPeriod)})`
-      );
-    } else {
-      // New keys are user-attributed, so the user default covers the creator.
-      const userDefault = defaults.find(
-        d => d.scopeType === 'user' && d.active !== false
-      );
-      if (userDefault) {
-        parts.push(
-          `your user budget (${formatBudgetCap(userDefault.limitAmount, userDefault.refreshPeriod)} default)`
-        );
-      }
-    }
-
-    const teamBudget = budgets.find(b => b.scopeType === 'team' && b.active);
-    if (teamBudget) {
-      parts.push(
-        `the team budget (${formatBudgetCap(teamBudget.limitAmount, teamBudget.refreshPeriod)})`
-      );
-    }
-
-    if (parts.length === 0) {
-      return null;
-    }
-    const list =
-      parts.length === 1
-        ? parts[0]
-        : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
-    return hasOwnBudget
-      ? `Spend on this key also counts toward ${list}.`
-      : `No key budget set. Spend still counts toward ${list}.`;
-  } catch (err: unknown) {
-    // Under -d, a failed lookup stays distinguishable from "no caps apply".
-    output.debug(
-      `Skipping inherited-caps notice: ${err instanceof Error ? err.message : String(err)}`
-    );
-    return null;
   }
 }

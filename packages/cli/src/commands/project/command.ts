@@ -1,9 +1,11 @@
 import { packageName } from '../../util/pkg-name';
+import { projectOption } from '../../util/arg-common';
 import {
+  allOption,
   formatOption,
   jsonOption,
   limitOption,
-  nextOption,
+  nextCursorOption,
   yesOption,
 } from '../../util/arg-common';
 
@@ -28,9 +30,9 @@ const sandboxFailoverRegionsOption = {
 } as const;
 
 export const addSubcommand = {
-  name: 'add',
-  aliases: [],
-  description: 'Add a new project',
+  name: 'create',
+  aliases: ['add'],
+  description: 'Create a new project',
   arguments: [
     {
       name: 'name',
@@ -40,8 +42,8 @@ export const addSubcommand = {
   options: [],
   examples: [
     {
-      name: 'Add a new project',
-      value: `${packageName} project add my-project`,
+      name: 'Create a new project',
+      value: `${packageName} project create my-project`,
     },
   ],
 } as const;
@@ -64,7 +66,7 @@ export const checksAddFlags = [
     shorthand: null,
     type: String,
     description:
-      'Path to JSON file for the POST body (see REST: Create a check). Overrides --check-name / related flags.',
+      'Path to JSON file for the POST body (see REST: Create a check). Overrides --check-name / related options.',
     deprecated: false,
   },
   {
@@ -87,7 +89,7 @@ export const checksAddFlags = [
     name: 'timeout',
     shorthand: null,
     type: Number,
-    description: 'Timeout in seconds for the new check (default 300)',
+    description: 'Timeout in seconds for the new check (default: 300)',
     deprecated: false,
   },
   {
@@ -113,6 +115,7 @@ export const checksRemoveFlags = [formatOption, jsonOption] as const;
 export const checksSubcommand = {
   name: 'checks',
   aliases: [],
+  summary: 'List, add, or remove deployment checks for a project',
   description:
     'List, add, or remove deployment checks for a project (GET/POST/DELETE /v2/projects/.../checks)',
   arguments: [
@@ -136,7 +139,7 @@ export const checksSubcommand = {
       value: `${packageName} project checks add my-app --file ./check.json`,
     },
     {
-      name: 'Add a check with flags (requires integration/webhook setup in the body via --file or --source)',
+      name: 'Add a check with options (requires integration/webhook setup in the body via --file or --source)',
       value: `${packageName} project checks add --check-name "CI" --requires deployment-url --blocks deployment-alias`,
     },
     {
@@ -156,7 +159,7 @@ export const inspectSubcommand = {
       required: false,
     },
   ],
-  options: [yesOption],
+  options: [yesOption, formatOption, jsonOption],
   examples: [
     {
       name: 'Inspect the linked project from the current directory',
@@ -165,6 +168,10 @@ export const inspectSubcommand = {
     {
       name: 'Inspect the project named "my-project"',
       value: `${packageName} project inspect my-project`,
+    },
+    {
+      name: 'Inspect a project as JSON',
+      value: `${packageName} project inspect my-project --json`,
     },
   ],
 } as const;
@@ -176,7 +183,7 @@ export const listSubcommand = {
   default: true,
   arguments: [],
   options: [
-    nextOption,
+    nextCursorOption,
     limitOption,
     formatOption,
     jsonOption,
@@ -188,31 +195,53 @@ export const listSubcommand = {
       deprecated: false,
     },
     {
+      name: 'paused',
+      description: 'Show only projects whose production traffic is paused',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+    },
+    {
+      name: 'query',
+      shorthand: 'q',
+      type: String,
+      argument: 'TEXT',
+      description: 'Search projects by name (substring match)',
+      deprecated: false,
+    },
+    // Hidden: `--filter` and `-f` are the old names of `--query`.
+    {
       name: 'filter',
       shorthand: 'f',
       type: String,
       argument: 'NAME',
-      description: 'Filter projects by name (substring match)',
-      deprecated: false,
+      description: 'Deprecated alias for `--query`',
+      deprecated: true,
     },
   ],
   examples: [
     {
-      name: 'Paginate projects, where `1584722256178` is the time in milliseconds since the UNIX epoch',
-      value: `${packageName} project ls --next 1584722256178`,
+      name: 'Show the next page, using the cursor from the previous output',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} project list --next <CURSOR>`,
     },
     {
       name: 'List projects using a deprecated Node.js version in JSON format',
-      value: `${packageName} project ls --update-required --json`,
+      value: `${packageName} project list --update-required --json`,
     },
     {
-      name: 'Filter projects by name',
-      value: `${packageName} project ls --filter my-app`,
+      name: 'Search projects by name',
+      value: `${packageName} project list --query my-app`,
+    },
+    {
+      name: 'List paused projects',
+      value: `${packageName} project list --paused`,
     },
   ],
 } as const;
 
 export const pauseSubcommand = {
+  descriptionTone: 'normal',
   name: 'pause',
   aliases: [],
   description:
@@ -243,14 +272,29 @@ export const pauseSubcommand = {
 export const resumeSubcommand = {
   name: 'resume',
   aliases: ['unpause'],
-  description: 'Resume production traffic for a paused project',
+  description: 'Resume production traffic for paused projects',
   arguments: [
     {
       name: 'project',
       required: false,
+      multiple: true,
     },
   ],
-  options: [formatOption, jsonOption],
+  options: [
+    {
+      ...allOption,
+      // Acting on many projects takes `--all` spelled out, not `-a`.
+      shorthand: null,
+      description: 'Resume every paused project in the team',
+    },
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when resuming several projects (--all also needs --scope or VERCEL_ORG_ID)',
+    },
+    formatOption,
+    jsonOption,
+  ],
   examples: [
     {
       name: 'Resume the linked project',
@@ -261,6 +305,18 @@ export const resumeSubcommand = {
       value: `${packageName} project resume my-project`,
     },
     {
+      name: 'Resume several projects',
+      value: `${packageName} project resume my-site my-api`,
+    },
+    {
+      name: 'Resume every paused project in the team',
+      value: `${packageName} project resume --all`,
+    },
+    {
+      name: 'Resume every paused project in a team without a prompt',
+      value: `${packageName} project resume --all --yes --scope my-team`,
+    },
+    {
       name: 'Resume a project and print the result as JSON',
       value: `${packageName} project resume my-project --json`,
     },
@@ -268,8 +324,8 @@ export const resumeSubcommand = {
 } as const;
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete a project',
   arguments: [
     {
@@ -277,7 +333,13 @@ export const removeSubcommand = {
       required: true,
     },
   ],
-  options: [],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip typing the project name. Without a terminal, also pass --scope unless you belong to only one team',
+    },
+  ],
   examples: [],
 } as const;
 
@@ -377,9 +439,16 @@ export const updateSubcommand = {
     {
       name: 'fluid-compute',
       shorthand: null,
-      type: String,
-      argument: 'on|off',
-      description: 'Enable or disable Fluid compute',
+      type: Boolean,
+      description: 'Turn on Fluid compute',
+      deprecated: false,
+      legacyValues: { on: 'on', off: 'off' },
+    },
+    {
+      name: 'no-fluid-compute',
+      shorthand: null,
+      type: Boolean,
+      description: 'Turn off Fluid compute',
       deprecated: false,
     },
     {
@@ -405,9 +474,16 @@ export const updateSubcommand = {
     {
       name: 'elastic-concurrency',
       shorthand: null,
-      type: String,
-      argument: 'on|off',
-      description: 'Enable or disable elastic concurrency for builds',
+      type: Boolean,
+      description: 'Turn on elastic concurrency for builds',
+      deprecated: false,
+      legacyValues: { on: 'on', off: 'off' },
+    },
+    {
+      name: 'no-elastic-concurrency',
+      shorthand: null,
+      type: Boolean,
+      description: 'Turn off elastic concurrency for builds',
       deprecated: false,
     },
     {
@@ -446,7 +522,7 @@ export const updateSubcommand = {
     },
     {
       name: 'Enable Fluid compute and set the function CPU tier',
-      value: `${packageName} project update my-project --fluid-compute on --function-cpu performance`,
+      value: `${packageName} project update my-project --fluid-compute --function-cpu performance`,
     },
     {
       name: 'Clear the framework preset and return JSON',
@@ -491,6 +567,7 @@ export const tokenSubcommand = {
 } as const;
 
 export const accessSummarySubcommand = {
+  descriptionTone: 'normal',
   name: 'access-summary',
   aliases: ['summary'],
   description:
@@ -552,20 +629,29 @@ export const membersSubcommand = {
     formatOption,
     jsonOption,
     {
+      name: 'query',
+      shorthand: 'q',
+      type: String,
+      argument: 'TEXT',
+      description: 'Search project members by name, username, or email',
+      deprecated: false,
+    },
+    // Hidden: `--search` is the old name of `--query`.
+    {
       name: 'search',
       shorthand: null,
       type: String,
-      description: 'Filter project members by name, username, or email',
-      deprecated: false,
+      description: 'Deprecated alias for `--query`',
+      deprecated: true,
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       description: 'Limit number of project members returned (1-100)',
       deprecated: false,
     },
-    nextOption,
+    nextCursorOption,
     memberRoleOption,
   ],
   examples: [
@@ -588,117 +674,99 @@ export const membersSubcommand = {
   ],
 } as const;
 
-export const protectionSubcommand = {
-  name: 'protection',
+// The settings `project protection enable` and `disable` change.
+const protectionToggleOptions = [
+  {
+    name: 'sso',
+    shorthand: null,
+    type: Boolean,
+    description: 'Apply action to SSO protection.',
+    deprecated: false,
+  },
+  {
+    name: 'password',
+    shorthand: null,
+    type: Boolean,
+    description:
+      'Apply action to password protection (requires eligible plan/permissions).',
+    deprecated: false,
+  },
+  {
+    name: 'protection-password',
+    shorthand: null,
+    type: String,
+    argument: 'PASSWORD',
+    description:
+      'Password value when enabling password protection (max 72 characters). Requires --password.',
+    deprecated: false,
+  },
+  {
+    name: 'customer-support-code-visibility',
+    shorthand: null,
+    type: Boolean,
+    description: 'Apply action to customer support code visibility protection.',
+    deprecated: false,
+  },
+  {
+    name: 'skew',
+    shorthand: null,
+    type: Boolean,
+    description: 'Apply action to skew protection.',
+    deprecated: false,
+  },
+  {
+    name: 'skew-max-age',
+    shorthand: null,
+    type: String,
+    argument: 'SECONDS',
+    description:
+      'When enabling with --skew, max age in seconds for skew protection (default: 2592000, 30 days).',
+    deprecated: false,
+  },
+  {
+    name: 'protection-bypass',
+    shorthand: null,
+    type: Boolean,
+    description: 'Apply action to automation protection bypass secrets.',
+    deprecated: false,
+  },
+  {
+    name: 'protection-bypass-secret',
+    shorthand: null,
+    type: String,
+    argument: 'SECRET',
+    description:
+      'Optional secret value for protection bypass. Required when disabling bypass.',
+    deprecated: false,
+  },
+  {
+    name: 'git-fork-protection',
+    shorthand: null,
+    type: Boolean,
+    description: 'Apply action to Git fork protection.',
+    deprecated: false,
+  },
+] as const;
+
+export const protectionEnableSubcommand = {
+  name: 'enable',
   aliases: [],
-  description: 'Show or toggle deployment protection settings for a project',
-  arguments: [
-    { name: 'action', required: false },
-    { name: 'name', required: false },
-  ],
-  options: [
-    formatOption,
-    jsonOption,
-    {
-      name: 'sso',
-      shorthand: null,
-      type: Boolean,
-      description: 'Apply action to SSO protection.',
-      deprecated: false,
-    },
-    {
-      name: 'password',
-      shorthand: null,
-      type: Boolean,
-      description:
-        'Apply action to password protection (requires eligible plan/permissions).',
-      deprecated: false,
-    },
-    {
-      name: 'protection-password',
-      shorthand: null,
-      type: String,
-      argument: 'PASSWORD',
-      description:
-        'Password value when enabling password protection (max 72 characters). Requires --password.',
-      deprecated: false,
-    },
-    {
-      name: 'customer-support-code-visibility',
-      shorthand: null,
-      type: Boolean,
-      description:
-        'Apply action to customer support code visibility protection.',
-      deprecated: false,
-    },
-    {
-      name: 'skew',
-      shorthand: null,
-      type: Boolean,
-      description: 'Apply action to skew protection.',
-      deprecated: false,
-    },
-    {
-      name: 'skew-max-age',
-      shorthand: null,
-      type: String,
-      argument: 'SECONDS',
-      description:
-        'When enabling with --skew, max age in seconds for skew protection (default 2592000, 30 days).',
-      deprecated: false,
-    },
-    {
-      name: 'protection-bypass',
-      shorthand: null,
-      type: Boolean,
-      description: 'Apply action to automation protection bypass secrets.',
-      deprecated: false,
-    },
-    {
-      name: 'protection-bypass-secret',
-      shorthand: null,
-      type: String,
-      argument: 'SECRET',
-      description:
-        'Optional secret value for protection bypass. Required when disabling bypass.',
-      deprecated: false,
-    },
-    {
-      name: 'git-fork-protection',
-      shorthand: null,
-      type: Boolean,
-      description: 'Apply action to Git fork protection.',
-      deprecated: false,
-    },
-  ],
+  description: 'Turn on deployment protection settings for a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [formatOption, jsonOption, ...protectionToggleOptions],
   examples: [
-    {
-      name: 'Protection settings for the linked project',
-      value: `${packageName} project protection`,
-    },
-    {
-      name: 'Named project as JSON',
-      value: `${packageName} project protection my-app --json`,
-    },
-    {
-      name: 'Disable password protection',
-      value: `${packageName} project protection disable my-app --password`,
-    },
     {
       name: 'Enable password protection',
       value: `${packageName} project protection enable my-app --password`,
     },
     {
       name: 'Enable password protection with a password',
+      placeholders: ['<password>'],
       value: `${packageName} project protection enable my-app --password --protection-password <password>`,
     },
     {
       name: 'Enable customer support code visibility',
       value: `${packageName} project protection enable my-app --customer-support-code-visibility`,
-    },
-    {
-      name: 'Disable customer support code visibility',
-      value: `${packageName} project protection disable my-app --customer-support-code-visibility`,
     },
     {
       name: 'Enable skew protection',
@@ -709,32 +777,79 @@ export const protectionSubcommand = {
       value: `${packageName} project protection enable my-app --skew --skew-max-age 604800`,
     },
     {
-      name: 'Disable skew protection',
-      value: `${packageName} project protection disable my-app --skew`,
-    },
-    {
       name: 'Enable automation protection bypass',
       value: `${packageName} project protection enable my-app --protection-bypass`,
-    },
-    {
-      name: 'Disable bypass with secret',
-      value: `${packageName} project protection disable my-app --protection-bypass --protection-bypass-secret <secret>`,
     },
     {
       name: 'Enable Git fork protection',
       value: `${packageName} project protection enable my-app --git-fork-protection`,
     },
     {
+      name: 'Enable SSO deployment protection',
+      value: `${packageName} project protection enable my-app --sso`,
+    },
+  ],
+} as const;
+
+export const protectionDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Turn off deployment protection settings for a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [formatOption, jsonOption, ...protectionToggleOptions],
+  examples: [
+    {
+      name: 'Disable password protection',
+      value: `${packageName} project protection disable my-app --password`,
+    },
+    {
+      name: 'Disable customer support code visibility',
+      value: `${packageName} project protection disable my-app --customer-support-code-visibility`,
+    },
+    {
+      name: 'Disable skew protection',
+      value: `${packageName} project protection disable my-app --skew`,
+    },
+    {
+      name: 'Disable bypass with secret',
+      placeholders: ['<secret>'],
+      value: `${packageName} project protection disable my-app --protection-bypass --protection-bypass-secret <secret>`,
+    },
+    {
       name: 'Disable Git fork protection',
       value: `${packageName} project protection disable my-app --git-fork-protection`,
     },
     {
-      name: 'Enable SSO deployment protection',
-      value: `${packageName} project protection enable my-app --sso`,
-    },
-    {
       name: 'Disable SSO for a named project',
       value: `${packageName} project protection disable my-app --sso`,
+    },
+  ],
+} as const;
+
+export const protectionSubcommand = {
+  name: 'protection',
+  aliases: [],
+  description: 'Show or toggle deployment protection settings for a project',
+  runsWithoutSubcommand: true,
+  arguments: [{ name: 'name', required: false }],
+  subcommands: [protectionEnableSubcommand, protectionDisableSubcommand],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Protection settings for the linked project',
+      value: `${packageName} project protection`,
+    },
+    {
+      name: 'Named project as JSON',
+      value: `${packageName} project protection my-app --json`,
+    },
+    {
+      name: 'Enable password protection',
+      value: `${packageName} project protection enable my-app --password`,
+    },
+    {
+      name: 'Disable password protection',
+      value: `${packageName} project protection disable my-app --password`,
     },
   ],
 } as const;
@@ -752,17 +867,26 @@ export const accessGroupsSubcommand = {
   options: [
     formatOption,
     jsonOption,
-    nextOption,
+    nextCursorOption,
+    {
+      name: 'query',
+      shorthand: 'q',
+      type: String,
+      argument: 'TEXT',
+      description: 'Search access groups by name',
+      deprecated: false,
+    },
+    // Hidden: `--search` is the old name of `--query`.
     {
       name: 'search',
       shorthand: null,
       type: String,
-      description: 'Search access groups by name',
-      deprecated: false,
+      description: 'Deprecated alias for `--query`',
+      deprecated: true,
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       description: 'Limit number of access groups returned (1-100)',
       deprecated: false,
@@ -780,14 +904,57 @@ export const accessGroupsSubcommand = {
   ],
 } as const;
 
+export const webAnalyticsEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  default: true,
+  description: 'Turn on Web Analytics for a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Enable Web Analytics for a named project',
+      value: `${packageName} project web-analytics enable my-project`,
+    },
+    {
+      name: 'Enable Web Analytics and print the result as JSON',
+      value: `${packageName} project web-analytics enable my-project --json`,
+    },
+  ],
+} as const;
+
+export const webAnalyticsDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Turn off Web Analytics for a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when disabling. Without a terminal, team projects also need --scope',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Disable Web Analytics for a named project',
+      value: `${packageName} project web-analytics disable my-project`,
+    },
+    {
+      name: 'Disable Web Analytics and print the result as JSON (non-interactive / agents)',
+      value: `${packageName} project web-analytics disable my-project --yes --json`,
+    },
+  ],
+} as const;
+
 export const webAnalyticsSubcommand = {
   name: 'web-analytics',
   aliases: [],
   description: 'Enable or disable Web Analytics for a project',
-  arguments: [
-    { name: 'action', required: false },
-    { name: 'name', required: false },
-  ],
+  arguments: [],
+  subcommands: [webAnalyticsEnableSubcommand, webAnalyticsDisableSubcommand],
   options: [formatOption, jsonOption],
   examples: [
     {
@@ -804,7 +971,44 @@ export const webAnalyticsSubcommand = {
     },
     {
       name: 'Disable Web Analytics and print the result as JSON (non-interactive / agents)',
-      value: `${packageName} project web-analytics disable my-project --json`,
+      value: `${packageName} project web-analytics disable my-project --yes --json`,
+    },
+    {
+      name: 'Enable Web Analytics and print the result as JSON',
+      value: `${packageName} project web-analytics enable my-project --json`,
+    },
+  ],
+} as const;
+
+export const speedInsightsEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  default: true,
+  description: 'Turn on Speed Insights for a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Enable Speed Insights for a named project',
+      value: `${packageName} project speed-insights enable my-project`,
+    },
+  ],
+} as const;
+
+export const speedInsightsDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Turn off Speed Insights for a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Disable Speed Insights for a named project',
+      value: `${packageName} project speed-insights disable my-project`,
+    },
+    {
+      name: 'Disable Speed Insights and print the result as JSON',
+      value: `${packageName} project speed-insights disable my-project --json`,
     },
   ],
 } as const;
@@ -813,10 +1017,8 @@ export const speedInsightsSubcommand = {
   name: 'speed-insights',
   aliases: [],
   description: 'Enable or disable Speed Insights for a project',
-  arguments: [
-    { name: 'action', required: false },
-    { name: 'name', required: false },
-  ],
+  arguments: [],
+  subcommands: [speedInsightsEnableSubcommand, speedInsightsDisableSubcommand],
   options: [formatOption, jsonOption],
   examples: [
     {
@@ -838,20 +1040,56 @@ export const speedInsightsSubcommand = {
   ],
 } as const;
 
+export const observabilityEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description: 'Turn on Observability Plus for a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Enable Observability Plus for the linked project',
+      value: `${packageName} project observability enable`,
+    },
+    {
+      name: 'Enable Observability Plus and print the result as JSON',
+      value: `${packageName} project observability enable my-project --json`,
+    },
+  ],
+} as const;
+
+export const observabilityDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Turn off Observability Plus for a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [
+    {
+      ...yesOption,
+      description:
+        'Skip the confirmation prompt when disabling. Without a terminal, team projects also need --scope',
+    },
+    formatOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Disable Observability Plus for a named project',
+      value: `${packageName} project observability disable my-project`,
+    },
+    {
+      name: 'Disable Observability Plus and print the result as JSON',
+      value: `${packageName} project observability disable my-project --yes --scope my-team --json`,
+    },
+  ],
+} as const;
+
 export const observabilitySubcommand = {
   name: 'observability',
   aliases: [],
   description: 'Enable or disable Observability Plus for a project',
-  arguments: [
-    {
-      name: 'action',
-      required: true,
-    },
-    {
-      name: 'name',
-      required: false,
-    },
-  ],
+  arguments: [],
+  subcommands: [observabilityEnableSubcommand, observabilityDisableSubcommand],
   options: [formatOption, jsonOption],
   examples: [
     {
@@ -865,6 +1103,88 @@ export const observabilitySubcommand = {
     {
       name: 'Enable Observability Plus and print the result as JSON',
       value: `${packageName} project observability enable my-project --json`,
+    },
+    {
+      name: 'Disable Observability Plus and print the result as JSON',
+      value: `${packageName} project observability disable my-project --yes --scope my-team --json`,
+    },
+  ],
+} as const;
+
+export const priorityEnableSubcommand = {
+  name: 'enable',
+  aliases: [],
+  description: 'Upgrade a project to Priority',
+  arguments: [{ name: 'name', required: false }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Upgrade the linked project to Priority',
+      value: `${packageName} project priority enable`,
+    },
+    {
+      name: 'Upgrade a named project to Priority',
+      value: `${packageName} project priority enable my-project`,
+    },
+  ],
+} as const;
+
+export const priorityDisableSubcommand = {
+  name: 'disable',
+  aliases: [],
+  description: 'Remove the Priority upgrade from a project',
+  arguments: [{ name: 'name', required: false }],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Remove Priority from a named project',
+      value: `${packageName} project priority disable my-project`,
+    },
+  ],
+} as const;
+
+export const prioritySubcommand = {
+  name: 'priority',
+  aliases: ['priority-project'],
+  description: 'Upgrade a project to Priority, or remove that upgrade',
+  arguments: [],
+  subcommands: [priorityEnableSubcommand, priorityDisableSubcommand],
+  options: [formatOption, jsonOption],
+  examples: [
+    {
+      name: 'Upgrade the linked project to Priority',
+      value: `${packageName} project priority enable`,
+    },
+    {
+      name: 'Upgrade a named project to Priority',
+      value: `${packageName} project priority enable my-project`,
+    },
+    {
+      name: 'Remove Priority from a named project',
+      value: `${packageName} project priority disable my-project`,
+    },
+  ],
+} as const;
+
+export const dangerouslyDeleteImmutableStaticAssetSubcommand = {
+  descriptionTone: 'normal',
+  name: 'dangerously-delete-immutable-static-asset',
+  aliases: [],
+  // Break-glass command: excluded from `project --help` on purpose.
+  hidden: true,
+  description:
+    'Permanently delete an immutable static asset from storage. This action can not be undone. Any request to this static asset will serve a 410 response for 7 days and then return a 404.',
+  arguments: [
+    {
+      name: 'path',
+      required: true,
+    },
+  ],
+  options: [projectOption],
+  examples: [
+    {
+      name: 'Permanently delete an immutable static asset from storage',
+      value: `${packageName} project dangerously-delete-immutable-static-asset _next/static/immutable/chunks/example.js`,
     },
   ],
 } as const;
@@ -887,62 +1207,27 @@ export const projectCommand = {
     speedInsightsSubcommand,
     pauseSubcommand,
     observabilitySubcommand,
+    prioritySubcommand,
     resumeSubcommand,
     updateSubcommand,
     renameSubcommand,
     removeSubcommand,
     tokenSubcommand,
+    dangerouslyDeleteImmutableStaticAssetSubcommand,
   ],
   options: [],
   examples: [
     {
+      name: 'List projects in the current scope',
+      value: `${packageName} project list`,
+    },
+    {
+      name: 'Inspect a project',
+      value: `${packageName} project inspect my-project`,
+    },
+    {
       name: 'Pause production traffic for a project',
-      value: [
-        `${packageName} project pause [NAME]`,
-        `${packageName} project pause my-project`,
-      ],
-    },
-    {
-      name: 'Resume a paused project',
-      value: [
-        `${packageName} project resume [NAME]`,
-        `${packageName} project resume my-project`,
-      ],
-    },
-    {
-      name: 'Add a member to a project',
-      value: [
-        `${packageName} project members add [NAME] <EMAIL | UID> --role <ROLE>`,
-        `${packageName} project members add my-project user@example.com --role PROJECT_VIEWER`,
-      ],
-    },
-    {
-      name: 'Remove a member from a project',
-      value: [
-        `${packageName} project members remove [NAME] <EMAIL | UID>`,
-        `${packageName} project members remove my-project user@example.com`,
-      ],
-    },
-    {
-      name: 'Enable or disable Observability Plus for a project',
-      value: [
-        `${packageName} project observability <enable | disable> [NAME]`,
-        `${packageName} project observability enable my-project`,
-      ],
-    },
-    {
-      name: 'Enable Web Analytics for a project',
-      value: [
-        `${packageName} project web-analytics [NAME]`,
-        `${packageName} project web-analytics my-project`,
-      ],
-    },
-    {
-      name: 'Enable Speed Insights for a project',
-      value: [
-        `${packageName} project speed-insights [NAME]`,
-        `${packageName} project speed-insights my-project`,
-      ],
+      value: `${packageName} project pause my-project`,
     },
   ],
 } as const;

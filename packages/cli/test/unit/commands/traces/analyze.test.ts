@@ -205,9 +205,10 @@ describe('analyze', () => {
 
   it('collects error spans by status code', () => {
     const t = trace([
-      span({ spanId: 'r', status: { code: 0 } }),
-      span({ spanId: 'e1', status: { code: 1, message: 'boom' } }),
-      span({ spanId: 'e2', status: { code: 1 } }),
+      span({ spanId: 'r', status: { code: 'Unset' } }),
+      span({ spanId: 'ok', status: { code: 'Ok' } }),
+      span({ spanId: 'e1', status: { code: 'Error', message: 'boom' } }),
+      span({ spanId: 'e2', status: { code: 'Error' } }),
     ]);
     const a = analyze(t);
     expect(a.errorSpans.map(s => s.spanId)).toEqual(['e1', 'e2']);

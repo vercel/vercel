@@ -1,3 +1,4 @@
+import stripAnsi from 'strip-ansi';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import schema from '../../../../src/commands/metrics/schema';
@@ -154,8 +155,12 @@ describe('metrics schema', () => {
       error: {
         code: 'rate_limited',
         message: 'Too many requests - try again in 60s',
+        hint: 'Wait at least 60 seconds before trying again.',
+        retryable: true,
+        retryAfterMs: 60000,
       },
     });
+    expect(client.stderr.getFullOutput()).toBe('');
   });
 
   it('reads system metric details from v1 by default', async () => {
@@ -199,6 +204,32 @@ describe('metrics schema', () => {
         aggregations: ['count', 'unique'],
       },
     ]);
+  });
+
+  it('warns that FID is deprecated when showing its details', async () => {
+    vi.stubEnv('FF_LEGACY_METRICS', '');
+    client.scenario.get('/metrics/v1', (_req, res) => {
+      res.json({
+        metrics: [
+          {
+            id: 'vercel.speed_insights.fid_ms',
+            description: 'First Input Delay',
+            dimensions: ['route'],
+            unit: 'milliseconds',
+            aggregations: ['p75'],
+          },
+        ],
+        pagination: { hasMore: false, nextCursor: null },
+      });
+    });
+    client.setArgv('metrics', 'schema', 'vercel.speed_insights.fid_ms');
+
+    const exitCode = await schema(client, new MockTelemetry());
+
+    expect(exitCode).toBe(0);
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      '! First Input Delay will be sunset on November 1st. Use Interaction to Next Paint instead (vercel.speed_insights.inp_ms). Learn more: https://web.dev/articles/fid'
+    );
   });
 
   it('follows metric catalog pagination', async () => {

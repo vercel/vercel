@@ -38,7 +38,7 @@ export default async function rulesLs(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -56,7 +56,7 @@ export default async function rulesLs(
     output.log(
       `Example: ${getCommandName('flags rules ls my-feature --environment production')}`
     );
-    return 1;
+    return 2;
   }
 
   try {

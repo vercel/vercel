@@ -1,9 +1,11 @@
+import { jsonOption } from '../../util/arg-common';
+
 export const statusSubcommand = {
   name: 'status',
   aliases: [],
   description: 'Shows whether telemetry collection is enabled or disabled',
   arguments: [],
-  options: [],
+  options: [jsonOption],
   examples: [],
 } as const;
 

@@ -215,6 +215,29 @@ function createMutableStringFlag(): TestFlag {
   };
 }
 
+function createExperimentOwnedFlag(): TestFlag {
+  return {
+    ...createMutableStringFlag(),
+    id: 'flag_experiment001',
+    slug: 'experiment-feature',
+    experiment: {
+      id: 'exp_checkout',
+      base: {
+        type: 'entity',
+        kind: 'user',
+        attribute: 'id',
+      },
+      weights: {
+        'control-id': 50,
+        'treatment-id': 50,
+        'legacy-id': 0,
+      },
+      controlVariantId: 'control-id',
+      enrollmentSeed: 42,
+    },
+  };
+}
+
 function createReferenceFlag(): TestFlag {
   return {
     id: 'flag_references001',
@@ -280,7 +303,7 @@ describe('flags update', () => {
   }
 
   beforeEach(() => {
-    testFlags = createTestFlags();
+    testFlags = [...createTestFlags(), createExperimentOwnedFlag()];
     useUser();
     useTeams('team_dummy');
     useProject({
@@ -300,11 +323,49 @@ describe('flags update', () => {
     setTTY(true);
   });
 
+  it.each([
+    [
+      'editing an existing variant',
+      ['--variant', 'control-id', '--value', 'updated'],
+    ],
+    ['adding a variant', ['--add-variant', 'new=New']],
+  ])('directs %s on an experiment-owned flag to the experiments command', async (_case, commandArgs) => {
+    makeNonInteractive();
+    client.setArgv('flags', 'update', 'experiment-feature', ...commandArgs);
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toEqual(1);
+    expect(client.stderr.getFullOutput()).toContain(
+      'managed by experiment exp_checkout'
+    );
+    expect(client.stderr.getFullOutput()).toContain(
+      'vercel experiments update <experiment> --file <file>'
+    );
+  });
+
+  it('handles an experiment-owned flag without experiment details', async () => {
+    makeNonInteractive();
+    testFlags.at(-1)!.experiment = {
+      base: { type: 'entity', kind: 'user', attribute: 'id' },
+    };
+    client.setArgv(
+      'flags',
+      'update',
+      'experiment-feature',
+      '--add-variant',
+      'new=New'
+    );
+
+    expect(await flags(client)).toBe(1);
+    expect(client.stderr.getFullOutput()).toContain('managed by an experiment');
+  });
+
   describe('--help', () => {
     it('tracks telemetry', async () => {
       client.setArgv('flags', 'update', '--help');
       const exitCodePromise = flags(client);
-      await expect(exitCodePromise).resolves.toEqual(2);
+      await expect(exitCodePromise).resolves.toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {
@@ -398,7 +459,11 @@ describe('flags update', () => {
   });
 
   describe('existing variant updates', () => {
-    it('updates string variant values and labels', async () => {
+    it.each([
+      'active',
+      'archived',
+    ] as const)('updates string variant values and labels (%s)', async state => {
+      testFlags[1].state = state;
       makeNonInteractive();
       client.setArgv(
         'flags',
@@ -424,6 +489,7 @@ describe('flags update', () => {
       );
       expect(client.stderr.getFullOutput()).toContain('has been updated');
       expect(client.stderr.getFullOutput()).toContain('Variant:');
+      expect(testFlags[1].state).toBe(state);
     });
 
     it('stores literal equals signs in values set with --value', async () => {
@@ -816,7 +882,10 @@ describe('flags update', () => {
       ]);
     });
 
-    it('removes unused variants by ID and value', async () => {
+    it.each([
+      'active',
+      'archived',
+    ] as const)('removes unused variants by ID and value (%s)', async state => {
       makeNonInteractive();
       client.setArgv(
         'flags',
@@ -829,13 +898,14 @@ describe('flags update', () => {
         '--yes'
       );
 
-      testFlags.push(createMutableStringFlag());
+      testFlags.push({ ...createMutableStringFlag(), state });
       const exitCode = await flags(client);
 
       expect(exitCode).toEqual(0);
       expect(getFlag('mutable-feature').variants).toMatchObject([
         { id: 'control-id', value: 'control', label: 'Control' },
       ]);
+      expect(getFlag('mutable-feature').state).toBe(state);
     });
 
     it('supports repeatable removes', async () => {
@@ -971,7 +1041,7 @@ describe('flags update', () => {
       );
     });
 
-    it('rejects add and remove on archived flags', async () => {
+    it('adds a variant to an archived flag without unarchiving it', async () => {
       makeNonInteractive();
       const archivedFlag = createMutableStringFlag();
       archivedFlag.state = 'archived';
@@ -987,9 +1057,15 @@ describe('flags update', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toEqual(1);
+      expect(exitCode).toEqual(0);
+      expect(getFlag('mutable-feature').state).toBe('archived');
+      expect(getFlag('mutable-feature').variants).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ value: 'x', label: 'X' }),
+        ])
+      );
       expect(client.stderr.getFullOutput()).toContain(
-        'is archived and cannot be updated'
+        'This flag remains archived'
       );
     });
 
@@ -1219,7 +1295,7 @@ describe('flags update', () => {
 
       expect(exitCode).toEqual(1);
       expect(client.stderr.getFullOutput()).toContain(
-        'Missing required flag --yes'
+        'Missing required option --yes'
       );
     });
 
@@ -1646,7 +1722,7 @@ describe('flags update', () => {
 
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --variant'
+      'Missing required option --variant'
     );
   });
 
@@ -1664,7 +1740,7 @@ describe('flags update', () => {
 
     expect(exitCode).toEqual(1);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required flag --variant'
+      'Missing required option --variant'
     );
   });
 

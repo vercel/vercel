@@ -17,6 +17,7 @@ import {
 import { getFlagsSpecification } from '../../../util/get-flags-specification';
 import output from '../../../output-manager';
 import { getCommandAliases } from '../..';
+import { warnDeprecatedSubcommand } from '../../../util/warn-deprecated-subcommand';
 import type { FirewallTelemetryClient } from '../../../util/telemetry/commands/firewall';
 
 const COMMAND_CONFIG = {
@@ -38,7 +39,7 @@ export default async function main(
     });
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const {
@@ -53,16 +54,18 @@ export default async function main(
     telemetry.trackCliFlagHelp('firewall', 'ip-blocks');
     output.print(
       help(ipBlocksSubcommand, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
     );
-    return 2;
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
       help(command, {
+        stream: client.stderr,
         parent: firewallCommand,
         columns: client.stderr.columns,
       })
@@ -77,7 +80,7 @@ export default async function main(
           `ip-blocks:${subcommandOriginal}`
         );
         printHelp(ipBlocksListSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandIpBlocksList(subcommandOriginal);
       return list(client, subArgs);
@@ -88,7 +91,7 @@ export default async function main(
           `ip-blocks:${subcommandOriginal}`
         );
         printHelp(ipBlocksBlockSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandIpBlocksBlock(subcommandOriginal);
       return block(client, subArgs);
@@ -99,14 +102,22 @@ export default async function main(
           `ip-blocks:${subcommandOriginal}`
         );
         printHelp(ipBlocksUnblockSubcommand);
-        return 2;
+        return 0;
       }
       telemetry.trackCliSubcommandIpBlocksUnblock(subcommandOriginal);
+      if (subcommandOriginal === 'rm') {
+        warnDeprecatedSubcommand(
+          client,
+          'firewall ip-blocks rm',
+          'firewall ip-blocks unblock'
+        );
+      }
       return unblock(client, subArgs);
     default:
       output.error(getInvalidSubcommand(COMMAND_CONFIG));
       output.print(
         help(ipBlocksSubcommand, {
+          stream: client.stderr,
           parent: firewallCommand,
           columns: client.stderr.columns,
         })

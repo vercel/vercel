@@ -1,25 +1,48 @@
-import { projectOption, yesOption } from '../../util/arg-common';
-import { TIMESTAMP_IDENTIFY_HELP } from '../../util/flags/attribute-types';
+import {
+  jsonOption,
+  projectOption,
+  sinceOption,
+  untilOption,
+  yesOption,
+} from '../../util/arg-common';
+import {
+  formatFlagAttributeTypeList,
+  TIMESTAMP_IDENTIFY_HELP,
+} from '../../util/flags/attribute-types';
 import { formatFlagConditionComparatorList } from '../../util/flags/comparators';
 import { packageName } from '../../util/pkg-name';
-import { FLAG_EVALUATIONS_GRANULARITIES } from './evaluations-config';
+import {
+  FLAG_EVALUATIONS_DIMENSION_NAMES,
+  FLAG_EVALUATIONS_GRANULARITIES,
+} from './evaluations-config';
 
-const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}. Timestamp attributes also accept after, before, on-or-after, and on-or-before with an ISO 8601 date and time (for example 2026-04-16T09:00:00Z) or epoch milliseconds. after and before are exclusive; use on-or-after or on-or-before for inclusive boundaries. Date/times without a timezone use this machine's timezone. ${TIMESTAMP_IDENTIFY_HELP}`;
+const staticValueModeNote = {
+  title: 'Notes',
+  body: [
+    'Puts the environment in static value mode: every request receives the chosen variant. Existing splits, rollouts, rules, and targets are kept but not evaluated.',
+    'Run `flags targeting enable <flag>` to switch the environment back to targets and rules. Run `flags inspect <flag>` first to see what each environment serves today.',
+  ],
+} as const;
+
+const segmentRuleOperatorDescription = `Valid operators: ${formatFlagConditionComparatorList()}. Timestamp attributes only accept gt (after), gte (at-or-after), lt (before), and lte (at-or-before) with an ISO 8601 date and time (for example 2026-04-16T09:00:00Z) or epoch milliseconds. gt and lt are exclusive; use gte or lte for inclusive boundaries. Date/times without a timezone use this machine's timezone. ${TIMESTAMP_IDENTIFY_HELP}`;
 
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List all feature flags for the current project',
+  description:
+    'List active feature flags for the current project (use --state archived for archived ones)',
   default: true,
   arguments: [],
   options: [
     projectOption,
     {
       name: 'state',
-      shorthand: 's',
+      shorthand: null,
+      deprecatedShorthand: 's',
       type: String,
       deprecated: false,
-      description: 'Filter flags by state (active or archived)',
+      description:
+        'Filter flags by state: active or archived (default: active)',
       argument: 'STATE',
     },
     {
@@ -40,17 +63,26 @@ export const listSubcommand = {
       argument: 'ID',
     },
     {
-      name: 'maintainer-id',
+      name: 'maintainer',
       shorthand: null,
       type: [String],
       deprecated: false,
       description:
         'Filter flags by maintainer user id (repeatable; any may match)',
+      argument: 'MAINTAINER',
+    },
+    // Hidden: `--maintainer-id` is the old name of `--maintainer`.
+    {
+      name: 'maintainer-id',
+      shorthand: null,
+      type: [String],
+      deprecated: true,
+      description: 'Deprecated alias for `--maintainer`',
       argument: 'ID',
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       deprecated: false,
       description:
@@ -62,7 +94,8 @@ export const listSubcommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Pagination cursor from a previous list response',
+      description:
+        'Show the next page using the cursor from the previous output',
       argument: 'CURSOR',
     },
     {
@@ -70,33 +103,34 @@ export const listSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output in JSON format',
+      description: 'Output as JSON',
     },
   ],
   examples: [
     {
       name: 'List all active flags',
-      value: `${packageName} flags ls`,
+      value: `${packageName} flags list`,
     },
     {
       name: 'List archived flags',
-      value: `${packageName} flags ls --state archived`,
+      value: `${packageName} flags list --state archived`,
     },
     {
       name: 'Filter flags by tag, creator, and maintainer',
-      value: `${packageName} flags ls --tag checkout --created-by user_123 --maintainer-id user_456`,
+      value: `${packageName} flags list --tag checkout --created-by user_123 --maintainer user_456`,
     },
     {
       name: 'List the first page of 10 flags',
-      value: `${packageName} flags ls --limit 10`,
+      value: `${packageName} flags list --limit 10`,
     },
     {
       name: 'List the next page using the cursor from the previous page',
-      value: `${packageName} flags ls --limit 10 --next <cursor>`,
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} flags list --limit 10 --next <CURSOR>`,
     },
     {
       name: 'List flags as JSON',
-      value: `${packageName} flags ls --json`,
+      value: `${packageName} flags list --json`,
     },
   ],
 } as const;
@@ -120,7 +154,7 @@ export const staleSubcommand = {
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       deprecated: false,
       description:
@@ -132,7 +166,8 @@ export const staleSubcommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Pagination cursor from a previous stale response',
+      description:
+        'Show the next page using the cursor from the previous output',
       argument: 'CURSOR',
     },
     {
@@ -140,7 +175,7 @@ export const staleSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output in JSON format',
+      description: 'Output as JSON',
     },
   ],
   examples: [
@@ -154,7 +189,8 @@ export const staleSubcommand = {
     },
     {
       name: 'List the next page using the cursor from the previous page',
-      value: `${packageName} flags stale --limit 10 --next <cursor>`,
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} flags stale --limit 10 --next <CURSOR>`,
     },
     {
       name: 'List stale flags as JSON',
@@ -173,11 +209,15 @@ export const inspectSubcommand = {
       required: true,
     },
   ],
-  options: [projectOption],
+  options: [projectOption, jsonOption],
   examples: [
     {
       name: 'Show details of a feature flag',
       value: `${packageName} flags inspect my-feature-flag`,
+    },
+    {
+      name: 'Show flag data as JSON',
+      value: `${packageName} flags inspect my-feature-flag --json`,
     },
   ],
 } as const;
@@ -201,11 +241,11 @@ export const versionsListSubcommand = {
       type: String,
       deprecated: false,
       description: 'Filter versions by changed environment',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       deprecated: false,
       description: 'Return at most NUMBER versions (1-100)',
@@ -216,7 +256,8 @@ export const versionsListSubcommand = {
       shorthand: null,
       type: String,
       deprecated: false,
-      description: 'Continue from a previous response',
+      description:
+        'Show the next page using the cursor from the previous output',
       argument: 'CURSOR',
     },
     {
@@ -232,7 +273,7 @@ export const versionsListSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output in JSON format',
+      description: 'Output as JSON',
     },
   ],
   examples: [
@@ -250,7 +291,8 @@ export const versionsListSubcommand = {
     },
     {
       name: 'List the next page of version history',
-      value: `${packageName} flags versions my-feature-flag --limit 10 --next <cursor>`,
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} flags versions my-feature-flag --limit 10 --next <CURSOR>`,
     },
     {
       name: 'List version history as JSON',
@@ -321,46 +363,44 @@ export const versionsSubcommand = {
 export const evaluationsSubcommand = {
   name: 'evaluations',
   aliases: [],
-  description: 'Display evaluation metrics for a feature flag',
+  description:
+    'Display evaluation metrics for a feature flag, or for every flag in the project when no flag is given',
   arguments: [
     {
       name: 'flag',
-      required: true,
+      required: false,
     },
   ],
   options: [
     projectOption,
     {
-      name: 'since',
-      shorthand: 's',
-      type: String,
-      deprecated: false,
-      description:
-        'Start time: relative (1h, 30m, 2d) or ISO date (default: 1h)',
-      argument: 'TIME',
+      ...sinceOption,
+      description: `${sinceOption.description} (default: 1h ago)`,
     },
-    {
-      name: 'until',
-      shorthand: 'u',
-      type: String,
-      deprecated: false,
-      description: 'End time (default: now)',
-      argument: 'TIME',
-    },
+    untilOption,
     {
       name: 'granularity',
-      shorthand: 'g',
+      shorthand: null,
+      deprecatedShorthand: 'g',
       type: String,
       deprecated: false,
       description: `Time bucket size: ${FLAG_EVALUATIONS_GRANULARITIES.join(', ')} (default: auto)`,
       argument: 'SIZE',
     },
     {
+      name: 'group-by',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: `Dimensions to group by (repeatable): ${FLAG_EVALUATIONS_DIMENSION_NAMES.join(', ')} (default: variant for one flag, flag for the whole project). Deleted SDK keys are shown as their hash`,
+      argument: 'DIM',
+    },
+    {
       name: 'json',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output in JSON format',
+      description: 'Output as JSON',
     },
   ],
   examples: [
@@ -371,6 +411,18 @@ export const evaluationsSubcommand = {
     {
       name: 'Show evaluation metrics as JSON',
       value: `${packageName} flags evaluations my-feature --since 24h --json`,
+    },
+    {
+      name: 'Show which SDK keys and services evaluate a flag',
+      value: `${packageName} flags evaluations my-feature --group-by sdk-key --group-by client`,
+    },
+    {
+      name: 'Show which SDK keys are used across every flag in the project',
+      value: `${packageName} flags evaluations --group-by sdk-key --since 24h`,
+    },
+    {
+      name: 'Check that every client picked up the latest flag change',
+      value: `${packageName} flags evaluations my-feature --group-by datafile-revision --group-by client`,
     },
   ],
 } as const;
@@ -389,7 +441,8 @@ export const createSubcommand = {
     projectOption,
     {
       name: 'kind',
-      shorthand: 'k',
+      shorthand: null,
+      deprecatedShorthand: 'k',
       type: String,
       deprecated: false,
       description:
@@ -398,7 +451,8 @@ export const createSubcommand = {
     },
     {
       name: 'description',
-      shorthand: 'd',
+      shorthand: null,
+      deprecatedShorthand: 'd',
       type: String,
       deprecated: false,
       description: 'Description of the feature flag',
@@ -406,12 +460,31 @@ export const createSubcommand = {
     },
     {
       name: 'variant',
-      shorthand: 'v',
+      shorthand: null,
+      deprecatedShorthand: 'v',
       type: [String],
       deprecated: false,
       description:
         'Variant definition as VALUE[=LABEL] (can be repeated for string, number, and json flags)',
       argument: 'VALUE[=LABEL]',
+    },
+    {
+      name: 'default-variant',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Variant ID or value to serve in every environment. Without it, every environment serves the first variant; boolean flags serve Off, and On in development',
+      argument: 'VARIANT',
+    },
+    {
+      name: 'environment-variant',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Variant ID or value to serve in one environment as ENVIRONMENT=VARIANT; repeatable, overrides --default-variant',
+      argument: 'ENVIRONMENT=VARIANT',
     },
   ],
   examples: [
@@ -420,16 +493,24 @@ export const createSubcommand = {
       value: `${packageName} flags create my-feature`,
     },
     {
+      name: 'Create a boolean feature flag that is Off in every environment',
+      value: `${packageName} flags create my-feature --default-variant false`,
+    },
+    {
+      name: 'Create a boolean feature flag that is On only in preview',
+      value: `${packageName} flags create my-feature --default-variant false --environment-variant preview=true`,
+    },
+    {
       name: 'Create a string feature flag with description',
       value: `${packageName} flags create my-feature --kind string --description "My feature flag"`,
     },
     {
       name: 'Create a string feature flag with explicit variants',
-      value: `${packageName} flags add my-feature --kind string --variant control="Welcome back" --variant treatment="New onboarding"`,
+      value: `${packageName} flags create my-feature --kind string --variant control="Welcome back" --variant treatment="New onboarding"`,
     },
     {
       name: 'Create a JSON feature flag with explicit variants',
-      value: `${packageName} flags add layout-config --kind json --variant '{"theme":"light"}'=Light --variant '{"theme":"dark","sidebar":true}'=Dark`,
+      value: `${packageName} flags create layout-config --kind json --variant '{"theme":"light"}'=Light --variant '{"theme":"dark","sidebar":true}'=Dark`,
     },
   ],
 } as const;
@@ -471,7 +552,8 @@ export const updateSubcommand = {
     projectOption,
     {
       name: 'variant',
-      shorthand: 'v',
+      shorthand: null,
+      deprecatedShorthand: 'v',
       type: String,
       deprecated: false,
       description: 'Variant ID or value to update',
@@ -487,7 +569,8 @@ export const updateSubcommand = {
     },
     {
       name: 'label',
-      shorthand: 'l',
+      shorthand: null,
+      deprecatedShorthand: 'l',
       type: String,
       deprecated: false,
       description: 'New variant label',
@@ -566,11 +649,12 @@ export const setSubcommand = {
       deprecated: false,
       description:
         'The environment to set the variant in (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'variant',
-      shorthand: 'v',
+      shorthand: null,
+      deprecatedShorthand: 'v',
       type: String,
       deprecated: false,
       description: 'The variant ID or value to serve',
@@ -599,10 +683,19 @@ export const setSubcommand = {
       value: `${packageName} flags set my-feature -e development --variant true`,
     },
   ],
+  helpSections: [
+    {
+      title: 'Notes',
+      body: [
+        'Puts the environment in static value mode. The existing default variant, split or rollout, rules, and targets are preserved but not evaluated.',
+        `Run \`${packageName} flags targeting enable <FLAG>\` to resume targeting with the saved configuration.`,
+      ],
+    },
+  ],
 } as const;
 
-export const useTargetingSubcommand = {
-  name: 'use-targeting',
+export const targetingEnableSubcommand = {
+  name: 'enable',
   aliases: [],
   description:
     'Enable targeting for a feature flag environment; keeps the current fallthrough unless --default-variant is set',
@@ -621,7 +714,7 @@ export const useTargetingSubcommand = {
       deprecated: false,
       description:
         'The environment to enable targeting in (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'default-variant',
@@ -644,17 +737,39 @@ export const useTargetingSubcommand = {
   examples: [
     {
       name: 'Enable targeting and keep the current fallthrough',
-      value: `${packageName} flags use-targeting my-feature --environment production`,
+      value: `${packageName} flags targeting enable my-feature --environment production`,
     },
     {
       name: 'Enable targeting with a static default Off',
-      value: `${packageName} flags use-targeting my-feature --environment production --default-variant false`,
+      value: `${packageName} flags targeting enable my-feature --environment production --default-variant false`,
     },
     {
       name: 'Enable targeting with a string default',
-      value: `${packageName} flags use-targeting welcome-message -e production --default-variant control`,
+      value: `${packageName} flags targeting enable welcome-message -e production --default-variant control`,
     },
   ],
+} as const;
+
+export const targetingSubcommand = {
+  name: 'targeting',
+  aliases: [],
+  description: 'Manage targeting for a feature flag environment',
+  arguments: [],
+  subcommands: [targetingEnableSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'Enable targeting and keep the current fallthrough',
+      value: `${packageName} flags targeting enable my-feature --environment production`,
+    },
+  ],
+} as const;
+
+/** Hidden: `flags use-targeting` is the old name of `flags targeting enable`. */
+export const useTargetingSubcommand = {
+  ...targetingEnableSubcommand,
+  name: 'use-targeting',
+  hidden: true,
 } as const;
 
 export const splitSubcommand = {
@@ -677,7 +792,7 @@ export const splitSubcommand = {
       deprecated: false,
       description:
         'The environment to configure (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'by',
@@ -690,7 +805,8 @@ export const splitSubcommand = {
     },
     {
       name: 'weight',
-      shorthand: 'w',
+      shorthand: null,
+      deprecatedShorthand: 'w',
       type: [String],
       deprecated: false,
       description:
@@ -731,6 +847,16 @@ export const splitSubcommand = {
   ],
 } as const;
 
+const rolloutFinalPercentageOption = {
+  name: 'final-percentage',
+  shorthand: null,
+  type: String,
+  deprecated: false,
+  description:
+    'Percentage served indefinitely after the last stage (0–100, up to 3 decimal places). Preserves the current value when omitted (default: 100 for new rollouts).',
+  argument: 'PERCENTAGE',
+} as const;
+
 export const rolloutSubcommand = {
   name: 'rollout',
   aliases: [],
@@ -751,7 +877,7 @@ export const rolloutSubcommand = {
       deprecated: false,
       description:
         'The environment to configure (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'from-variant',
@@ -759,7 +885,7 @@ export const rolloutSubcommand = {
       type: String,
       deprecated: false,
       description:
-        'The variant to roll away from (defaults to false for boolean flags)',
+        'The variant to roll away from (default: false for boolean flags)',
       argument: 'VARIANT',
     },
     {
@@ -768,7 +894,7 @@ export const rolloutSubcommand = {
       type: String,
       deprecated: false,
       description:
-        'The variant to roll towards (defaults to true for boolean flags)',
+        'The variant to roll towards (default: true for boolean flags)',
       argument: 'VARIANT',
     },
     {
@@ -791,13 +917,15 @@ export const rolloutSubcommand = {
     },
     {
       name: 'stage',
-      shorthand: 's',
+      shorthand: null,
+      deprecatedShorthand: 's',
       type: [String],
       deprecated: false,
       description:
-        'Add a rollout stage as PERCENTAGE,DURATION (e.g. "5,6h"). Can be specified multiple times. 100% is implied at the end.',
+        'Add a rollout stage as PERCENTAGE,DURATION (e.g. "5,6h"). Can be specified multiple times. Ends at --final-percentage (default: 100%).',
       argument: 'PERCENTAGE,DURATION',
     },
+    rolloutFinalPercentageOption,
     {
       name: 'start',
       shorthand: null,
@@ -822,6 +950,10 @@ export const rolloutSubcommand = {
       value: `${packageName} flags rollout redesigned-checkout --environment production --by user.userId --stage 5,6h --stage 10,6h --stage 25,12h --stage 50,1d`,
     },
     {
+      name: 'Finish a rollout at 50%',
+      value: `${packageName} flags rollout redesigned-checkout -e production --by user.userId --stage 5,6h --stage 25,12h --final-percentage 50`,
+    },
+    {
       name: 'Schedule a string-flag rollout for later',
       value: `${packageName} flags rollout welcome-message -e production --by user.userId --from-variant control --to-variant treatment --default-variant control --stage 10,2h --stage 50,12h --start 2026-04-16T09:00:00Z`,
     },
@@ -837,7 +969,8 @@ const ruleConditionDescription = `Rule condition as ENTITY.ATTRIBUTE:OPERATOR:VA
 const ruleOutcomeOptions = [
   {
     name: 'variant',
-    shorthand: 'v',
+    shorthand: null,
+    deprecatedShorthand: 'v',
     type: String,
     deprecated: false,
     description: 'Variant ID or value to serve when the rule matches',
@@ -854,7 +987,8 @@ const ruleOutcomeOptions = [
   },
   {
     name: 'weight',
-    shorthand: 'w',
+    shorthand: null,
+    deprecatedShorthand: 'w',
     type: [String],
     deprecated: false,
     description:
@@ -888,13 +1022,15 @@ const ruleOutcomeOptions = [
   },
   {
     name: 'stage',
-    shorthand: 's',
+    shorthand: null,
+    deprecatedShorthand: 's',
     type: [String],
     deprecated: false,
     description:
       'Add a rollout stage as PERCENTAGE,DURATION. Can be specified multiple times.',
     argument: 'PERCENTAGE,DURATION',
   },
+  rolloutFinalPercentageOption,
   {
     name: 'start',
     shorthand: null,
@@ -934,24 +1070,24 @@ export const rulesListSubcommand = {
       deprecated: false,
       description:
         'The environment to list rules for (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'json',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output in JSON format',
+      description: 'Output as JSON',
     },
   ],
   examples: [
     {
       name: 'List production rules for a flag',
-      value: `${packageName} flags rules ls my-feature --environment production`,
+      value: `${packageName} flags rules list my-feature --environment production`,
     },
     {
       name: 'List rules as JSON',
-      value: `${packageName} flags rules ls my-feature -e production --json`,
+      value: `${packageName} flags rules list my-feature -e production --json`,
     },
   ],
 } as const;
@@ -967,7 +1103,8 @@ export const rulesAddSubcommand = {
     },
   ],
   options: [
-    projectOption,
+    // `-p` is still the hidden short form of `--position` until the next major.
+    { ...projectOption, shorthand: null },
     {
       name: 'environment',
       shorthand: 'e',
@@ -975,11 +1112,12 @@ export const rulesAddSubcommand = {
       deprecated: false,
       description:
         'The environment to add the rule to (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'condition',
-      shorthand: 'c',
+      shorthand: null,
+      deprecatedShorthand: 'c',
       type: [String],
       deprecated: false,
       description: ruleConditionDescription,
@@ -988,10 +1126,11 @@ export const rulesAddSubcommand = {
     ...ruleOutcomeOptions,
     {
       name: 'position',
-      shorthand: 'p',
+      shorthand: null,
+      deprecatedShorthand: 'p',
       type: Number,
       deprecated: false,
-      description: '1-based position for the new rule (defaults to last)',
+      description: '1-based position for the new rule (default: last)',
       argument: 'N',
     },
     ruleMessageOption,
@@ -1039,11 +1178,12 @@ export const rulesUpdateSubcommand = {
       deprecated: false,
       description:
         'The environment containing the rule (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'condition',
-      shorthand: 'c',
+      shorthand: null,
+      deprecatedShorthand: 'c',
       type: [String],
       deprecated: false,
       description: 'Replace rule conditions. ' + ruleConditionDescription,
@@ -1087,14 +1227,14 @@ export const rulesRemoveSubcommand = {
       deprecated: false,
       description:
         'The environment containing the rule (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     ruleMessageOption,
   ],
   examples: [
     {
       name: 'Remove a rule',
-      value: `${packageName} flags rules rm my-feature rule_123 --environment production`,
+      value: `${packageName} flags rules remove my-feature rule_123 --environment production`,
     },
   ],
 } as const;
@@ -1114,7 +1254,8 @@ export const rulesMoveSubcommand = {
     },
   ],
   options: [
-    projectOption,
+    // `-p` is still the hidden short form of `--position` until the next major.
+    { ...projectOption, shorthand: null },
     {
       name: 'environment',
       shorthand: 'e',
@@ -1122,11 +1263,12 @@ export const rulesMoveSubcommand = {
       deprecated: false,
       description:
         'The environment containing the rule (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'position',
-      shorthand: 'p',
+      shorthand: null,
+      deprecatedShorthand: 'p',
       type: Number,
       deprecated: false,
       description: '1-based destination position for the rule',
@@ -1158,9 +1300,140 @@ export const rulesSubcommand = {
   examples: [],
 } as const;
 
-export const removeSubcommand = {
+const targetArgument = {
+  name: 'entity.attribute=value',
+  required: true,
+  multiple: true,
+} as const;
+
+const targetEnvironmentOption = {
+  name: 'environment',
+  shorthand: 'e',
+  type: String,
+  deprecated: false,
+  description:
+    'The environment to change (production, preview, or development)',
+  argument: 'ENVIRONMENT',
+} as const;
+
+export const targetsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List the direct targets of a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...targetEnvironmentOption,
+      description:
+        'The environment to list targets for (production, preview, or development)',
+    },
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'List production targets for a flag',
+      value: `${packageName} flags targets list my-feature --environment production`,
+    },
+    {
+      name: 'List targets as JSON',
+      value: `${packageName} flags targets list my-feature -e production --json`,
+    },
+  ],
+} as const;
+
+export const targetsAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description:
+    'Serve a variant to specific entity values in a feature flag environment. A value already targeted by another variant moves to the new one. Append |LABEL to a value to also set its label.',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+    targetArgument,
+  ],
+  options: [
+    projectOption,
+    targetEnvironmentOption,
+    {
+      name: 'variant',
+      shorthand: null,
+      deprecatedShorthand: 'v',
+      type: String,
+      deprecated: false,
+      description:
+        'Variant ID or value to serve to the targets (default: true for boolean flags)',
+      argument: 'VARIANT',
+    },
+    ruleMessageOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Serve On to two users in production',
+      value: `${packageName} flags targets add my-feature --environment production user.id=user_123 user.id=user_456`,
+    },
+    {
+      name: 'Serve a string variant to a team',
+      value: `${packageName} flags targets add welcome-message -e preview --variant treatment team.id=team_789`,
+    },
+    {
+      name: 'Add a target and label it in one step',
+      value: `${packageName} flags targets add my-feature -e production "team.id=team_789|Vercel"`,
+    },
+  ],
+} as const;
+
+export const targetsRemoveSubcommand = {
   name: 'remove',
   aliases: ['rm'],
+  description: 'Remove direct targets from a feature flag environment',
+  arguments: [
+    {
+      name: 'flag',
+      required: true,
+    },
+    targetArgument,
+  ],
+  options: [
+    projectOption,
+    targetEnvironmentOption,
+    ruleMessageOption,
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Stop targeting a user in production',
+      value: `${packageName} flags targets remove my-feature --environment production user.id=user_123`,
+    },
+  ],
+} as const;
+
+export const targetsSubcommand = {
+  name: 'targets',
+  aliases: [],
+  description:
+    'Manage direct targets: entity values that always receive a fixed variant',
+  arguments: [],
+  subcommands: [
+    targetsListSubcommand,
+    targetsAddSubcommand,
+    targetsRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const removeSubcommand = {
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete a feature flag',
   arguments: [
     {
@@ -1178,11 +1451,20 @@ export const removeSubcommand = {
   examples: [
     {
       name: 'Delete a feature flag',
-      value: `${packageName} flags rm my-feature-flag`,
+      value: `${packageName} flags delete my-feature-flag`,
     },
     {
       name: 'Delete without confirmation',
-      value: `${packageName} flags rm my-feature-flag --yes`,
+      value: `${packageName} flags delete my-feature-flag --yes`,
+    },
+  ],
+  helpSections: [
+    {
+      title: 'Notes',
+      body: [
+        'Only archived flags can be deleted. Run `flags archive <flag>` first.',
+        'Deletion is permanent. Prefer leaving flags archived; `flags unarchive <flag>` restores an archived flag.',
+      ],
     },
   ],
 } as const;
@@ -1203,6 +1485,14 @@ export const archiveSubcommand = {
       ...yesOption,
       description: 'Skip the confirmation prompt when archiving a flag',
     },
+    {
+      name: 'message',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Attach a revision message when archiving the flag',
+      argument: 'TEXT',
+    },
   ],
   examples: [
     {
@@ -1212,6 +1502,20 @@ export const archiveSubcommand = {
     {
       name: 'Archive without confirmation',
       value: `${packageName} flags archive my-feature-flag --yes`,
+    },
+    {
+      name: 'Archive a flag with a revision message',
+      value: `${packageName} flags archive my-feature-flag --message "Removed from code"`,
+    },
+  ],
+  helpSections: [
+    {
+      title: 'Notes',
+      body: [
+        'Archived flags evaluate to the default value in code. Remove the flag from your code and deploy to every environment before archiving.',
+        'The command reports evaluations from the last 3 days before asking for confirmation. Clients on @vercel/flags-core older than 1.6.0 do not report evaluations, so zero does not prove the flag is unused. For a longer window, run `flags evaluations <flag> --since 30d` (the default is the last hour).',
+        '`flags unarchive <flag>` restores the flag with its configuration and history.',
+      ],
     },
   ],
 } as const;
@@ -1265,11 +1569,12 @@ export const disableSubcommand = {
       deprecated: false,
       description:
         'The environment to disable the flag in (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'variant',
-      shorthand: 'v',
+      shorthand: null,
+      deprecatedShorthand: 'v',
       type: String,
       deprecated: false,
       description:
@@ -1299,6 +1604,7 @@ export const disableSubcommand = {
       value: `${packageName} flags disable my-feature -e production --message "Pause rollout in production"`,
     },
   ],
+  helpSections: [staticValueModeNote],
 } as const;
 
 export const enableSubcommand = {
@@ -1321,7 +1627,7 @@ export const enableSubcommand = {
       deprecated: false,
       description:
         'The environment to enable the flag in (production, preview, or development)',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'message',
@@ -1342,6 +1648,7 @@ export const enableSubcommand = {
       value: `${packageName} flags enable my-feature --environment production --message "Resume production rollout"`,
     },
   ],
+  helpSections: [staticValueModeNote],
 } as const;
 
 export const segmentsListSubcommand = {
@@ -1356,17 +1663,17 @@ export const segmentsListSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output in JSON format',
+      description: 'Output as JSON',
     },
   ],
   examples: [
     {
       name: 'List all segments',
-      value: `${packageName} flags segments ls`,
+      value: `${packageName} flags segments list`,
     },
     {
       name: 'List segments as JSON',
-      value: `${packageName} flags segments ls --json`,
+      value: `${packageName} flags segments list --json`,
     },
   ],
 } as const;
@@ -1388,7 +1695,7 @@ export const segmentsInspectSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output in JSON format',
+      description: 'Output as JSON',
     },
   ],
   examples: [
@@ -1417,7 +1724,8 @@ export const segmentsCreateSubcommand = {
     projectOption,
     {
       name: 'label',
-      shorthand: 'l',
+      shorthand: null,
+      deprecatedShorthand: 'l',
       type: String,
       deprecated: false,
       description: 'Human-readable label for the segment',
@@ -1425,7 +1733,8 @@ export const segmentsCreateSubcommand = {
     },
     {
       name: 'description',
-      shorthand: 'd',
+      shorthand: null,
+      deprecatedShorthand: 'd',
       type: String,
       deprecated: false,
       description: 'Description of the segment',
@@ -1450,7 +1759,8 @@ export const segmentsCreateSubcommand = {
     },
     {
       name: 'add',
-      shorthand: 'a',
+      shorthand: null,
+      deprecatedShorthand: 'a',
       type: [String],
       deprecated: false,
       description: `Add include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, or rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE; repeatable. ${segmentRuleOperatorDescription}`,
@@ -1494,7 +1804,8 @@ export const segmentsUpdateSubcommand = {
     projectOption,
     {
       name: 'label',
-      shorthand: 'l',
+      shorthand: null,
+      deprecatedShorthand: 'l',
       type: String,
       deprecated: false,
       description: 'New human-readable label for the segment',
@@ -1502,7 +1813,8 @@ export const segmentsUpdateSubcommand = {
     },
     {
       name: 'description',
-      shorthand: 'd',
+      shorthand: null,
+      deprecatedShorthand: 'd',
       type: String,
       deprecated: false,
       description: 'New description for the segment',
@@ -1527,7 +1839,8 @@ export const segmentsUpdateSubcommand = {
     },
     {
       name: 'add',
-      shorthand: 'a',
+      shorthand: null,
+      deprecatedShorthand: 'a',
       type: [String],
       deprecated: false,
       description: `Add include:ENTITY.ATTRIBUTE=VALUE, exclude:ENTITY.ATTRIBUTE=VALUE, or rule:ENTITY.ATTRIBUTE:OPERATOR:VALUE; repeatable. ${segmentRuleOperatorDescription}`,
@@ -1570,8 +1883,8 @@ export const segmentsUpdateSubcommand = {
 } as const;
 
 export const segmentsRemoveSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
   description: 'Delete a feature flag segment',
   arguments: [
     {
@@ -1589,11 +1902,11 @@ export const segmentsRemoveSubcommand = {
   examples: [
     {
       name: 'Delete a segment',
-      value: `${packageName} flags segments rm beta-users`,
+      value: `${packageName} flags segments delete beta-users`,
     },
     {
       name: 'Delete without confirmation',
-      value: `${packageName} flags segments rm beta-users --yes`,
+      value: `${packageName} flags segments delete beta-users --yes`,
     },
   ],
 } as const;
@@ -1614,6 +1927,350 @@ export const segmentsSubcommand = {
   examples: [],
 } as const;
 
+// Entities subcommands
+const attributeTypeDescription = `Valid types: ${formatFlagAttributeTypeList()}`;
+
+export const entitiesListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description: 'List the feature flag entities for the current project',
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'List all entities',
+      value: `${packageName} flags entities list`,
+    },
+    {
+      name: 'List entities as JSON',
+      value: `${packageName} flags entities list --json`,
+    },
+  ],
+} as const;
+
+export const entitiesCreateSubcommand = {
+  name: 'create',
+  aliases: ['add'],
+  description: 'Create a feature flag entity',
+  arguments: [
+    {
+      name: 'kind',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'label',
+      shorthand: null,
+      deprecatedShorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'Human-readable label for the entity',
+      argument: 'LABEL',
+    },
+    {
+      name: 'attribute',
+      shorthand: null,
+      deprecatedShorthand: 'a',
+      type: [String],
+      deprecated: false,
+      description: `Add an attribute as KEY:TYPE; repeatable. ${attributeTypeDescription}`,
+      argument: 'KEY:TYPE',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the created entity as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Create a user entity with attributes',
+      value: `${packageName} flags entities create user --label User --attribute id:string --attribute plan:string`,
+    },
+    {
+      name: 'Create a team entity with a string array attribute',
+      value: `${packageName} flags entities create team --attribute id:string --attribute features:stringArray`,
+    },
+  ],
+} as const;
+
+export const entitiesUpdateSubcommand = {
+  name: 'update',
+  aliases: [],
+  description: 'Update a feature flag entity and its attributes',
+  arguments: [
+    {
+      name: 'kind',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      name: 'label',
+      shorthand: null,
+      deprecatedShorthand: 'l',
+      type: String,
+      deprecated: false,
+      description: 'New human-readable label for the entity',
+      argument: 'LABEL',
+    },
+    {
+      name: 'add-attribute',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: `Add an attribute as KEY:TYPE; repeatable. ${attributeTypeDescription}`,
+      argument: 'KEY:TYPE',
+    },
+    {
+      name: 'remove-attribute',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description:
+        'Remove an attribute by key; repeatable. Fails when flags or segments still reference it',
+      argument: 'KEY',
+    },
+    {
+      name: 'set-attribute-type',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: `Change the type of an attribute as KEY:TYPE; repeatable. Changing the type also removes existing value labels. Fails when flags or segments still reference it. ${attributeTypeDescription}`,
+      argument: 'KEY:TYPE',
+    },
+    {
+      name: 'json',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Output the updated entity as JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Change the entity label',
+      value: `${packageName} flags entities update user --label "End user"`,
+    },
+    {
+      name: 'Add and remove attributes',
+      value: `${packageName} flags entities update user --add-attribute email:string --remove-attribute legacyId`,
+    },
+    {
+      name: 'Change an attribute type',
+      value: `${packageName} flags entities update user --set-attribute-type signupAt:timestamp`,
+    },
+  ],
+} as const;
+
+export const entitiesRemoveSubcommand = {
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
+  description:
+    'Delete a feature flag entity. Fails when flags or segments still reference it',
+  arguments: [
+    {
+      name: 'kind',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when deleting an entity',
+    },
+  ],
+  examples: [
+    {
+      name: 'Delete an entity',
+      value: `${packageName} flags entities delete device`,
+    },
+    {
+      name: 'Delete without confirmation',
+      value: `${packageName} flags entities delete device --yes`,
+    },
+  ],
+} as const;
+
+const labelOptions = [
+  projectOption,
+  {
+    name: 'json',
+    shorthand: null,
+    type: Boolean,
+    deprecated: false,
+    description: 'Output results and errors as JSON',
+  },
+] as const;
+
+export const labelsListSubcommand = {
+  name: 'ls',
+  aliases: ['list'],
+  description: 'Discover label lists or list the labels for an attribute',
+  arguments: [{ name: 'ENTITY.ATTRIBUTE', required: false }],
+  options: [
+    ...labelOptions,
+    {
+      name: 'limit',
+      shorthand: 'n',
+      type: Number,
+      deprecated: false,
+      description: 'Return at most NUMBER lists or labels (default: 20)',
+      argument: 'NUMBER',
+    },
+    {
+      name: 'next',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description: 'Continue from the cursor returned by the previous page',
+      argument: 'CURSOR',
+    },
+  ],
+  examples: [
+    {
+      name: 'Discover label lists',
+      value: `${packageName} flags labels ls`,
+    },
+    {
+      name: 'List the first page of plan labels',
+      value: `${packageName} flags labels ls user.plan`,
+    },
+    {
+      name: 'Continue listing plan labels',
+      placeholders: ['<CURSOR>'],
+      value: `${packageName} flags labels ls user.plan --limit 50 --next <CURSOR>`,
+    },
+  ],
+} as const;
+
+export const labelsSetSubcommand = {
+  name: 'set',
+  aliases: [],
+  description: 'Create or replace one attribute value label',
+  arguments: [
+    { name: 'ENTITY.ATTRIBUTE', required: true },
+    { name: 'value', required: true },
+    { name: 'label', required: true },
+  ],
+  options: labelOptions,
+  examples: [
+    {
+      name: 'Label a plan',
+      value: `${packageName} flags labels set user.plan pro "Pro Plan"`,
+    },
+  ],
+} as const;
+
+export const labelsRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description:
+    'Remove a value label without changing targeting; ignore missing labels',
+  arguments: [
+    { name: 'ENTITY.ATTRIBUTE', required: true },
+    { name: 'value', required: true },
+  ],
+  options: labelOptions,
+  examples: [
+    {
+      name: 'Remove a plan label',
+      value: `${packageName} flags labels remove user.plan pro`,
+    },
+  ],
+} as const;
+
+export const labelsApplySubcommand = {
+  name: 'apply',
+  aliases: [],
+  description: 'Set and remove multiple attribute value labels',
+  arguments: [{ name: 'ENTITY.ATTRIBUTE', required: true }],
+  options: [
+    ...labelOptions,
+    {
+      name: 'set',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Create or replace a value label as VALUE=LABEL; repeatable',
+      argument: 'VALUE=LABEL',
+    },
+    {
+      name: 'remove',
+      shorthand: null,
+      type: [String],
+      deprecated: false,
+      description: 'Remove a value label; repeatable; ignore missing labels',
+      argument: 'VALUE',
+    },
+    {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Apply label operations from a JSON array; cannot combine with --set or --remove',
+      argument: 'JSON',
+    },
+  ],
+  examples: [
+    {
+      name: 'Set and remove plan labels',
+      value: `${packageName} flags labels apply user.plan --set "pro=Pro Plan" --set "enterprise=Enterprise Plan" --remove legacy`,
+    },
+    {
+      name: 'Apply JSON operations',
+      value: `${packageName} flags labels apply user.plan --data '[{"operation":"upsert","value":"id=123","label":"Example"},{"operation":"delete","value":"legacy"}]'`,
+    },
+  ],
+} as const;
+
+export const labelsSubcommand = {
+  name: 'labels',
+  aliases: [],
+  description:
+    'Discover label lists and manage labels for string or stringArray attributes',
+  arguments: [],
+  subcommands: [
+    labelsListSubcommand,
+    labelsSetSubcommand,
+    labelsRemoveSubcommand,
+    labelsApplySubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
+export const entitiesSubcommand = {
+  name: 'entities',
+  aliases: [],
+  description: 'Manage the entity schema used for flag targeting',
+  arguments: [],
+  subcommands: [
+    entitiesListSubcommand,
+    entitiesCreateSubcommand,
+    entitiesUpdateSubcommand,
+    entitiesRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 // SDK Keys subcommands
 export const sdkKeysListSubcommand = {
   name: 'list',
@@ -1627,24 +2284,24 @@ export const sdkKeysListSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Output in JSON format',
+      description: 'Output as JSON',
     },
   ],
   examples: [
     {
       name: 'List all SDK keys',
-      value: `${packageName} flags sdk-keys ls`,
+      value: `${packageName} flags sdk-keys list`,
     },
     {
       name: 'List SDK keys as JSON',
-      value: `${packageName} flags sdk-keys ls --json`,
+      value: `${packageName} flags sdk-keys list --json`,
     },
   ],
 } as const;
 
 export const sdkKeysAddSubcommand = {
-  name: 'add',
-  aliases: [],
+  name: 'create',
+  aliases: ['add'],
   description: 'Create a new SDK key',
   arguments: [],
   options: [
@@ -1664,11 +2321,12 @@ export const sdkKeysAddSubcommand = {
       type: String,
       deprecated: false,
       description: 'The environment for the SDK key',
-      argument: 'ENV',
+      argument: 'ENVIRONMENT',
     },
     {
       name: 'label',
-      shorthand: 'l',
+      shorthand: null,
+      deprecatedShorthand: 'l',
       type: String,
       deprecated: false,
       description: 'Optional label for the SDK key',
@@ -1678,19 +2336,19 @@ export const sdkKeysAddSubcommand = {
   examples: [
     {
       name: 'Create a server SDK key for production',
-      value: `${packageName} flags sdk-keys add --type server --environment production`,
+      value: `${packageName} flags sdk-keys create --type server --environment production`,
     },
     {
       name: 'Create a client SDK key with a label',
-      value: `${packageName} flags sdk-keys add --type client -e preview --label "Preview App"`,
+      value: `${packageName} flags sdk-keys create --type client -e preview --label "Preview App"`,
     },
   ],
 } as const;
 
 export const sdkKeysRemoveSubcommand = {
-  name: 'remove',
-  aliases: ['rm'],
-  description: 'Delete an SDK key',
+  name: 'revoke',
+  aliases: ['remove', 'rm'],
+  description: 'Revoke an SDK key',
   arguments: [
     {
       name: 'key',
@@ -1701,13 +2359,14 @@ export const sdkKeysRemoveSubcommand = {
     projectOption,
     {
       ...yesOption,
-      description: 'Skip the confirmation prompt when deleting an SDK key',
+      description: 'Skip the confirmation prompt when revoking an SDK key',
     },
   ],
   examples: [
     {
-      name: 'Delete an SDK key',
-      value: `${packageName} flags sdk-keys rm <hash-key>`,
+      name: 'Revoke an SDK key',
+      placeholders: ['<hash-key>'],
+      value: `${packageName} flags sdk-keys revoke <hash-key>`,
     },
   ],
 } as const;
@@ -1726,6 +2385,104 @@ export const sdkKeysSubcommand = {
   examples: [],
 } as const;
 
+// Connections subcommands
+export const connectionsListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description:
+    'List the projects connected to the flags of the current project',
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'role',
+      shorthand: null,
+      type: String,
+      deprecated: false,
+      description:
+        'Which side of the connection the current project is on: "source" lists the projects that may read its flags, "consumer" lists the projects whose flags it may read (default: source)',
+      argument: 'ROLE',
+    },
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'List the projects that may read the flags of the current project',
+      value: `${packageName} flags connections list`,
+    },
+    {
+      name: 'List the projects whose flags the current project may read',
+      value: `${packageName} flags connections list --role consumer`,
+    },
+  ],
+} as const;
+
+export const connectionsAddSubcommand = {
+  name: 'add',
+  aliases: [],
+  description:
+    'Let another project in the team read the flags of the current project',
+  arguments: [
+    {
+      name: 'consumer-project',
+      required: true,
+    },
+  ],
+  options: [projectOption],
+  examples: [
+    {
+      name: 'Let project "storefront" read the flags of the current project',
+      value: `${packageName} flags connections add storefront`,
+    },
+    {
+      name: 'Let a project read the flags of a specific source project',
+      value: `${packageName} flags connections add storefront --project checkout`,
+    },
+  ],
+} as const;
+
+export const connectionsRemoveSubcommand = {
+  name: 'remove',
+  aliases: ['rm'],
+  description: 'Stop a project from reading the flags of the current project',
+  arguments: [
+    {
+      name: 'consumer-project',
+      required: true,
+    },
+  ],
+  options: [
+    projectOption,
+    {
+      ...yesOption,
+      description: 'Skip the confirmation prompt when removing a connection',
+    },
+  ],
+  examples: [
+    {
+      name: 'Stop project "storefront" from reading the flags of the current project',
+      value: `${packageName} flags connections remove storefront`,
+    },
+  ],
+} as const;
+
+export const connectionsSubcommand = {
+  name: 'connections',
+  aliases: [],
+  description:
+    'Manage which projects in the team may read the flags of a project',
+  // Not released yet; works when invoked, kept out of `flags --help`.
+  hidden: true,
+  arguments: [],
+  subcommands: [
+    connectionsListSubcommand,
+    connectionsAddSubcommand,
+    connectionsRemoveSubcommand,
+  ],
+  options: [],
+  examples: [],
+} as const;
+
 export const prepareSubcommand = {
   name: 'prepare',
   aliases: [],
@@ -1733,6 +2490,52 @@ export const prepareSubcommand = {
   arguments: [],
   options: [],
   examples: [],
+} as const;
+
+export const datafileSubcommand = {
+  name: 'datafile',
+  aliases: [],
+  description: 'Display the datafile of the project',
+  arguments: [],
+  options: [
+    projectOption,
+    {
+      name: 'environment',
+      shorthand: 'e',
+      type: String,
+      deprecated: false,
+      description:
+        'The environment to load the datafile for (production, preview, or development). Not supported with --sdk-key, as SDK keys are bound to an environment',
+      argument: 'ENVIRONMENT',
+    },
+    {
+      name: 'sdk-key',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description:
+        'Authenticate with an SDK key instead of user or development OIDC credentials. The key is read from stdin, or from a masked prompt in a terminal',
+    },
+    jsonOption,
+  ],
+  examples: [
+    {
+      name: 'Display the datafile of the linked project',
+      value: `${packageName} flags datafile`,
+    },
+    {
+      name: 'Display the production datafile of a specific project',
+      value: `${packageName} flags datafile --project my-project --environment production`,
+    },
+    {
+      name: 'Display the datafile for an SDK key read from stdin',
+      value: `${packageName} flags datafile --sdk-key < sdk-key.txt`,
+    },
+    {
+      name: 'Display the datafile as JSON',
+      value: `${packageName} flags datafile --json`,
+    },
+  ],
 } as const;
 
 export const overrideSubcommand = {
@@ -1779,6 +2582,7 @@ export const overrideSubcommand = {
     },
     {
       name: 'Decrypt an override token',
+      placeholders: ['<token>'],
       value: `${packageName} flags override --decrypt <token>`,
     },
   ],
@@ -1799,6 +2603,7 @@ export const flagsCommand = {
     openSubcommand,
     updateSubcommand,
     setSubcommand,
+    targetingSubcommand,
     useTargetingSubcommand,
     splitSubcommand,
     rolloutSubcommand,
@@ -1808,9 +2613,14 @@ export const flagsCommand = {
     disableSubcommand,
     enableSubcommand,
     rulesSubcommand,
+    targetsSubcommand,
     segmentsSubcommand,
+    entitiesSubcommand,
+    labelsSubcommand,
     sdkKeysSubcommand,
+    connectionsSubcommand,
     prepareSubcommand,
+    datafileSubcommand,
     overrideSubcommand,
   ],
   options: [],

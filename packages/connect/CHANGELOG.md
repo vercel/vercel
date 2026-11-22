@@ -1,5 +1,147 @@
 # @vercel/connect
 
+## 2.5.6
+
+### Patch Changes
+
+- @vercel/oidc@4.0.4
+
+## 2.5.5
+
+### Patch Changes
+
+- 314fba0: eve channel credential helpers now only accept Connect-forwarded webhooks whose Vercel OIDC token matches the deployment's project and environment, and `createConnectWebhookVerifier()` now rejects audience-exchanged tokens.
+
+## 2.5.4
+
+### Patch Changes
+
+- @vercel/oidc@4.0.3
+
+## 2.5.3
+
+### Patch Changes
+
+- @vercel/oidc@4.0.2
+
+## 2.5.2
+
+### Patch Changes
+
+- 99f8fae: Align experimental MCP subscription creation with Connect's required `ttlMs` duration or `null` for indefinite watches. This breaks the experimental `expiresAt` creation input in direct calls and the AI SDK/eve adapter; update callers to use `ttlMs` and matching AI SDK/eve releases. Subscription responses retain the server-calculated `expiresAt`.
+
+## 2.5.1
+
+### Patch Changes
+
+- 0854ada: Document using a Passport identity from `requireIdentity` as the subject for `getToken`.
+
+## 2.5.0
+
+### Minor Changes
+
+- 1e9cee9: Add an experimental Connect-managed events adapter for AI SDK, with resolved account scope and no event store dependency. The experimental helper now returns a synchronous `createAdapter({ transport })` factory instead of bound operations, matching AI SDK #22325. Pass an optional `mcpUrl` to override the transport endpoint; direct callers must call `createAdapter()` before using subscription operations.
+- 7a77164: Add experimental MCP subscription management with nested ConnectTokenParams, ID-based lookup with optional ownership assertions, explicit monitoring lifetime, scoped inspection/cancellation, and bounded requests. Optional `mcpUrl` selects the authorized upstream endpoint for discovery and subscription creation.
+
+### Patch Changes
+
+- 4fa90e1: Align experimental event catalog discovery with the Connect backend and forward the selected MCP resource URL. Subscription listing now returns `pagination.next`; the AI SDK and eve adapters translate it to their existing `nextCursor` contract, including empty filtered pages.
+- 4fa90e1: Expose an experimental events bridge on eve Connect authorization providers, reusing the authorized subject and token constraints for managed subscriptions and Connect delivery verification. Bind event operations to the connection URL through the AI SDK transport-context factory without requiring a second URL in eve configuration.
+- d032cfb: Add experimental Connect event delivery authentication scoped to project, environment, registered path, preview branch and delivery purpose, with envelope schema validation. Distinguish OIDC identity failures from temporary signing-key outages.
+
+  Preserve optional MCP event metadata and opaque cursors within the total delivery body limit.
+
+- Updated dependencies [d032cfb]
+  - @vercel/oidc@4.0.1
+
+## 2.4.1
+
+### Patch Changes
+
+- 90f2ad7: Require patched Auth.js core (0.41.3 or newer) for the optional Auth.js adapter.
+
+## 2.4.0
+
+### Minor Changes
+
+- edbf428: Allow token subjects to omit `type` and infer `type: 'token'` before sending Connect requests. Refine Passport identity types so verified identities have a string token.
+
+### Patch Changes
+
+- Updated dependencies [ec76b68]
+  - @vercel/oidc@4.0.0
+
+## 2.3.6
+
+### Patch Changes
+
+- @vercel/oidc@3.8.10
+
+## 2.3.5
+
+### Patch Changes
+
+- 346f472: Add experimental identity provider support to user subjects.
+
+## 2.3.4
+
+### Patch Changes
+
+- 55594c7: Include the OIDC project ID and environment alongside the team ID in Auth.js and Better Auth authorization URLs, preferring the custom environment ID when present.
+
+## 2.3.3
+
+### Patch Changes
+
+- 77bac19: Expose complete external-resource requirement metadata from eve connection and Slack credential helpers while preserving connector-only metadata compatibility.
+- dde48e0: Add an experimental manifest compiler API that converts eve external-resource snapshots into Connect manifests during builds.
+
+## 2.3.2
+
+### Patch Changes
+
+- @vercel/oidc@3.8.9
+
+## 2.3.1
+
+### Patch Changes
+
+- 71b55b4: Require eve 0.39.1 or newer for the optional eve integration, aligning the peer range with the supported minimum and the version used to build and test the adapter.
+
+## 2.3.0
+
+### Minor Changes
+
+- 6be8817: Add `@vercel/connect/tanstack-ai`: `connectMCPTransport` builds a `@tanstack/ai-mcp` transport config with a Vercel Connect `authProvider`, raising the consent challenge eagerly on Streamable HTTP and via the MCP-spec 401 flow on SSE and refusing HTTP redirects by default, plus `getConsentChallenge` / `isConsentRequiredError` helpers for unwrapping `MCPConnectionError` (also exported from `/mcp` and `/ai-sdk`). The shared MCP adapter gains a `consent: 'transport' | 'eager'` option (default unchanged), returns a self-contained `ConnectOAuthClientProvider` type assignable to both `@ai-sdk/mcp` and `@modelcontextprotocol/sdk` (optional members of `@ai-sdk/mcp`'s interface are no longer part of the return type), reports a non-empty `redirectUrl` placeholder so the official SDK stays on the interactive consent path instead of its client-credentials branch, and implements the official SDK's `discoveryState` hook so a compromised MCP server cannot steer OAuth discovery fetches to private-network URLs.
+
+## 2.2.0
+
+### Minor Changes
+
+- 793f162: Add `connectTeamsAdapter` for Chat SDK Microsoft Teams bots, with lazy app identity, Bot Framework and Microsoft Graph tokens, and Vercel OIDC verification for Connect-forwarded webhooks.
+
+### Patch Changes
+
+- @vercel/oidc@3.8.8
+
+## 2.1.0
+
+### Minor Changes
+
+- a020e37: Add `connectTeamsCredentials` for Eve Microsoft Teams channels. The helper resolves the managed bot application ID and short-lived Bot Framework tokens through Vercel Connect, and verifies Connect-forwarded activities with Vercel OIDC.
+
+## 2.0.4
+
+### Patch Changes
+
+- @vercel/oidc@3.8.7
+
+## 2.0.3
+
+### Patch Changes
+
+- @vercel/oidc@3.8.6
+
 ## 2.0.2
 
 ### Patch Changes

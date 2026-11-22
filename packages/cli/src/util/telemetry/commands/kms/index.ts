@@ -20,9 +20,9 @@ export class KmsTelemetryClient
     });
   }
 
-  trackCliSubcommandAdd(actual: string) {
+  trackCliSubcommandCreate(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'add',
+      subcommand: 'create',
       value: actual,
     });
   }
@@ -41,9 +41,9 @@ export class KmsTelemetryClient
     });
   }
 
-  trackCliSubcommandRemove(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'remove',
+      subcommand: 'delete',
       value: actual,
     });
   }

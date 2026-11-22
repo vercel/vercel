@@ -483,7 +483,7 @@ describe('integration', () => {
         const exitCode = await integrationCommand(client);
         expect(exitCode, 'exit code for "integration"').toEqual(1);
         await expect(client.stderr).toOutput(
-          'Error: No project linked. Either use `vc link` to link a project, or the `--all` flag to list all resources.'
+          'Error: No project linked. Either use `vc link` to link a project, or the `--all` option to list all resources.'
         );
       });
 
@@ -516,9 +516,9 @@ describe('integration', () => {
 
         client.setArgv('integration', 'list', 'other-project', '--all');
         const exitCode = await integrationCommand(client);
-        expect(exitCode, 'exit code for "integration"').toEqual(1);
+        expect(exitCode, 'exit code for "integration"').toEqual(2);
         await expect(client.stderr).toOutput(
-          'Error: Cannot specify a project when using the `--all` flag.'
+          'Error: Cannot specify a project when using the `--all` option.'
         );
       });
     });

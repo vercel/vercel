@@ -10,7 +10,10 @@ import {
   openUrlInBrowserCommand,
   shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
-import { AGENT_REASON } from '../../util/agent-output-constants';
+import {
+  AGENT_REASON,
+  getExitCodeForReason,
+} from '../../util/agent-output-constants';
 import { verifySubcommand } from './command';
 import { DomainsVerifyTelemetryClient } from '../../util/telemetry/commands/domains/verify';
 import {
@@ -62,7 +65,7 @@ export default async function verify(client: Client, argv: string[]) {
             client.argv,
             'domains verify --help'
           ),
-          when: 'See valid arguments and flags',
+          when: 'See valid arguments and options',
         },
       ],
     });
@@ -323,7 +326,7 @@ function writeCommandError(
   } else {
     output.error(error.humanMessage ?? error.message);
   }
-  return 1;
+  return getExitCodeForReason(error.reason);
 }
 
 function writeHumanOutput(result: HumanVerificationOutput): void {

@@ -30,7 +30,7 @@ describe('firewall publish', () => {
     it('tracks telemetry', async () => {
       client.setArgv('firewall', 'publish', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
 
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         {

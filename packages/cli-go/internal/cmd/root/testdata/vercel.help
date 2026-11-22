@@ -1,0 +1,56 @@
+
+  ▲ vercel [options] <command | path>
+
+  For deploy command help, run `vercel deploy --help`
+
+  Commands:
+
+    Basic
+
+      help    Show help for a command
+      login   Sign in to your Vercel account
+
+    Advanced
+
+      teams   Manage Teams under your Vercel account
+      whoami  Shows the username of the currently logged in user
+
+  Global Options:
+
+    -h, --help                     Output usage information
+    -v, --version                  Output the version number
+    --changelog                    Show the 5 latest Vercel product updates
+    --cwd                          Current working directory
+    -A FILE, --local-config=FILE   Path to the local `vercel.json` file
+    -Q DIR, --global-config=DIR    Path to the global `.vercel` directory
+    -d, --debug                    Debug mode [off]
+    --no-color                     No color mode [off]
+    --non-interactive              Run without interactive prompts (default when agent detected)
+    -S, --scope                    Set a custom scope
+    -t TOKEN, --token=TOKEN        Login token
+
+  Examples:
+
+  – Deploy the current directory
+
+    $ vercel
+
+  – Deploy a custom path
+
+    $ vercel /usr/src/project
+
+  – Deploy with Environment Variables
+
+    $ vercel -e NODE_ENV=production
+
+  – Show the usage information for the sub command `list`
+
+    $ vercel help list
+
+  – Show the 5 latest Vercel product updates
+
+    $ vercel --changelog
+
+  – Search Vercel product updates
+
+    $ vercel changelog search "AI SDK"

@@ -177,6 +177,13 @@ export async function resolveAlertsScope(
     });
   }
 
+  return scopeFromLinkedProject(linkedProject);
+}
+
+export function scopeFromLinkedProject(linkedProject: {
+  org: { id: string };
+  project: { id: string; name: string };
+}): AlertsScope {
   return {
     teamId: linkedProject.org.id,
     projectId: linkedProject.project.id,

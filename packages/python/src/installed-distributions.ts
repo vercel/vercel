@@ -102,6 +102,29 @@ interface InstalledPythonDistributionsOptions {
   distributions: ReadonlyMap<string, DistributionIndex>;
   pythonMajor: number | undefined;
   pythonMinor: number | undefined;
+  /** Installed packages to leave out of the function bundle. */
+  excludePackages?: string[];
+}
+
+function withoutPackages(
+  distributions: ReadonlyMap<string, DistributionIndex>,
+  packageNames: string[]
+): ReadonlyMap<string, DistributionIndex> {
+  if (packageNames.length === 0) {
+    return distributions;
+  }
+
+  const excluded = new Set(packageNames.map(normalizePackageName));
+  const filtered = new Map<string, DistributionIndex>();
+  for (const [dir, index] of distributions) {
+    filtered.set(
+      dir,
+      new Map(
+        [...index].filter(([name]) => !excluded.has(normalizePackageName(name)))
+      )
+    );
+  }
+  return filtered;
 }
 
 export class InstalledPythonDistributions {
@@ -114,10 +137,12 @@ export class InstalledPythonDistributions {
     venvPath,
     pythonMajor,
     pythonMinor,
+    excludePackages,
   }: {
     venvPath: string;
     pythonMajor: number | undefined;
     pythonMinor: number | undefined;
+    excludePackages?: string[];
   }): Promise<InstalledPythonDistributions> {
     const sitePackageDirs = await getVenvSitePackagesDirs(venvPath);
     const distributions = new Map<string, DistributionIndex>();
@@ -136,12 +161,16 @@ export class InstalledPythonDistributions {
       distributions,
       pythonMajor,
       pythonMinor,
+      excludePackages,
     });
   }
 
   constructor(options: InstalledPythonDistributionsOptions) {
     this.sitePackageDirs = options.sitePackageDirs;
-    this.distributions = options.distributions;
+    this.distributions = withoutPackages(
+      options.distributions,
+      options.excludePackages ?? []
+    );
     this.pythonMajor = options.pythonMajor;
     this.pythonMinor = options.pythonMinor;
   }
@@ -152,6 +181,19 @@ export class InstalledPythonDistributions {
    */
   getSitePackageDirs(): string[] {
     return this.sitePackageDirs;
+  }
+
+  /**
+   * Return the installed version of a package (matched via PEP 503
+   * normalization), or null when the package is not found in the venv.
+   */
+  getInstalledVersion(packageName: string): string | null {
+    const target = normalizePackageName(packageName);
+    for (const index of this.distributions.values()) {
+      const dist = index.get(target);
+      if (dist) return dist.version;
+    }
+    return null;
   }
 
   async mirrorPackagesIntoVendor({

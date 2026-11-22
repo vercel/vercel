@@ -7,14 +7,14 @@ export const inspectCommand = {
   description: 'Show information about a deployment.',
   arguments: [
     {
-      name: 'url|deploymentId',
+      name: 'deployment',
       required: true,
     },
   ],
   options: [
     {
       name: 'timeout',
-      description: 'Time to wait for deployment completion [3m]',
+      description: 'Time to wait for deployment completion (default: 3m)',
       argument: 'TIME',
       shorthand: null,
       type: String,
@@ -22,14 +22,16 @@ export const inspectCommand = {
     },
     {
       name: 'wait',
-      description: 'Blocks until deployment completes',
+      description:
+        'Blocks until deployment completes (exits 1 if --timeout is reached first)',
       shorthand: null,
       type: Boolean,
       deprecated: false,
     },
     {
       name: 'logs',
-      shorthand: 'l',
+      shorthand: null,
+      deprecatedShorthand: 'l',
       type: Boolean,
       deprecated: false,
       description: 'Prints the build logs instead of the deployment summary',

@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import output from '../../output-manager';
+import type Client from '../../util/client';
 import { packageName } from '../../util/pkg-name';
 import { listAvailableVersions } from '../../util/native-self-update';
 import { getVersionContext } from '../../util/version-context';
@@ -10,8 +11,13 @@ const DEFAULT_COUNT = 20;
  * `vc version list`: versions available to install. For now this mirrors the
  * published `vercel` npm versions.
  */
-export default async function list(): Promise<number> {
-  output.spinner('Fetching available versions…', 0);
+export default async function list(
+  client: Client,
+  asJson = false
+): Promise<number> {
+  if (!asJson) {
+    output.spinner('Fetching available versions…', 0);
+  }
 
   let versions: string[];
   let currentVersion: string;
@@ -29,6 +35,13 @@ export default async function list(): Promise<number> {
   }
 
   output.stopSpinner();
+
+  if (asJson) {
+    client.stdout.write(
+      `${JSON.stringify({ versions, currentVersion }, null, 2)}\n`
+    );
+    return 0;
+  }
 
   if (versions.length === 0) {
     output.log('No versions found');

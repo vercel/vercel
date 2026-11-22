@@ -1,0 +1,21 @@
+{
+  "functions": {
+    "jobs/nightly.py": {
+      "maxDuration": 42
+    }
+  },
+  "schedules": {
+    "nightly": {
+      "schedule": "0 0 * * *",
+      "entrypoint": "jobs/nightly.py"
+    },
+    "hourly-cleanup": {
+      "schedule": "0 * * * *",
+      "entrypoint": "jobs/hourly.py"
+    },
+    "weekly": {
+      "schedule": "0 0 * * 0",
+      "entrypoint": "jobs/weekly.py"
+    }
+  }
+}

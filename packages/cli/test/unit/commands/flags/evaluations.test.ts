@@ -1,12 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import stripAnsi from 'strip-ansi';
 import { writeFileSync } from 'fs';
+import { outputJSON } from 'fs-extra';
 import { join } from 'path';
 import flags from '../../../../src/commands/flags';
 import type { Flag } from '../../../../src/util/flags/types';
 import {
   removeProjectLink,
   setupUnitFixture,
+  setupTmpDir,
 } from '../../../helpers/setup-unit-fixture';
 import { client } from '../../../mocks/client';
 import { defaultFlags, useFlags } from '../../../mocks/flags';
@@ -18,7 +20,18 @@ import {
 import { useTeams } from '../../../mocks/team';
 import { useUser } from '../../../mocks/user';
 
-const ROLLUP = 'vercel_flag_evaluation_flag_evaluations_sum';
+// Fixture rows carry the value under this key until toCanonicalPoint moves it
+// into `values.value`.
+const FIXTURE_VALUE_KEY = 'evaluations';
+
+function toCanonicalPoint(row: Record<string, unknown>) {
+  const {
+    timestamp: _timestamp,
+    [FIXTURE_VALUE_KEY]: value,
+    ...dimensions
+  } = row;
+  return { dimensions, values: { value } };
+}
 const evaluationFlags: Flag[] = [
   ...defaultFlags,
   {
@@ -58,6 +71,9 @@ describe('flags evaluations', () => {
   let flagLookupFailure:
     | { status: number; code: string; message: string }
     | undefined;
+  let sdkKeysLookupFailure:
+    | { status: number; code: string; message: string }
+    | undefined;
 
   beforeEach(() => {
     client.reset();
@@ -70,13 +86,10 @@ describe('flags evaluations', () => {
       accountId: 'team_dummy',
     });
     client.cwd = setupUnitFixture('commands/flags/vercel-flags-test');
-    process.env.VERCEL_FLAG_EVALUATIONS_API_URL = new URL(
-      '/api/observability/metrics',
-      client.apiUrl
-    ).href;
     postedBody = undefined;
     postedQuery = undefined;
     flagLookupFailure = undefined;
+    sdkKeysLookupFailure = undefined;
     client.scenario.get(
       '/v1/projects/:projectId/feature-flags/flags/:flagIdOrSlug',
       (_req, res, next) => {
@@ -92,11 +105,22 @@ describe('flags evaluations', () => {
         });
       }
     );
+    client.scenario.get(
+      '/v1/projects/:projectId/feature-flags/sdk-keys',
+      (_req, res, next) => {
+        if (!sdkKeysLookupFailure) {
+          next?.();
+          return;
+        }
+        res.status(sdkKeysLookupFailure.status).json({
+          error: {
+            code: sdkKeysLookupFailure.code,
+            message: sdkKeysLookupFailure.message,
+          },
+        });
+      }
+    );
     useFlags(evaluationFlags);
-  });
-
-  afterEach(() => {
-    delete process.env.VERCEL_FLAG_EVALUATIONS_API_URL;
   });
 
   function useEvaluationsResponse({
@@ -106,13 +130,25 @@ describe('flags evaluations', () => {
     data?: Record<string, unknown>[];
     summary?: Record<string, unknown>[];
   } = {}) {
-    client.scenario.post('/api/observability/metrics', (req, res) => {
+    client.scenario.post('/metrics/v1', (req, res) => {
       postedBody = req.body as Record<string, unknown>;
       postedQuery = req.query as Record<string, unknown>;
       res.json({
-        data,
-        summary,
-        statistics: { rowsRead: 42, bytesRead: 1024 },
+        series: data.map(row => ({
+          timestamp: row.timestamp,
+          ...toCanonicalPoint(row),
+        })),
+        summary: summary.map(toCanonicalPoint),
+        queryId: 'query_123',
+        meta: {
+          sources: [{ id: 'flags' }],
+          statistics: {
+            elapsedMs: 10,
+            databaseElapsedMs: 5,
+            rowsRead: 42,
+            bytesRead: 1024,
+          },
+        },
       });
     });
   }
@@ -123,28 +159,28 @@ describe('flags evaluations', () => {
         {
           timestamp: '2026-07-10T10:00:00.000Z',
           flagVariant: 'off',
-          [ROLLUP]: 3,
+          [FIXTURE_VALUE_KEY]: 3,
         },
         {
           timestamp: '2026-07-10T10:05:00.000Z',
           flagVariant: 'off',
-          [ROLLUP]: 5,
+          [FIXTURE_VALUE_KEY]: 5,
         },
         {
           timestamp: '2026-07-10T10:00:00.000Z',
           flagVariant: 'on',
-          [ROLLUP]: 2,
+          [FIXTURE_VALUE_KEY]: 2,
         },
         {
           timestamp: '2026-07-10T10:05:00.000Z',
           flagVariant: '',
-          [ROLLUP]: 1,
+          [FIXTURE_VALUE_KEY]: 1,
         },
       ],
       summary: [
-        { flagVariant: 'off', [ROLLUP]: 8 },
-        { flagVariant: 'on', [ROLLUP]: 2 },
-        { flagVariant: '', [ROLLUP]: 1 },
+        { flagVariant: 'off', [FIXTURE_VALUE_KEY]: 8 },
+        { flagVariant: 'on', [FIXTURE_VALUE_KEY]: 2 },
+        { flagVariant: '', [FIXTURE_VALUE_KEY]: 1 },
       ],
     });
 
@@ -162,32 +198,28 @@ describe('flags evaluations', () => {
     const exitCode = await flags(client);
 
     expect(exitCode).toBe(0);
-    expect(postedQuery).toMatchObject({ ownerId: 'team_dummy' });
-    expect(postedBody).toMatchObject({
+    expect(postedQuery).toMatchObject({ teamId: 'team_dummy' });
+    expect(postedBody).toEqual({
       scope: {
-        type: 'project',
         ownerId: 'team_dummy',
         projectIds: ['vercel-flags-test'],
       },
-      reason: 'flag_evaluation_chart',
-      event: 'flagEvaluation',
-      rollups: {
-        [ROLLUP]: {
-          measure: 'flagEvaluations',
-          aggregation: 'sum',
-        },
+      timeRange: {
+        start: '2026-07-10T10:00:00.000Z',
+        end: '2026-07-10T10:10:00.000Z',
       },
-      orderBy: ROLLUP,
-      orderDirection: 'desc',
+      bucketSeconds: 300,
       groupBy: ['flagVariant'],
-      limit: 101,
-      limitRanking: 'single_pass',
-      tailRollup: 'truncate',
-      summaryOnly: false,
-      filter: "flagKey eq 'my-feature'",
-      granularity: { minutes: 5 },
-      startTime: '2026-07-10T10:00:00.000Z',
-      endTime: '2026-07-10T10:10:00.000Z',
+      filter: 'flagKey:"my-feature"',
+      metrics: {
+        value: { metric: 'vercel.flags.evaluation', aggregation: 'sum' },
+      },
+      outputs: ['value'],
+      seriesSelection: {
+        limit: 101,
+        mode: 'exact',
+        rankBy: [{ metric: 'value', direction: 'desc' }],
+      },
     });
 
     const stdout = stripAnsi(client.stdout.getFullOutput());
@@ -231,9 +263,11 @@ describe('flags evaluations', () => {
 
     expect(exitCode).toBe(0);
     expect(postedBody).toMatchObject({
-      granularity: { minutes: 1 },
-      startTime: '2026-07-10T09:03:00.000Z',
-      endTime: '2026-07-10T10:04:00.000Z',
+      bucketSeconds: 60,
+      timeRange: {
+        start: '2026-07-10T09:03:00.000Z',
+        end: '2026-07-10T10:04:00.000Z',
+      },
     });
   });
 
@@ -243,20 +277,20 @@ describe('flags evaluations', () => {
         {
           timestamp: '2026-07-10T10:00:00.000Z',
           flagVariant: 'off',
-          [ROLLUP]: 3,
+          [FIXTURE_VALUE_KEY]: 3,
         },
         {
           timestamp: '2026-07-10T10:01:00.000Z',
           flagVariant: '',
-          [ROLLUP]: 1,
+          [FIXTURE_VALUE_KEY]: 1,
         },
       ],
       summary: [
-        { flagVariant: 'off', [ROLLUP]: 3 },
-        { flagVariant: '', [ROLLUP]: 1 },
+        { flagVariant: 'off', [FIXTURE_VALUE_KEY]: 3 },
+        { flagVariant: '', [FIXTURE_VALUE_KEY]: 1 },
         ...Array.from({ length: 98 }, (_, index) => ({
           flagVariant: `unused-${index}`,
-          [ROLLUP]: 0,
+          [FIXTURE_VALUE_KEY]: 0,
         })),
       ],
     });
@@ -280,6 +314,7 @@ describe('flags evaluations', () => {
     expect(json).toEqual({
       flag: 'my-feature',
       variants: { off: false, on: true },
+      groupBy: ['variant'],
       startTime: '2026-07-10T10:00:00.000Z',
       endTime: '2026-07-10T11:00:00.000Z',
       granularity: { minutes: 1 },
@@ -314,17 +349,17 @@ describe('flags evaluations', () => {
   it('keeps default-in-code buckets when the API omits the variant id', async () => {
     useEvaluationsResponse({
       summary: [
-        { flagVariant: '', [ROLLUP]: 59 },
+        { flagVariant: '', [FIXTURE_VALUE_KEY]: 59 },
         ...Array.from({ length: 100 }, (_, index) => ({
           flagVariant: `variant-${index}`,
-          [ROLLUP]: 100 - index,
+          [FIXTURE_VALUE_KEY]: 100 - index,
         })),
       ],
       data: [
         {
           timestamp: '2026-07-10T10:00:00.000Z',
           flagVariant: null,
-          [ROLLUP]: 59,
+          [FIXTURE_VALUE_KEY]: 59,
         },
       ],
     });
@@ -409,13 +444,13 @@ describe('flags evaluations', () => {
     useEvaluationsResponse({
       summary: variants.map((variant, index) => ({
         flagVariant: variant,
-        [ROLLUP]: variants.length - index,
+        [FIXTURE_VALUE_KEY]: variants.length - index,
       })),
       data: ['variant-100', 'variant-99', 'variant-0'].map(
         (variant, index) => ({
           timestamp: '2026-07-10T10:00:00.000Z',
           flagVariant: variant,
-          [ROLLUP]: index + 1,
+          [FIXTURE_VALUE_KEY]: index + 1,
         })
       ),
     });
@@ -446,7 +481,7 @@ describe('flags evaluations', () => {
     useEvaluationsResponse({
       summary: Array.from({ length: 101 }, (_, index) => ({
         flagVariant: `variant-${index}`,
-        [ROLLUP]: 101 - index,
+        [FIXTURE_VALUE_KEY]: 101 - index,
       })),
     });
     client.setArgv('flags', 'evaluations', 'my-feature');
@@ -494,7 +529,6 @@ describe('flags evaluations', () => {
 
     expect(exitCode).toBe(0);
     expect(postedBody?.scope).toEqual({
-      type: 'project',
       ownerId: 'team_dummy',
       projectIds: ['vercel-flags-test'],
     });
@@ -515,7 +549,7 @@ describe('flags evaluations', () => {
       '--until',
       '2026-07-10T10:00:00.000Z'
     );
-    expect(await flags(client)).toBe(1);
+    expect(await flags(client)).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'The start time must be before the end time'
     );
@@ -523,13 +557,13 @@ describe('flags evaluations', () => {
   });
 
   it.each([
-    ['1m', { minutes: 1 }],
-    ['5m', { minutes: 5 }],
-    ['15m', { minutes: 15 }],
-    ['1h', { hours: 1 }],
-    ['4h', { hours: 4 }],
-    ['1d', { days: 1 }],
-  ])('accepts the supported %s granularity', async (value, duration) => {
+    ['1m', 60],
+    ['5m', 300],
+    ['15m', 900],
+    ['1h', 3600],
+    ['4h', 14400],
+    ['1d', 86400],
+  ])('accepts the supported %s granularity', async (value, bucketSeconds) => {
     useEvaluationsResponse();
     client.setArgv(
       'flags',
@@ -540,7 +574,7 @@ describe('flags evaluations', () => {
     );
 
     expect(await flags(client)).toBe(0);
-    expect(postedBody?.granularity).toEqual(duration);
+    expect(postedBody?.bucketSeconds).toBe(bucketSeconds);
     expect(client.telemetryEventStore).toHaveTelemetryEvents([
       { key: 'subcommand:evaluations', value: 'evaluations' },
       { key: 'argument:flag', value: '[REDACTED]' },
@@ -557,7 +591,7 @@ describe('flags evaluations', () => {
       '10m'
     );
 
-    expect(await flags(client)).toBe(1);
+    expect(await flags(client)).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Invalid granularity "10m". Use one of: 1m, 5m, 15m, 1h, 4h, 1d.'
     );
@@ -627,19 +661,440 @@ describe('flags evaluations', () => {
     });
   });
 
-  it('rejects a missing flag argument', async () => {
-    client.setArgv('flags', 'evaluations');
+  it('queries every flag in the project grouped by flag when no flag is given', async () => {
+    useEvaluationsResponse({
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          flagKey: 'my-feature',
+          [FIXTURE_VALUE_KEY]: 30,
+        },
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          flagKey: 'number-feature',
+          [FIXTURE_VALUE_KEY]: 12,
+        },
+      ],
+      summary: [
+        { flagKey: 'my-feature', [FIXTURE_VALUE_KEY]: 30 },
+        { flagKey: 'number-feature', [FIXTURE_VALUE_KEY]: 12 },
+      ],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--granularity',
+      '1h'
+    );
 
     const exitCode = await flags(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(0);
+    expect(postedBody).toMatchObject({ groupBy: ['flagKey'] });
+    expect(postedBody).not.toHaveProperty('filter');
+    const stdout = stripAnsi(client.stdout.getFullOutput());
+    expect(stdout).toContain('Flags');
+    expect(stdout).toContain('my-feature');
+    expect(stdout).toContain('number-feature');
+    expect(stdout).not.toContain('Variants');
+  });
+
+  it('groups by SDK key and client and resolves SDK key labels', async () => {
+    useEvaluationsResponse({
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          sdkKeyId: 'sdk_key_abc123',
+          flagClientName: 'api-deployments',
+          [FIXTURE_VALUE_KEY]: 20,
+        },
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          sdkKeyId: 'unknown-hash',
+          flagClientName: 'api-builds',
+          [FIXTURE_VALUE_KEY]: 4,
+        },
+      ],
+      summary: [
+        {
+          sdkKeyId: 'sdk_key_abc123',
+          flagClientName: 'api-deployments',
+          [FIXTURE_VALUE_KEY]: 20,
+        },
+        {
+          sdkKeyId: 'unknown-hash',
+          flagClientName: 'api-builds',
+          [FIXTURE_VALUE_KEY]: 4,
+        },
+      ],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      'my-feature',
+      '--group-by',
+      'sdk-key',
+      '--group-by',
+      'client',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--granularity',
+      '1h'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(0);
+    expect(postedBody).toMatchObject({
+      groupBy: ['sdkKeyId', 'flagClientName'],
+      filter: 'flagKey:"my-feature"',
+    });
+    const stdout = stripAnsi(client.stdout.getFullOutput());
+    expect(stdout).toContain('SDK Keys');
+    expect(stdout).toContain('Clients');
+    expect(stdout).toContain('Production Server (production)');
+    expect(stdout).toContain('unknown-hash (unknown or deleted key)');
+    expect(stdout).toContain('api-deployments');
+    expect(stdout).not.toContain('Variants');
+    expect(client.telemetryEventStore).toHaveTelemetryEvents([
+      { key: 'subcommand:evaluations', value: 'evaluations' },
+      { key: 'argument:flag', value: '[REDACTED]' },
+      { key: 'option:since', value: '[REDACTED]' },
+      { key: 'option:until', value: '[REDACTED]' },
+      { key: 'option:granularity', value: '1h' },
+      { key: 'option:group-by', value: 'sdk-key,client' },
+    ]);
+  });
+
+  it('includes SDK key metadata in JSON when grouping by SDK key', async () => {
+    useEvaluationsResponse({
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          sdkKeyId: 'sdk_key_abc123',
+          [FIXTURE_VALUE_KEY]: 20,
+        },
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          sdkKeyId: 'unknown-hash',
+          [FIXTURE_VALUE_KEY]: 4,
+        },
+      ],
+      summary: [
+        { sdkKeyId: 'sdk_key_abc123', [FIXTURE_VALUE_KEY]: 20 },
+        { sdkKeyId: 'unknown-hash', [FIXTURE_VALUE_KEY]: 4 },
+      ],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      '--group-by',
+      'sdk-key',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--granularity',
+      '1h',
+      '--json'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(0);
+    const json = JSON.parse(client.stdout.getFullOutput());
+    expect(json).toEqual({
+      flag: null,
+      groupBy: ['sdk-key'],
+      startTime: '2026-07-10T10:00:00.000Z',
+      endTime: '2026-07-10T11:00:00.000Z',
+      granularity: { hours: 1 },
+      truncated: false,
+      buckets: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          sdkKeyId: 'sdk_key_abc123',
+          sdkKeyLabel: 'Production Server',
+          sdkKeyEnvironment: 'production',
+          evaluations: 20,
+        },
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          sdkKeyId: 'unknown-hash',
+          sdkKeyLabel: null,
+          sdkKeyEnvironment: null,
+          evaluations: 4,
+        },
+      ],
+    });
+  });
+
+  it('groups by datafile revision and client', async () => {
+    useEvaluationsResponse({
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          datafileRevision: '7',
+          flagClientName: 'api-deployments',
+          [FIXTURE_VALUE_KEY]: 20,
+        },
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          datafileRevision: '6',
+          flagClientName: 'api-builds',
+          [FIXTURE_VALUE_KEY]: 4,
+        },
+      ],
+      summary: [
+        {
+          datafileRevision: '7',
+          flagClientName: 'api-deployments',
+          [FIXTURE_VALUE_KEY]: 20,
+        },
+        {
+          datafileRevision: '6',
+          flagClientName: 'api-builds',
+          [FIXTURE_VALUE_KEY]: 4,
+        },
+      ],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      'my-feature',
+      '--group-by',
+      'datafile-revision',
+      '--group-by',
+      'client',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--granularity',
+      '1h',
+      '--json'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(0);
+    expect(postedBody).toMatchObject({
+      groupBy: ['datafileRevision', 'flagClientName'],
+      filter: 'flagKey:"my-feature"',
+    });
+    const json = JSON.parse(client.stdout.getFullOutput());
+    expect(json.groupBy).toEqual(['datafile-revision', 'client']);
+    expect(json.buckets).toEqual([
+      {
+        timestamp: '2026-07-10T10:00:00.000Z',
+        datafileRevision: '7',
+        clientName: 'api-deployments',
+        evaluations: 20,
+      },
+      {
+        timestamp: '2026-07-10T10:00:00.000Z',
+        datafileRevision: '6',
+        clientName: 'api-builds',
+        evaluations: 4,
+      },
+    ]);
+  });
+
+  it('falls back to SDK key hashes when the SDK keys lookup fails', async () => {
+    sdkKeysLookupFailure = {
+      status: 403,
+      code: 'forbidden',
+      message: 'Not authorized to list SDK keys.',
+    };
+    useEvaluationsResponse({
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          sdkKeyId: 'sdk_key_abc123',
+          [FIXTURE_VALUE_KEY]: 20,
+        },
+      ],
+      summary: [{ sdkKeyId: 'sdk_key_abc123', [FIXTURE_VALUE_KEY]: 20 }],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      '--group-by',
+      'sdk-key',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z'
+    );
+
+    expect(await flags(client)).toBe(0);
+    expect(postedBody).toMatchObject({ groupBy: ['sdkKeyId'] });
+    expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+      'Could not load SDK key labels; SDK keys are shown as hashes.'
+    );
+    expect(stripAnsi(client.stdout.getFullOutput())).toContain(
+      'sdk_key_abc123 (unknown or deleted key)'
+    );
+  });
+
+  it('keeps JSON stdout and stderr clean when the SDK keys lookup fails', async () => {
+    sdkKeysLookupFailure = {
+      status: 403,
+      code: 'forbidden',
+      message: 'Not authorized to list SDK keys.',
+    };
+    useEvaluationsResponse({
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          sdkKeyId: 'sdk_key_abc123',
+          [FIXTURE_VALUE_KEY]: 20,
+        },
+      ],
+      summary: [{ sdkKeyId: 'sdk_key_abc123', [FIXTURE_VALUE_KEY]: 20 }],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      '--group-by',
+      'sdk-key',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--json'
+    );
+
+    expect(await flags(client)).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'Could not load SDK key labels'
+    );
+    const json = JSON.parse(client.stdout.getFullOutput());
+    expect(json.buckets).toEqual([
+      {
+        timestamp: '2026-07-10T10:00:00.000Z',
+        sdkKeyId: 'sdk_key_abc123',
+        sdkKeyLabel: null,
+        sdkKeyEnvironment: null,
+        evaluations: 20,
+      },
+    ]);
+  });
+
+  it('strips escape sequences and control characters from reported group values', async () => {
+    const hostileClient = 'api-\u001b[31mred\u001b[0m\nnext-line\u0007';
+    useEvaluationsResponse({
+      data: [
+        {
+          timestamp: '2026-07-10T10:00:00.000Z',
+          flagClientName: hostileClient,
+          [FIXTURE_VALUE_KEY]: 20,
+        },
+      ],
+      summary: [{ flagClientName: hostileClient, [FIXTURE_VALUE_KEY]: 20 }],
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      '--group-by',
+      'client',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z'
+    );
+
+    expect(await flags(client)).toBe(0);
+    const stdout = client.stdout.getFullOutput();
+    expect(stdout).toContain('api-rednext-line');
+    expect(stdout).not.toContain('\u001b[31m');
+    expect(stdout).not.toContain('\u0007');
+  });
+
+  it('truncates by composite group key when grouping by several dimensions', async () => {
+    const groups = Array.from({ length: 101 }, (_, index) => ({
+      sdkKeyId: `key-${index % 2}`,
+      flagClientName: `client-${index}`,
+    }));
+    useEvaluationsResponse({
+      summary: groups.map((group, index) => ({
+        ...group,
+        [FIXTURE_VALUE_KEY]: groups.length - index,
+      })),
+      data: [
+        // Key from a visible group, client from the dropped 101st group.
+        // Only a filter on the full composite key removes this row.
+        { sdkKeyId: 'key-1', flagClientName: 'client-100' },
+        groups[100],
+        groups[1],
+      ].map((group, index) => ({
+        timestamp: '2026-07-10T10:00:00.000Z',
+        ...group,
+        [FIXTURE_VALUE_KEY]: index + 1,
+      })),
+    });
+    client.setArgv(
+      'flags',
+      'evaluations',
+      '--group-by',
+      'sdk-key',
+      '--group-by',
+      'client',
+      '--since',
+      '2026-07-10T10:00:00.000Z',
+      '--until',
+      '2026-07-10T11:00:00.000Z',
+      '--json'
+    );
+
+    expect(await flags(client)).toBe(0);
+
+    const json = JSON.parse(client.stdout.getFullOutput());
+    expect(json.truncated).toBe(true);
+    expect(
+      json.buckets.map(
+        (bucket: { sdkKeyId: string; clientName: string }) =>
+          `${bucket.sdkKeyId}/${bucket.clientName}`
+      )
+    ).toEqual(['key-1/client-1']);
+  });
+
+  it('rejects grouping by variant without a flag', async () => {
+    client.setArgv('flags', 'evaluations', '--group-by', 'variant');
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
-      'Missing required argument: flag'
+      'Grouping by variant needs a flag'
+    );
+  });
+
+  it('rejects an unknown group-by dimension', async () => {
+    client.setArgv(
+      'flags',
+      'evaluations',
+      'my-feature',
+      '--group-by',
+      'region'
+    );
+
+    const exitCode = await flags(client);
+
+    expect(exitCode).toBe(2);
+    expect(client.stderr.getFullOutput()).toContain(
+      'Invalid group-by dimension "region". Use one of: variant, flag, sdk-key, client, environment, reason, datafile-revision.'
     );
   });
 
   it('returns API failures as JSON errors', async () => {
-    client.scenario.post('/api/observability/metrics', (_req, res) => {
+    client.scenario.post('/metrics/v1', (_req, res) => {
       res.status(403).json({
         error: { code: 'forbidden', message: 'Not allowed' },
       });
@@ -652,10 +1107,56 @@ describe('flags evaluations', () => {
     expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
       error: {
         code: 'FORBIDDEN',
-        message:
-          'You do not have permission to query metrics for this project/team.',
+        message: 'Not allowed',
+        hint: expect.stringContaining('ask a team owner'),
+        retryable: false,
+        userActionRequired: true,
+        scope: expect.any(String),
       },
     });
+    expect(client.stdout.getFullOutput()).not.toContain('team_dummy');
+    expect(client.stderr.getFullOutput()).not.toContain('Not allowed');
+  });
+
+  it('names the missing flags permission on a generic 403', async () => {
+    client.scenario.post('/metrics/v1', (_req, res) => {
+      res.status(403).json({
+        error: { code: 'forbidden', message: 'Forbidden' },
+      });
+    });
+    client.setArgv('flags', 'evaluations', 'my-feature', '--json');
+
+    expect(await flags(client)).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput()).error).toMatchObject({
+      code: 'FORBIDDEN',
+      message: expect.stringContaining('read feature flags'),
+    });
+  });
+
+  it('rejects projects owned by a personal account', async () => {
+    client.reset();
+    useUser({ id: 'user_123' });
+    useProject({
+      ...defaultProject,
+      id: 'prj_personal',
+      name: 'personal-project',
+      accountId: 'user_123',
+    });
+    const cwd = setupTmpDir();
+    await outputJSON(join(cwd, '.vercel/project.json'), {
+      orgId: 'user_123',
+      projectId: 'prj_personal',
+    });
+    client.cwd = cwd;
+    useEvaluationsResponse();
+    client.setArgv('flags', 'evaluations', 'my-feature', '--json');
+
+    expect(await flags(client)).toBe(1);
+    expect(JSON.parse(client.stdout.getFullOutput()).error).toMatchObject({
+      code: 'MISSING_SCOPE',
+      message: expect.stringContaining('team-owned projects only'),
+    });
+    expect(postedBody).toBeUndefined();
   });
 
   it('does not map flag lookup failures to metrics errors', async () => {
@@ -685,19 +1186,26 @@ describe('flags evaluations', () => {
 
       const exitCode = await flags(client);
 
-      expect(exitCode).toBe(2);
-      expect(client.stderr.getFullOutput()).toContain(
+      expect(exitCode).toBe(0);
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
         'Display evaluation metrics for a feature flag'
       );
-      expect(client.stderr.getFullOutput()).toContain('--since');
-      expect(client.stderr.getFullOutput()).toContain('--json');
-      expect(client.stderr.getFullOutput()).toContain(
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain('--since');
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain('--json');
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
         '1m, 5m, 15m, 1h, 4h, 1d'
       );
-      expect(client.stderr.getFullOutput()).not.toContain('--format');
-      expect(client.stderr.getFullOutput()).not.toContain('--group-by');
-      expect(client.stderr.getFullOutput()).not.toContain('--filter');
-      expect(client.stderr.getFullOutput()).not.toContain('--limit');
+      expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+        '--format'
+      );
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain(
+        '--group-by <DIM>'
+      );
+      expect(stripAnsi(client.stderr.getFullOutput())).toContain('sdk-key');
+      expect(stripAnsi(client.stderr.getFullOutput())).not.toContain(
+        '--filter'
+      );
+      expect(stripAnsi(client.stderr.getFullOutput())).not.toContain('--limit');
       expect(client.telemetryEventStore).toHaveTelemetryEvents([
         { key: 'flag:help', value: 'flags:evaluations' },
       ]);

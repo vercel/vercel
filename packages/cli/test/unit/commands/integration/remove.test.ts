@@ -37,7 +37,7 @@ describe('integration', () => {
         await expect(client.stderr).toOutput('? Are you sure? (y/N)');
         client.stdin.write('y\n');
 
-        await expect(client.stderr).toOutput('Uninstalling integration…');
+        await expect(client.stderr).toOutput('Removing integration…');
         await expect(client.stderr).toOutput(
           `${integration} successfully removed.`
         );
@@ -54,12 +54,27 @@ describe('integration', () => {
         const exitCodePromise = integrationCommand(client);
 
         await expect(client.stderr).toOutput('Retrieving integration…');
-        await expect(client.stderr).toOutput('Uninstalling integration…');
+        await expect(client.stderr).toOutput('Removing integration…');
         await expect(client.stderr).toOutput(
           `> Success! ${integration} successfully removed.`
         );
 
         await expect(exitCodePromise).resolves.toEqual(0);
+      });
+
+      it('removes an integration when invoked as rm', async () => {
+        useConfiguration();
+        mockDeleteIntegration();
+        const integration = 'acme-no-projects';
+
+        client.setArgv('integration', 'rm', integration, '--yes');
+        const exitCodePromise = integrationCommand(client);
+
+        await expect(client.stderr).toOutput(
+          `> Success! ${integration} successfully removed.`
+        );
+        await expect(exitCodePromise).resolves.toEqual(0);
+        expect(client.stderr.getFullOutput()).not.toContain('is deprecated');
       });
 
       it('parses slug when global flags are before the integration subcommand', async () => {
@@ -78,7 +93,7 @@ describe('integration', () => {
         );
         const exitCode = await integrationCommand(client);
         expect(exitCode).toBe(0);
-        await expect(client.stderr).toOutput('Uninstalling integration…');
+        await expect(client.stderr).toOutput('Removing integration…');
       });
 
       it('exits gracefully when cancelling during confirmation for removing an integration', async () => {
@@ -206,7 +221,7 @@ describe('integration', () => {
 
         client.setArgv('integration', 'remove', integration, '--format=json');
         const exitCode = await integrationCommand(client);
-        expect(exitCode).toEqual(1);
+        expect(exitCode).toEqual(2);
         await expect(client.stderr).toOutput(
           'Error: --json requires --yes to skip confirmation prompts'
         );
@@ -256,7 +271,7 @@ describe('integration', () => {
           '--format=xml'
         );
         const exitCode = await integrationCommand(client);
-        expect(exitCode).toEqual(1);
+        expect(exitCode).toEqual(2);
         await expect(client.stderr).toOutput(
           'Error: Invalid output format: "xml"'
         );
@@ -290,7 +305,7 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             'Error: You must specify an integration. See `--help` for details.'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('writes structured JSON when non-interactive and integration slug is missing', async () => {
@@ -305,7 +320,7 @@ describe('integration', () => {
             '--cwd',
             '/tmp/example'
           );
-          await expect(integrationCommand(client)).rejects.toThrow('exit:1');
+          await expect(integrationCommand(client)).rejects.toThrow('exit:2');
           const payload = JSON.parse(client.stdout.getFullOutput().trim());
           expect(payload).toMatchObject({
             status: 'error',
@@ -326,7 +341,7 @@ describe('integration', () => {
           await expect(client.stderr).toOutput(
             'Cannot specify more than one integration at a time.'
           );
-          await expect(exitCodePromise).resolves.toEqual(1);
+          await expect(exitCodePromise).resolves.toEqual(2);
         });
 
         it('should error when attempting to remove an integration with resources', async () => {
@@ -348,10 +363,10 @@ describe('integration', () => {
           await expect(client.stderr).toOutput('? Are you sure? (y/N)');
           client.stdin.write('y\n');
 
-          await expect(client.stderr).toOutput('Uninstalling integration…');
+          await expect(client.stderr).toOutput('Removing integration…');
 
           await expect(client.stderr).toOutput(
-            `Cannot uninstall ${integration} because it still has resources.`
+            `Cannot remove ${integration} because it still has resources.`
           );
           await expect(client.stderr).toOutput(
             'Resources that must be removed first:'
@@ -401,13 +416,13 @@ describe('integration', () => {
             expect.arrayContaining([
               expect.objectContaining({
                 command: expect.stringContaining(
-                  'integration resource remove store-acme-other-project --disconnect-all --yes --json'
+                  'integration resource delete store-acme-other-project --disconnect-all --yes --json'
                 ),
                 when: expect.stringMatching(/store-acme-other-project/),
               }),
               expect.objectContaining({
                 command: expect.stringContaining(
-                  'integration resource remove store-acme-no-projects --disconnect-all --yes --json'
+                  'integration resource delete store-acme-no-projects --disconnect-all --yes --json'
                 ),
                 when: expect.stringMatching(/store-acme-no-projects/),
               }),
@@ -473,7 +488,7 @@ describe('integration', () => {
           const exitCodePromise = integrationCommand(client);
 
           await expect(client.stderr).toOutput(
-            `Cannot uninstall ${integration} because it still has resources.`
+            `Cannot remove ${integration} because it still has resources.`
           );
           await expect(client.stderr).toOutput(
             'AGENT: You must get user approval before running any resource removal commands.'

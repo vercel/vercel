@@ -17,3 +17,28 @@ export function isFlagEvaluationsGranularity(
     granularity => granularity === value
   );
 }
+
+export const FLAG_EVALUATIONS_DIMENSIONS = {
+  variant: { field: 'flagVariant', heading: 'Variants' },
+  flag: { field: 'flagKey', heading: 'Flags' },
+  'sdk-key': { field: 'sdkKeyId', heading: 'SDK Keys' },
+  client: { field: 'flagClientName', heading: 'Clients' },
+  environment: { field: 'environment', heading: 'Environments' },
+  reason: { field: 'flagEvaluationReason', heading: 'Reasons' },
+  'datafile-revision': {
+    field: 'datafileRevision',
+    heading: 'Datafile Revisions',
+  },
+} as const;
+
+export type FlagEvaluationsDimension = keyof typeof FLAG_EVALUATIONS_DIMENSIONS;
+
+export const FLAG_EVALUATIONS_DIMENSION_NAMES = Object.keys(
+  FLAG_EVALUATIONS_DIMENSIONS
+) as FlagEvaluationsDimension[];
+
+export function isFlagEvaluationsDimension(
+  value: string
+): value is FlagEvaluationsDimension {
+  return (FLAG_EVALUATIONS_DIMENSION_NAMES as string[]).includes(value);
+}

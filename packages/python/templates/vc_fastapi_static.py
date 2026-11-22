@@ -6,24 +6,35 @@ Writes a JSON object to the output file:
 
     {
       "mounts": [
-        {"urlPath": str, "directory": str,
-         "fallback": {"file": str, "status": int} | null,
-         "frontend": bool}
+        {
+          "urlPath": str,
+          "directory": str,
+          "fallback": {"file": str, "status": int} | null,
+          "frontend": bool,
+          "html": bool
+        },
+        ...
       ],
-      "shadowRoutes": [str, ...]
+      "shadowRoutes": [
+        {"body": str, "methods": [str] | null},
+        ...
+      ],
+      "excludedFiles": [str, ...]
     }
 
-- "mounts" are StaticFiles / frontend directories to copy to the CDN;
+- "mounts" are StaticFiles / frontend directories to copy to the CDN.
   "frontend" marks a low-priority app.frontend() build.
-- "mounts[].fallback" is the resolved frontend fallback file to serve for
+  "html" reflects the StaticFiles html mode (always True for frontends).
+  "mounts[].fallback" is the resolved frontend fallback file to serve for
   unmatched paths under that mount ("index.html"/"404.html"), or null for a
-  plain `app.mount(StaticFiles(...))`.
-- "shadowRoutes" are routing patterns (regex bodies, matched against the request
-  path minus its leading slash) for paths a higher-priority route owns and that
-  must therefore be routed to the app (Lambda) BEFORE the CDN. This preserves
-  FastAPI precedence:
-    * app.mount():   routes declared BEFORE the mount win (evaluated in order).
-    * app.frontend(): all normal routes win (the build is low-priority).
+  plain app.mount(StaticFiles(...)).
+- "shadowRoutes" are pre-filesystem routing rules for paths that must reach
+  the Lambda before the CDN can act. Each entry carries a regex body (matched
+  against the request path minus its leading slash) and the HTTP methods it
+  applies to (null means all methods).
+- "excludedFiles" are CDN URL paths (with leading slash) of files in plain
+  StaticFiles mounts that prior GET/HEAD app routes own. The builder withholds
+  these from CDN copying so the Lambda catch-all serves them directly.
 
 Mounts are suppressed (omitted from output) when the app or a mounted sub-app
 has user-defined middleware, because CDN-served files bypass the middleware
@@ -67,6 +78,7 @@ class StaticMount:
     directory: str
     fallback: Fallback | None = None
     frontend: bool = False
+    html: bool = False
 
     @classmethod
     def from_route(
@@ -86,6 +98,7 @@ class StaticMount:
             directory=os.path.abspath(str(directory)),
             fallback=_resolve_fallback(static_app),
             frontend=frontend,
+            html=static_app.html,
         )
 
 
@@ -196,7 +209,7 @@ def _index_subdir_shadows(url_prefix: str, directory: str) -> set[str]:
     return shadows
 
 
-def _divergent_url_shadows(mount: StaticMount, html: bool) -> list[ShadowRoute]:
+def _divergent_url_shadows(mount: StaticMount) -> list[ShadowRoute]:
     """Shadow routes for directory URLs the CDN and the app serve differently.
 
     When a directory holds an index.html, the app and the CDN serve that
@@ -213,15 +226,18 @@ def _divergent_url_shadows(mount: StaticMount, html: bool) -> list[ShadowRoute]:
     html=False shadows both forms. The app 404s both while the CDN serves the
     index, so both must reach the Lambda.
 
-    Directory redirects are GET-only: HEAD for bare dirs is handled by the
-    builder's CDN redirect routes placed before shadow routes.
+    Shadows are all-methods: the Lambda 404s HEAD just as it does GET, which
+    matches the real app. No CDN redirect routes are emitted for html=False
+    mounts, so HEAD must be intercepted by the shadow.
     """
+    if mount.html:
+        return []  # bare-dir 307 redirects are emitted as static CDN rules by the builder
     bodies = _index_subdir_shadows(mount.urlPath, mount.directory)
-    if not (html and mount.urlPath == "/"):
+    # Only needed when index.html is present at the root. Without it the
+    # CDN has no implicit directory index to serve and misses naturally.
+    if os.path.isfile(os.path.join(mount.directory, "index.html")):
         bodies.add(_escape_path(mount.urlPath))
-    if html:
-        bodies = {f"{body}(?!/)" for body in bodies}
-    return [ShadowRoute(body=body, methods=("GET",)) for body in bodies]
+    return [ShadowRoute(body=body, methods=None) for body in bodies]
 
 
 def _frontend_groups(router: Router) -> list[_FrontendRouteGroup]:
@@ -338,6 +354,11 @@ class PriorRoute:
         parts.append(_escape(path[last:]))
         return "".join(parts)
 
+    @cached_property
+    def parametrized(self) -> bool:
+        """True when the path has `{param}` placeholders that expand to regex groups."""
+        return bool(_PARAM_RE.search(self.path_format))
+
 
 @dataclass
 class Precedence:
@@ -366,19 +387,18 @@ class Precedence:
     def shadow_bodies(self, mount: StaticMount) -> list[ShadowRoute]:
         """Shadow-route body+methods for every prior route that shadows `mount`.
 
-        When a route declares GET, HEAD is added to the shadow methods. HTTP
-        semantics tie HEAD to GET, so the Lambda (not the CDN) should handle
-        HEAD on API-owned paths and return 405 when HEAD is not declared.
+        Used for frontend mounts: the frontend fallback in handle: 'miss'
+        intercepts extension-less CDN misses and would serve index.html before
+        the Lambda catch-all is reached. A pre-filesystem shadow ensures the
+        Lambda handles these paths first.
         """
         result = []
         for r in self.routes:
             if not r.shadows(mount):
                 continue
             methods = r.methods
-            # With plain StaticFiles, HEAD bypasses the GET route and the
-            # mount serves it (200), so CDN can do the same without Lambda.
-            # With app.frontend(), HEAD on a GET route path returns 405.
-            # Shadow HEAD only for frontend mounts.
+            # HEAD on a GET-only route under a frontend returns 405 not 200,
+            # so the Lambda must handle it rather than the CDN.
             if methods is not None and "GET" in methods and mount.frontend:
                 methods = methods | {"HEAD"}
             result.append(
@@ -388,6 +408,162 @@ class Precedence:
                 )
             )
         return result
+
+    def excluded_files(self, mount: StaticMount) -> set[str]:
+        """CDN URL paths of files in `mount` that prior routes own.
+
+        Returns URL paths to exclude from the CDN so the Lambda serves them.
+        """
+        relevant = [
+            r for r in self.routes
+            if r.shadows(mount)
+            # Routes with no GET/HEAD methods leave their files on the CDN.
+            and (r.methods is None or r.methods & {"GET", "HEAD"})
+            # A trailing-slash route owns only the slash form; the bare-form
+            # file stays on the CDN (see trailing_slash_shadows).
+            and not (r.path_format.endswith("/") and r.path_format != "/")
+        ]
+        if not relevant:
+            return set()
+
+        literal_routes: list[PriorRoute] = []
+        parametrized_bodies: list[str] = []
+        for r in relevant:
+            if r.parametrized:
+                parametrized_bodies.append(r.shadow_body)
+            else:
+                literal_routes.append(r)
+
+        excluded: set[str] = set()
+        mount_prefix = mount.urlPath.strip("/")
+
+        # Literal fast-path: check file existence directly from the route path.
+        for r in literal_routes:
+            rel = r.path_format[len(mount.urlPath.rstrip("/")) + 1:]
+            if os.path.isfile(os.path.join(mount.directory, *rel.split("/"))):
+                excluded.add(r.path_format)
+
+        # Parametrized: one combined-regex pass over the directory tree.
+        if parametrized_bodies:
+            combined = re.compile("^(?:" + "|".join(parametrized_bodies) + ")$")
+            for dirpath, _, filenames in os.walk(mount.directory):
+                for filename in filenames:
+                    rel = os.path.relpath(
+                        os.path.join(dirpath, filename), mount.directory
+                    ).replace(os.sep, "/")
+                    url_body = f"{mount_prefix}/{rel}".lstrip("/")
+                    if combined.match(url_body):
+                        excluded.add("/" + url_body)
+
+        return excluded
+
+    def trailing_slash_shadows(self, mount: StaticMount) -> list[ShadowRoute]:
+        """Slash-form shadows for trailing-slash routes whose bare path is a file.
+
+        A route declared as @app.get("/mount/file/") owns the slash form of a
+        path where a file sits at the bare form on the CDN. The file stays on
+        the CDN; a slash-form shadow routes /mount/file/ to the Lambda before
+        the CDN can serve it.
+
+        A parametrized trailing-slash route owns the slash form of every path
+        it matches, so its whole pattern is shadowed with no file check: slash
+        forms without an underlying CDN file miss to the Lambda anyway, so the
+        broad shadow only pre-empts paths the Lambda already owns.
+        """
+        result = []
+        prefix_len = len(mount.urlPath.rstrip("/")) + 1
+        for r in self.routes:
+            if not r.shadows(mount):
+                continue
+            if not r.path_format.endswith("/") or r.path_format == "/":
+                continue
+            if r.parametrized:
+                result.append(ShadowRoute(body=r.shadow_body + "/", methods=None))
+                continue
+            rel = r.path_format[prefix_len:].rstrip("/")
+            if not rel:
+                continue
+            if os.path.isfile(os.path.join(mount.directory, *rel.split("/"))):
+                result.append(ShadowRoute(body=r.shadow_body + "/", methods=None))
+        return result
+
+    def non_cdn_method_shadows(self, mount: StaticMount) -> list[ShadowRoute]:
+        """Method-scoped shadows for prior routes with no GET/HEAD methods.
+
+        Such a route's colliding file stays on the CDN (see `excluded_files`),
+        but the CDN matches an existing file for any method and terminates
+        with 405 rather than falling through to the Lambda. Shadowing the
+        route's declared methods sends them to the app, which serves the
+        route. GET/HEAD stays on the CDN.
+        """
+        return [
+            ShadowRoute(body=r.shadow_body, methods=tuple(sorted(r.methods)))
+            for r in self.routes
+            if r.shadows(mount)
+            and r.methods is not None
+            and not (r.methods & {"GET", "HEAD"})
+        ]
+
+    def owned_dir_url_paths(self, mount: StaticMount) -> tuple[set[str], set[str]]:
+        """Directory URL paths in `mount` that prior GET/HEAD routes own.
+
+        For html=True mounts the CDN emits bare-dir 307 redirects for every
+        directory that has an index.html and serves the index at the slash
+        form. A prior route that owns the bare directory URL must be shadowed
+        so the Lambda handles the request before the redirect fires. A route
+        declared with a trailing slash owns the slash form instead (the app
+        307s the bare form to it), so that form must reach the Lambda before
+        the CDN serves the index.
+
+        Returns (bare_owned, slash_owned) directory URL paths.
+        """
+        relevant = [
+            r for r in self.routes
+            if r.shadows(mount)
+            and (r.methods is None or r.methods & {"GET", "HEAD"})
+        ]
+        if not relevant:
+            return set(), set()
+
+        bare_literal: set[str] = set()
+        slash_literal: set[str] = set()
+        bare_bodies: list[str] = []
+        slash_bodies: list[str] = []
+        for r in relevant:
+            slash_form = r.path_format.endswith("/") and r.path_format != "/"
+            if r.parametrized:
+                (slash_bodies if slash_form else bare_bodies).append(r.shadow_body)
+            else:
+                (slash_literal if slash_form else bare_literal).add(
+                    r.path_format.rstrip("/") or "/"
+                )
+
+        def _combined(bodies: list[str]) -> re.Pattern[str] | None:
+            return re.compile("^(?:" + "|".join(bodies) + ")$") if bodies else None
+
+        bare_combined = _combined(bare_bodies)
+        slash_combined = _combined(slash_bodies)
+
+        mount_prefix = mount.urlPath.strip("/")
+        bare_owned: set[str] = set()
+        slash_owned: set[str] = set()
+
+        for dirpath, _, filenames in os.walk(mount.directory):
+            if "index.html" not in filenames:
+                continue
+            rel = os.path.relpath(dirpath, mount.directory)
+            dir_url = (
+                mount.urlPath.rstrip("/") or "/"
+                if rel == "."
+                else mount.urlPath.rstrip("/") + "/" + rel.replace(os.sep, "/")
+            )
+            url_body = (mount_prefix + "/" + rel.replace(os.sep, "/")).lstrip("/") if rel != "." else mount_prefix
+            if dir_url in bare_literal or (bare_combined and bare_combined.match(url_body)):
+                bare_owned.add(dir_url)
+            if dir_url in slash_literal or (slash_combined and slash_combined.match(url_body)):
+                slash_owned.add(dir_url)
+
+        return bare_owned, slash_owned
 
     def add_mount(self, url_prefix: str) -> None:
         self.mount_prefixes.append(url_prefix.rstrip("/"))
@@ -410,25 +586,40 @@ def _collect_mount(
     *,
     has_middleware: bool,
     suppress_middleware_mounts: bool,
-) -> tuple[list[StaticMount], list[ShadowRoute]]:
+) -> tuple[list[StaticMount], list[ShadowRoute], list[str]]:
     """Discover one app.mount(): a StaticFiles mount serves from the CDN, a
     Router/sub-app recurses, and a raw ASGI app owns its subtree opaquely.
     """
     url_prefix = prefix + route.path
     if prior.eclipses(url_prefix):
-        return [], []
+        return [], [], []
 
     if suppress_middleware_mounts:
         has_middleware = has_middleware or bool(getattr(route.app, "user_middleware", []))
 
     mounts: list[StaticMount] = []
     shadow_routes: list[ShadowRoute] = []
+    excluded_files: set[str] = set()
 
     static = StaticMount.from_route(route, prefix, frontend=False)
     if static and not has_middleware:
         mounts.append(static)
-        shadow_routes += prior.shadow_bodies(static)
-        shadow_routes += _divergent_url_shadows(static, html=route.app.html)
+        excluded_files |= prior.excluded_files(static)
+        shadow_routes += prior.non_cdn_method_shadows(static)
+        shadow_routes += prior.trailing_slash_shadows(static)
+        shadow_routes += _divergent_url_shadows(static)
+        if route.app.html:
+            bare_owned, slash_owned = prior.owned_dir_url_paths(static)
+            for dir_url in bare_owned:
+                shadow_routes.append(
+                    ShadowRoute(body=_escape_path(dir_url) + "(?!/)", methods=None)
+                )
+            for dir_url in slash_owned:
+                # The trailing slash pins the builder's `^/((<body>)/?)$` wrap
+                # to the slash form only; the bare form stays on the CDN 307.
+                shadow_routes.append(
+                    ShadowRoute(body=_escape_path(dir_url) + "/", methods=None)
+                )
 
     # A Starlette/FastAPI sub-app isn't a Router but exposes one as `.router`;
     # a StaticFiles or raw ASGI app exposes neither.
@@ -441,7 +632,7 @@ def _collect_mount(
         # Recurse for the sub-app's own StaticFiles mounts, then shadow the
         # rest of its subtree to the Lambda.
         sub_prefix = prefix + route.path.rstrip("/")
-        sub_mounts, sub_shadow = collect(
+        sub_mounts, sub_shadow, sub_excluded = collect(
             sub_router,
             sub_prefix,
             prior,
@@ -450,6 +641,7 @@ def _collect_mount(
         )
         mounts.extend(sub_mounts)
         shadow_routes += sub_shadow
+        excluded_files.update(sub_excluded)
         shadow_routes.append(_subtree_shadow_route(sub_prefix, sub_mounts))
     elif static is None:
         # A raw ASGI app (e.g. WSGIMiddleware) owns its subtree with nothing on
@@ -458,7 +650,7 @@ def _collect_mount(
         shadow_routes.append(_subtree_shadow_route(url_prefix, []))
 
     prior.add_mount(url_prefix)
-    return mounts, shadow_routes
+    return mounts, shadow_routes, sorted(excluded_files)
 
 
 def collect(
@@ -468,16 +660,21 @@ def collect(
     *,
     has_middleware: bool,
     suppress_middleware_mounts: bool,
-) -> tuple[list[StaticMount], list[ShadowRoute]]:
-    """Walk the route table for (static mounts to copy, shadow routes).
+) -> tuple[list[StaticMount], list[ShadowRoute], list[str]]:
+    """Walk the route table for (static mounts to copy, shadow routes, excluded files).
 
     Shadow routes are merged so that the same path covered by multiple API
     routes with different methods produces one entry with the union of methods.
+
+    Excluded files are CDN URL paths withheld from copying so the Lambda
+    catch-all serves them directly. Covers plain StaticFiles app-route-wins
+    only.
     """
     prior = prior.child() if prior else Precedence()
 
     mounts: list[StaticMount] = []
     shadow_routes: list[ShadowRoute] = []
+    excluded_files: set[str] = set()
     frontends: list[StaticMount] = []
 
     def _route_methods(route: Route) -> frozenset[str] | None:
@@ -486,13 +683,14 @@ def collect(
         return frozenset(m) if m else None
 
     def collect_mount(mount_route: Mount) -> None:
-        sub_mounts, sub_shadow = _collect_mount(
+        sub_mounts, sub_shadow, sub_excluded = _collect_mount(
             mount_route, prefix, prior,
             has_middleware=has_middleware,
             suppress_middleware_mounts=suppress_middleware_mounts,
         )
         mounts.extend(sub_mounts)
         shadow_routes.extend(sub_shadow)
+        excluded_files.update(sub_excluded)
 
     for route in router.routes:
         if isinstance(route, Route):
@@ -527,6 +725,9 @@ def collect(
         # app.include_router() with a frontend build.
         for ctx in _effective_low_priority_routes(route):
             if suppress_middleware_mounts and (_frontend_has_dependencies(ctx) or has_middleware):
+                shadow_prefix = prefix + ctx.frontend_prefix
+                sub_mounts = [s for s in mounts if s.urlPath.startswith(shadow_prefix.rstrip("/") + "/")]
+                shadow_routes.append(_subtree_shadow_route(shadow_prefix, sub_mounts))
                 continue
             for r in ctx.original_route.routes:
                 if m := StaticMount.from_route(
@@ -534,13 +735,22 @@ def collect(
                 ):
                     frontends.append(m)
 
-    # app.frontend() builds.
+    # app.frontend() builds. Prepend so own frontends sort before included ones,
+    # matching _iter_low_priority_routes. Own wins any same-prefix tie.
+    own_frontends: list[StaticMount] = []
     for group in _frontend_groups(router):
         if suppress_middleware_mounts and (_frontend_has_dependencies(group) or has_middleware):
+            for route in group.routes:
+                if m := StaticMount.from_route(route, prefix, frontend=True):
+                    shadow_prefix = m.urlPath.rstrip("/")
+                    sub_mounts = [s for s in mounts if s.urlPath.startswith(shadow_prefix.rstrip("/") + "/")]
+                    shadow_routes.append(_subtree_shadow_route(shadow_prefix, sub_mounts))
+                    break
             continue
         for route in group.routes:
             if m := StaticMount.from_route(route, prefix, frontend=True):
-                frontends.append(m)
+                own_frontends.append(m)
+    frontends = own_frontends + frontends
 
     # A frontend is low-priority: every route shadows it, and one whose prefix
     # an earlier mount owns is unreachable (Starlette dispatches to the mount
@@ -551,10 +761,8 @@ def collect(
             continue
         mounts.append(m)
         shadow_routes += prior.shadow_bodies(m)
-        # A frontend is html=True StaticFiles, so its URLs diverge the same way.
-        shadow_routes += _divergent_url_shadows(m, html=True)
 
-    return mounts, _merge_shadow_routes(shadow_routes)
+    return mounts, _merge_shadow_routes(shadow_routes), sorted(excluded_files)
 
 
 def _merge_shadow_routes(routes: list[ShadowRoute]) -> list[ShadowRoute]:
@@ -599,11 +807,13 @@ class Output:
 
     mounts: list[StaticMount] = field(default_factory=list)
     shadowRoutes: list[ShadowRoute] = field(default_factory=list)
+    excludedFiles: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, object]:
         return {
             "mounts": [asdict(m) for m in self.mounts],
             "shadowRoutes": [sr.to_dict() for sr in self.shadowRoutes],
+            "excludedFiles": list(self.excludedFiles),
         }
 
 
@@ -639,10 +849,10 @@ def discover(variable_name: str, project_root: str, module_name: str, suppress_m
     if suppress_middleware_mounts and getattr(app, "user_middleware", []):
         return Output()
 
-    mounts, shadow_routes = collect(
+    mounts, shadow_routes, excluded_files = collect(
         router, has_middleware=False, suppress_middleware_mounts=suppress_middleware_mounts
     )
-    return Output(mounts=mounts, shadowRoutes=shadow_routes)
+    return Output(mounts=mounts, shadowRoutes=shadow_routes, excludedFiles=excluded_files)
 
 
 def main() -> None:

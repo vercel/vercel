@@ -1,4 +1,10 @@
 import type Client from '../client';
+import type { FetchOptions } from '../client';
+
+export type LeaderboardFetchOptions = Pick<
+  FetchOptions,
+  'signal' | 'retry' | 'bailOn429'
+>;
 
 // The leaderboards are served from vercel.com, not the AI Gateway host or the
 // api host. Passing an absolute URL to client.fetch bypasses the default api
@@ -96,17 +102,24 @@ function buildUrl(query: LeaderboardQuery, format: 'json' | 'csv'): string {
 /** Fetch the leaderboard as the structured JSON export payload. */
 export async function fetchLeaderboard(
   client: Client,
-  query: LeaderboardQuery & { dataset: 'models' | 'labs' }
+  query: LeaderboardQuery & { dataset: 'models' | 'labs' },
+  opts?: LeaderboardFetchOptions
 ): Promise<LeaderboardTimeseriesResponse>;
 export async function fetchLeaderboard(
   client: Client,
-  query: LeaderboardQuery & { dataset: 'apps' | 'providers' }
+  query: LeaderboardQuery & { dataset: 'apps' | 'providers' },
+  opts?: LeaderboardFetchOptions
 ): Promise<LeaderboardRankedResponse>;
 export async function fetchLeaderboard(
   client: Client,
-  query: LeaderboardQuery
+  query: LeaderboardQuery,
+  opts: LeaderboardFetchOptions = {}
 ): Promise<LeaderboardTimeseriesResponse | LeaderboardRankedResponse> {
-  return client.fetch(buildUrl(query, 'json'), { method: 'GET' });
+  return client.fetch(buildUrl(query, 'json'), {
+    method: 'GET',
+    teamOptional: true,
+    ...opts,
+  });
 }
 
 /** Fetch the leaderboard as the raw CSV export, passed through verbatim. */
@@ -116,6 +129,7 @@ export async function fetchLeaderboardCsv(
 ): Promise<string> {
   const res = await client.fetch(buildUrl(query, 'csv'), {
     method: 'GET',
+    teamOptional: true,
     json: false,
   });
   return res.text();

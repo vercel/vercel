@@ -126,6 +126,6 @@ export async function resolveMessageContent(
     client,
     jsonOutput,
     'MISSING_CONTENT',
-    'No content provided. Pass -m <text>, --file <path>, or pipe stdin (e.g. `echo "LGTM" | vercel comments reply <thread>`).'
+    'No content provided. Pass --message <text>, --file <path>, or pipe stdin (e.g. `echo "LGTM" | vercel comments reply <thread>`).'
   );
 }

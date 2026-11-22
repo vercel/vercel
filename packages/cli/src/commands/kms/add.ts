@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import type { JSONObject } from '@vercel-internals/types';
 import type Client from '../../util/client';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import { getCommandName, getCommandNamePlain } from '../../util/pkg-name';
 import { validateJsonOutput } from '../../util/output-format';
 import { parseArguments } from '../../util/get-args';
@@ -30,7 +30,7 @@ import {
 import { KmsAddTelemetryClient } from '../../util/telemetry/commands/kms/add';
 import { addSubcommand } from './command';
 
-const USAGE = 'kms add <name>';
+const USAGE = 'kms create <name>';
 
 export default async function add(client: Client, argv: string[]) {
   const telemetry = new KmsAddTelemetryClient({
@@ -45,7 +45,7 @@ export default async function add(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { args, flags: opts } = parsedArgs;
   const [name] = args;
@@ -70,7 +70,7 @@ export default async function add(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput || client.nonInteractive;
 
@@ -103,7 +103,7 @@ export default async function add(client: Client, argv: string[]) {
     ...(claimsSchema && { claimsSchema }),
   };
 
-  const { contextName } = await getScope(client);
+  const contextName = await getContextName(client);
   if (!client.nonInteractive) {
     output.spinner(`Creating issuer under ${chalk.bold(contextName)}`);
   }

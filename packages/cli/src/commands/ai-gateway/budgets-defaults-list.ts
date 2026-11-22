@@ -33,7 +33,7 @@ export default async function list(client: Client, argv: string[]) {
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
   const { flags: opts } = parsedArgs;
 
@@ -42,7 +42,7 @@ export default async function list(client: Client, argv: string[]) {
   const formatResult = validateJsonOutput(opts);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -78,7 +78,7 @@ export default async function list(client: Client, argv: string[]) {
 
   if (shown.length === 0) {
     output.log(
-      `No budget defaults set. Set one with ${getCommandName('ai-gateway budgets defaults set')}.`
+      `No budget defaults set. Set one with ${getCommandName('ai-gateway budgets set <scope> --default')}.`
     );
     return 0;
   }

@@ -29,9 +29,9 @@ export class BlobTelemetryClient
     });
   }
 
-  trackCliSubcommandDel(actual: string) {
+  trackCliSubcommandDelete(actual: string) {
     this.trackCliSubcommand({
-      subcommand: 'del',
+      subcommand: 'delete',
       value: actual,
     });
   }
@@ -117,6 +117,16 @@ export class BlobTelemetryClient
     }
   }
 
+  trackCliOptionStore(value: string | undefined) {
+    if (value) {
+      this.trackCliOption({
+        option: '--store',
+        value: this.redactedValue,
+      });
+    }
+  }
+
+  // The deprecated name keeps its own key, to measure who still uses it.
   trackCliOptionStoreId(value: string | undefined) {
     if (value) {
       this.trackCliOption({

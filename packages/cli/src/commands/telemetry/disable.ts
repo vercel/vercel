@@ -1,5 +1,4 @@
 import type Client from '../../util/client';
-import { writeToConfigFile } from '../../util/config/files';
 import status from './status';
 
 export default async function disable(client: Client) {
@@ -11,7 +10,7 @@ export default async function disable(client: Client) {
     },
   };
 
-  writeToConfigFile(client.config);
+  client.writeToConfigFile();
   await status(client);
   return 0;
 }

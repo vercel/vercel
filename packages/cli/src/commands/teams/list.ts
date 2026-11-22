@@ -16,7 +16,12 @@ import { validateJsonOutput } from '../../util/output-format';
 import output from '../../output-manager';
 import { TeamsListTelemetryClient } from '../../util/telemetry/commands/teams/list';
 import { validateLsArgs } from '../../util/validate-ls-args';
-import { getPaginationOpts } from '../../util/get-pagination-opts';
+import {
+  getPaginationOpts,
+  INVALID_NEXT_MESSAGE,
+  parseNumericCursor,
+} from '../../util/get-pagination-opts';
+import { printNextPageCommand } from '../../util/pagination';
 
 export default async function list(
   client: Client,
@@ -42,11 +47,11 @@ export default async function list(
           reason: 'invalid_arguments',
           message: error instanceof Error ? error.message : String(error),
         },
-        1
+        2
       );
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const validationResult = validateLsArgs({
@@ -59,16 +64,16 @@ export default async function list(
     return validationResult;
   }
 
-  const next = parsedArgs.flags['--next'];
+  const next = parseNumericCursor(parsedArgs.flags['--next']);
   const limit = parsedArgs.flags['--limit'];
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
-  telemetry.trackCliOptionNext(next);
+  telemetry.trackCliOptionNext(parsedArgs.flags['--next']);
   telemetry.trackCliOptionLimit(limit);
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliOptionCount(parsedArgs.flags['--count']);
@@ -76,8 +81,8 @@ export default async function list(
   telemetry.trackCliOptionSince(parsedArgs.flags['--since']);
 
   if (typeof next !== 'undefined' && !Number.isInteger(next)) {
-    output.error('Please provide a number for flag `--next`');
-    return 1;
+    output.error(INVALID_NEXT_MESSAGE);
+    return 2;
   }
   try {
     getPaginationOpts(parsedArgs.flags);
@@ -87,25 +92,32 @@ export default async function list(
   }
 
   output.spinner('Fetching teams');
-  const { teams, pagination } = await getTeams(client, {
+  const teamsResponse = await getTeams(client, {
     next,
     limit,
     apiVersion: 2,
   });
+  // Defend against an API response that omits `teams` entirely (e.g. an
+  // empty/unexpected payload) so we don't crash further down.
+  const teams = teamsResponse.teams ?? [];
+  const { pagination } = teamsResponse;
   let { currentTeam } = config;
 
   output.spinner('Fetching user information');
   const user = await getUser(client);
 
-  const accountIsCurrent = !currentTeam && user.version !== 'northstar';
+  // An agent run with no team chosen has no current scope, not the account.
+  const accountIsCurrent =
+    !currentTeam && !client.isTeamUnchosen() && user.version !== 'northstar';
 
   if (accountIsCurrent) {
     currentTeam = user.id;
   }
 
-  const teamList = teams.map(({ id, slug, name }) => ({
+  const teamList = teams.map(({ id, slug, name, billing }) => ({
     id,
     name,
+    plan: billing?.plan ?? null,
     value: slug,
     isCurrent: id === currentTeam,
   }));
@@ -114,6 +126,7 @@ export default async function list(
     teamList.unshift({
       id: user.id,
       name: user.email,
+      plan: user.billing?.plan ?? null,
       value: user.username || user.email,
       isCurrent: accountIsCurrent,
     });
@@ -122,11 +135,25 @@ export default async function list(
   // Bring the current Team to the beginning of the list
   if (!accountIsCurrent) {
     const index = teamList.findIndex(choice => choice.id === currentTeam);
-    const choice = teamList.splice(index, 1)[0];
-    teamList.unshift(choice);
+    if (index !== -1) {
+      const choice = teamList.splice(index, 1)[0];
+      teamList.unshift(choice);
+    }
   }
 
   output.stopSpinner();
+
+  if (teamList.length === 0) {
+    // The API returned no usable team data for this credential (e.g. a
+    // personal-account-only OAuth grant with no team memberships). Surface
+    // a clear, actionable error instead of rendering an empty/garbled list.
+    output.error(
+      'No teams are visible to the current credential. ' +
+        `Run ${cmd(`${packageName} whoami`)} to check which account you're ` +
+        'authenticated as, or re-authorize your credential with team-level access.'
+    );
+    return 1;
+  }
 
   if (asJson) {
     const jsonOutput = {
@@ -134,6 +161,7 @@ export default async function list(
         id: team.id,
         slug: team.value,
         name: team.name,
+        plan: team.plan,
         current: team.isCurrent,
       })),
       pagination,
@@ -144,8 +172,8 @@ export default async function list(
 
     const teamTable = table(
       [
-        ['id', 'Team name'].map(str => gray(str)),
-        ...teamList.map(team => [team.value, team.name]),
+        ['id', 'Team name', 'Plan'].map(str => gray(str)),
+        ...teamList.map(team => [team.value, team.name, team.plan ?? '-']),
       ],
       { hsep: 5 }
     );
@@ -172,7 +200,7 @@ export default async function list(
       ]);
       const nextCmd = `${packageName} teams ls${flags} --next ${pagination.next}`;
       client.stdout.write('\n'); // empty line
-      output.log(`To display the next page run ${cmd(nextCmd)}`);
+      printNextPageCommand(nextCmd);
     }
   }
 

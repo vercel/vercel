@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { commands } from '../../../src/commands';
+import { commandNames, commands, isHiddenCommand } from '../../../src/commands';
 describe('index', () => {
   it('outputs a map of what aliases our commands use', () => {
     expect(commands).toEqual(
@@ -14,18 +14,24 @@ describe('index', () => {
         ['api', 'api'],
         ['bisect', 'bisect'],
         ['blob', 'blob'],
+        ['budgets', 'budgets'],
+        ['budget', 'budgets'],
         ['build', 'build'],
+        ['builders', 'builders'],
         ['buy', 'buy'],
         ['cache', 'cache'],
         ['cert', 'certs'],
         ['certs', 'certs'],
         ['changelog', 'changelog'],
+        ['ci', 'ci'],
         ['comments', 'comments'],
         ['connect', 'connect'],
         ['contract', 'contract'],
         ['cron', 'crons'],
         ['crons', 'crons'],
         ['curl', 'curl'],
+        ['daemon', 'daemons'],
+        ['daemons', 'daemons'],
         ['deploy', 'deploy'],
         ['deploy-hooks', 'deploy-hooks'],
         ['deploy-hook', 'deploy-hooks'],
@@ -34,12 +40,19 @@ describe('index', () => {
         ['dns', 'dns'],
         ['domain', 'domains'],
         ['domains', 'domains'],
+        ['drain', 'drains'],
+        ['drains', 'drains'],
         ['edge-config', 'global-config'],
         ['env', 'env'],
+        ['environment', 'environments'],
+        ['environments', 'environments'],
+        ['experiments', 'experiments'],
+        ['feedback', 'feedback'],
         ['firewall', 'firewall'],
         ['flags', 'flags'],
         ['git', 'git'],
         ['global-config', 'global-config'],
+        ['health', 'health'],
         ['help', 'help'],
         ['httpstat', 'httpstat'],
         ['i', 'install'],
@@ -61,8 +74,12 @@ describe('index', () => {
         ['mcp', 'mcp'],
         ['mf', 'microfrontends'],
         ['metrics', 'metrics'],
+        ['monitors', 'monitors'],
         ['microfrontends', 'microfrontends'],
         ['open', 'open'],
+        ['organizations', 'organizations'],
+        ['organization', 'organizations'],
+        ['pricing', 'pricing'],
         ['project', 'project'],
         ['projects', 'project'],
         ['promote', 'promote'],
@@ -77,15 +94,22 @@ describe('index', () => {
         ['routes', 'routes'],
         ['rr', 'rolling-release'],
         ['sandbox', 'sandbox'],
+        ['schedules', 'schedules'],
         ['security', 'security'],
+        ['setup', 'setup'],
+        ['signup', 'signup'],
         ['skills', 'skills'],
+        ['status-page', 'health'],
+        ['storage', 'storage'],
         ['switch', 'teams'],
-        ['target', 'target'],
-        ['targets', 'target'],
+        ['target', 'environments'],
+        ['targets', 'environments'],
         ['tokens', 'tokens'],
         ['team', 'teams'],
         ['teams', 'teams'],
         ['telemetry', 'telemetry'],
+        ['token-pass', 'token-pass'],
+        ['tokenpass', 'token-pass'],
         ['traces', 'traces'],
         ['upgrade', 'upgrade'],
         ['version', 'version'],
@@ -97,5 +121,12 @@ describe('index', () => {
         ['whoami', 'whoami'],
       ])
     );
+  });
+
+  it('keeps hidden commands out of discovery suggestions', () => {
+    expect(commands.get('experiments')).toBe('experiments');
+    expect(commandNames).not.toContain('experiments');
+    expect(isHiddenCommand('experiments')).toBe(true);
+    expect(isHiddenCommand('flags')).toBe(false);
   });
 });

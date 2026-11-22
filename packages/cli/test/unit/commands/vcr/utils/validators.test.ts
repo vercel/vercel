@@ -25,7 +25,7 @@ describe('validateVcrJsonOutput', () => {
 
   it('returns exit code 1 for an invalid --format value', () => {
     const result = validateVcrJsonOutput(client, { '--format': 'bogus' });
-    expect(result).toBe(1);
+    expect(result).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('bogus');
   });
 });
@@ -65,7 +65,7 @@ describe('validateVcrChoice', () => {
       ['name', 'size'],
       false
     );
-    expect(result).toBe(1);
+    expect(result).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Invalid value for --sort-by: "bogus". Must be one of: name, size.'
     );
@@ -89,7 +89,7 @@ describe('requireVcrRepository', () => {
       false,
       'vcr inspect <repository>'
     );
-    expect(result).toBe(1);
+    expect(result).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('vcr inspect <repository>');
   });
 });
@@ -118,7 +118,7 @@ describe('requireVcrRepositoryAndImageId', () => {
       false,
       'vcr image inspect <repository> <imageId>'
     );
-    expect(result).toBe(1);
+    expect(result).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'vcr image inspect <repository> <imageId>'
     );
@@ -132,7 +132,7 @@ describe('requireVcrRepositoryAndImageId', () => {
       false,
       'vcr image inspect <repository> <imageId>'
     );
-    expect(result).toBe(1);
+    expect(result).toBe(2);
   });
 });
 
@@ -160,7 +160,7 @@ describe('requireVcrRepositoryAndTag', () => {
       false,
       'vcr tag inspect <repository> <tag>'
     );
-    expect(result).toBe(1);
+    expect(result).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'vcr tag inspect <repository> <tag>'
     );
@@ -174,6 +174,6 @@ describe('requireVcrRepositoryAndTag', () => {
       false,
       'vcr tag inspect <repository> <tag>'
     );
-    expect(result).toBe(1);
+    expect(result).toBe(2);
   });
 });

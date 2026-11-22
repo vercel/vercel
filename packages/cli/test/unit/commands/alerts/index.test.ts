@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '../../../mocks/client';
 import alerts from '../../../../src/commands/alerts';
+import { printCommandHelp } from '../../../../src/commands/print-command-help';
 import * as linkModule from '../../../../src/util/projects/link';
 import * as getScopeModule from '../../../../src/util/get-scope';
 
@@ -49,16 +50,92 @@ describe('alerts', () => {
     vi.restoreAllMocks();
   });
 
-  it('prints help output', async () => {
-    client.setArgv('alerts', '--help');
+  it('prints help output', () => {
+    expect(printCommandHelp(client, 'alerts', [])).toBe(0);
 
-    const exitCode = await alerts(client);
-
-    expect(exitCode).toBe(0);
-    const helpOut = client.stderr.getFullOutput();
-    expect(helpOut).toContain('rules');
+    const helpOut = client.stdout.getFullOutput();
+    expect(helpOut).toContain('monitors');
     expect(helpOut).toContain('List alert groups');
-    expect(client.stderr.getFullOutput()).toContain('--project');
+    expect(helpOut).toContain('--project');
+  });
+
+  it('keeps `alerts rules` as an alias for `monitors` on the alert-rules API', async () => {
+    client.scenario.get('/alerts/v3/alert-rules', (_req, res) => {
+      res.json({
+        rules: [{ id: 'ar_alias', name: 'Alias rule', type: 'built-in' }],
+        pagination: { next: null },
+      });
+    });
+    client.setArgv('alerts', 'rules', 'ls', '--format', 'json');
+
+    expect(await alerts(client)).toBe(0);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.monitors).toBeUndefined();
+    expect(payload.rules.map((rule: { id: string }) => rule.id)).toEqual([
+      'ar_alias',
+    ]);
+  });
+
+  it('inspects a rule through the alert-rules API with `alerts rules`', async () => {
+    const rule = { id: 'ar_alias', name: 'Alias rule', type: 'built-in' };
+    client.scenario.get('/alerts/v3/alert-rules/:ruleId', (req, res) => {
+      expect(req.params.ruleId).toBe('ar_alias');
+      res.json({ rule });
+    });
+    client.setArgv('alerts', 'rules', 'inspect', 'ar_alias', '--json');
+
+    expect(await alerts(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({ rule });
+  });
+
+  it('removes a rule through the alert-rules API with `alerts rules`', async () => {
+    client.scenario.delete('/alerts/v3/alert-rules/:ruleId', (_req, res) => {
+      res.json({ success: true });
+    });
+    client.setArgv('alerts', 'rules', 'rm', 'ar_alias', '--yes', '--json');
+
+    expect(await alerts(client)).toBe(0);
+    expect(JSON.parse(client.stdout.getFullOutput())).toEqual({
+      ok: true,
+      ruleId: 'ar_alias',
+      deleted: true,
+    });
+  });
+
+  it('lists rule notifications through the alert-rules API with `alerts rules`', async () => {
+    client.scenario.get(
+      '/alerts/v3/alert-rules/:ruleId/notifications',
+      (_req, res) => res.json({ notifications: [] })
+    );
+    client.nonInteractive = true;
+    client.setArgv('alerts', 'rules', 'notifications', 'ar_alias');
+
+    expect(await alerts(client)).toBe(0);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    expect(payload.ruleId).toBe('ar_alias');
+    expect(payload.monitorId).toBeUndefined();
+  });
+
+  it('warns that `alerts rules` is deprecated in favor of `monitors`', async () => {
+    client.scenario.get('/alerts/v3/alert-rules', (_req, res) => {
+      res.json({ rules: [], pagination: { next: null } });
+    });
+    client.setArgv('alerts', 'rules', 'ls');
+
+    expect(await alerts(client)).toBe(0);
+    expect(client.stderr.getFullOutput()).toContain(
+      '`vercel alerts rules` is deprecated. Use `vercel monitors`.'
+    );
+  });
+
+  it('does not warn about the alias with --json', async () => {
+    client.scenario.get('/alerts/v3/alert-rules', (_req, res) => {
+      res.json({ rules: [], pagination: { next: null } });
+    });
+    client.setArgv('alerts', 'rules', 'ls', '--json');
+
+    expect(await alerts(client)).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('deprecated');
   });
 
   it('lists alerts for linked project by default', async () => {
@@ -293,7 +370,7 @@ describe('alerts', () => {
 
     const exitCode = await alerts(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       'Cannot specify both --all and --project'
     );
@@ -308,7 +385,7 @@ describe('alerts', () => {
     client.setArgv('alerts', '--project', '--cwd', '/tmp', '--non-interactive');
     client.nonInteractive = true;
 
-    await expect(alerts(client)).rejects.toThrow('exit:1');
+    await expect(alerts(client)).rejects.toThrow('exit:2');
     const payload = JSON.parse(
       logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string
     );
@@ -328,7 +405,7 @@ describe('alerts', () => {
     client.setArgv('alerts', '--all', '--project', 'x', '--non-interactive');
     client.nonInteractive = true;
 
-    await expect(alerts(client)).rejects.toThrow('exit:1');
+    await expect(alerts(client)).rejects.toThrow('exit:2');
     const payload = JSON.parse(
       logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string
     );
@@ -349,7 +426,7 @@ describe('alerts', () => {
 
     const exitCode = await alerts(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       '`--since` must be earlier than `--until`.'
     );
@@ -360,7 +437,7 @@ describe('alerts', () => {
 
     const exitCode = await alerts(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain('Invalid time format');
   });
 
@@ -369,7 +446,7 @@ describe('alerts', () => {
 
     const exitCode = await alerts(client);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(client.stderr.getFullOutput()).toContain(
       '`--limit` must be an integer between 1 and 100.'
     );
@@ -393,6 +470,103 @@ describe('alerts', () => {
     expect(output).toContain('grp_x');
     expect(output).toContain('No alerts in this group.');
     expect(client.stdout.getFullOutput()).not.toContain('"id"');
+  });
+
+  it('inspect uses the team scope when the directory is not linked', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+    });
+    let requestQuery: any;
+    let inspectPath = '';
+    client.scenario.get('/alerts/v3/groups/:groupId', (req, res) => {
+      inspectPath = req.path;
+      requestQuery = req.query;
+      res.json({ id: 'grp_x', status: 'active' });
+    });
+
+    client.setArgv('alerts', 'inspect', 'grp_x', '--json');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(0);
+    expect(inspectPath).toContain('/alerts/v3/groups/grp_x');
+    expect(requestQuery.teamId).toBe('team_dummy');
+    expect(requestQuery.projectId).toBeUndefined();
+    expect(JSON.parse(client.stdout.getFullOutput()).group.id).toBe('grp_x');
+  });
+
+  it('inspect reports a missing team scope when unlinked and no team is selected', async () => {
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+    });
+    mockedGetScope.mockResolvedValue({
+      contextName: 'user',
+      team: null,
+      user: { id: 'user_dummy' } as any,
+      app: null,
+    } as any);
+
+    client.setArgv('alerts', 'inspect', 'grp_x', '--json');
+
+    const exitCode = await alerts(client);
+
+    expect(exitCode).toBe(1);
+    const out = JSON.parse(client.stdout.getFullOutput());
+    expect(out.error.code).toBe('NO_TEAM');
+    expect(out.error.message).not.toContain('--project');
+  });
+
+  it('inspect suggests --all when a project-scoped group is not found', async () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as () => never);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    client.scenario.get('/alerts/v3/groups/:groupId', (_req, res) => {
+      res.statusCode = 404;
+      res.json({ error: { code: 'not_found', message: 'Not found' } });
+    });
+
+    client.setArgv('alerts', 'inspect', 'grp_x', '--non-interactive');
+    client.nonInteractive = true;
+
+    await expect(alerts(client)).rejects.toThrow('exit:1');
+    const payload = JSON.parse(
+      logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string
+    );
+    expect(payload.reason).toBe('not_found');
+    // The linked project fixes the team, so the hint must suggest --all.
+    expect(payload.hint).toContain('--all');
+    expect(payload.next[1].command).toContain('alerts inspect grp_x --all');
+  });
+
+  it('inspect suggests --scope when a team-scoped group is not found', async () => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as () => never);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    mockedGetLinkedProject.mockResolvedValue({
+      status: 'not_linked',
+      org: null,
+      project: null,
+    });
+    client.scenario.get('/alerts/v3/groups/:groupId', (_req, res) => {
+      res.statusCode = 404;
+      res.json({ error: { code: 'not_found', message: 'Not found' } });
+    });
+
+    client.setArgv('alerts', 'inspect', 'grp_x', '--non-interactive');
+    client.nonInteractive = true;
+
+    await expect(alerts(client)).rejects.toThrow('exit:1');
+    const payload = JSON.parse(
+      logSpy.mock.calls[logSpy.mock.calls.length - 1][0] as string
+    );
+    expect(payload.hint).toContain('--scope <team-slug>');
+    expect(payload.hint).not.toContain('--all');
   });
 
   it('passes nested inspect args when global flags precede alerts', async () => {

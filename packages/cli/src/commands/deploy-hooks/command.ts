@@ -1,6 +1,7 @@
 import { packageName } from '../../util/pkg-name';
 import {
   formatOption,
+  gitBranchOption,
   jsonOption,
   projectOption as sharedProjectOption,
   yesOption,
@@ -14,13 +15,15 @@ const projectOption = {
 export const listSubcommand = {
   name: 'list',
   aliases: ['ls'],
-  description: 'List deploy hooks for a project',
+  default: true,
+  description:
+    'List deploy hooks for a project (anyone with a hook URL can trigger a deployment)',
   arguments: [],
   options: [formatOption, jsonOption, projectOption],
   examples: [
     {
       name: 'List deploy hooks as JSON',
-      value: `${packageName} deploy-hooks ls --json`,
+      value: `${packageName} deploy-hooks list --json`,
     },
   ],
 } as const;
@@ -28,7 +31,8 @@ export const listSubcommand = {
 export const createSubcommand = {
   name: 'create',
   aliases: ['add'],
-  description: 'Create a deploy hook for a Git branch',
+  description:
+    'Create a deploy hook for a Git branch (anyone with the URL can trigger a deployment)',
   arguments: [
     {
       name: 'name',
@@ -37,27 +41,32 @@ export const createSubcommand = {
   ],
   options: [
     {
+      ...gitBranchOption,
+      description: 'Git branch to deploy when the hook URL is triggered',
+    },
+    // Hidden: `--ref` and `-r` are the old names of `--git-branch`.
+    {
       name: 'ref',
       shorthand: 'r',
       type: String,
       argument: 'BRANCH',
-      deprecated: false,
-      description: 'Git branch ref to deploy when the hook URL is triggered',
+      deprecated: true,
+      description: 'Deprecated alias for `--git-branch`',
     },
     projectOption,
   ],
   examples: [
     {
       name: 'Create a hook that deploys `main`',
-      value: `${packageName} deploy-hooks create cms-rebuild --ref main`,
+      value: `${packageName} deploy-hooks create cms-rebuild --git-branch main`,
     },
   ],
 } as const;
 
 export const removeSubcommand = {
-  name: 'remove',
-  aliases: ['rm', 'delete'],
-  description: 'Remove a deploy hook by id',
+  name: 'delete',
+  aliases: ['rm', 'del', 'remove'],
+  description: 'Delete a deploy hook by id',
   arguments: [
     {
       name: 'id',
@@ -68,7 +77,7 @@ export const removeSubcommand = {
     projectOption,
     {
       ...yesOption,
-      description: 'Skip the confirmation prompt when removing a deploy hook',
+      description: 'Skip the confirmation prompt when deleting a deploy hook',
     },
   ],
   examples: [],

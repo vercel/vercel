@@ -1,5 +1,71 @@
 # @vercel/aws
 
+## 0.2.23
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.16
+
+## 0.2.22
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.15
+
+## 0.2.21
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.14
+
+## 0.2.20
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.13
+
+## 0.2.19
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.12
+
+## 0.2.18
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.11
+
+## 0.2.17
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.10
+
+## 0.2.16
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.9
+
+## 0.2.15
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.8
+
+## 0.2.14
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.7
+
+## 0.2.13
+
+### Patch Changes
+
+- @vercel/oidc-aws-credentials-provider@3.3.6
+
 ## 0.2.12
 
 ### Patch Changes

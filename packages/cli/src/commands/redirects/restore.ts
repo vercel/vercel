@@ -64,11 +64,11 @@ export default async function restore(client: Client, argv: string[]) {
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(error);
-    return 1;
+    return 2;
   }
 
   const link = await requireProjectContext(

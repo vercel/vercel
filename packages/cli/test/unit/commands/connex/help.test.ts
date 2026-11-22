@@ -15,7 +15,10 @@ describe('connect --help', () => {
   });
 
   it('links to the Vercel Connect guide', () => {
-    const output = help(connexCommand, { columns: 80 });
+    const output = help(connexCommand, {
+      stream: { isTTY: false },
+      columns: 80,
+    });
 
     expect(output).toContain('Vercel Connect guide:');
     expect(output).toContain(DOCS_URL);
@@ -23,7 +26,11 @@ describe('connect --help', () => {
 
   it('links to the guide from every subcommand', () => {
     for (const subcommand of connexCommand.subcommands) {
-      const output = help(subcommand, { columns: 80, parent: connexCommand });
+      const output = help(subcommand, {
+        stream: { isTTY: false },
+        columns: 80,
+        parent: connexCommand,
+      });
 
       expect(output, `${subcommand.name} help`).toContain(DOCS_URL);
     }
@@ -37,7 +44,10 @@ describe('connect --help', () => {
   });
 
   it('omits the guide when no documentation is in scope', () => {
-    const output = help(createSubcommand, { columns: 80 });
+    const output = help(createSubcommand, {
+      stream: { isTTY: false },
+      columns: 80,
+    });
 
     expect(output).not.toContain('Vercel Connect guide:');
   });

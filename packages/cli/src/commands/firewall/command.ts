@@ -1,5 +1,11 @@
 import { packageName } from '../../util/pkg-name';
-import { projectOption, yesOption } from '../../util/arg-common';
+import {
+  limitOption,
+  projectOption,
+  sinceOption,
+  untilOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const teamLevelOption = {
   name: 'team-level',
@@ -92,6 +98,7 @@ export const diffSubcommand = {
 } as const;
 
 export const publishSubcommand = {
+  descriptionTone: 'normal',
   name: 'publish',
   aliases: [],
   description:
@@ -115,6 +122,7 @@ export const publishSubcommand = {
 } as const;
 
 export const discardSubcommand = {
+  descriptionTone: 'normal',
   name: 'discard',
   aliases: [],
   description:
@@ -159,6 +167,7 @@ export const systemBypassListSubcommand = {
 } as const;
 
 export const systemBypassAddSubcommand = {
+  descriptionTone: 'normal',
   name: 'add',
   aliases: [],
   description:
@@ -195,6 +204,7 @@ export const systemBypassAddSubcommand = {
 } as const;
 
 export const systemBypassRemoveSubcommand = {
+  descriptionTone: 'normal',
   name: 'remove',
   aliases: ['rm'],
   description:
@@ -385,14 +395,15 @@ export const rulesListSubcommand = {
   name: 'list',
   aliases: ['ls'],
   description:
-    'List all custom firewall rules, including any unpublished draft changes',
+    'List managed bot rules and custom firewall rules, including unpublished draft changes',
   arguments: [],
   options: [
     projectOption,
     teamLevelOption,
     {
       name: 'expand',
-      shorthand: 'e',
+      shorthand: null,
+      deprecatedShorthand: 'e',
       type: Boolean,
       deprecated: false,
       description: 'Show full condition details for each rule',
@@ -425,7 +436,7 @@ export const rulesInspectSubcommand = {
   name: 'inspect',
   aliases: [],
   description:
-    'Show the full configuration of a custom firewall rule, including conditions, action, and rate limit settings',
+    'Show a custom or managed bot rule, including conditions, action, and rate limit settings',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     projectOption,
@@ -447,6 +458,10 @@ export const rulesInspectSubcommand = {
       name: 'Inspect a rule by ID',
       value: `${packageName} firewall rules inspect rule_abc123`,
     },
+    {
+      name: 'Inspect a managed bot rule',
+      value: `${packageName} firewall rules inspect bot-protection`,
+    },
   ],
 } as const;
 
@@ -454,7 +469,7 @@ export const rulesAddSubcommand = {
   name: 'add',
   aliases: [],
   description:
-    'Create a new custom firewall rule using AI, an interactive builder, JSON, or command-line flags. Stages a draft change — run `publish` to make it live',
+    'Create a new custom firewall rule using AI, an interactive builder, JSON, or command-line options. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name', required: false }],
   options: [
     projectOption,
@@ -467,11 +482,19 @@ export const rulesAddSubcommand = {
       description: 'Generate rule from natural language (AI-powered)',
     },
     {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      argument: 'JSON',
+      deprecated: false,
+      description: 'Create rule from a JSON payload',
+    },
+    // Hidden: the old name for --data. `--json` is the output flag elsewhere.
+    {
       name: 'json',
       shorthand: null,
       type: String,
-      deprecated: false,
-      description: 'Create rule from JSON payload',
+      deprecated: true,
     },
     {
       name: 'condition',
@@ -511,11 +534,19 @@ export const rulesAddSubcommand = {
       description: 'Rule description (max 256 chars)',
     },
     {
-      name: 'disabled',
+      name: 'no-enable',
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Create as disabled (default: enabled)',
+      description: 'Add the rule turned off (default: on)',
+    },
+    {
+      // Hidden: the old name of `--no-enable`.
+      name: 'disabled',
+      shorthand: null,
+      type: Boolean,
+      deprecated: true,
+      description: 'Deprecated alias for `--no-enable`',
     },
     {
       name: 'rate-limit-algo',
@@ -569,7 +600,7 @@ export const rulesAddSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Permanent redirect (301). Default: temporary (307)',
+      description: 'Permanent redirect (301) (default: temporary, 307)',
     },
     yesOption,
   ],
@@ -584,10 +615,10 @@ export const rulesAddSubcommand = {
     },
     {
       name: 'Create from JSON',
-      value: `${packageName} firewall rules add --json '{"name":"Block bots","active":true,"conditionGroup":[{"conditions":[{"type":"user_agent","op":"sub","value":"crawler"}]}],"action":{"mitigate":{"action":"deny"}}}'`,
+      value: `${packageName} firewall rules add --data '{"name":"Block bots","active":true,"conditionGroup":[{"conditions":[{"type":"user_agent","op":"sub","value":"crawler"}]}],"action":{"mitigate":{"action":"deny"}}}'`,
     },
     {
-      name: 'Create with flags',
+      name: 'Create with options',
       value: `${packageName} firewall rules add "Block bots" --condition '{"type":"user_agent","op":"sub","value":"crawler"}' --action deny --yes`,
     },
     {
@@ -598,10 +629,10 @@ export const rulesAddSubcommand = {
 } as const;
 
 export const rulesEditSubcommand = {
-  name: 'edit',
-  aliases: [],
+  name: 'update',
+  aliases: ['edit'],
   description:
-    'Edit an existing custom firewall rule using AI, an interactive editor, JSON, or command-line flags. Stages a draft change — run `publish` to make it live',
+    'Update a custom rule or a managed bot rule action using AI, an interactive editor, JSON, or command-line options. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
   options: [
     projectOption,
@@ -614,11 +645,19 @@ export const rulesEditSubcommand = {
       description: 'Describe changes using natural language (AI-powered)',
     },
     {
+      name: 'data',
+      shorthand: null,
+      type: String,
+      argument: 'JSON',
+      deprecated: false,
+      description: 'Replace rule with a JSON payload',
+    },
+    // Hidden: the old name for --data. `--json` is the output flag elsewhere.
+    {
       name: 'json',
       shorthand: null,
       type: String,
-      deprecated: false,
-      description: 'Replace rule with JSON payload',
+      deprecated: true,
     },
     {
       name: 'condition',
@@ -665,18 +704,34 @@ export const rulesEditSubcommand = {
       description: 'Change description (use "" to clear)',
     },
     {
+      name: 'enable',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Turn the rule on',
+    },
+    {
+      name: 'no-enable',
+      shorthand: null,
+      type: Boolean,
+      deprecated: false,
+      description: 'Turn the rule off',
+    },
+    {
+      // Hidden: the old name of `--enable`.
       name: 'enabled',
       shorthand: null,
       type: Boolean,
-      deprecated: false,
-      description: 'Set rule to enabled',
+      deprecated: true,
+      description: 'Deprecated alias for `--enable`',
     },
     {
+      // Hidden: the old name of `--no-enable`.
       name: 'disabled',
       shorthand: null,
       type: Boolean,
-      deprecated: false,
-      description: 'Set rule to disabled',
+      deprecated: true,
+      description: 'Deprecated alias for `--no-enable`',
     },
     {
       name: 'rate-limit-algo',
@@ -726,30 +781,34 @@ export const rulesEditSubcommand = {
       shorthand: null,
       type: Boolean,
       deprecated: false,
-      description: 'Permanent redirect (301). Default: temporary (307)',
+      description: 'Permanent redirect (301) (default: temporary, 307)',
     },
     yesOption,
   ],
   examples: [
     {
       name: 'Interactive mode',
-      value: `${packageName} firewall rules edit "My Rule"`,
+      value: `${packageName} firewall rules update "My Rule"`,
     },
     {
-      name: 'Edit with AI',
-      value: `${packageName} firewall rules edit "My Rule" --ai "Change action to challenge"`,
+      name: 'Update with AI',
+      value: `${packageName} firewall rules update "My Rule" --ai "Change action to challenge"`,
     },
     {
-      name: 'Change action via flags',
-      value: `${packageName} firewall rules edit "My Rule" --action challenge --duration 5m --yes`,
+      name: 'Change action via options',
+      value: `${packageName} firewall rules update "My Rule" --action challenge --duration 5m --yes`,
     },
     {
       name: 'Replace conditions',
-      value: `${packageName} firewall rules edit "My Rule" --condition '{"type":"path","op":"pre","value":"/new"}' --yes`,
+      value: `${packageName} firewall rules update "My Rule" --condition '{"type":"path","op":"pre","value":"/new"}' --yes`,
     },
     {
       name: 'Rename a rule',
-      value: `${packageName} firewall rules edit "My Rule" --name "New Name" --yes`,
+      value: `${packageName} firewall rules update "My Rule" --name "New Name" --yes`,
+    },
+    {
+      name: 'Change a managed bot rule action',
+      value: `${packageName} firewall rules update ai-bots --action deny --yes`,
     },
   ],
 } as const;
@@ -770,6 +829,7 @@ export const rulesEnableSubcommand = {
 } as const;
 
 export const rulesDisableSubcommand = {
+  descriptionTone: 'normal',
   name: 'disable',
   aliases: [],
   description:
@@ -800,8 +860,8 @@ export const rulesRemoveSubcommand = {
 } as const;
 
 export const rulesReorderSubcommand = {
-  name: 'reorder',
-  aliases: ['move'],
+  name: 'move',
+  aliases: ['reorder'],
   description:
     'Change the priority order of a custom firewall rule. Stages a draft change — run `publish` to make it live',
   arguments: [{ name: 'name-or-id', required: true }],
@@ -834,11 +894,11 @@ export const rulesReorderSubcommand = {
   examples: [
     {
       name: 'Move to first position',
-      value: `${packageName} firewall rules reorder "My Rule" --first --yes`,
+      value: `${packageName} firewall rules move "My Rule" --first --yes`,
     },
     {
       name: 'Move to position 3',
-      value: `${packageName} firewall rules reorder "My Rule" --position 3 --yes`,
+      value: `${packageName} firewall rules move "My Rule" --position 3 --yes`,
     },
   ],
 } as const;
@@ -874,13 +934,14 @@ export const rulesSubcommand = {
       value: `${packageName} firewall rules add --ai "Rate limit /api to 100 requests per minute by IP"`,
     },
     {
-      name: 'Edit with AI',
-      value: `${packageName} firewall rules edit "My Rule" --ai "Change action to challenge"`,
+      name: 'Update with AI',
+      value: `${packageName} firewall rules update "My Rule" --ai "Change action to challenge"`,
     },
   ],
 } as const;
 
 export const attackModeEnableSubcommand = {
+  descriptionTone: 'normal',
   name: 'enable',
   aliases: [],
   description:
@@ -910,6 +971,7 @@ export const attackModeEnableSubcommand = {
 } as const;
 
 export const attackModeDisableSubcommand = {
+  descriptionTone: 'normal',
   name: 'disable',
   aliases: [],
   description:
@@ -946,6 +1008,7 @@ export const attackModeSubcommand = {
 
 // System Mitigations subcommands
 export const systemMitigationsPauseSubcommand = {
+  descriptionTone: 'normal',
   name: 'pause',
   aliases: [],
   description:
@@ -961,6 +1024,7 @@ export const systemMitigationsPauseSubcommand = {
 } as const;
 
 export const systemMitigationsResumeSubcommand = {
+  descriptionTone: 'normal',
   name: 'resume',
   aliases: [],
   description:
@@ -1012,22 +1076,10 @@ export const alertsListSubcommand = {
     projectOption,
     jsonOutputOption,
     {
-      name: 'since',
-      shorthand: null,
-      type: String,
-      argument: 'TIME',
-      deprecated: false,
-      description:
-        'Start of the window: relative (24h, 7d) or ISO date (default: 24h ago)',
+      ...sinceOption,
+      description: `${sinceOption.description} (default: 24h ago)`,
     },
-    {
-      name: 'until',
-      shorthand: null,
-      type: String,
-      argument: 'TIME',
-      deprecated: false,
-      description: 'End of the window (default: now)',
-    },
+    untilOption,
   ],
   examples: [
     {
@@ -1086,25 +1138,13 @@ export const persistentActionsListSubcommand = {
     projectOption,
     jsonOutputOption,
     {
-      name: 'since',
-      shorthand: null,
-      type: String,
-      argument: 'TIME',
-      deprecated: false,
-      description:
-        'Start of the window: relative (1h, 6h) or ISO date (default: 1h ago)',
+      ...sinceOption,
+      description: `${sinceOption.description} (default: 1h ago)`,
     },
-    {
-      name: 'until',
-      shorthand: null,
-      type: String,
-      argument: 'TIME',
-      deprecated: false,
-      description: 'End of the window (default: now)',
-    },
+    untilOption,
     {
       name: 'limit',
-      shorthand: null,
+      shorthand: 'n',
       type: Number,
       argument: 'NUMBER',
       deprecated: false,
@@ -1149,22 +1189,10 @@ export const persistentActionsInspectSubcommand = {
       description: 'Narrow to an action (challenge, deny, log, …)',
     },
     {
-      name: 'since',
-      shorthand: null,
-      type: String,
-      argument: 'TIME',
-      deprecated: false,
-      description:
-        'Start of the window: relative (1h, 6h) or ISO date (default: 1h ago)',
+      ...sinceOption,
+      description: `${sinceOption.description} (default: 1h ago)`,
     },
-    {
-      name: 'until',
-      shorthand: null,
-      type: String,
-      argument: 'TIME',
-      deprecated: false,
-      description: 'End of the window (default: now)',
-    },
+    untilOption,
     {
       name: 'paths',
       shorthand: null,
@@ -1208,9 +1236,322 @@ export const persistentActionsSubcommand = {
   ],
 } as const;
 
+/**
+ * Dimension filters, mirroring the traffic page's filter bar. `--query`
+ * covers anything not spelled out here, but a flag per dimension keeps the
+ * common cases free of OData.
+ */
+const trafficIpOption = {
+  name: 'ip',
+  shorthand: null,
+  type: String,
+  argument: 'IP',
+  deprecated: false,
+  description: 'Narrow to one client IP',
+} as const;
+
+const trafficJa4Option = {
+  name: 'ja4',
+  shorthand: null,
+  type: String,
+  argument: 'DIGEST',
+  deprecated: false,
+  description: 'Narrow to one JA4 TLS fingerprint',
+} as const;
+
+const trafficAsnOption = {
+  name: 'asn',
+  shorthand: null,
+  type: String,
+  argument: 'NAME',
+  deprecated: false,
+  description: 'Narrow to one autonomous system name',
+} as const;
+
+const trafficUserAgentOption = {
+  name: 'user-agent',
+  shorthand: null,
+  type: String,
+  argument: 'UA',
+  deprecated: false,
+  description: 'Narrow to one user agent',
+} as const;
+
+const trafficPathOption = {
+  name: 'path',
+  shorthand: null,
+  type: String,
+  argument: 'PATH',
+  deprecated: false,
+  description: 'Narrow to one request path',
+} as const;
+
+const trafficRuleOption = {
+  name: 'rule',
+  shorthand: null,
+  type: String,
+  argument: 'RULE_ID',
+  deprecated: false,
+  description: 'Narrow to one firewall rule id',
+} as const;
+
+const trafficHostOption = {
+  name: 'host',
+  shorthand: null,
+  type: String,
+  argument: 'HOSTNAME',
+  deprecated: false,
+  description: 'Narrow to one hostname',
+} as const;
+
+const trafficBotOption = {
+  name: 'bot',
+  shorthand: null,
+  type: String,
+  argument: 'BOT',
+  deprecated: false,
+  description: 'Narrow to one verified bot',
+} as const;
+
+const trafficUnknownBotOption = {
+  name: 'unknown-bot',
+  shorthand: null,
+  type: String,
+  argument: 'CATEGORY',
+  deprecated: false,
+  description: 'Narrow inspect unknown-bot to one category',
+} as const;
+
+const trafficCountryOption = {
+  name: 'country',
+  shorthand: null,
+  type: String,
+  argument: 'CODE',
+  deprecated: false,
+  description: 'Narrow to one country code',
+} as const;
+
+const trafficActionOption = {
+  name: 'action',
+  shorthand: null,
+  type: String,
+  argument: 'ACTION',
+  deprecated: false,
+  description: 'Narrow to one firewall action (deny, challenge, log, …)',
+} as const;
+
+const trafficQueryOption = {
+  name: 'query',
+  shorthand: 'q',
+  type: [String],
+  argument: 'TEXT',
+  deprecated: false,
+  // KQL, not OData: these commands always query the canonical observability
+  // path — they do not read `FF_LEGACY_METRICS` the way `vercel metrics`
+  // does — and an OData expression here earns the deprecation warning.
+  description: 'KQL filter expression (repeatable, ANDed together)',
+} as const;
+
+// Hidden: `--filter` is the old name of `--query`.
+const trafficFilterOption = {
+  name: 'filter',
+  shorthand: null,
+  type: [String],
+  argument: 'EXPR',
+  deprecated: true,
+  description: 'Deprecated alias for `--query`',
+} as const;
+
+// Hidden: `--top` is the old name of `--limit`.
+const trafficTopOption = {
+  name: 'top',
+  shorthand: null,
+  type: Number,
+  argument: 'NUMBER',
+  deprecated: true,
+  description: 'Deprecated alias for `--limit`',
+} as const;
+
+const trafficAlertOption = {
+  name: 'alert',
+  shorthand: null,
+  type: String,
+  argument: 'ALERT_ID',
+  deprecated: false,
+  description:
+    'Scope the window and rule to one alert id from `firewall alerts list`',
+} as const;
+
+const trafficSinceOption = {
+  ...sinceOption,
+  description: `${sinceOption.description} (default: 24h ago)`,
+} as const;
+
+/**
+ * The `--ip`-style narrowing flags, one per traffic dimension. Both traffic
+ * subcommands take the whole set: `buildTrafficFilter` reads them by
+ * dimension alias, so a subcommand that leaves one out rejects it as an
+ * unknown option rather than narrowing by it.
+ */
+const trafficDimensionOptions = [
+  trafficIpOption,
+  trafficJa4Option,
+  trafficAsnOption,
+  trafficUserAgentOption,
+  trafficPathOption,
+  trafficRuleOption,
+  trafficHostOption,
+  trafficBotOption,
+  trafficUnknownBotOption,
+  trafficCountryOption,
+  trafficActionOption,
+] as const;
+
+export const trafficListSubcommand = {
+  name: 'list',
+  aliases: ['ls'],
+  description:
+    'Show requests by firewall action, with the top clients behind them',
+  arguments: [],
+  options: [
+    projectOption,
+    jsonOutputOption,
+    trafficSinceOption,
+    untilOption,
+    {
+      ...limitOption,
+      description: 'Rows per top list (default: 5)',
+    },
+    trafficTopOption,
+    {
+      name: 'dimension',
+      shorthand: null,
+      type: [String],
+      argument: 'DIM',
+      deprecated: false,
+      description:
+        'Top list to include: ip, ja4, asn, user-agent, path, rule, host, bot, unknown-bot, country, action (repeatable) (default: ip, ja4, asn, user-agent, path, rule, host, bot)',
+    },
+    trafficAlertOption,
+    ...trafficDimensionOptions,
+    trafficQueryOption,
+    trafficFilterOption,
+  ],
+  examples: [
+    {
+      name: 'Show traffic from the last day',
+      value: `${packageName} firewall traffic list`,
+    },
+    {
+      name: 'Show the last hour, with the top 20 rows per list',
+      value: `${packageName} firewall traffic list --since 1h --limit 20`,
+    },
+    {
+      name: 'Show which countries and user agents denied traffic came from',
+      value: `${packageName} firewall traffic list --action deny --dimension country --dimension user-agent`,
+    },
+  ],
+} as const;
+
+export const trafficInspectSubcommand = {
+  name: 'inspect',
+  aliases: [],
+  description:
+    'Show one traffic dimension value: its actions over time and what it requested',
+  arguments: [
+    { name: 'dimension', required: true },
+    { name: 'value', required: true },
+  ],
+  options: [
+    projectOption,
+    jsonOutputOption,
+    trafficSinceOption,
+    untilOption,
+    {
+      name: 'group-by',
+      shorthand: null,
+      type: String,
+      argument: 'DIM',
+      deprecated: false,
+      description:
+        'Dimension to break the traffic down by (default: depends on the inspected dimension)',
+    },
+    {
+      ...limitOption,
+      description: 'Rows in the breakdown (default: 10)',
+    },
+    trafficTopOption,
+    trafficAlertOption,
+    // Narrowing flags as well as the dimension argument: an inspected value
+    // is often worth looking at through one more constraint — this IP's
+    // denied requests, this path's traffic from one country — and the filter
+    // they build is ANDed with the value the same way `list` does it.
+    ...trafficDimensionOptions,
+    trafficQueryOption,
+    trafficFilterOption,
+  ],
+  examples: [
+    {
+      name: 'Inspect one client IP',
+      value: `${packageName} firewall traffic inspect ip 1.2.3.4`,
+    },
+    {
+      name: 'See which IPs a rule acted on',
+      value: `${packageName} firewall traffic inspect rule rule_abc123 --group-by ip`,
+    },
+    {
+      name: 'Inspect a path over the last week',
+      value: `${packageName} firewall traffic inspect path /api/checkout --since 7d`,
+    },
+    {
+      name: 'Narrow one client to what the firewall denied',
+      value: `${packageName} firewall traffic inspect ip 1.2.3.4 --action deny`,
+    },
+  ],
+} as const;
+
+export const botManagementSubcommand = {
+  name: 'bot-management',
+  aliases: [],
+  description: 'List managed bot rules and top unknown bot traffic',
+  arguments: [],
+  options: [projectOption, jsonOutputOption],
+  examples: [
+    {
+      name: 'List managed bot rules and unknown bot traffic',
+      value: `${packageName} firewall bot-management`,
+    },
+    {
+      name: 'Update Bot Protection',
+      value: `${packageName} firewall rules update bot-protection --action log --yes`,
+    },
+  ],
+} as const;
+
+export const trafficSubcommand = {
+  name: 'traffic',
+  aliases: [],
+  description:
+    'Explore firewall traffic: requests by action, top clients, and one dimension in detail',
+  arguments: [],
+  subcommands: [trafficListSubcommand, trafficInspectSubcommand],
+  options: [],
+  examples: [
+    {
+      name: 'Show traffic from the last day',
+      value: `${packageName} firewall traffic list`,
+    },
+    {
+      name: 'Inspect one client IP',
+      value: `${packageName} firewall traffic inspect ip 1.2.3.4`,
+    },
+  ],
+} as const;
+
 export const firewallCommand = {
   name: 'firewall',
   aliases: [],
+  summary: 'Manage firewall rules and bypass settings',
   description:
     "Manage your project's firewall rules, IP blocks, and system bypass configuration",
   arguments: [],
@@ -1222,14 +1563,24 @@ export const firewallCommand = {
     discardSubcommand,
     ipBlocksSubcommand,
     rulesSubcommand,
+    botManagementSubcommand,
     systemBypassSubcommand,
     attackModeSubcommand,
     systemMitigationsSubcommand,
     alertsSubcommand,
     persistentActionsSubcommand,
+    trafficSubcommand,
   ],
   options: [],
   examples: [
+    {
+      name: 'Show firewall traffic',
+      value: `${packageName} firewall traffic list`,
+    },
+    {
+      name: 'List managed bot rules',
+      value: `${packageName} firewall bot-management`,
+    },
     {
       name: 'List firewall alerts',
       value: `${packageName} firewall alerts list`,

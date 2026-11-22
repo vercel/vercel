@@ -30,7 +30,7 @@ export default async function segmentsInspect(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -43,7 +43,7 @@ export default async function segmentsInspect(
     output.log(
       `Example: ${getCommandName('flags segments inspect beta-users')}`
     );
-    return 1;
+    return 2;
   }
 
   telemetryClient.trackCliArgumentSegment(segmentArg);

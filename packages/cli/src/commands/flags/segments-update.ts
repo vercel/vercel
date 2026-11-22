@@ -60,7 +60,7 @@ export default async function segmentsUpdate(
     parsedArgs = parseArguments(argv, flagsSpecification);
   } catch (err) {
     printError(err);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -193,9 +193,9 @@ export default async function segmentsUpdate(
               },
             ],
           },
-          1
+          2
         );
-        return 1;
+        return 2;
       }
       output.warn('No segment changes were provided');
       return 0;
@@ -260,7 +260,7 @@ async function resolveSegmentArg(
           },
         ],
       },
-      1
+      2
     );
     return undefined;
   }

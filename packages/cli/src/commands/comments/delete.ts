@@ -28,7 +28,7 @@ export default async function deleteCommentMessage(
   const formatResult = validateJsonOutput(parsedArgs.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const jsonOutput = formatResult.jsonOutput;
   const yes = Boolean(parsedArgs.flags['--yes']);

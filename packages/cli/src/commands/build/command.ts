@@ -1,5 +1,11 @@
 import { packageName } from '../../util/pkg-name';
-import { projectOption, yesOption } from '../../util/arg-common';
+import {
+  deploymentOption,
+  environmentOption,
+  projectOption,
+  targetOption,
+  yesOption,
+} from '../../util/arg-common';
 
 export const buildCommand = {
   name: 'build',
@@ -15,17 +21,15 @@ export const buildCommand = {
       deprecated: false,
     },
     {
-      name: 'target',
-      shorthand: null,
-      type: String,
-      argument: 'TARGET',
-      deprecated: false,
-      description: 'Specify the target environment',
+      ...environmentOption,
+      description:
+        'Environment to build for: production, preview, or a custom environment (default: preview)',
     },
+    targetOption,
     {
       name: 'output',
       description: 'Directory where built assets will be written to',
-      shorthand: null,
+      shorthand: 'o',
       argument: 'DIR',
       type: String,
       deprecated: false,
@@ -44,14 +48,12 @@ export const buildCommand = {
       deprecated: false,
     },
     {
-      name: 'id',
+      ...deploymentOption,
       description:
         'Deployment ID to pull environment variables from (e.g. dpl_xxx)',
-      shorthand: null,
-      type: String,
-      argument: 'ID',
-      deprecated: false,
     },
+    // `--id` is the deprecated name of `--deployment`.
+    { name: 'id', shorthand: null, type: String, deprecated: true },
     projectOption,
   ],
   examples: [
@@ -65,7 +67,7 @@ export const buildCommand = {
     },
     {
       name: 'Build with deployment-scoped environment variables',
-      value: `${packageName} build --id dpl_xxx`,
+      value: `${packageName} build --deployment dpl_xxx`,
     },
   ],
 } as const;

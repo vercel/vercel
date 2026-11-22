@@ -36,13 +36,13 @@ export async function inspect(client: Client, argv: string[]) {
     parsedArguments = parseArguments(argv, flagsSpecification);
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(parsedArguments.flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -52,7 +52,7 @@ export async function inspect(client: Client, argv: string[]) {
     output.error(
       'Too many arguments. Usage: `vercel integration resource inspect <resource>`.'
     );
-    return 1;
+    return 2;
   }
 
   const resourceName: string | undefined = parsedArguments.args[0];
@@ -60,7 +60,7 @@ export async function inspect(client: Client, argv: string[]) {
 
   if (!resourceName) {
     output.error('You must specify a resource. See `--help` for details.');
-    return 1;
+    return 2;
   }
 
   const { contextName, team } = await getScope(client);

@@ -3,7 +3,10 @@ import {
   createConnectSendblueConfig,
   type ConnectSendblueParams,
 } from '../internal/sendblue-lines.js';
-import { vercelOidc } from 'eve/channels/auth';
+import {
+  createConnectWebhookVerifier,
+  type ConnectWebhookVerifier,
+} from '../chat/webhook-verifier.js';
 
 /** Managed Sendblue channel credentials returned by {@link connectSendblueCredentials}. */
 export interface ConnectSendblueCredentials {
@@ -14,7 +17,7 @@ export interface ConnectSendblueCredentials {
   /** Every Sendblue line authorized for this connector. */
   allowedFromNumbers: () => Promise<readonly string[]>;
   /** Verifies webhooks forwarded by Vercel Connect. */
-  webhookVerifier: ReturnType<typeof vercelOidc>;
+  webhookVerifier: ConnectWebhookVerifier;
 }
 
 /** Token parameters accepted by {@link connectSendblueCredentials}. */
@@ -33,6 +36,6 @@ export function connectSendblueCredentials(
 ): ConnectSendblueCredentials {
   return {
     ...createConnectSendblueConfig(connector, params, options),
-    webhookVerifier: vercelOidc(),
+    webhookVerifier: createConnectWebhookVerifier(),
   };
 }

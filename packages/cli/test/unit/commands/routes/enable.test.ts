@@ -26,7 +26,7 @@ describe('routes enable', () => {
   it('should show help with --help flag', async () => {
     client.setArgv('routes', 'enable', '--help');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(2);
+    expect(exitCode).toEqual(0);
   });
 
   it('should enable a disabled route', async () => {
@@ -71,7 +71,7 @@ describe('routes enable', () => {
     useEditRoute();
     client.setArgv('routes', 'enable');
     const exitCode = await routes(client);
-    expect(exitCode).toEqual(1);
+    expect(exitCode).toEqual(2);
   });
 
   it('should error when route not found', async () => {

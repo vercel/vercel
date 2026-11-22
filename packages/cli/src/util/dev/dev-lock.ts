@@ -117,7 +117,7 @@ export async function acquireDevLock(
   return {
     acquired: false,
     existingLock: null,
-    reason: `Lock file exists at ${lockPath} but cannot be read`,
+    reason: `The lock file at \`${lockPath}\` could not be read. If no other \`vercel dev\` is running, remove it and retry.`,
   };
 }
 

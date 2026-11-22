@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReadableStream } from 'node:stream/web';
-import { Response } from '../../../src/util/fetch';
+import { Response } from '../../../src/util/fetch-primitives';
 import printEvents from '../../../src/util/events';
 
 const { mockDebug } = vi.hoisted(() => ({ mockDebug: vi.fn() }));

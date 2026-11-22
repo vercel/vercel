@@ -9,7 +9,7 @@ import { packageName } from '../../../util/pkg-name';
 const projectScopeOption = {
   ...projectOption,
   shorthand: 'p',
-  description: 'Project name or ID (defaults to the linked project).',
+  description: 'Project name or ID (default: linked project).',
 } as const;
 
 const nextOption = {
@@ -17,7 +17,7 @@ const nextOption = {
   shorthand: null,
   type: String,
   deprecated: false,
-  description: 'Continue from a previous response',
+  description: 'Show the next page using the cursor from the previous output',
   argument: 'CURSOR',
 } as const;
 

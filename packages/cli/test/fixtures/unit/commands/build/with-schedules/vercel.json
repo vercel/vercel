@@ -1,23 +1,24 @@
 {
-  "schedules": [
-    {
-      "name": "daily-report",
-      "expression": {
-        "cron": "0 0 * * *"
-      },
-      "target": {
-        "function": "api/scheduled-job"
-      }
+  "schedules": {
+    "daily-report": {
+      "timezone": "America/New_York",
+      "schedule": "0 0 * * *",
+      "function": "api/scheduled-job"
     },
-    {
-      "name": "hourly-jobs",
-      "expression": {
-        "cron": "0 * * * *",
-        "jitter": "5m"
-      },
-      "target": {
-        "topic": "hourly-jobs"
-      }
+    "hourly-jobs": {
+      "schedule": "0 * * * *",
+      "jitter": 5,
+      "topic": "hourly-jobs"
+    },
+    "every-ten": {
+      "schedule": "*/10 * * * *",
+      "jitter": 15,
+      "topic": "every-ten"
+    },
+    "minimum-jitter": {
+      "schedule": "*/10 * * * *",
+      "jitter": 1,
+      "topic": "minimum-jitter"
     }
-  ]
+  }
 }

@@ -31,12 +31,12 @@ export default async function addCmd(
     );
   } catch (error) {
     if (client.nonInteractive) {
-      exitWithNonInteractiveError(client, error, 1, {
+      exitWithNonInteractiveError(client, error, 2, {
         variant: 'global-config',
       });
     }
     printError(error);
-    return 1;
+    return 2;
   }
 
   const { args, flags } = parsedArgs;
@@ -53,29 +53,30 @@ export default async function addCmd(
         {
           status: 'error',
           reason: 'missing_arguments',
-          message: 'Slug is required. Usage: `vercel global-config add <slug>`',
+          message:
+            'Slug is required. Usage: `vercel global-config create <slug>`',
           next: [
             {
               command: buildCommandWithGlobalFlags(
                 client.argv,
-                'global-config add <slug>'
+                'global-config create <slug>'
               ),
             },
           ],
         },
-        1
+        2
       );
     }
     output.error(
-      `Missing slug. Usage: ${chalk.cyan(getCommandName('global-config add <slug>'))}`
+      `Missing slug. Usage: ${chalk.cyan(getCommandName('global-config create <slug>'))}`
     );
-    return 1;
+    return 2;
   }
 
   const formatResult = validateJsonOutput(flags);
   if (!formatResult.valid) {
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
   const asJson = formatResult.jsonOutput;
 
@@ -89,7 +90,7 @@ export default async function addCmd(
         Array.isArray(parsed)
       ) {
         output.error('`--items` must be a JSON object of key → value pairs.');
-        return 1;
+        return 2;
       }
       items = parsed as Record<string, unknown>;
     } catch {

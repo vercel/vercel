@@ -1,8 +1,11 @@
 // Mirror of `@vercel/trace-viewer/types`. Will be swapped for the published
 // package once it ships to npm.
 
+// OpenTelemetry status names, also used by `vercel traces search --json`.
+export type SpanStatusCode = 'Unset' | 'Ok' | 'Error';
+
 export type SpanStatus = {
-  code: number;
+  code: SpanStatusCode;
   message?: string;
 };
 

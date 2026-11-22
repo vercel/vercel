@@ -23,4 +23,10 @@ export class BlobDelTelemetryClient
       });
     }
   }
+
+  trackCliFlagYes(yes: boolean | undefined) {
+    if (yes) {
+      this.trackCliFlag('yes');
+    }
+  }
 }

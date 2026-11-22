@@ -1,6 +1,8 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { client } from '../../../mocks/client';
 import firewall from '../../../../src/commands/firewall';
+import { addInteractive } from '../../../../src/commands/firewall/rules/add-interactive';
+import { projectScope } from '../../../../src/util/firewall/scope';
 import { useUser } from '../../../mocks/user';
 import {
   useListFirewallConfigs,
@@ -13,8 +15,13 @@ import {
   createChange,
 } from '../../../mocks/firewall';
 import { useProject, defaultProject } from '../../../mocks/project';
-import { useTeams } from '../../../mocks/team';
-import { setupUnitFixture } from '../../../helpers/setup-unit-fixture';
+import { setTeamBillingPlan, useTeams } from '../../../mocks/team';
+import { teamCache } from '../../../../src/util/teams/get-team-by-id-or-slug';
+import { quoteArg } from '../../../../src/util/flags/quote-arg';
+import {
+  setupTmpDir,
+  setupUnitFixture,
+} from '../../../helpers/setup-unit-fixture';
 
 describe('firewall rules add', () => {
   beforeEach(() => {
@@ -62,6 +69,52 @@ describe('firewall rules add', () => {
       expect(
         (capturedRequests.patchDraft?.value as any)?.conditionGroup
       ).toHaveLength(1);
+    });
+
+    it.each([
+      '--project',
+      '-p',
+    ])('keeps %s in the publish suggestion as --project', async flag => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+      client.cwd = setupTmpDir();
+      client.config.currentTeam = 'team_dummy';
+      useProject({
+        ...defaultProject,
+        id: 'other-firewall',
+        name: 'other-firewall',
+        accountId: 'team_dummy',
+      });
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        'Block test path',
+        '--condition',
+        '{"type":"path","op":"pre","value":"/test"}',
+        '--action',
+        'deny',
+        flag,
+        'other-firewall',
+        '--yes'
+      );
+      const exitCode = await firewall(client);
+      expect(exitCode).toEqual(0);
+      const output = client.stderr.getFullOutput().replace(/\s+/g, ' ');
+      expect(output).toContain(
+        'Run vercel firewall publish --project other-firewall to make it live'
+      );
+      expect(output).toContain(
+        'vercel firewall discard --project other-firewall to undo'
+      );
+      expect(client.telemetryEventStore.readonlyEvents).toContainEqual(
+        expect.objectContaining({
+          key: 'option:project',
+          value: '[REDACTED]',
+        })
+      );
     });
 
     it('should create a multi-condition AND rule', async () => {
@@ -440,7 +493,10 @@ describe('firewall rules add', () => {
       ).toBe('1h');
     });
 
-    it('should create an inactive rule with description', async () => {
+    it.each([
+      ['--no-enable', false],
+      ['--disabled', true],
+    ])('should create an inactive rule with %s', async (flag, deprecated) => {
       useListFirewallConfigs(createConfig(), null);
       usePatchDraft();
       useActivateConfig();
@@ -454,7 +510,7 @@ describe('firewall rules add', () => {
         '{"type":"path","op":"pre","value":"/test"}',
         '--action',
         'log',
-        '--disabled',
+        flag,
         '--description',
         'Test description',
         '--yes'
@@ -466,6 +522,12 @@ describe('firewall rules add', () => {
       expect((capturedRequests.patchDraft?.value as any)?.description).toBe(
         'Test description'
       );
+      const stderr = client.stderr.getFullOutput();
+      if (deprecated) {
+        expect(stderr).toContain('--disabled is deprecated. Use --no-enable.');
+      } else {
+        expect(stderr).not.toContain('deprecated');
+      }
     });
 
     it('should create a log rule', async () => {
@@ -990,7 +1052,7 @@ describe('firewall rules add', () => {
       (client.stdin as any).isTTY = false;
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Interactive mode is not available');
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
   });
 
@@ -998,6 +1060,35 @@ describe('firewall rules add', () => {
 
   describe('JSON mode', () => {
     it('should create a rule from valid JSON', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      usePatchDraft();
+      useActivateConfig();
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--data',
+        JSON.stringify({
+          name: 'JSON rule',
+          active: true,
+          conditionGroup: [
+            { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
+          ],
+          action: { mitigate: { action: 'deny' } },
+        }),
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput('Rule "JSON rule" staged');
+      expect(await exitCodePromise).toEqual(0);
+      expect(capturedRequests.patchDraft?.action).toBe('rules.insert');
+      expect((capturedRequests.patchDraft?.value as any)?.name).toBe(
+        'JSON rule'
+      );
+    });
+
+    it('accepts --json, the deprecated name for --data', async () => {
       useListFirewallConfigs(createConfig(), null);
       usePatchDraft();
       useActivateConfig();
@@ -1018,12 +1109,29 @@ describe('firewall rules add', () => {
         '--yes'
       );
       const exitCodePromise = firewall(client);
-      await expect(client.stderr).toOutput('Rule "JSON rule" staged');
+      await expect(client.stderr).toOutput(
+        '! --json is deprecated for rule payloads. Use --data.'
+      );
       expect(await exitCodePromise).toEqual(0);
-      expect(capturedRequests.patchDraft?.action).toBe('rules.insert');
       expect((capturedRequests.patchDraft?.value as any)?.name).toBe(
         'JSON rule'
       );
+    });
+
+    it('rejects --data with --json', async () => {
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--data',
+        '{"name":"a"}',
+        '--json',
+        '{"name":"b"}',
+        '--yes'
+      );
+      const exitCodePromise = firewall(client);
+      await expect(client.stderr).toOutput("Can't use --data with --json.");
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should create a complex JSON rule with rate limit', async () => {
@@ -1035,7 +1143,7 @@ describe('firewall rules add', () => {
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         JSON.stringify({
           name: 'Complex JSON',
           active: true,
@@ -1074,13 +1182,13 @@ describe('firewall rules add', () => {
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         '{bad json',
         '--yes'
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Invalid JSON');
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should error when JSON missing name', async () => {
@@ -1088,7 +1196,7 @@ describe('firewall rules add', () => {
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         JSON.stringify({
           conditionGroup: [
             { conditions: [{ type: 'path', op: 'pre', value: '/api' }] },
@@ -1107,7 +1215,7 @@ describe('firewall rules add', () => {
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         JSON.stringify({
           name: 'Test',
           action: { mitigate: { action: 'deny' } },
@@ -1124,7 +1232,7 @@ describe('firewall rules add', () => {
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         JSON.stringify({
           name: 'Test',
           conditionGroup: [
@@ -1143,7 +1251,7 @@ describe('firewall rules add', () => {
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         JSON.stringify({
           name: 'Test',
           conditionGroup: [{ notConditions: [] }],
@@ -1163,7 +1271,7 @@ describe('firewall rules add', () => {
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         JSON.stringify({
           name: 'Test',
           conditionGroup: [{ conditions: [{ op: 'eq', value: 'test' }] }],
@@ -1183,7 +1291,7 @@ describe('firewall rules add', () => {
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         JSON.stringify({
           name: 'Test',
           conditionGroup: [
@@ -1205,7 +1313,7 @@ describe('firewall rules add', () => {
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         JSON.stringify({
           name: 'a'.repeat(161),
           conditionGroup: [
@@ -1237,17 +1345,17 @@ describe('firewall rules add', () => {
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput(
-        'Cannot use --ai, --json, and --condition together'
+        'Cannot use --ai, --data, and --condition together'
       );
       expect(await exitCodePromise).toEqual(1);
     });
 
-    it('should error on --json + --condition', async () => {
+    it('should error on --data + --condition', async () => {
       client.setArgv(
         'firewall',
         'rules',
         'add',
-        '--json',
+        '--data',
         '{"name":"test"}',
         '--condition',
         '{"type":"path","op":"pre","value":"/test"}',
@@ -1255,25 +1363,25 @@ describe('firewall rules add', () => {
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput(
-        'Cannot use --ai, --json, and --condition together'
+        'Cannot use --ai, --data, and --condition together'
       );
       expect(await exitCodePromise).toEqual(1);
     });
 
-    it('should error on --ai + --json', async () => {
+    it('should error on --ai + --data', async () => {
       client.setArgv(
         'firewall',
         'rules',
         'add',
         '--ai',
         'Block bots',
-        '--json',
+        '--data',
         '{"name":"test"}',
         '--yes'
       );
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput(
-        'Cannot use --ai, --json, and --condition together'
+        'Cannot use --ai, --data, and --condition together'
       );
       expect(await exitCodePromise).toEqual(1);
     });
@@ -1313,6 +1421,42 @@ describe('firewall rules add', () => {
       expect((capturedRequests.patchDraft?.value as any)?.name).toBe(
         'AI Generated Rule'
       );
+    });
+
+    it('turns a Priority project 401 into an upsell', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      useGenerateFirewallRule();
+      client.scenario.patch(
+        '/v1/security/firewall/config/draft',
+        (_req: any, res: any) => {
+          res.status(401).json({
+            error: {
+              code: 'unauthorized',
+              message: 'This feature requires a Priority project',
+            },
+          });
+        }
+      );
+
+      client.setArgv(
+        'firewall',
+        'rules',
+        'add',
+        '--ai',
+        'Rate limit /api to 100 requests per minute by IP',
+        '--yes'
+      );
+      const exitCode = await firewall(client);
+      expect(exitCode).toEqual(1);
+      const output = client.stderr.getFullOutput();
+      const team = teamCache.get('team_dummy');
+      expect(output).toContain(
+        `This rule requires a Priority project for firewall-test on team ${team?.slug}`
+      );
+      expect(output).toContain(
+        `project priority enable firewall-test --scope ${quoteArg(team?.slug ?? '')}`
+      );
+      expect(output).not.toContain('(401)');
     });
 
     it('should create a rule with specific AI-generated conditions', async () => {
@@ -1491,7 +1635,7 @@ describe('firewall rules add', () => {
     it('tracks help telemetry', async () => {
       client.setArgv('firewall', 'rules', 'add', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
     });
   });
 
@@ -1554,5 +1698,198 @@ describe('firewall rules add', () => {
       await expect(client.stderr).toOutput('Discarded');
       expect(await exitCodePromise).toEqual(0);
     });
+
+    it('turns a manual add of a bot condition into the Priority upsell', async () => {
+      useListFirewallConfigs(createConfig(), null);
+      client.scenario.patch(
+        '/v1/security/firewall/config/draft',
+        (_req: any, res: any) => {
+          res.status(401).json({
+            error: {
+              code: 'unauthorized',
+              message: 'This feature requires a Priority project',
+            },
+          });
+        }
+      );
+
+      const exitCodePromise = addInteractive(
+        client,
+        projectScope(
+          { id: 'firewall-test-project', name: 'firewall-test' },
+          'team_dummy',
+          'dummy-team'
+        ),
+        {
+          prePopulated: {
+            name: 'Block bots',
+            conditionGroup: [
+              {
+                conditions: [
+                  { type: 'bot_category', op: 'eq', value: 'ai_scraper' },
+                ],
+              },
+            ],
+            action: {
+              mitigate: {
+                action: 'deny',
+                rateLimit: null,
+                redirect: null,
+                actionDuration: null,
+              },
+            },
+          },
+        }
+      );
+
+      await expect(client.stderr).toOutput('Rule name:');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Description');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('What next?');
+      client.stdin.write('\x1B[B\x1B[B\n');
+      await expect(client.stderr).toOutput('Action:');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Action duration');
+      client.stdin.write('\n');
+      await expect(client.stderr).toOutput('Create this rule?');
+      client.stdin.write('y\n');
+
+      expect(await exitCodePromise).toEqual(1);
+      const output = client.stderr.getFullOutput();
+      expect(output).toContain(
+        'This rule requires a Priority project for firewall-test on team dummy-team'
+      );
+      expect(output).toContain(
+        'project priority enable firewall-test --scope dummy-team'
+      );
+      expect(output).not.toContain('(401)');
+    });
+  });
+
+  it('turns a Priority project 401 into an upsell', async () => {
+    useListFirewallConfigs(createConfig(), null);
+    client.scenario.patch(
+      '/v1/security/firewall/config/draft',
+      (_req: any, res: any) => {
+        res.status(401).json({
+          error: {
+            code: 'unauthorized',
+            message: 'This feature requires a Priority project',
+          },
+        });
+      }
+    );
+
+    client.setArgv(
+      'firewall',
+      'rules',
+      'add',
+      'Block bot category',
+      '--condition',
+      '{"type":"bot_category","op":"eq","value":"ai_scraper"}',
+      '--action',
+      'deny',
+      '--yes'
+    );
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+    const output = client.stderr.getFullOutput();
+    const team = teamCache.get('team_dummy');
+    expect(team?.slug).toBeTruthy();
+    expect(output).toContain(
+      `This rule requires a Priority project for firewall-test on team ${team?.slug}`
+    );
+    expect(output).toContain(
+      `project priority enable firewall-test --scope ${quoteArg(team?.slug ?? '')}`
+    );
+    expect(output).not.toContain('--project');
+    expect(output).not.toContain('--non-interactive');
+    expect(output).not.toContain('A person must');
+    expect(output).not.toContain('cannot be automated');
+    expect(output).not.toContain('(401)');
+    expect(output).not.toContain('This feature requires a Priority project');
+    expect(output).not.toContain('https://vercel.com');
+  });
+
+  it('returns a structured plan error with --json', async () => {
+    client.scenario.get(
+      '/v1/security/firewall/config',
+      (_req: any, res: any) => {
+        res.status(401).json({
+          error: {
+            code: 'unauthorized',
+            message: 'This feature requires a Priority project',
+          },
+        });
+      }
+    );
+
+    client.setArgv('firewall', 'rules', 'list', '--json');
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+    const payload = JSON.parse(client.stdout.getFullOutput());
+    const team = teamCache.get('team_dummy');
+    expect(payload).toMatchObject({
+      status: 'error',
+      reason: 'plan_upgrade_required',
+      userActionRequired: true,
+      scope: team?.slug,
+    });
+    expect(payload.data.project).toEqual({
+      id: 'firewall-test-project',
+      name: 'firewall-test',
+    });
+    expect(payload.data.team.slug).toBe(team?.slug);
+    expect(payload.data.team.slug).not.toBe('firewall-test');
+    expect(payload.next?.[0]?.command).toContain(
+      `project priority enable firewall-test --scope ${quoteArg(team?.slug ?? '')}`
+    );
+    expect(payload.next?.[0]?.command).not.toContain('--project');
+    expect(payload.next?.[0]?.command).not.toContain('--non-interactive');
+    expect(payload.message).toContain(
+      `This rule requires a Priority project for firewall-test on team ${team?.slug}`
+    );
+    expect(client.stderr.getFullOutput()).not.toContain(
+      'This rule requires a Priority project'
+    );
+    expect(client.stderr.getFullOutput()).not.toContain('(401)');
+  });
+
+  it('sends a Hobby team to buy pro for that team, not priority enable', async () => {
+    setTeamBillingPlan('hobby');
+    useListFirewallConfigs(createConfig(), null);
+    client.scenario.patch(
+      '/v1/security/firewall/config/draft',
+      (_req: any, res: any) => {
+        res.status(401).json({
+          error: {
+            code: 'unauthorized',
+            message: 'This feature requires a Priority project',
+          },
+        });
+      }
+    );
+
+    client.setArgv(
+      'firewall',
+      'rules',
+      'add',
+      'Block bot category',
+      '--condition',
+      '{"type":"bot_category","op":"eq","value":"ai_scraper"}',
+      '--action',
+      'deny',
+      '--yes'
+    );
+    const exitCode = await firewall(client);
+    expect(exitCode).toEqual(1);
+    const output = client.stderr.getFullOutput();
+    const team = teamCache.get('team_dummy');
+    expect(output).toContain(`buy pro --scope ${quoteArg(team?.slug ?? '')}`);
+    expect(output).toContain(
+      `project priority enable firewall-test --scope ${quoteArg(team?.slug ?? '')}`
+    );
+    expect(output).not.toContain('--project');
   });
 });

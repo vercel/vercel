@@ -6,7 +6,12 @@ import { AGENT_REASON, AGENT_STATUS } from '../agent-output-constants';
 import { getCommandName, getCommandNamePlain } from '../pkg-name';
 import { resolveProjectContext } from './resolve-project-context';
 
-export type ProjectContextCommand = 'redirects' | 'routes' | 'firewall';
+export type ProjectContextCommand =
+  | 'daemons'
+  | 'redirects'
+  | 'routes'
+  | 'firewall'
+  | 'schedules';
 
 /**
  * Resolves an existing project context or reports that one is required.

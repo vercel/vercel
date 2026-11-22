@@ -66,8 +66,8 @@ export class ActivityTelemetryClient
     }
   }
 
-  trackCliOptionNext(v: number | undefined) {
-    if (typeof v === 'number') {
+  trackCliOptionNext(v: string | undefined) {
+    if (v !== undefined) {
       this.trackCliOption({
         option: 'next',
         value: this.redactedValue,

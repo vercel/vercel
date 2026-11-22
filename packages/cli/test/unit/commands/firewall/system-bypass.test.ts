@@ -53,7 +53,7 @@ describe('firewall system-bypass', () => {
     it('tracks help telemetry', async () => {
       client.setArgv('firewall', 'system-bypass', 'list', '--help');
       const exitCode = await firewall(client);
-      expect(exitCode).toEqual(2);
+      expect(exitCode).toEqual(0);
     });
   });
 
@@ -90,7 +90,7 @@ describe('firewall system-bypass', () => {
       client.setArgv('firewall', 'system-bypass', 'add', '--yes');
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Missing required argument');
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should reject invalid IP address', async () => {
@@ -174,7 +174,7 @@ describe('firewall system-bypass', () => {
       client.setArgv('firewall', 'system-bypass', 'remove', '--yes');
       const exitCodePromise = firewall(client);
       await expect(client.stderr).toOutput('Missing required argument');
-      expect(await exitCodePromise).toEqual(1);
+      expect(await exitCodePromise).toEqual(2);
     });
 
     it('should reject invalid IP on remove', async () => {

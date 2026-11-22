@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { errorToString } from '@vercel/error-utils';
 import * as ERRORS from '../../util/errors-ts';
-import getScope from '../../util/get-scope';
+import { getContextName } from '../../util/get-scope';
 import isRootDomain from '../../util/is-root-domain';
 import param from '../../util/output/param';
 import updateAutoRenew from '../../util/domains/update-auto-renew';
@@ -10,6 +10,7 @@ import output from '../../output-manager';
 import { DomainsAutoRenewTelemetryClient } from '../../util/telemetry/commands/domains/auto-renew';
 import type Client from '../../util/client';
 import { autoRenewSubcommand } from './command';
+import { warnDeprecatedSubcommand } from '../../util/warn-deprecated-subcommand';
 import { parseArguments } from '../../util/get-args';
 import { getFlagsSpecification } from '../../util/get-flags-specification';
 import { printError } from '../../util/error';
@@ -19,11 +20,19 @@ import {
   outputAgentError,
   shouldEmitNonInteractiveCommandError,
 } from '../../util/agent-output';
-import { AGENT_REASON, AGENT_STATUS } from '../../util/agent-output-constants';
+import {
+  AGENT_REASON,
+  AGENT_STATUS,
+  getExitCodeForReason,
+} from '../../util/agent-output-constants';
 
 const ON = 'on';
 const OFF = 'off';
 
+/**
+ * `vercel domains auto-renew enable|disable <domain>`. The old
+ * `auto-renew <domain> <on|off>` form still works and warns.
+ */
 export default async function autoRenew(client: Client, argv: string[]) {
   const telemetry = new DomainsAutoRenewTelemetryClient({
     opts: {
@@ -42,13 +51,22 @@ export default async function autoRenew(client: Client, argv: string[]) {
       message: error instanceof Error ? error.message : String(error),
     });
     printError(error);
-    return 1;
+    return 2;
   }
   const { args } = parsedArgs;
-  const [domainName, state] = args;
+  const action =
+    args[0] === 'enable' || args[0] === 'disable' ? args[0] : undefined;
+  const [domainName, state] = action ? args.slice(1) : args;
 
+  if (action === 'enable') {
+    telemetry.trackCliSubcommandEnable(action);
+  } else if (action === 'disable') {
+    telemetry.trackCliSubcommandDisable(action);
+  }
   telemetry.trackCliArgumentDomain(domainName);
-  telemetry.trackCliArgumentState(state);
+  if (!action) {
+    telemetry.trackCliArgumentState(state);
+  }
   telemetry.trackCliOptionFormat(parsedArgs.flags['--format']);
   telemetry.trackCliFlagJson(parsedArgs.flags['--json']);
 
@@ -60,7 +78,7 @@ export default async function autoRenew(client: Client, argv: string[]) {
       message: formatResult.error,
     });
     output.error(formatResult.error);
-    return 1;
+    return 2;
   }
 
   const { jsonOutput } = formatResult;
@@ -77,7 +95,7 @@ export default async function autoRenew(client: Client, argv: string[]) {
         reason,
         message,
       });
-      return 1;
+      return getExitCodeForReason(reason);
     }
     if (jsonOutput || !canPrompt(client)) {
       client.stdout.write(
@@ -87,21 +105,20 @@ export default async function autoRenew(client: Client, argv: string[]) {
           2
         )}\n`
       );
-      return 1;
+      return getExitCodeForReason(reason);
     }
     output.error(humanMessage);
-    return 1;
+    return getExitCodeForReason(reason);
   }
 
-  if (args.length !== 2 || !domainName || !state) {
+  if (args.length !== 2 || !domainName || (!action && !state)) {
+    const usage = getCommandName(
+      `domains auto-renew ${action ?? 'enable|disable'} <domain>`
+    );
     return fail(
       AGENT_REASON.MISSING_ARGUMENTS,
-      `Invalid number of arguments. Usage: ${getCommandName(
-        'domains auto-renew <domain> <on|off>'
-      )}`,
-      `Invalid number of arguments. Usage: ${chalk.cyan(
-        `${getCommandName('domains auto-renew <domain> <on|off>')}`
-      )}`
+      `Invalid number of arguments. Usage: ${usage}`,
+      `Invalid number of arguments. Usage: ${chalk.cyan(usage)}`
     );
   }
 
@@ -115,7 +132,7 @@ export default async function autoRenew(client: Client, argv: string[]) {
     );
   }
 
-  if (state !== ON && state !== OFF) {
+  if (!action && state !== ON && state !== OFF) {
     return fail(
       AGENT_REASON.INVALID_ARGUMENTS,
       `Invalid state "${state}". Expected ${ON} or ${OFF}.`,
@@ -125,11 +142,20 @@ export default async function autoRenew(client: Client, argv: string[]) {
     );
   }
 
-  const enabled = state === ON;
-  const { contextName } = await getScope(client);
+  const enabled = action ? action === 'enable' : state === ON;
+  if (!action) {
+    warnDeprecatedSubcommand(
+      client,
+      `domains auto-renew ${domainName} ${state}`,
+      `domains auto-renew ${enabled ? 'enable' : 'disable'} ${domainName}`
+    );
+  }
+  const contextName = await getContextName(client);
 
   if (!asJson) {
-    output.spinner(`Turning automatic renewal ${state} for ${domainName}`);
+    output.spinner(
+      `${enabled ? 'Enabling' : 'Disabling'} automatic renewal for ${domainName}`
+    );
   }
 
   try {
@@ -204,9 +230,9 @@ export default async function autoRenew(client: Client, argv: string[]) {
   }
 
   output.success(
-    enabled
-      ? `Automatic renewal turned on for ${param(domainName)}`
-      : `Automatic renewal turned off for ${param(domainName)}`
+    `${enabled ? 'Enabled' : 'Disabled'} automatic renewal for ${param(
+      domainName
+    )}`
   );
   return 0;
 }

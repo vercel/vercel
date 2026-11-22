@@ -1,16 +1,30 @@
 import chalk from 'chalk';
 import type Client from '../../util/client';
 import { printError } from '../../util/error';
-import { getCommandNamePlain } from '../../util/pkg-name';
+import {
+  getCommandName,
+  getCommandNamePlain,
+  packageName,
+} from '../../util/pkg-name';
 import output from '../../output-manager';
 import {
   outputAgentError,
+  writeAgentError,
   buildCommandWithYes,
-  withGlobalFlags as withClientGlobalFlags,
+  buildCommandWithGlobalFlags,
+  shouldEmitNonInteractiveCommandError,
+  type AgentErrorPayload,
 } from '../../util/agent-output';
-import { AGENT_STATUS, AGENT_REASON } from '../../util/agent-output-constants';
+import {
+  AGENT_STATUS,
+  AGENT_REASON,
+  getExitCodeForReason,
+} from '../../util/agent-output-constants';
 import { getGlobalFlagsFromArgs } from '../../util/arg-common';
 import { isAPIError } from '../../util/errors-ts';
+import { FIREWALL_ACTIVITY_PLAN_MESSAGE } from '../../util/firewall/get-firewall-alerts';
+import { apiServerMessage } from '../../util/firewall/server-message';
+import { clientObservabilityPlanRecovery } from '../../util/metrics/plan-gate';
 import type { Command } from '../help';
 import {
   parseSubcommandArguments,
@@ -18,11 +32,17 @@ import {
 } from '../../util/command-arguments';
 import type { FirewallIpRule, FirewallRule } from '../../util/firewall/types';
 import type { FirewallScope } from '../../util/firewall/scope';
+import { resolveManagedBotRuleId } from '../../util/firewall/managed-bot-rules';
 import listFirewallConfigs from '../../util/firewall/list-firewall-configs';
 import activateFirewallConfig from '../../util/firewall/activate-firewall-config';
 import getScope from '../../util/get-scope';
 import { requireProjectContext } from '../../util/projects/require-project-context';
 import stamp from '../../util/output/stamp';
+import { quoteArg } from '../../util/flags/quote-arg';
+import { teamCache } from '../../util/teams/get-team-by-id-or-slug';
+
+const PRIORITY_PROJECT_ENABLE_COMMAND = 'project priority enable';
+const BUY_PRO_COMMAND = 'buy pro';
 
 /**
  * Plain suggested command with global flags from argv (--cwd, --non-interactive, etc.).
@@ -31,14 +51,17 @@ import stamp from '../../util/output/stamp';
 export function withGlobalFlags(
   client: Client,
   commandTemplate: string,
-  scope?: FirewallScope
+  scope?: FirewallScope,
+  options: { excludeFlags?: string[]; preserveProject?: boolean } = {}
 ): string {
   const template =
     scope?.type === 'team'
       ? `${commandTemplate} --team-level`
       : commandTemplate;
-  return withClientGlobalFlags(client, template, {
-    preserveProject: true,
+  return buildCommandWithGlobalFlags(client.argv, template, undefined, {
+    globalFlags: 'all',
+    preserveProject: options.preserveProject ?? true,
+    excludeFlags: options.excludeFlags,
   });
 }
 
@@ -62,12 +85,12 @@ export async function resolveFirewallScope(
           reason: AGENT_REASON.INVALID_ARGUMENTS,
           message,
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     output.error(message);
-    return 1;
+    return 2;
   }
 
   if (flags['--team-level']) {
@@ -104,7 +127,158 @@ export async function resolveFirewallScope(
     type: 'project',
     projectId: project.id,
     teamId: org.type === 'team' ? org.id : undefined,
+    teamSlug: org.type === 'team' ? org.slug : undefined,
     displayName: project.name,
+  };
+}
+
+/** Whether the refusal named Priority project (or the leftover Priority Tier copy). */
+export function mentionsPriorityProject(message: string): boolean {
+  return (
+    /priority\s+project/i.test(message) || /priority\s+tier/i.test(message)
+  );
+}
+
+function teamPlan(scope: FirewallScope): string | undefined {
+  return scope.teamId ? teamCache.get(scope.teamId)?.billing?.plan : undefined;
+}
+
+/**
+ * The team the refused request ran against. `buy pro` and
+ * `project priority enable` otherwise use the globally selected team, which
+ * can be a different one, so the recovery always names this team as `--scope`.
+ * The slug is never used as the project name.
+ */
+function priorityTeam(scope: FirewallScope): {
+  id: string;
+  slug: string | null;
+  name: string | null;
+  scopeArg: string;
+} | null {
+  const cached = scope.teamId ? teamCache.get(scope.teamId) : undefined;
+  if (scope.type === 'team') {
+    return {
+      id: scope.teamId,
+      slug: scope.displayName,
+      name: cached?.name ?? null,
+      scopeArg: scope.displayName,
+    };
+  }
+  if (!scope.teamId) return null;
+  const slug = scope.teamSlug ?? cached?.slug ?? null;
+  return {
+    id: scope.teamId,
+    slug,
+    name: cached?.name ?? null,
+    scopeArg: slug ?? scope.teamId,
+  };
+}
+
+/** Same labeling as `project priority`: slug, plus the team name when it differs. */
+function teamLabel(team: { slug: string; name: string | null }): string {
+  return team.name && team.name !== team.slug
+    ? `${team.slug} (${team.name})`
+    : team.slug;
+}
+
+type PriorityProjectFix = {
+  command: string;
+  hint: string;
+  plainHint: string;
+  when: string;
+  excludeFlags: string[];
+  preserveProject: false;
+  reason: string;
+  /** Value of `--scope` on the recovery. Absent for a personal account. */
+  scope?: string;
+  data: {
+    project: { id: string; name: string } | null;
+    team: { id: string; slug: string | null; name: string | null } | null;
+    plan: string | null;
+  };
+};
+
+function styledCommand(command: string, plain: boolean): string {
+  return plain ? getCommandNamePlain(command) : getCommandName(command);
+}
+
+/**
+ * Recovery for a Priority project refusal.
+ *
+ * The project is a positional argument. The team is only `--scope`. A
+ * preserved `--project` or the globally selected team would name the wrong
+ * target. On a personal account there is no team to upgrade.
+ */
+export function priorityProjectFix(scope: FirewallScope): PriorityProjectFix {
+  const excludeFlags = [
+    '--non-interactive',
+    '--project',
+    '--yes',
+    '--scope',
+    '--team',
+  ];
+  const project =
+    scope.type === 'project'
+      ? { id: scope.projectId, name: scope.displayName }
+      : null;
+  const team = priorityTeam(scope);
+  const plan = teamPlan(scope) ?? null;
+  const data = {
+    project,
+    team: team && { id: team.id, slug: team.slug, name: team.name },
+    plan,
+  };
+  const projectToken = project ? quoteArg(project.name) : '<project>';
+  const scopeFlag = team ? ` --scope ${quoteArg(team.scopeArg)}` : '';
+  const enable = `${PRIORITY_PROJECT_ENABLE_COMMAND} ${projectToken}${scopeFlag}`;
+
+  if (!team) {
+    const hint =
+      'Priority projects are only available on team accounts. Use --scope to specify one.';
+    return {
+      command: '',
+      hint,
+      plainHint: hint,
+      when: hint,
+      excludeFlags,
+      preserveProject: false,
+      reason: AGENT_REASON.MISSING_SCOPE,
+      data,
+    };
+  }
+
+  if (plan === 'hobby' || plan === 'oss') {
+    const upgrade = `${BUY_PRO_COMMAND}${scopeFlag}`;
+    const hint = (plain: boolean) =>
+      `Priority Projects are only available on Pro or Enterprise team plans. Upgrade with ${styledCommand(upgrade, plain)}, then run ${styledCommand(enable, plain)}.`;
+    return {
+      command: upgrade,
+      hint: hint(false),
+      plainHint: hint(true),
+      when: 'a person has approved upgrading the plan',
+      excludeFlags,
+      preserveProject: false,
+      reason: AGENT_REASON.PLAN_UPGRADE_REQUIRED,
+      scope: team.scopeArg,
+      data,
+    };
+  }
+
+  const shown = styledCommand(enable, false);
+  const plain = styledCommand(enable, true);
+  const placeholder = 'Replace <project> with a project on this team.';
+  return {
+    command: enable,
+    hint: project ? shown : `${shown} ${placeholder}`,
+    plainHint: project ? plain : `${plain} ${placeholder}`,
+    when: project
+      ? 'user runs this command in an interactive terminal'
+      : 'Replace <project> with a project on this team.',
+    excludeFlags,
+    preserveProject: false,
+    reason: AGENT_REASON.PLAN_UPGRADE_REQUIRED,
+    scope: team.scopeArg,
+    data,
   };
 }
 
@@ -112,7 +286,8 @@ export async function resolveFirewallScope(
  * User-facing message for firewall API errors. Team scope maps the two 403
  * causes (plan gate, owner-only ACL) to actionable messages; everything else
  * surfaces the server message so gated-feature errors (e.g. 401 Security Plus)
- * stay verbatim.
+ * stay verbatim. A Priority project refusal is reported separately, with
+ * `project priority enable` as the recovery.
  */
 export function mapFirewallApiError(
   e: unknown,
@@ -127,6 +302,114 @@ export function mapFirewallApiError(
     return `You need to be a team owner to manage the team-level firewall for "${scope.displayName}".${err.message ? ` (${err.message})` : ''}`;
   }
   return err.message || fallback;
+}
+
+/**
+ * A Priority project 401 is a plan gate, not a credential failure and not a
+ * retry of the command that just failed. Returns an exit code when that is
+ * the case, otherwise null so the caller reports the error itself.
+ */
+function priorityProjectMessage(
+  scope: FirewallScope,
+  fix: PriorityProjectFix
+): string {
+  const team = fix.data.team;
+  const label =
+    team?.slug != null
+      ? teamLabel({ slug: team.slug, name: team.name })
+      : undefined;
+  if (scope.type === 'project') {
+    if (!label) {
+      return `This rule requires a Priority project. ${fix.hint}`;
+    }
+    return `This rule requires a Priority project for ${scope.displayName} on team ${label}.`;
+  }
+  return label
+    ? `This rule requires a Priority project on team ${label}.`
+    : 'This rule requires a Priority project.';
+}
+
+/**
+ * A Priority project 401 is a plan gate, not a credential failure and not a
+ * retry of the command that just failed. Returns an exit code when that is
+ * the case, otherwise null so the caller reports the error itself.
+ *
+ * `--json` writes one error document and no human line, matching
+ * `project priority`. The document's `scope` and `--scope` are the team the
+ * request ran against, never the project name and never a different
+ * globally selected team.
+ */
+export function failPriorityProjectGate(
+  client: Client,
+  error: unknown,
+  scope: FirewallScope,
+  opts?: { json?: boolean }
+): number | null {
+  const serverMessage = apiServerMessage(error);
+  if (!serverMessage || !mentionsPriorityProject(serverMessage)) return null;
+  const fix = priorityProjectFix(scope);
+  const message = priorityProjectMessage(scope, fix);
+  const payload: AgentErrorPayload = {
+    status: AGENT_STATUS.ERROR,
+    reason: fix.reason,
+    message,
+    userActionRequired: true,
+    hint: fix.plainHint,
+    retryable: false,
+    ...(fix.scope ? { scope: fix.scope } : {}),
+    data: fix.data,
+    ...(fix.command
+      ? {
+          next: [
+            {
+              command: buildCommandWithGlobalFlags(
+                client.argv,
+                fix.command,
+                packageName,
+                {
+                  globalFlags: 'all',
+                  preserveProject: false,
+                  excludeFlags: fix.excludeFlags,
+                }
+              ),
+              when: fix.when,
+            },
+          ],
+        }
+      : {}),
+  };
+  if (shouldEmitNonInteractiveCommandError(client)) {
+    outputAgentError(client, payload, 1);
+  }
+  if (opts?.json) {
+    output.stopSpinner();
+    writeAgentError(client, payload);
+    return 1;
+  }
+  output.error(message);
+  if (fix.command) {
+    output.log(fix.hint);
+  }
+  return 1;
+}
+
+/**
+ * The rule payload from `--data`, or from `--json`, its deprecated old name.
+ * Returns an exit code when both are given.
+ */
+export function getRulePayload(flags: {
+  '--data'?: string;
+  '--json'?: string;
+}): string | undefined | number {
+  const legacy = flags['--json'];
+  if (legacy !== undefined && flags['--data'] !== undefined) {
+    output.error("Can't use --data with --json.");
+    return 2;
+  }
+  if (legacy !== undefined) {
+    output.warning('--json is deprecated for rule payloads. Use --data.');
+  }
+  return flags['--data'] ?? legacy;
 }
 
 export async function parseSubcommandArgs(
@@ -157,16 +440,16 @@ export async function parseSubcommandArgs(
               command: getCommandNamePlain(
                 `firewall ${fullPath} ${flags.join(' ')}`.trim()
               ),
-              when: 'fix flags and retry',
+              when: 'fix options and retry',
             },
           ],
         },
-        1
+        2
       );
-      return 1;
+      return 2;
     }
     printError(err);
-    return 1;
+    return 2;
   }
 
   return parsedArgs;
@@ -215,28 +498,133 @@ export function firewallPermissionMessage(
  *
  * `nextCommand` is offered only when re-running could plausibly succeed, so
  * omit it for failures a retry cannot clear.
+ *
+ * `fix` is for a failure with a known remedy, which is a different thing: a
+ * command that clears the cause rather than one to run afterwards. It is the
+ * only part of this that a person sees, because `nextCommand` reaches the
+ * agent payload alone, and an error stating no recovery leaves a reader
+ * nowhere to go. Both ride along in `next[]` for an agent, the fix first
+ * since it is what unblocks the command.
  */
 export function failFirewall(
   client: Client,
   opts: {
     message: string;
     nextCommand?: string;
+    fix?: {
+      command?: string;
+      excludeFlags?: string[];
+      hint: string;
+      preserveProject?: boolean;
+      when?: string;
+    };
     reason?: string;
   }
 ): number {
+  const reason = opts.reason ?? AGENT_REASON.INVALID_ARGUMENTS;
+  const exitCode = getExitCodeForReason(reason);
   if (client.nonInteractive) {
-    outputAgentError(client, {
-      status: AGENT_STATUS.ERROR,
-      reason: opts.reason ?? AGENT_REASON.INVALID_ARGUMENTS,
-      message: opts.message,
-      next: opts.nextCommand
-        ? [{ command: withGlobalFlags(client, opts.nextCommand) }]
-        : [],
-    });
-    return 1;
+    outputAgentError(
+      client,
+      {
+        status: AGENT_STATUS.ERROR,
+        reason,
+        message: opts.message,
+        ...(opts.fix?.hint ? { hint: opts.fix.hint } : {}),
+        next: [
+          ...(opts.fix?.command
+            ? [
+                {
+                  command: withGlobalFlags(
+                    client,
+                    opts.fix.command,
+                    undefined,
+                    {
+                      excludeFlags: opts.fix.excludeFlags,
+                      preserveProject: opts.fix.preserveProject,
+                    }
+                  ),
+                  ...(opts.fix.when ? { when: opts.fix.when } : {}),
+                },
+              ]
+            : []),
+          ...(opts.nextCommand
+            ? [{ command: withGlobalFlags(client, opts.nextCommand) }]
+            : []),
+        ],
+      },
+      exitCode
+    );
+    return exitCode;
   }
   output.error(opts.message);
-  return 1;
+  // Last, because it is the most actionable line.
+  if (opts.fix) {
+    output.log(opts.fix.hint);
+  }
+  return exitCode;
+}
+
+/**
+ * A 402 from the observability query used for traffic, alerts, and
+ * persistent-action charts. Same recovery as `vercel metrics`: buy Plus
+ * when that is what the API named, or hand Priority enable to a person
+ * when it named Priority project. Hobby follows the same product, but the
+ * command is `buy pro` — Plus cannot be purchased there, and enable would
+ * only restate the plan gate.
+ */
+export function failFirewallObservabilityPlan(
+  client: Client,
+  error: unknown,
+  projectName?: string
+): number {
+  const message = apiServerMessage(error) ?? FIREWALL_ACTIVITY_PLAN_MESSAGE;
+  // `requireProjectContext` pointed `currentTeam` at the project's team for
+  // this run only; the recovery command has to carry it.
+  const fix = clientObservabilityPlanRecovery(
+    client,
+    error,
+    message,
+    projectName
+  );
+  return failFirewall(client, {
+    message,
+    fix,
+    reason: AGENT_REASON.API_ERROR,
+  });
+}
+
+/**
+ * Refuse an operation that names a managed bot rule, which the custom-rule
+ * mutations cannot carry out: the three settings are not rows in the rule
+ * list, so there is nothing to add, remove, reorder, enable or disable. Only
+ * their action is editable, and the message says so rather than reporting the
+ * slug as an unknown rule.
+ *
+ * Returns `null` when the identifier is not reserved, so callers continue.
+ * The reservation is project-scope only — the team-level config holds custom
+ * rules and IP blocks alone, and has no managed bot settings to collide with.
+ */
+export function refuseManagedBotMutation(
+  client: Client,
+  scope: FirewallScope,
+  identifier: string | undefined,
+  verb: string
+): number | null {
+  if (scope.type !== 'project') return null;
+  const id = resolveManagedBotRuleId(identifier);
+  if (!id) return null;
+
+  const command = `firewall rules update ${id} --action <action>`;
+  return failFirewall(client, {
+    message: `Can't ${verb} "${identifier}". That's a managed bot rule.`,
+    reason: AGENT_REASON.INVALID_ARGUMENTS,
+    fix: {
+      command,
+      hint: `Use ${chalk.cyan(withGlobalFlags(client, command, scope))} to change it.`,
+      when: 'change the managed bot rule instead',
+    },
+  });
 }
 
 /**

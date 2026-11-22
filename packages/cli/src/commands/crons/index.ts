@@ -31,7 +31,7 @@ export default async function main(client: Client) {
     });
   } catch (error) {
     printError(error);
-    return 1;
+    return 2;
   }
 
   const telemetry = new CronsTelemetryClient({
@@ -49,15 +49,24 @@ export default async function main(client: Client) {
 
   if (!subcommand && needHelp) {
     telemetry.trackCliFlagHelp('crons');
-    output.print(help(cronsCommand, { columns: client.stderr.columns }));
-    return 2;
+    output.print(
+      help(cronsCommand, {
+        stream: client.stderr,
+        columns: client.stderr.columns,
+      })
+    );
+    return 0;
   }
 
   function printHelp(command: Command) {
     output.print(
-      help(command, { parent: cronsCommand, columns: client.stderr.columns })
+      help(command, {
+        stream: client.stderr,
+        parent: cronsCommand,
+        columns: client.stderr.columns,
+      })
     );
-    return 2;
+    return 0;
   }
 
   switch (subcommand) {
