@@ -17,6 +17,12 @@
 </p>
 <br/>
 
+pages/
+public/
+styles/
+next.config.js
+package.json
+
 ## Vercel
 
 Vercel’s AI Cloud is a unified platform for building modern applications, giving teams the tools to be flexible, move fast, and stay secure while focusing on their products instead of infrastructure.
