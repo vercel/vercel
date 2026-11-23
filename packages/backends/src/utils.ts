@@ -5,6 +5,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   execCommand,
+  markBuildStep,
   getEnvForPackageManager,
   getNodeVersion,
   scanParentDirs,
@@ -53,6 +54,7 @@ export async function downloadInstallAndBundle(
   const installCommand = config.projectSettings?.installCommand;
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
+      markBuildStep('INSTALLING_DEPENDENCIES');
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
         env: spawnEnv,
@@ -114,6 +116,7 @@ export async function maybeExecBuildCommand(
       PATH: `${nodeBinPath}${delimiter}${spawnEnv?.PATH || process.env.PATH}`,
     };
 
+    markBuildStep('BUILDING');
     return execCommand(projectBuildCommand, {
       env,
       cwd: args.workPath,

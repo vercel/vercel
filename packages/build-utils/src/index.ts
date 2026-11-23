@@ -184,6 +184,7 @@ export * from './types';
 export * from './errors';
 
 export * from './trace';
+export { markBuildStep, type BuildStep } from './build-step';
 
 export { NODE_VERSIONS } from './fs/node-version';
 

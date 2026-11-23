@@ -17,6 +17,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   execCommand,
+  markBuildStep,
   getEnvForPackageManager,
   getNodeBinPaths,
   scanParentDirs,
@@ -391,6 +392,7 @@ export const build: BuildV2 = async buildOptions => {
       })
       .trace(async () => {
         if (typeof trimmedInstallCommand === 'string') {
+          markBuildStep('INSTALLING_DEPENDENCIES');
           console.log(
             `Running "install" command: \`${trimmedInstallCommand}\`...`
           );
@@ -572,6 +574,7 @@ export const build: BuildV2 = async buildOptions => {
             `Added "${nodeBinPath}" to PATH env because a build command was used.`
           );
 
+          markBuildStep('BUILDING');
           console.log(`Running "${buildCommand}"`);
           await execCommand(buildCommand, {
             cwd: entryPath,

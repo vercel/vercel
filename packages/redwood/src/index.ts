@@ -24,6 +24,7 @@ import {
   runNpmInstall,
   runPackageJsonScript,
   execCommand,
+  markBuildStep,
   File,
   FileBlob,
   FileFsRef,
@@ -103,6 +104,7 @@ export const build: BuildV2 = async ({
 
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
+      markBuildStep('INSTALLING_DEPENDENCIES');
       console.log(`Running "install" command: \`${installCommand}\`...`);
 
       await execCommand(installCommand, {
@@ -150,6 +152,7 @@ export const build: BuildV2 = async ({
 
   if (buildCommand) {
     debug(`Executing build command "${buildCommand}"`);
+    markBuildStep('BUILDING');
     await execCommand(buildCommand, {
       env: spawnEnv,
       cwd: workPath,

@@ -6,6 +6,7 @@ import {
   BuildResultV2Typical,
   debug,
   execCommand,
+  markBuildStep,
   generateProjectManifest,
   getEnvForPackageManager,
   getReportedServiceType,
@@ -334,6 +335,7 @@ export const build: BuildV2 = async ({
 
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
+      markBuildStep('INSTALLING_DEPENDENCIES');
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
         env: spawnEnv,
@@ -380,6 +382,7 @@ export const build: BuildV2 = async ({
   // Run "Build Command"
   if (buildCommand) {
     debug(`Executing build command "${buildCommand}"`);
+    markBuildStep('BUILDING');
     await execCommand(buildCommand, {
       env: spawnEnv,
       cwd: entrypointFsDirname,

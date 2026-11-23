@@ -26,6 +26,7 @@ import {
   createDaemonStaticFileFilter,
   download,
   execCommand,
+  markBuildStep,
   spawnCommand,
   runNpmInstall,
   getEnvForPackageManager,
@@ -574,6 +575,7 @@ export const build: BuildV2 = async ({
         isNpmInstall = true;
       } else if (typeof installCommand === 'string') {
         if (installCommand.trim()) {
+          markBuildStep('INSTALLING_DEPENDENCIES');
           console.log(`Running "install" command: \`${installCommand}\`...`);
           await execCommand(installCommand, {
             env: spawnEnv,
@@ -785,6 +787,9 @@ export const build: BuildV2 = async ({
 
       if (buildCommand) {
         debug(`Executing "${buildCommand}"`);
+      }
+      if (typeof buildCommand === 'string') {
+        markBuildStep('BUILDING');
       }
 
       try {

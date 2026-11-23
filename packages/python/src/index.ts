@@ -31,6 +31,7 @@ import {
   debug,
   NowBuildError,
   execCommand,
+  markBuildStep,
   scanParentDirs,
   getEnvForPackageManager,
   isPythonFramework,
@@ -1890,6 +1891,7 @@ export const build: BuildVX = async ({
           uvCacheDir,
           quiet: true,
         });
+        markBuildStep('INSTALLING_DEPENDENCIES');
         console.log(
           `Running "install" command: \`${projectInstallCommand}\`...`
         );
@@ -1949,6 +1951,7 @@ export const build: BuildVX = async ({
       })
       .trace(async () => {
         if (projectBuildCommand) {
+          markBuildStep('BUILDING');
           console.log(`Running "${projectBuildCommand}"`);
           await execCommand(projectBuildCommand, {
             env: pythonEnv,

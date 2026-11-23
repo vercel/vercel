@@ -41,6 +41,7 @@ import {
 } from './node-version';
 import { readConfigFile } from './read-config-file';
 import { cloneEnv } from '../clone-env';
+import { markBuildStep } from '../build-step';
 import json5 from 'json5';
 import yaml from 'js-yaml';
 
@@ -1086,6 +1087,7 @@ export async function runNpmInstall(
     }
 
     const installTime = Date.now();
+    markBuildStep('INSTALLING_DEPENDENCIES', output?.stdout);
     if (output?.stdout) {
       output.stdout.write('Installing dependencies...\n');
     } else {
@@ -1999,6 +2001,7 @@ export async function runCustomInstallCommand({
     return false;
   }
 
+  markBuildStep('INSTALLING_DEPENDENCIES');
   console.log(`Running "install" command: \`${installCommand}\`...`);
   const env = getEnvForPackageManager({
     cliType,
@@ -2071,6 +2074,7 @@ export async function runPackageJsonScript(
     opts.prettyCommand = `yarn run ${scriptName}`;
   }
 
+  markBuildStep('BUILDING');
   console.log(`Running "${opts.prettyCommand}"`);
   await spawnAsync(cliType, ['run', scriptName], opts);
 

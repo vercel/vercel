@@ -5,6 +5,7 @@ import {
   debug,
   download,
   execCommand,
+  markBuildStep,
   FileBlob,
   FileFsRef,
   generateProjectManifest,
@@ -135,6 +136,7 @@ export const build: BuildV2 = async ({
 
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
+      markBuildStep('INSTALLING_DEPENDENCIES');
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
         env: spawnEnv,
@@ -433,6 +435,7 @@ module.exports = config;`;
     // Run "Build Command"
     if (buildCommand) {
       debug(`Executing build command "${buildCommand}"`);
+      markBuildStep('BUILDING');
       await execCommand(buildCommand, {
         env: spawnEnv,
         cwd: entrypointFsDirname,
@@ -455,6 +458,7 @@ module.exports = config;`;
           config.projectSettings?.createdAt
         );
       } else {
+        markBuildStep('BUILDING');
         await execCommand('remix build', {
           env: spawnEnv,
           cwd: entrypointFsDirname,

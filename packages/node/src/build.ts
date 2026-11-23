@@ -28,6 +28,7 @@ import {
   isSymbolicLink,
   walkParentDirs,
   execCommand,
+  markBuildStep,
   findMatchingFunction,
   getEnvForPackageManager,
   scanParentDirs,
@@ -121,6 +122,7 @@ async function downloadInstallAndBundle({
     });
   } else if (typeof installCommand === 'string' && considerBuildCommand) {
     if (installCommand.trim()) {
+      markBuildStep('INSTALLING_DEPENDENCIES');
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
         env: spawnEnv,
@@ -199,6 +201,7 @@ async function runFunctionInstallCommand({
   pendingFunctionInstalls.set(ran, pending);
   let install = pending.get(key);
   if (!install) {
+    markBuildStep('INSTALLING_DEPENDENCIES');
     console.log(`Running "install" command: \`${installCommand}\`...`);
     install = execCommand(installCommand, { env: spawnEnv, cwd: workPath })
       .then(() => {
@@ -563,6 +566,7 @@ export const build = async ({
   // but we're reusing the node builder for hono and express, where they should be treated as the
   // primary builder
   if (projectBuildCommand && considerBuildCommand) {
+    markBuildStep('BUILDING');
     await execCommand(projectBuildCommand, {
       // Yarn v2 PnP mode may be activated, so force
       // "node-modules" linker style

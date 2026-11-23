@@ -5,6 +5,7 @@ import {
   download,
   EdgeFunction,
   execCommand,
+  markBuildStep,
   generateProjectManifest,
   getEnvForPackageManager,
   getNodeVersion,
@@ -75,6 +76,7 @@ export const build: BuildV2 = async ({
 
   if (typeof installCommand === 'string') {
     if (installCommand.trim()) {
+      markBuildStep('INSTALLING_DEPENDENCIES');
       console.log(`Running "install" command: \`${installCommand}\`...`);
       await execCommand(installCommand, {
         env: spawnEnv,
@@ -133,6 +135,7 @@ export const build: BuildV2 = async ({
   // Run "Build Command"
   if (buildCommand) {
     debug(`Executing build command "${buildCommand}"`);
+    markBuildStep('BUILDING');
     await execCommand(buildCommand, {
       env: spawnEnv,
       cwd: entrypointDir,
@@ -158,6 +161,7 @@ export const build: BuildV2 = async ({
         config.projectSettings?.createdAt
       );
     } else {
+      markBuildStep('BUILDING');
       await execCommand('shopify hydrogen build', {
         env: spawnEnv,
         cwd: entrypointDir,
