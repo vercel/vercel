@@ -10,7 +10,11 @@ import os from 'node:os';
  * ```
  */
 export function getUserAgent(pkg: { name: string; version: string }): string {
-  return `${os.hostname()} @ ${pkg.name} ${pkg.version} node-${
+  return `${os
+    .hostname()
+    // Strip non-ASCII characters (e.g. emoji) from hostname to avoid illegal HTTP header values
+    .replace(/[^\x20-\x7e]/g, '')
+    .trim()} @ ${pkg.name} ${pkg.version} node-${
     process.version
   } ${os.platform()} (${os.arch()})`;
 }

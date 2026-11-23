@@ -4,7 +4,10 @@ import { hostname } from 'os';
 
 const VERCEL_ISSUER = new URL('https://vercel.com');
 export const VERCEL_CLI_CLIENT_ID = 'cl_HYyOPBNtFMfHhaUn9L4QPfTZz6TP47bp';
-export const userAgent = `${hostname()} @ ${ua}`;
+export const userAgent = `${hostname()
+  // Strip non-ASCII characters (e.g. emoji) from hostname to avoid illegal HTTP header values
+  .replace(/[^\x20-\x7e]/g, '')
+  .trim()} @ ${ua}`;
 
 interface AuthorizationServerMetadata {
   issuer: URL;
