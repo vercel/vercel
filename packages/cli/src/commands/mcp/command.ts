@@ -10,10 +10,10 @@ export const mcpCommand = {
     {
       name: 'project',
       description:
-        'Set up project-specific MCP access for the currently linked project',
+        'Deprecated: project-specific MCP URLs are no longer supported. Sets up the shared Vercel MCP endpoint.',
       shorthand: null,
       type: Boolean,
-      deprecated: false,
+      deprecated: true,
     },
     {
       name: 'clients',
@@ -29,10 +29,6 @@ export const mcpCommand = {
     {
       name: 'Interactively set up MCP agents',
       value: `${packageName} mcp`,
-    },
-    {
-      name: 'Set up project-specific MCP access',
-      value: `${packageName} mcp --project`,
     },
     {
       name: 'Non-interactive: set up Cursor and VS Code',

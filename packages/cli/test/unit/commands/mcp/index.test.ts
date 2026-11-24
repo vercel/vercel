@@ -21,7 +21,6 @@ describe('mcp', () => {
       const payload = JSON.parse(client.stdout.getFullOutput());
       expect(Object.keys(payload).sort()).toEqual([
         'hint',
-        'next',
         'status',
         'summary',
       ]);
@@ -32,12 +31,6 @@ describe('mcp', () => {
       expect(payload.hint).toContain(
         'Complete any required setup and authentication'
       );
-      expect(payload.next).toEqual([
-        {
-          command: 'vercel link',
-          when: 'To link a project for project-specific MCP (optional)',
-        },
-      ]);
       expect(client.stderr.getFullOutput()).toBe('');
     } else {
       expect(client.stdout.getFullOutput()).toBe('');
@@ -93,6 +86,31 @@ describe('mcp', () => {
       exitSpy.mockRestore();
       (client as { nonInteractive: boolean }).nonInteractive = false;
     });
+  });
+
+  it('warns that --project is deprecated and sets up the shared endpoint', async () => {
+    client.setArgv(
+      'mcp',
+      '--project',
+      '--clients',
+      'Claude.ai and Claude for desktop'
+    );
+
+    const exitCode = await mcpCommand(client);
+    expect(exitCode).toBe(0);
+    const text = client.stderr.getFullOutput();
+    expect(text).toContain('The --project flag is deprecated');
+    expect(text).toContain('• Name: Vercel\n');
+    expect(text).toContain('• URL: https://mcp.vercel.com\n');
+    expect(text).not.toContain('Project-specific URL');
+  });
+
+  it('hides --project from help', async () => {
+    client.setArgv('mcp', '--help');
+
+    const exitCode = await mcpCommand(client);
+    expect(exitCode).toBe(0);
+    expect(client.stderr.getFullOutput()).not.toContain('--project');
   });
 
   describe('interactive mode', () => {

@@ -1,14 +1,11 @@
 import output from '../../output-manager';
 import type Client from '../../util/client';
 import { execSync } from 'child_process';
-import { getLinkedProject } from '../../util/projects/link';
-import { packageName } from '../../util/pkg-name';
 import { outputAgentError } from '../../util/agent-output';
 
 const MCP_ENDPOINT = 'https://mcp.vercel.com';
 
 export interface McpOptions {
-  project?: boolean;
   clients?: string[];
 }
 
@@ -36,70 +33,9 @@ function safeExecSync(
   }
 }
 
-async function getProjectSpecificUrl(
-  client: Client
-): Promise<{ url: string; projectName: string } | null> {
-  try {
-    const linkedProject = await getLinkedProject(client);
-
-    if (
-      linkedProject.status !== 'linked' ||
-      !linkedProject.org ||
-      !linkedProject.project
-    ) {
-      return null;
-    }
-
-    const { org, project } = linkedProject;
-    return {
-      url: `${MCP_ENDPOINT}/${org.slug}/${project.name}`,
-      projectName: project.name,
-    };
-  } catch (_error) {
-    return null;
-  }
-}
-
 export default async function mcp(client: Client, opts: McpOptions = {}) {
-  const isProjectSpecific = opts.project ?? client.argv.includes('--project');
-
   if (!client.nonInteractive) {
     output.print('🚀 Vercel MCP Setup — Automated\n');
-  }
-
-  if (isProjectSpecific) {
-    if (!client.nonInteractive) {
-      output.print('🔗 Setting up project-specific MCP access...\n');
-    }
-
-    const projectInfo = await getProjectSpecificUrl(client);
-    if (!projectInfo) {
-      if (client.nonInteractive) {
-        outputAgentError(
-          client,
-          {
-            status: 'error',
-            reason: 'not_linked',
-            message:
-              'No linked project found. Link your project first for project-specific MCP.',
-            next: [{ command: `${packageName} link` }],
-          },
-          1
-        );
-      }
-      output.print(
-        '❌ No linked project found. Please link your project first:\n'
-      );
-      output.print('   vercel link\n');
-      return 1;
-    }
-
-    if (!client.nonInteractive) {
-      output.print(`✅ Project-specific URL: ${projectInfo.url}\n`);
-      output.print(
-        'This URL will automatically provide project and team context.\n\n'
-      );
-    }
   }
 
   const availableClients = getAvailableClients();
@@ -179,12 +115,8 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
     }
 
     if (clientName === 'Claude Code') {
-      const mcpUrl = isProjectSpecific
-        ? (await getProjectSpecificUrl(client))?.url
-        : MCP_ENDPOINT;
-      const mcpName = isProjectSpecific
-        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
-        : 'vercel';
+      const mcpUrl = MCP_ENDPOINT;
+      const mcpName = 'vercel';
 
       const result = safeExecSync(
         `claude mcp add --transport http ${mcpName} ${mcpUrl}`
@@ -232,15 +164,8 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
           '   2. Navigate to Connectors and select Add custom connector\n'
         );
         output.print('   3. Configure the connector:\n');
-        if (isProjectSpecific) {
-          const projectInfo = await getProjectSpecificUrl(client);
-          const projectName = projectInfo?.projectName || 'project';
-          output.print(`      • Name: Vercel ${projectName}\n`);
-          output.print(`      • URL: ${projectInfo?.url}\n`);
-        } else {
-          output.print('      • Name: Vercel\n');
-          output.print(`      • URL: ${MCP_ENDPOINT}\n`);
-        }
+        output.print('      • Name: Vercel\n');
+        output.print(`      • URL: ${MCP_ENDPOINT}\n`);
         output.print('   4. Complete the authentication flow\n');
       }
       summary.push('ℹ️  Claude.ai/Desktop: Manual setup required');
@@ -270,12 +195,8 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         continue;
       }
 
-      const mcpUrl = isProjectSpecific
-        ? (await getProjectSpecificUrl(client))?.url
-        : MCP_ENDPOINT;
-      const serverName = isProjectSpecific
-        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
-        : 'vercel';
+      const mcpUrl = MCP_ENDPOINT;
+      const serverName = 'vercel';
 
       // Check if Vercel MCP is already configured in Cursor
       const cursorConfigPath =
@@ -302,8 +223,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
           const config = JSON.parse(configContent);
           const mcpServers = config.mcpServers || {};
           cursorAlreadyConfigured = Object.values(mcpServers).some(
-            (server: any) =>
-              server.url === mcpUrl || server.url === MCP_ENDPOINT
+            (server: any) => server.url === MCP_ENDPOINT
           );
         }
 
@@ -313,8 +233,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
           const config = JSON.parse(configContent);
           const mcpServers = config['mcp.servers'] || {};
           cursorAlreadyConfigured = Object.values(mcpServers).some(
-            (server: any) =>
-              server.url === mcpUrl || server.url === MCP_ENDPOINT
+            (server: any) => server.url === MCP_ENDPOINT
           );
         }
       } catch (_error) {
@@ -393,12 +312,8 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
         }
       }
 
-      const mcpUrl = isProjectSpecific
-        ? (await getProjectSpecificUrl(client))?.url
-        : MCP_ENDPOINT;
-      const serverName = isProjectSpecific
-        ? `vercel-${(await getProjectSpecificUrl(client))?.projectName}`
-        : 'vercel';
+      const mcpUrl = MCP_ENDPOINT;
+      const serverName = 'vercel';
 
       // Check if Vercel MCP is already configured in VS Code
       const vscodeConfigPath =
@@ -425,8 +340,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
           const config = JSON.parse(configContent);
           const mcpServers = config.servers || {};
           vscodeAlreadyConfigured = Object.values(mcpServers).some(
-            (server: any) =>
-              server.url === mcpUrl || server.url === MCP_ENDPOINT
+            (server: any) => server.url === MCP_ENDPOINT
           );
         }
 
@@ -436,8 +350,7 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
           const config = JSON.parse(configContent);
           const mcpServers = config['mcp.servers'] || {};
           vscodeAlreadyConfigured = Object.values(mcpServers).some(
-            (server: any) =>
-              server.url === mcpUrl || server.url === MCP_ENDPOINT
+            (server: any) => server.url === MCP_ENDPOINT
           );
         }
       } catch (_error) {
@@ -504,12 +417,6 @@ export default async function mcp(client: Client, opts: McpOptions = {}) {
       status: 'ok',
       summary,
       hint: 'Complete any required setup and authentication in the selected MCP clients. Restart configured clients if needed.',
-      next: [
-        {
-          command: `${packageName} link`,
-          when: 'To link a project for project-specific MCP (optional)',
-        },
-      ],
     };
     client.stdout.write(`${JSON.stringify(jsonOutput, null, 2)}\n`);
     return 0;

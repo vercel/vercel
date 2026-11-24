@@ -269,7 +269,7 @@ const PROJECT_SHAPE_EXCEPTIONS = {
   'agent-runs inspect': 'Uses the NAME|ID placeholder',
   'agent-runs list': 'Uses the NAME|ID placeholder',
   'agent-runs trace': 'Uses the NAME|ID placeholder',
-  mcp: '--project is Boolean and means project-scoped setup',
+  mcp: '--project is a hidden, deprecated Boolean kept so old invocations still run',
   'microfrontends create-group': 'Accepts repeatable project names',
   'traces inspect': 'Uses the NAME|ID placeholder',
   'webhooks create': 'Accepts only a project ID and can be repeated',
@@ -683,7 +683,6 @@ const MISSING_GUIDE_LETTER_EXCEPTIONS = {
     '-p is still the hidden short form of --position until the next major.',
   'flags rules move --project':
     '-p is still the hidden short form of --position until the next major.',
-  'mcp --project': '--project is a Boolean here, not a project name.',
   'metrics --all':
     '-a is still the hidden short form of --aggregation until the next major.',
 } as const satisfies Readonly<Record<string, string>>;

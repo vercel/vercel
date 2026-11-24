@@ -88,7 +88,6 @@ export default async function main(client: Client) {
     return 0;
   }
 
-  const project = !!parsedArgs.flags['--project'];
   const clientsFlag = parsedArgs.flags['--clients'] as string | undefined;
   const clients = parseAndValidateClients(clientsFlag);
 
@@ -141,13 +140,14 @@ export default async function main(client: Client) {
     }
   }
 
-  // Add the parsed flags to client.argv so the mcp function can access them
-  if (project) {
-    client.argv.push('--project');
+  if (parsedArgs.flags['--project']) {
+    output.warn(
+      'The --project flag is deprecated. Project-specific MCP URLs are no longer supported, so the shared Vercel MCP endpoint will be set up instead.'
+    );
   }
 
   try {
-    return await mcp(client, { project, clients });
+    return await mcp(client, { clients });
   } catch (err: unknown) {
     output.prettyError(err);
     return 1;
