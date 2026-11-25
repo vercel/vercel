@@ -2,20 +2,46 @@
   "name": "@vercel/oidc",
   "description": "Runtime OIDC helpers intended for use with Vercel Functions",
   "homepage": "https://vercel.com",
+  "type": "commonjs",
   "files": [
     "**/*.js",
+    "**/*.mjs",
     "**/*.d.ts",
     "**/*.md"
   ],
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "edge-light": "./dist/index-edge-light.js",
-      "browser": "./dist/index-browser.js",
-      "react-native": "./dist/index-browser.js",
-      "workflow": "./dist/index-browser.js",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js"
+      "edge-light": {
+        "import": {
+          "types": "./dist/index-edge-light.d.ts",
+          "default": "./dist/index-edge-light.mjs"
+        },
+        "require": {
+          "types": "./dist/index-edge-light.d.ts",
+          "default": "./dist/index-edge-light.js"
+        }
+      },
+      "browser": {
+        "types": "./dist/index-browser.d.ts",
+        "default": "./dist/index-browser.js"
+      },
+      "react-native": {
+        "types": "./dist/index-browser.d.ts",
+        "default": "./dist/index-browser.js"
+      },
+      "workflow": {
+        "types": "./dist/index-browser.d.ts",
+        "default": "./dist/index-browser.js"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     }
   },
   "version": "4.0.4",
