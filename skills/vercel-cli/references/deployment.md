@@ -4,7 +4,7 @@
 
 Inspect the exact deployment URL or alias supplied by the user. An alias need not match the project name; resolve the project from deployment metadata rather than the hostname prefix. Failure to find an inferred project name does not prove lack of access.
 
-`vercel deploy` deploys local source; `vercel deploy --prebuilt` uploads existing build output; `vercel redeploy` rebuilds an existing deployment from its source. Choose the source that tests the user's intended change. Deploying a local checkout is not interchangeable with a Git integration deployment: commit metadata, aliases, source provenance, and dashboard grouping may differ.
+`vercel deploy` deploys local source; `vercel deploy --prebuilt` uploads existing build output; `vercel redeploy` creates a new deployment from an existing one's source: a Git deployment rebuilds from its commit, and a CLI deployment reuses the files it uploaded, so redeploying a prebuilt deployment ships the same build output without rebuilding. Choose the source that tests the user's intended change. Deploying a local checkout is not interchangeable with a Git integration deployment: commit metadata, aliases, source provenance, and dashboard grouping may differ.
 
 ## Builds and Cache
 
