@@ -69,6 +69,20 @@ export async function refreshTokenRequest(options: {
 }
 
 /**
+ * Error returned for a non-2xx OAuth token response. `code` is the OAuth
+ * `error` field (e.g. `invalid_grant` for a revoked or expired refresh token).
+ */
+export class OAuthTokenError extends Error {
+  name = 'OAuthTokenError';
+  constructor(
+    message: string,
+    readonly code?: string
+  ) {
+    super(message);
+  }
+}
+
+/**
  * Process the token response and extract the token set
  */
 export async function processTokenResponse(
@@ -77,11 +91,11 @@ export async function processTokenResponse(
   const json = await response.json();
 
   if (!response.ok) {
-    const errorMsg =
+    const code =
       typeof json === 'object' && json && 'error' in json
         ? String(json.error)
-        : 'Token refresh failed';
-    return [new Error(errorMsg)];
+        : undefined;
+    return [new OAuthTokenError(code ?? 'Token refresh failed', code)];
   }
 
   // Validate response structure

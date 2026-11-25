@@ -25,6 +25,8 @@ vi.mock('./token-io', () => ({
 describe('getVercelToken', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(cliConfig.tryReadAuthConfig).mockReset();
+    vi.mocked(cliConfig.writeAuthConfig).mockReset();
   });
 
   afterEach(() => {
@@ -113,7 +115,7 @@ describe('getVercelToken', () => {
     });
   });
 
-  it('should clear auth and throw RefreshAccessTokenFailedError if token expired and no refresh token', async () => {
+  it('should keep auth and throw RefreshAccessTokenFailedError if token expired and no refresh token', async () => {
     const expiredTokenNoRefresh = {
       token: 'expired-access-token',
       expiresAt: Math.floor(Date.now() / 1000) - 3600,
@@ -126,13 +128,10 @@ describe('getVercelToken', () => {
     await expect(getVercelToken()).rejects.toThrow(
       RefreshAccessTokenFailedError
     );
-    expect(cliConfig.writeAuthConfig).toHaveBeenCalledWith(
-      expect.any(String),
-      {}
-    );
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 
-  it('should clear auth and throw RefreshAccessTokenFailedError if refresh fails with OAuth error', async () => {
+  it('should clear auth and throw RefreshAccessTokenFailedError if the refresh token is revoked (invalid_grant)', async () => {
     const expiredToken = {
       token: 'expired-access-token',
       refreshToken: 'invalid-refresh-token',
@@ -154,12 +153,71 @@ describe('getVercelToken', () => {
       RefreshAccessTokenFailedError
     );
     expect(cliConfig.writeAuthConfig).toHaveBeenCalledWith(
-      expect.any(String),
+      '/mock/user/data/com.vercel.cli',
       {}
     );
   });
 
-  it('should clear auth and throw RefreshAccessTokenFailedError if refresh fails with network error', async () => {
+  it('should keep auth if refresh fails with a transient OAuth error', async () => {
+    const expiredToken = {
+      token: 'expired-access-token',
+      refreshToken: 'valid-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) - 3600,
+    };
+
+    vi.mocked(cliConfig.tryReadAuthConfig).mockReturnValue(expiredToken);
+    vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'temporarily_unavailable' }),
+    } as Response);
+
+    await expect(getVercelToken()).rejects.toThrow(
+      RefreshAccessTokenFailedError
+    );
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
+  });
+
+  it('should share one refresh between concurrent callers with different buffers', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    let current: cliConfig.AuthConfig = {
+      token: 'expired-access-token',
+      refreshToken: 'old-refresh-token',
+      expiresAt: now - 3600,
+    };
+    vi.mocked(cliConfig.tryReadAuthConfig).mockImplementation(() => current);
+    vi.mocked(cliConfig.writeAuthConfig).mockImplementation((_dir, cfg) => {
+      current = cfg;
+    });
+    const refreshSpy = vi
+      .spyOn(oauth, 'refreshTokenRequest')
+      .mockImplementation(async () => {
+        await new Promise(resolve => setTimeout(resolve, 10));
+        return {
+          ok: true,
+          json: async () => ({
+            access_token: 'new-access-token',
+            token_type: 'Bearer',
+            expires_in: 7200,
+            refresh_token: 'new-refresh-token',
+          }),
+        } as Response;
+      });
+
+    const results = await Promise.all([
+      getVercelToken(),
+      getVercelToken({ expirationBufferMs: 60_000 }),
+      getVercelToken({ expirationBufferMs: 120_000 }),
+    ]);
+
+    expect(results).toEqual([
+      'new-access-token',
+      'new-access-token',
+      'new-access-token',
+    ]);
+    expect(refreshSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('should keep auth and throw RefreshAccessTokenFailedError if refresh fails with network error', async () => {
     const expiredToken = {
       token: 'expired-access-token',
       refreshToken: 'valid-refresh-token',
@@ -174,10 +232,7 @@ describe('getVercelToken', () => {
     await expect(getVercelToken()).rejects.toThrow(
       RefreshAccessTokenFailedError
     );
-    expect(cliConfig.writeAuthConfig).toHaveBeenCalledWith(
-      expect.any(String),
-      {}
-    );
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 
   it('should treat token as valid if expiresAt is missing (--token case)', async () => {
@@ -275,5 +330,55 @@ describe('getVercelToken', () => {
     const writeCall = vi.mocked(cliConfig.writeAuthConfig).mock.calls[0][1];
     expect(writeCall.expiresAt).toBeGreaterThanOrEqual(beforeCall + 7200);
     expect(writeCall.expiresAt).toBeLessThanOrEqual(afterCall + 7200);
+  });
+
+  it('should use the login saved by another process when the refresh fails', async () => {
+    const expiredToken = {
+      token: 'expired-access-token',
+      refreshToken: 'old-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) - 3600,
+    };
+    const rotatedConfig = {
+      token: 'rotated-access-token',
+      refreshToken: 'rotated-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    };
+
+    vi.mocked(cliConfig.tryReadAuthConfig)
+      .mockReturnValueOnce(expiredToken)
+      .mockReturnValue(rotatedConfig);
+    vi.spyOn(oauth, 'refreshTokenRequest').mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        error: 'invalid_grant',
+        error_description: 'Refresh token already used',
+      }),
+    } as Response);
+
+    await expect(getVercelToken()).resolves.toBe('rotated-access-token');
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
+  });
+
+  it('should use the login saved by another process when the refresh throws', async () => {
+    const expiredToken = {
+      token: 'expired-access-token',
+      refreshToken: 'old-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) - 3600,
+    };
+    const rotatedConfig = {
+      token: 'rotated-access-token',
+      refreshToken: 'rotated-refresh-token',
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    };
+
+    vi.mocked(cliConfig.tryReadAuthConfig)
+      .mockReturnValueOnce(expiredToken)
+      .mockReturnValue(rotatedConfig);
+    vi.spyOn(oauth, 'refreshTokenRequest').mockRejectedValue(
+      new Error('Network error')
+    );
+
+    await expect(getVercelToken()).resolves.toBe('rotated-access-token');
+    expect(cliConfig.writeAuthConfig).not.toHaveBeenCalled();
   });
 });
