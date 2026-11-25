@@ -25,7 +25,6 @@ await Promise.all([
   esbuild({
     entryPoints: [
       'src/index.ts',
-      'src/index-browser.ts',
       'src/index-edge-light.ts',
     ],
     format: 'esm',

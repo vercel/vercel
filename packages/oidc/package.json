@@ -12,16 +12,36 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
       "edge-light": {
-        "import": "./dist/index-edge-light.mjs",
-        "require": "./dist/index-edge-light.js"
+        "import": {
+          "types": "./dist/index-edge-light.d.ts",
+          "default": "./dist/index-edge-light.mjs"
+        },
+        "require": {
+          "types": "./dist/index-edge-light.d.ts",
+          "default": "./dist/index-edge-light.js"
+        }
       },
-      "browser": "./dist/index-browser.mjs",
-      "react-native": "./dist/index-browser.mjs",
-      "workflow": "./dist/index-browser.mjs",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "browser": {
+        "types": "./dist/index-browser.d.ts",
+        "default": "./dist/index-browser.js"
+      },
+      "react-native": {
+        "types": "./dist/index-browser.d.ts",
+        "default": "./dist/index-browser.js"
+      },
+      "workflow": {
+        "types": "./dist/index-browser.d.ts",
+        "default": "./dist/index-browser.js"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     }
   },
   "version": "4.0.4",
