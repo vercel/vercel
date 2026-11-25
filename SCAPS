@@ -1,0 +1,56 @@
+
+LET BE THE NAME OF THE  SIM CHANGE ALERT & PROTECTION SYSTEM (SCAPS) 
+
+1.	Introduction
+This proposal is for Business according to Ethiopian business law and regulation. 
+2.	 Dashboard module 
+•	Dashboard and Interface color should be Green blue and red as needed wide dashboard 
+•	The system is both for Android and PC
+3.	 Registration  module 
+•	Voluntary registration of customers
+•	Owner full name
+•	Unless payment is confirmed protect registration but not on trial 
+•	IMEI 1 and 2  on registration
+•	Phone  model
+•	SIM number if SIM two registered both
+•	Address, city/town, sub-city , district/ wereda/ kebele,house No.  selection option/by dropdown list 
+•	Online registration  with payment option online through  telebirr or bank
+•	Place for National ID number 
+•	Payment  confirmation box
+o	Telebirr or bank during registration
+o	Payment features is needed to automatically approval
+o	Place for telebirr connection  and bank payment options
+o	Show amount or payment approved 
+o	Payment limitation option 
+o	Payment is changeable based on durations are sat by admin- three month, six month  yearly
+o	Do not restrict without payment during trial
+o	Payment is by  Eth birr   
+o	Use for  payment by dropdown list
+
+4.	Security   module 
+	Admin and password needed but not during trial
+	Prepare place user name and password  	for end users 
+	Strong protection from an authorized users /individuals and on line thefts/hackers 
+	Password change option
+	Do not show total revenue 
+	Other related to security  
+5.	SIM Change Report Security Alert module 
+	Number of SIM that insert to the lost cell phone 
+	Show  the theft SIM number inserted to lost phone, the name through  true caller or Ethiotelecom network
+	Name of registered customer name, SIM Number address detail.
+	Date and  time 
+	Reporting system is two ways phone owner and  to the central management of the system (SCAPS)
+6.	Deploy Module
+•	The system downloadable for use, self-deploy add setting for installation on pc and Android phone
+7.	Android Module
+•	Design for Android phone communication option or option using both PC cell phones 8. 
+8.	Solution Module
+•	Solution to open lock phone if the lost phone obtained by tracking
+9.	Legal entities Module 
+•	Possibility of communicated legal entities
+10.	Tracking module
+Track the lost cell phone through GPS/ ethiotelecom network
+11.	 Back Module
+•	Make for all modules back option
+
+
