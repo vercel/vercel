@@ -11,6 +11,7 @@ import {
   Prerender,
   debug,
   glob,
+  normalizePath,
   Files,
   BuildResultV2Typical as BuildResult,
 } from '@vercel/build-utils';
@@ -932,9 +933,15 @@ export async function serverBuild({
     };
 
     const getBuildTraceFile = (page: string) => {
+      // The trace maps are keyed by `glob()` output, which is always POSIX,
+      // while `getOriginalPagePath()` builds App Router paths with
+      // `path.relative()` — backslashes on Windows. Unnormalized, every lookup
+      // misses there and each page is re-traced instead of reusing its
+      // `.nft.json`.
+      const normalizedPage = normalizePath(page);
       return (
-        pageBuildTraces[page + '.nft.json'] ||
-        appBuildTraces[page + '.nft.json']
+        pageBuildTraces[normalizedPage + '.nft.json'] ||
+        appBuildTraces[normalizedPage + '.nft.json']
       );
     };
 
