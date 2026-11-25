@@ -1,9 +1,8 @@
-import {
-  createRemoteJWKSet,
-  jwtVerify,
-  type JWTVerifyOptions,
-  type JWTVerifyResult,
-  type JWTPayload,
+import type {
+  JWTVerifyOptions,
+  JWTVerifyResult,
+  JWTPayload,
+  JWTVerifyGetKey,
 } from 'jose';
 
 const VERCEL_OIDC_ISSUER = 'https://oidc.vercel.com';
@@ -11,7 +10,24 @@ const VERCEL_OIDC_JWKS_URL = new URL(
   'https://oidc.vercel.com/.well-known/jwks'
 );
 const DEFAULT_ALGORITHMS = ['RS256'];
-const VERCEL_OIDC_JWKS = createRemoteJWKSet(VERCEL_OIDC_JWKS_URL);
+
+type Jose = typeof import('jose');
+
+let VERCEL_OIDC_JWKS: JWTVerifyGetKey | undefined;
+
+/**
+ * `jose` v6 is ESM-only. It is loaded with a dynamic `import()` because
+ * `require()` of an ES module is not available in every runtime (for example,
+ * Vercel's `nodejs24.x` runs with `--no-experimental-require-module`).
+ */
+async function getVercelOidcJwks(): Promise<{
+  jose: Jose;
+  jwks: JWTVerifyGetKey;
+}> {
+  const jose = await import('jose');
+  VERCEL_OIDC_JWKS ??= jose.createRemoteJWKSet(VERCEL_OIDC_JWKS_URL);
+  return { jose, jwks: VERCEL_OIDC_JWKS };
+}
 
 /** A verified token whose Vercel identity does not match the receiver. */
 class VercelOidcTokenValidationError extends TypeError {
@@ -86,7 +102,8 @@ export async function verifyVercelOidcToken<PayloadType = VercelOidcPayload>(
     );
   }
 
-  const result = await jwtVerify<PayloadType>(token, VERCEL_OIDC_JWKS, {
+  const { jose, jwks } = await getVercelOidcJwks();
+  const result = await jose.jwtVerify<PayloadType>(token, jwks, {
     ...verifyOptions,
     algorithms: algorithms ?? DEFAULT_ALGORITHMS,
   });

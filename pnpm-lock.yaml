@@ -1500,12 +1500,12 @@ importers:
         specifier: 7.5.11
         version: 7.5.11
     devDependencies:
-      '@vercel-internals/ipc-proxy':
-        specifier: workspace:*
-        version: link:../../internals/ipc-proxy
       '@types/node':
         specifier: 20.11.0
         version: 20.11.0
+      '@vercel-internals/ipc-proxy':
+        specifier: workspace:*
+        version: link:../../internals/ipc-proxy
       '@vercel/build-utils':
         specifier: workspace:*
         version: link:../build-utils
@@ -2405,8 +2405,8 @@ importers:
         specifier: workspace:*
         version: link:../cli-exec
       jose:
-        specifier: ^5.9.6
-        version: 5.9.6
+        specifier: ^6.2.5
+        version: 6.2.15
     devDependencies:
       prettier:
         specifier: 3.8.3
@@ -10171,6 +10171,9 @@ packages:
 
   jose@5.9.6:
     resolution: {integrity: sha512-AMlnetc9+CV9asI19zHmrgS/WYsWUwCn2R7RzlbJWD7F9eWYUTGyBmU9o6PxngtLGOiDGPRu+Uc4fhKzbpteZQ==}
+
+  jose@6.2.15:
+    resolution: {integrity: sha512-qdF6ewcZARtef63fJ9AKKZPgxw+t7USH6HLXYcD4CrdmSvDp79rpJSPFEKc90QBeGS63u1KQtN2MZQHC0yDIzA==}
 
   jose@6.2.3:
     resolution: {integrity: sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw==}
@@ -21405,6 +21408,8 @@ snapshots:
   jju@1.4.0: {}
 
   jose@5.9.6: {}
+
+  jose@6.2.15: {}
 
   jose@6.2.3: {}
 
