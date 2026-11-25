@@ -9,7 +9,11 @@ import {
 } from '@vercel/cli-config';
 import { VercelOidcTokenError } from './token-error';
 import { findRootDir, getUserDataDir } from './token-io';
-import { refreshTokenRequest, processTokenResponse } from './oauth';
+import {
+  refreshTokenRequest,
+  processTokenResponse,
+  OAuthTokenError,
+} from './oauth';
 import {
   AccessTokenMissingError,
   RefreshAccessTokenFailedError,
@@ -23,6 +27,9 @@ export interface GetVercelTokenOptions {
    */
   expirationBufferMs?: number;
 }
+
+// In-flight OAuth refreshes, keyed by the auth config directory.
+const inFlightTokenRefreshes = new Map<string, Promise<string>>();
 
 export async function getVercelToken(
   options?: GetVercelTokenOptions
@@ -50,9 +57,40 @@ export async function getVercelToken(
     throw new RefreshAccessTokenFailedError('No refresh token available');
   }
 
+  // Single-flight at the token-acquisition level: the OAuth refresh token
+  // rotates, so concurrent refreshes (whatever the caller's project/team or
+  // buffer) must share one request instead of double-spending it.
+  const inFlight = inFlightTokenRefreshes.get(configDir);
+  if (inFlight) {
+    await inFlight;
+    // Re-read the login the leader saved and validate it against this
+    // caller's own expiration buffer.
+    const latest = tryReadAuthConfig(configDir);
+    if (latest && isValidAccessToken(latest, options?.expirationBufferMs)) {
+      return latest.token!;
+    }
+    return getVercelToken(options);
+  }
+
+  const refresh = refreshAccessToken(
+    configDir,
+    authConfig,
+    options?.expirationBufferMs
+  ).finally(() => {
+    inFlightTokenRefreshes.delete(configDir);
+  });
+  inFlightTokenRefreshes.set(configDir, refresh);
+  return refresh;
+}
+
+async function refreshAccessToken(
+  configDir: string,
+  authConfig: AuthConfig,
+  expirationBufferMs?: number
+): Promise<string> {
   try {
     const tokenResponse = await refreshTokenRequest({
-      refresh_token: authConfig.refreshToken,
+      refresh_token: authConfig.refreshToken!,
     });
 
     const [tokensError, tokens] = await processTokenResponse(tokenResponse);
@@ -72,16 +110,23 @@ export async function getVercelToken(
     // Token is guaranteed to be defined since we just set it from tokens.access_token
     return updatedConfig.token!;
   } catch (error) {
-    // The refresh failed (OAuth error, network error, ...). Never erase
-    // `auth.json` here: the refresh token may have been rotated by another
-    // caller or process, and a transient failure must not log the user out.
-    // If another process saved a fresh login in the meantime, use it.
+    // The refresh failed. If another process saved a fresh login in the
+    // meantime (the refresh token rotated), use it.
     const rotatedToken = getRotatedAccessToken(
       configDir,
       authConfig,
-      options?.expirationBufferMs
+      expirationBufferMs
     );
     if (rotatedToken) return rotatedToken;
+
+    // A definitive `invalid_grant` means the refresh token is revoked or
+    // expired, so the login can never recover: clear it so the next call
+    // reports a missing login (re-login hint) instead of failing forever.
+    // Transient failures (network errors, 5xx, ...) keep the login.
+    const cause = (error as { cause?: unknown } | undefined)?.cause;
+    if (cause instanceof OAuthTokenError && cause.code === 'invalid_grant') {
+      writeAuthConfig(configDir, {});
+    }
 
     if (
       error instanceof AccessTokenMissingError ||
