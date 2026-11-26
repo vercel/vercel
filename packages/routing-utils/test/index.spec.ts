@@ -336,6 +336,33 @@ describe('normalizeRoutes', () => {
     }
   });
 
+  test('service-targeted catch-all rewrite matches the root path', () => {
+    const { error, routes } = getTransformedRoutes({
+      rewrites: [
+        {
+          source: '/:path*',
+          destination: {
+            service: 'frontend',
+          },
+        },
+      ],
+    });
+
+    assert.equal(error, null);
+    const serviceRoute = routes?.find(
+      r => !isHandler(r) && typeof r.destination === 'object'
+    );
+    assert.ok(serviceRoute, 'expected a service-targeted route');
+    if (serviceRoute && !isHandler(serviceRoute) && serviceRoute.src) {
+      const src = new RegExp(serviceRoute.src);
+      // `:path*` matches zero or more segments, so the bare root is included.
+      assert.equal(src.test('/'), true, `${src.source} must match "/"`);
+      assert.equal(src.test('/foo'), true);
+      assert.equal(src.test('/foo/bar'), true);
+      assert.equal(src.test('/foo/'), false);
+    }
+  });
+
   test('compiles request.path parameters on service rewrites', () => {
     const rewrite = {
       source: '/api/v1/:path*',
