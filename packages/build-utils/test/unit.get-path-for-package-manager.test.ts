@@ -30,7 +30,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should not set npm path if corepack enabled',
       args: {
         cliType: 'npm',
-        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+        nodeVersion: getNodeVersionByMajor(14),
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -48,7 +48,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should not prepend npm path again if already detected',
       args: {
         cliType: 'npm',
-        nodeVersion: { major: 14, range: '14.x', runtime: 'nodejs14.x' },
+        nodeVersion: getNodeVersionByMajor(14),
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -66,7 +66,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should not set path if node is 16 and npm 7+ is detected',
       args: {
         cliType: 'npm',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: getNodeVersionByMajor(16),
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -84,7 +84,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should set YARN_NODE_LINKER w/yarn if it is not already defined',
       args: {
         cliType: 'yarn',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: getNodeVersionByMajor(16),
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -101,7 +101,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should not set YARN_NODE_LINKER if it already exists',
       args: {
         cliType: 'yarn',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: getNodeVersionByMajor(16),
         lockfileVersion: 2,
         env: {
           FOO: 'bar',
@@ -119,7 +119,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should set path if pnpm 7+ is detected',
       args: {
         cliType: 'pnpm',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: getNodeVersionByMajor(16),
         lockfileVersion: 5.4,
         env: {
           FOO: 'bar',
@@ -138,7 +138,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should set path if bun v1 is detected',
       args: {
         cliType: 'bun',
-        nodeVersion: { major: 18, range: '18.x', runtime: 'nodejs18.x' },
+        nodeVersion: getNodeVersionByMajor(18),
         lockfileVersion: 0,
         env: {
           FOO: 'bar',
@@ -156,7 +156,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should not set pnpm path if corepack is enabled',
       args: {
         cliType: 'pnpm',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: getNodeVersionByMajor(16),
         lockfileVersion: 5.4,
         env: {
           FOO: 'bar',
@@ -174,7 +174,7 @@ describe('Test `getPathForPackageManager()`', () => {
       name: 'should not prepend pnpm path again if already detected',
       args: {
         cliType: 'pnpm',
-        nodeVersion: { major: 16, range: '16.x', runtime: 'nodejs16.x' },
+        nodeVersion: getNodeVersionByMajor(16),
         lockfileVersion: 5.4,
         env: {
           FOO: 'bar',
