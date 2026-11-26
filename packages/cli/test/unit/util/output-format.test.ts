@@ -194,6 +194,80 @@ describe('output-format', () => {
       ).toBe(false);
     });
 
+    it('treats -F json as machine-readable', () => {
+      const argv = ['node', 'vercel', 'crons', 'ls', '-F', 'json'];
+      expect(wantsMachineReadableOutput('crons', argv)).toBe(true);
+      expect(shouldPrintVersionBanner('crons', argv)).toBe(false);
+      expect(
+        wantsMachineReadableOutput('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '-F',
+          'JSON',
+        ])
+      ).toBe(true);
+    });
+
+    it('treats -F json at the end of grouped short flags as machine-readable', () => {
+      expect(
+        wantsMachineReadableOutput('crons', [
+          'node',
+          'vercel',
+          'crons',
+          'ls',
+          '-dF',
+          'json',
+        ])
+      ).toBe(true);
+    });
+
+    it('treats --json=<value> as machine-readable', () => {
+      const argv = ['node', 'vercel', 'webhooks', 'ls', '--json=true'];
+      expect(wantsMachineReadableOutput('webhooks', argv)).toBe(true);
+      expect(shouldPrintVersionBanner('webhooks', argv)).toBe(false);
+    });
+
+    it('keeps human chrome for non-json format values', () => {
+      expect(
+        wantsMachineReadableOutput('ai-gateway', [
+          'node',
+          'vercel',
+          'ai-gateway',
+          'leaderboard',
+          '-F',
+          'csv',
+        ])
+      ).toBe(false);
+      expect(
+        wantsMachineReadableOutput('ai-gateway', [
+          'node',
+          'vercel',
+          'ai-gateway',
+          'leaderboard',
+          '--format=table',
+        ])
+      ).toBe(false);
+    });
+
+    it('ignores JSON flags after the -- separator', () => {
+      const argv = [
+        'node',
+        'vercel',
+        'env',
+        'run',
+        '--',
+        'node',
+        'script.js',
+        '--json',
+        '-F',
+        'json',
+      ];
+      expect(wantsMachineReadableOutput('env', argv)).toBe(false);
+      expect(shouldPrintVersionBanner('env', argv)).toBe(true);
+    });
+
     it('keeps human chrome for normal commands', () => {
       expect(wantsMachineReadableOutput('deploy', ['node', 'vercel'])).toBe(
         false

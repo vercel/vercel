@@ -82,6 +82,51 @@ export function validateJsonOutput(flags: {
   }
 }
 
+function isJsonFormatValue(value: string | undefined): boolean {
+  return value?.toLowerCase() === 'json';
+}
+
+/**
+ * Matches `-F` alone or at the end of a group of short flags (e.g. `-dF`),
+ * which is where `arg` lets a value-taking short flag read the next argument.
+ */
+const SHORT_FORMAT_FLAG = /^-[A-Za-z]*F$/;
+
+/**
+ * Scans raw argv for every spelling of the JSON output flags that the `arg`
+ * parser accepts: `--json`, `--json=<any>`, `--format json`, `--format=json`,
+ * and `-F json`. Arguments after `--` are positional and are ignored.
+ */
+function argvRequestsJson(argv: readonly string[]): boolean {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+
+    if (arg === '--') {
+      return false;
+    }
+
+    // `arg` treats `--json=<anything>` as `--json` for Boolean flags.
+    if (arg === '--json' || arg.startsWith('--json=')) {
+      return true;
+    }
+
+    if (arg.startsWith('--format=')) {
+      if (isJsonFormatValue(arg.slice('--format='.length))) {
+        return true;
+      }
+      continue;
+    }
+
+    if (arg === '--format' || SHORT_FORMAT_FLAG.test(arg)) {
+      if (isJsonFormatValue(argv[i + 1])) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /** True when stdout is expected to be machine-parsed (suppress human chrome). */
 export function wantsMachineReadableOutput(
   subcommand: string | undefined,
@@ -95,22 +140,7 @@ export function wantsMachineReadableOutput(
     return true;
   }
 
-  if (argv.includes('--json')) {
-    return true;
-  }
-
-  for (const arg of argv) {
-    if (arg.toLowerCase() === '--format=json') {
-      return true;
-    }
-  }
-
-  const formatIdx = argv.indexOf('--format');
-  if (formatIdx !== -1 && argv[formatIdx + 1]?.toLowerCase() === 'json') {
-    return true;
-  }
-
-  return false;
+  return argvRequestsJson(argv);
 }
 
 export function shouldPrintVersionBanner(
